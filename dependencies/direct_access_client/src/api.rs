@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2024
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -9,14 +8,20 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-use pyo3::prelude::*;
 
-/// Task Payload
-#[derive(Debug, Clone, PartialEq)]
-#[pyclass]
-pub enum Payload {
-    /// Payload that contains Qiskit Primitive input.
-    QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
-    PasqalCloud { value: String },
-}
+pub mod backend_config;
+pub mod backend_details;
+pub mod backend_props;
+pub mod backend_pulse_defaults;
+pub mod list_backends;
+
+pub mod cancel_job;
+pub mod delete_job;
+pub mod job_details;
+pub mod job_status;
+pub mod job_wait_for_final_state;
+pub mod list_jobs;
+pub mod run_job;
+pub mod run_primitive;
+
+pub mod service_version;

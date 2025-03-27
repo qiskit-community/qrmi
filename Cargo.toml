@@ -2,8 +2,6 @@
 name = "qrmi"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/qiskit-community/spank-plugins"
-rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
 
 [lib]
 crate-type = ["staticlib", "rlib", "cdylib"]
@@ -12,9 +10,34 @@ crate-type = ["staticlib", "rlib", "cdylib"]
 default = []
 
 [dependencies]
+retry-policies = "0.4.0"
+tokio = { version = "1.40.0", features = ["full"] }
 env_logger = "0.11.5"
+serde_json = "1.0"
+libc = "0.2.169"
+futures = "0.3.31"
+clap = { version = "4.5.29", features = ["derive"] }
+uuid = "1.16.0"
 log = "0.4.26"
+direct-access-api = { path = "dependencies/direct_access_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.24.0", features = ["anyhow"] }
+ffi_helpers = "0.3.0"
+
+[build-dependencies]
+cbindgen = "0.26"
 
 [workspace]
+members = [
+    "dependencies/direct_access_client",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/qiskit-community/spank-plugins"
+rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
+
+[workspace.dependencies]
+direct-access-api = { path = "dependencies/direct_access_client" }

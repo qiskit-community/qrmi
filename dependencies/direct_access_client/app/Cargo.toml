@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "backend",
+    "cancel_job",
+    "delete_job",
+    "list_jobs",
+    "job_details",
+    "run_job",
+    "run_primitive",
+    "version",
+    "utility",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+
+[workspace.dependencies]
+direct-access-api = { path = ".." }

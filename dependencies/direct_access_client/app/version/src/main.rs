@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2024
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -9,14 +8,18 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-use pyo3::prelude::*;
 
-/// Task Payload
-#[derive(Debug, Clone, PartialEq)]
-#[pyclass]
-pub enum Payload {
-    /// Payload that contains Qiskit Primitive input.
-    QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
-    PasqalCloud { value: String },
+use direct_access_api::ClientBuilder;
+
+#[tokio::main]
+#[allow(unreachable_code)]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
+    let client = ClientBuilder::new("http://0.0.0.0:8290").build().unwrap();
+
+    let version = client.get_service_version().await?;
+    println!("{}", version);
+
+    Ok(())
 }

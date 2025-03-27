@@ -9,14 +9,9 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-use pyo3::prelude::*;
+use std::os::raw::c_int;
 
-/// Task Payload
-#[derive(Debug, Clone, PartialEq)]
-#[pyclass]
-pub enum Payload {
-    /// Payload that contains Qiskit Primitive input.
-    QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
-    PasqalCloud { value: String },
-}
+/// @brief C API invocation was succeeded.
+pub const QRMI_SUCCESS: c_int = 0;
+/// @brief C API invocation was failed.
+pub const QRMI_ERROR: c_int = -1;

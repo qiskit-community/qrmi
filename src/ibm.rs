@@ -9,14 +9,9 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-use pyo3::prelude::*;
 
-/// Task Payload
-#[derive(Debug, Clone, PartialEq)]
-#[pyclass]
-pub enum Payload {
-    /// Payload that contains Qiskit Primitive input.
-    QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
-    PasqalCloud { value: String },
-}
+//! QRMI implementations for IBM Quantum services
+
+mod direct_access;
+
+pub use self::direct_access::IBMDirectAccess;

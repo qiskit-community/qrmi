@@ -10,7 +10,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+pub mod ibm;
 pub mod models;
+pub mod consts;
+pub mod common;
 
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use anyhow::Result;
@@ -98,7 +101,7 @@ pub trait QuantumResource {
     ///     buf_reader.read_to_string(&mut contents)?;
     ///
     ///     let payload = qrmi::models::Payload::QiskitPrimitive {
-    ///          pubs: contents,
+    ///          input: contents,
     ///          program_id: args.program_id,
     ///     };
     ///     let job_id = qrmi.task_start(payload).unwrap();
@@ -199,6 +202,7 @@ pub trait QuantumResource {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<crate::ibm::IBMDirectAccess>()?;
     m.add_class::<crate::models::TaskStatus>()?;
     m.add_class::<crate::models::Payload>()?; 
     m.add_class::<crate::models::TaskResult>()?;

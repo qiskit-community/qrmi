@@ -9,10 +9,10 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-
 use pyo3::prelude::*;
 
 /// Task statuses.
+#[repr(C)]
 #[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskStatus {
