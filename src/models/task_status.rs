@@ -13,8 +13,8 @@ use pyo3::prelude::*;
 
 /// Task statuses.
 #[repr(C)]
-#[pyclass(eq, eq_int)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[pyclass(eq, eq_int, hash, frozen)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TaskStatus {
     /// Task is queued
     Queued,

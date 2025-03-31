@@ -15,8 +15,8 @@ use crate::QuantumResource;
 use anyhow::{bail, Result};
 use direct_access_api::utils::s3::S3Client;
 use direct_access_api::{
-    models::Backend, models::BackendStatus, models::JobStatus, models::LogLevel, models::ProgramId,
-    AuthMethod, Client, ClientBuilder,
+    models::Backend, models::BackendStatus, models::Job, models::JobStatus, models::LogLevel,
+    models::ProgramId, AuthMethod, Client, ClientBuilder,
 };
 use retry_policies::policies::ExponentialBackoff;
 use retry_policies::Jitter;
@@ -31,7 +31,7 @@ use uuid::Uuid;
 use pyo3::prelude::*;
 
 // c binding
-use crate::consts::{QRMI_SUCCESS, QRMI_ERROR};
+use crate::consts::{QRMI_ERROR, QRMI_SUCCESS};
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
@@ -286,6 +286,30 @@ impl IBMDirectAccess {
     /// Wrapper of async call for QRMI task_result() function.
     #[tokio::main]
     async fn _task_result(&mut self, task_id: &str) -> Result<TaskResult> {
+        let job = self.api_client.get_job::<Job>(task_id).await?;
+        if matches!(job.status, JobStatus::Failed) {
+            let reason_code = job.reason_code.map_or("".to_string(), |v| v.to_string());
+            let reason_message = job.reason_message.unwrap_or("".to_string());
+            let reason_solution = job.reason_solution.unwrap_or("".to_string());
+            bail!(
+                format!(
+                    "Unable to retrieve result for task {}. Task failed. code: {}, message: {}, solution: {}",
+                    task_id, reason_code, reason_message, reason_solution
+                )
+            );
+        }
+        if matches!(job.status, JobStatus::Cancelled) {
+            bail!(format!(
+                "Unable to retrieve result for task {}. Task was cancelled.",
+                task_id
+            ));
+        }
+        if matches!(job.status, JobStatus::Running) {
+            bail!(format!(
+                "Unable to retrieve result for task {}. Task is running.",
+                task_id
+            ));
+        }
         let s3_object_key = format!("results_{}.json", task_id);
         let object = self
             .s3_client
@@ -391,7 +415,7 @@ pub unsafe extern "C" fn qrmi_ibmda_new() -> *mut IBMDirectAccess {
 /// # Safety
 ///   
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
-/// 
+///
 /// * The memory pointed to by `id` must contain a valid nul terminator at the
 ///   end of the string.
 ///     
@@ -402,12 +426,12 @@ pub unsafe extern "C" fn qrmi_ibmda_new() -> *mut IBMDirectAccess {
 ///
 ///     * The entire memory range of this `CStr` must be contained within a single allocated object!
 ///     * `id` must be non-null even for a zero-length cstr.
-/// 
-/// * The memory referenced by the returned `CStr` must not be mutated for 
+///
+/// * The memory referenced by the returned `CStr` must not be mutated for
 ///   the duration of lifetime `'a`.
-/// 
+///
 /// * The nul terminator must be within `isize::MAX` from `id`
-/// 
+///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
 /// @param (id) [in] A resource identifier
 /// @param (outp) [out] accessible or not
@@ -417,11 +441,11 @@ pub unsafe extern "C" fn qrmi_ibmda_new() -> *mut IBMDirectAccess {
 pub unsafe extern "C" fn qrmi_ibmda_is_accessible(
     qrmi: *mut IBMDirectAccess,
     id: *const c_char,
-    outp: *mut bool
+    outp: *mut bool,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
-    } 
+    }
     ffi_helpers::null_pointer_check!(id, QRMI_ERROR);
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
@@ -434,19 +458,17 @@ pub unsafe extern "C" fn qrmi_ibmda_is_accessible(
 
 /// @brief Frees the memory space pointed to by `ptr`, which must have been returned by a previous call to qrmi_ibmda_new(). Otherwise, or if ptr has already been freed, segmentation fault occurs.  If `ptr` is NULL, returns < 0.
 /// # Safety
-/// 
+///
 /// * `ptr` must have been returned by a previous call to qrmi_ibmda_new().
-/// 
+///
 /// @param (ptr) [in] A IBMDirectAccess QRMI handle
-/// @return QRMI_SUCCESS(0) if succeeded, otherwise QRMI_ERROR. 
+/// @return QRMI_SUCCESS(0) if succeeded, otherwise QRMI_ERROR.
 /// @version 0.1.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmda_free(
-    ptr: *mut IBMDirectAccess
-) -> c_int {
+pub unsafe extern "C" fn qrmi_ibmda_free(ptr: *mut IBMDirectAccess) -> c_int {
     if ptr.is_null() {
         return QRMI_ERROR;
-    } 
+    }
     unsafe {
         let _ = Box::from_raw(ptr);
     };
@@ -458,7 +480,7 @@ pub unsafe extern "C" fn qrmi_ibmda_free(
 /// # Safety
 ///   
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
-/// 
+///
 /// * The memory pointed to by `id` must contain a valid nul terminator at the
 ///   end of the string.
 ///     
@@ -469,12 +491,12 @@ pub unsafe extern "C" fn qrmi_ibmda_free(
 ///
 ///     * The entire memory range of this `CStr` must be contained within a single allocated object!
 ///     * `id` must be non-null even for a zero-length cstr.
-/// 
-/// * The memory referenced by the returned `CStr` must not be mutated for 
+///
+/// * The memory referenced by the returned `CStr` must not be mutated for
 ///   the duration of lifetime `'a`.
-/// 
+///
 /// * The nul terminator must be within `isize::MAX` from `id`
-/// 
+///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
 /// @param (id) [in] A resource identifier
 /// @return Acquisition token if succeeded, otherwise NULL. Must call qrmi_string_free() to free if no longer used.
@@ -482,7 +504,7 @@ pub unsafe extern "C" fn qrmi_ibmda_free(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_acquire(
     qrmi: *mut IBMDirectAccess,
-    id: *const c_char
+    id: *const c_char,
 ) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
@@ -494,12 +516,12 @@ pub unsafe extern "C" fn qrmi_ibmda_acquire(
             Ok(token) => {
                 if let Ok(token_cstr) = CString::new(token) {
                     return token_cstr.into_raw();
-                } 
+                }
             }
             Err(err) => {
                 eprintln!("{:?}", err);
             }
-        } 
+        }
     }
     std::ptr::null()
 }
@@ -533,11 +555,11 @@ pub unsafe extern "C" fn qrmi_ibmda_acquire(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_release(
     qrmi: *mut IBMDirectAccess,
-    id: *const c_char
+    id: *const c_char,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
-    } 
+    }
     ffi_helpers::null_pointer_check!(id, QRMI_ERROR);
 
     if let Ok(token) = CStr::from_ptr(id).to_str() {
@@ -548,7 +570,7 @@ pub unsafe extern "C" fn qrmi_ibmda_release(
             Err(err) => {
                 eprintln!("{:?}", err);
             }
-        } 
+        }
     }
     QRMI_SUCCESS
 }
@@ -587,11 +609,11 @@ pub unsafe extern "C" fn qrmi_ibmda_release(
 pub unsafe extern "C" fn qrmi_ibmda_task_start(
     qrmi: *mut IBMDirectAccess,
     program_id: *const c_char,
-    input: *const c_char
+    input: *const c_char,
 ) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
-    } 
+    }
 
     ffi_helpers::null_pointer_check!(program_id, std::ptr::null());
     ffi_helpers::null_pointer_check!(input, std::ptr::null());
@@ -604,7 +626,7 @@ pub unsafe extern "C" fn qrmi_ibmda_task_start(
             input: input_str.to_string(),
             program_id: program_id_str.to_string(),
         };
-    
+
         match (*qrmi).task_start(payload) {
             Ok(job_id) => {
                 if let Ok(job_id_cstr) = CString::new(job_id) {
@@ -616,7 +638,7 @@ pub unsafe extern "C" fn qrmi_ibmda_task_start(
             }
         }
     }
-    std::ptr::null() 
+    std::ptr::null()
 }
 
 /// @brief Stops a task.
@@ -647,11 +669,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_start(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_task_stop(
     qrmi: *mut IBMDirectAccess,
-    task_id: *const c_char
+    task_id: *const c_char,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
-    } 
+    }
 
     ffi_helpers::null_pointer_check!(task_id, QRMI_ERROR);
 
@@ -710,7 +732,7 @@ pub unsafe extern "C" fn qrmi_ibmda_task_status(
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
         match (*qrmi).task_status(task_id_str) {
             Ok(v) => {
-                *outp = TaskStatus::from(v);
+                *outp = v;
                 return QRMI_SUCCESS;
             }
             Err(err) => {
@@ -748,11 +770,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_status(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_task_result(
     qrmi: *mut IBMDirectAccess,
-    task_id: *const c_char
+    task_id: *const c_char,
 ) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
-    } 
+    }
 
     ffi_helpers::null_pointer_check!(task_id, std::ptr::null());
 
@@ -798,11 +820,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_result(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_target(
     qrmi: *mut IBMDirectAccess,
-    id: *const c_char
+    id: *const c_char,
 ) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
-    } 
+    }
 
     ffi_helpers::null_pointer_check!(id, std::ptr::null());
 

@@ -10,9 +10,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use std::os::raw::{c_char, c_int};
+use crate::consts::{QRMI_ERROR, QRMI_SUCCESS};
 use std::ffi::CString;
-use crate::consts::{QRMI_SUCCESS, QRMI_ERROR};
+use std::os::raw::{c_char, c_int};
 
 /// @brief Free a string allocated by C API
 ///
@@ -36,9 +36,7 @@ use crate::consts::{QRMI_SUCCESS, QRMI_ERROR};
 /// @return QRMI_SUCCESS(0) if suceeded, otherwise QRMI_ERROR.
 /// @version 0.1.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_free_string(
-    ptr: *mut c_char
-) -> c_int {
+pub unsafe extern "C" fn qrmi_free_string(ptr: *mut c_char) -> c_int {
     ffi_helpers::null_pointer_check!(ptr, QRMI_ERROR);
     unsafe {
         drop(CString::from_raw(ptr));

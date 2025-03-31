@@ -12,11 +12,11 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{models::Payload, models::TaskStatus, QuantumResource, ibm::IBMDirectAccess};
+use qrmi::{ibm::IBMDirectAccess, models::Payload, models::TaskStatus, QuantumResource};
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::env;
 
 use std::{thread, time};
 

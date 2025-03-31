@@ -22,9 +22,11 @@ fn main() {
     config.cpp_compat = true;
     config.sort_by = cbindgen::SortKey::Name;
     config.usize_is_size_t = true;
-    let mut enum_config = cbindgen::EnumConfig::default();
-    enum_config.rename_variants = cbindgen::RenameRule::UpperCase;
-    config.enumeration = enum_config; 
+    let enum_config = cbindgen::EnumConfig {
+        rename_variants: cbindgen::RenameRule::UpperCase,
+        ..Default::default()
+    };
+    config.enumeration = enum_config;
 
     match cbindgen::generate_with_config(".", config) {
         Ok(value) => {
