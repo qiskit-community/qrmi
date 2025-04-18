@@ -13,5 +13,7 @@
 //! QRMI implementations for IBM Quantum services
 
 mod direct_access;
+mod qiskit_runtime_service;
 
 pub use self::direct_access::IBMDirectAccess;
+pub use self::qiskit_runtime_service::IBMQiskitRuntimeService;

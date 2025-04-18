@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "direct_access",
+    "qiskit_runtime_service",
 ]
 resolver = "2"
 

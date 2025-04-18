@@ -203,6 +203,7 @@ pub trait QuantumResource {
 #[pymodule]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<crate::ibm::IBMDirectAccess>()?;
+    m.add_class::<crate::ibm::IBMQiskitRuntimeService>()?;
     m.add_class::<crate::models::TaskStatus>()?;
     m.add_class::<crate::models::Payload>()?;
     m.add_class::<crate::models::TaskResult>()?;

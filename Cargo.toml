@@ -20,6 +20,7 @@ clap = { version = "4.5.29", features = ["derive"] }
 uuid = "1.16.0"
 log = "0.4.26"
 direct-access-api = { path = "dependencies/direct_access_client" }
+qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.24.0", features = ["anyhow"] }
 ffi_helpers = "0.3.0"
@@ -30,6 +31,7 @@ cbindgen = "0.26"
 [workspace]
 members = [
     "dependencies/direct_access_client",
+    "dependencies/qiskit_runtime_client",
 ]
 resolver = "2"
 

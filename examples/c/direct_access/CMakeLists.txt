@@ -10,7 +10,7 @@ else()
   set(LIB_PATH release)
 endif()
 
-set(PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+set(PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
 
 function(add_example TARGET_NAME C_FILE)
   # source files for the client app
@@ -42,7 +42,7 @@ function(add_example TARGET_NAME C_FILE)
   # path to headerfile
   target_include_directories(${TARGET_NAME}
           PRIVATE
-          ${CMAKE_CURRENT_SOURCE_DIR}/../..
+          ${CMAKE_CURRENT_SOURCE_DIR}/../../..
   )
 
   install (TARGETS ${TARGET_NAME} DESTINATION .)
