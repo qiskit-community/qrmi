@@ -26,6 +26,7 @@ use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
+use log::info;
 
 // python binding
 use pyo3::prelude::*;
@@ -40,11 +41,9 @@ use std::os::raw::{c_char, c_int};
 #[pyclass]
 pub struct IBMDirectAccess {
     pub(crate) api_client: Client,
-    pub(crate) s3_client: S3Client,
-    pub(crate) backend_name: String,
-    pub(crate) s3_bucket: String,
-    pub(crate) timeout_secs: u64,
 }
+
+const DEFAULT_ENDPOINT: &str = "http://localhost:8080";
 
 #[pymethods]
 impl IBMDirectAccess {
@@ -65,23 +64,8 @@ impl IBMDirectAccess {
     #[new]
     pub fn new() -> Self {
         // Check to see if the environment variables required to run this program are set.
-        let backend_name = env::var("QRMI_RESOURCE_ID").expect("QRMI_RESOURCE_ID");
-        let daapi_endpoint = env::var("QRMI_IBM_DA_ENDPOINT").expect("QRMI_IBM_DA_DAAPI_ENDPOINT");
-        let aws_access_key_id =
-            env::var("QRMI_IBM_DA_AWS_ACCESS_KEY_ID").expect("QRMI_IBM_DA_AWS_ACCESS_KEY_ID");
-        let aws_secret_access_key = env::var("QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY")
-            .expect("QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY");
-        let s3_endpoint = env::var("QRMI_IBM_DA_S3_ENDPOINT").expect("QRMI_IBM_DA_S3_ENDPOINT");
-        let s3_bucket = env::var("QRMI_IBM_DA_S3_BUCKET").expect("QRMI_IBM_DA_S3_BUCKET");
-        let s3_region = env::var("QRMI_IBM_DA_S3_REGION").expect("QRMI_IBM_DA_S3_REGION");
-
-        let iam_endpoint_url =
-            env::var("QRMI_IBM_DA_IAM_ENDPOINT").expect("QRMI_IBM_DA_IAM_ENDPOINT");
-        let apikey = env::var("QRMI_IBM_DA_IAM_APIKEY").expect("QRMI_IBM_DA_IAM_APIKEY");
-        let service_crn = env::var("QRMI_IBM_DA_SERVICE_CRN").expect("QRMI_IBM_DA_SERVICE_CRN");
-
-        let timeout = env::var("QRMI_IBM_DA_TIMEOUT_SECONDS").expect("QRMI_IBM_DA_TIMEOUT_SECONDS");
-        let timeout_secs = timeout.parse::<u64>().expect("QRMI_IBM_DA_TIMEOUT_SECONDS");
+        let daapi_endpoint =
+            env::var("QRMI_IBM_DA_ENDPOINT").unwrap_or(DEFAULT_ENDPOINT.to_string());
 
         let retry_policy = ExponentialBackoff::builder()
             .retry_bounds(Duration::from_secs(1), Duration::from_secs(5))
@@ -89,40 +73,54 @@ impl IBMDirectAccess {
             .base(2)
             .build_with_max_retries(5);
 
-        let auth_method = AuthMethod::IbmCloudIam {
-            apikey,
-            service_crn,
-            iam_endpoint_url,
-        };
-
-        let api_client = ClientBuilder::new(daapi_endpoint)
+        let binding = ClientBuilder::new(daapi_endpoint);
+        let mut builder = binding;
+        builder
             .with_timeout(Duration::from_secs(60))
-            .with_retry_policy(retry_policy)
-            .with_s3bucket(
+            .with_retry_policy(retry_policy);
+
+        if let (
+            Ok(aws_access_key_id),
+            Ok(aws_secret_access_key),
+            Ok(s3_endpoint),
+            Ok(s3_bucket),
+            Ok(s3_region),
+        ) = (
+            env::var("QRMI_IBM_DA_AWS_ACCESS_KEY_ID"),
+            env::var("QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY"),
+            env::var("QRMI_IBM_DA_S3_ENDPOINT"),
+            env::var("QRMI_IBM_DA_S3_BUCKET"),
+            env::var("QRMI_IBM_DA_S3_REGION"),
+        ) {
+            builder.with_s3bucket(
                 &aws_access_key_id,
                 &aws_secret_access_key,
                 &s3_endpoint,
                 &s3_bucket,
                 &s3_region,
-            )
-            .with_auth(auth_method)
-            .build()
-            .unwrap();
-
-        let s3_client = S3Client::new(
-            s3_endpoint,
-            aws_access_key_id,
-            aws_secret_access_key,
-            s3_region,
-        );
-
-        Self {
-            api_client,
-            s3_client,
-            backend_name,
-            s3_bucket,
-            timeout_secs,
+            );
         }
+        else {
+            info!("No S3 bucket configured.");
+        }
+
+        if let (Ok(apikey), Ok(service_crn), Ok(iam_endpoint_url)) = (
+            env::var("QRMI_IBM_DA_IAM_APIKEY"),
+            env::var("QRMI_IBM_DA_SERVICE_CRN"),
+            env::var("QRMI_IBM_DA_IAM_ENDPOINT"),
+        ) {
+            let auth_method = AuthMethod::IbmCloudIam {
+                apikey,
+                service_crn,
+                iam_endpoint_url,
+            };
+            builder.with_auth(auth_method);
+        }
+        else {
+            info!("No authentication configured.");
+        }
+
+        Self { api_client: builder.build().unwrap() }
     }
 
     /// Python binding of QRMI is_accessible() function.
@@ -197,9 +195,7 @@ impl IBMDirectAccess {
     /// Python binding of QRMI metadata() function.
     #[pyo3(name = "metadata")]
     fn pyfunc_metadata(&mut self) -> PyResult<HashMap<String, String>> {
-        let mut metadata: HashMap<String, String> = HashMap::new();
-        metadata.insert("backend_name".to_string(), self.backend_name.clone());
-        Ok(metadata)
+        Ok(self.metadata())
     }
 }
 
@@ -229,15 +225,35 @@ impl IBMDirectAccess {
     /// Wrapper of async call for QRMI task_start() function.
     #[tokio::main]
     async fn _task_start(&mut self, payload: Payload) -> Result<String> {
+        let backend_name = match env::var("QRMI_RESOURCE_ID") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_RESOURCE_ID is not set: {}", &err));
+            }
+        };
+
+        let timeout = match env::var("QRMI_IBM_DA_TIMEOUT_SECONDS") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_TIMEOUT_SECONDS is not set: {}", &err));
+            }
+        };
+        let timeout_secs = match timeout.parse::<u64>() {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("Failed to parse timeout value: {}", &err));
+            }
+        };
+
         if let Payload::QiskitPrimitive { input, program_id } = payload {
             let job: serde_json::Value = serde_json::from_str(input.as_str())?;
             if let Ok(program_id_enum) = ProgramId::from_str(&program_id) {
                 match self
                     .api_client
                     .run_primitive(
-                        &self.backend_name,
+                        &backend_name,
                         program_id_enum,
-                        self.timeout_secs,
+                        timeout_secs,
                         LogLevel::Debug,
                         &job,
                         None,
@@ -286,6 +302,54 @@ impl IBMDirectAccess {
     /// Wrapper of async call for QRMI task_result() function.
     #[tokio::main]
     async fn _task_result(&mut self, task_id: &str) -> Result<TaskResult> {
+        let s3_bucket = match env::var("QRMI_IBM_DA_S3_BUCKET") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_S3_BUCKET is not set: {}", &err));
+            }
+        };
+
+        let s3_endpoint = match env::var("QRMI_IBM_DA_S3_ENDPOINT") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_S3_ENDPOINT is not set: {}", &err));
+            }
+        };
+
+        let aws_access_key_id = match env::var("QRMI_IBM_DA_AWS_ACCESS_KEY_ID") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!(
+                    "QRMI_IBM_DA_AWS_ACCESS_KEY_ID is not set: {}",
+                    &err
+                ));
+            }
+        };
+
+        let aws_secret_access_key = match env::var("QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!(
+                    "QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY is not set: {}",
+                    &err
+                ));
+            }
+        };
+
+        let s3_region = match env::var("QRMI_IBM_DA_S3_REGION") {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_S3_REGION is not set: {}", &err));
+            }
+        };
+
+        let s3_client = S3Client::new(
+            s3_endpoint,
+            aws_access_key_id,
+            aws_secret_access_key,
+            s3_region,
+        );
+
         let job = self.api_client.get_job::<Job>(task_id).await?;
         if matches!(job.status, JobStatus::Failed) {
             let reason_code = job.reason_code.map_or("".to_string(), |v| v.to_string());
@@ -311,10 +375,7 @@ impl IBMDirectAccess {
             ));
         }
         let s3_object_key = format!("results_{}.json", task_id);
-        let object = self
-            .s3_client
-            .get_object(&self.s3_bucket, &s3_object_key)
-            .await?;
+        let object = s3_client.get_object(&s3_bucket, &s3_object_key).await?;
         let retrieved_txt = String::from_utf8(object)?;
         Ok(TaskResult {
             value: retrieved_txt,
@@ -388,7 +449,9 @@ impl QuantumResource for IBMDirectAccess {
 
     fn metadata(&mut self) -> HashMap<String, String> {
         let mut metadata: HashMap<String, String> = HashMap::new();
-        metadata.insert("backend_name".to_string(), self.backend_name.clone());
+        if let Ok(backend_name) = env::var("QRMI_RESOURCE_ID") {
+            metadata.insert("backend_name".to_string(), backend_name);
+        }
         metadata
     }
 }
