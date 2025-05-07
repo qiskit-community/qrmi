@@ -19,7 +19,6 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| QRMI_RESOURCE_ID | Quantum backend name(e.g. `ibm_torino`) |
 | QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
 | QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -36,11 +35,12 @@ Refer [this tool](../../../../commands/qrun/qiskit_pubs_gen) to generate. You ca
 
 ```shell-session
 $ python example.py -h
-usage: example.py [-h] input program_id
+usage: example.py [-h] backend input program_id
 
 An example of IBM Qiskit Runtime Service QRMI
 
 positional arguments:
+  backend     backend name
   input       primitive input file
   program_id  'estimator' or 'sampler'
 
@@ -49,5 +49,5 @@ options:
 ```
 For example,
 ```shell-session
-$ python example.py sampler_input.json sampler
+$ python example.py ibm_torino sampler_input.json sampler
 ```

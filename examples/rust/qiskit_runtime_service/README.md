@@ -11,7 +11,6 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| QRMI_RESOURCE_ID | Quantum backend name(e.g. `ibm_torino`) |
 | QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
 | QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -35,11 +34,12 @@ $ cargo build --release
 ## How to run this example
 ```shell-session
 $ ../target/release/qiskit_runtime_service --help
-QRMI for Qiskit Runtime Service - Example
+QRMI for IBM Qiskit Runtime Service - Example
 
-Usage: qrmi-example-qiskit_runtime_service --input <INPUT> --program-id <PROGRAM_ID>
+Usage: qrmi-example-qiskit_runtime_service --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
 
 Options:
+  -b, --backend <BACKEND>        backend name
   -i, --input <INPUT>            primitive input file
   -p, --program-id <PROGRAM_ID>  program id
   -h, --help                     Print help
@@ -47,5 +47,5 @@ Options:
 ```
 For example,
 ```shell-session
-$ ../target/release/qrmi-example-qiskit_runtime_service -i sampler_input.json -p sampler
+$ ../target/release/qrmi-example-qiskit_runtime_service -b ibm_torino -i sampler_input.json -p sampler
 ```

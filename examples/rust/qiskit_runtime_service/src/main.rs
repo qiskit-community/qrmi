@@ -13,7 +13,6 @@
 use clap::Parser;
 use dotenv::dotenv;
 use qrmi::{ibm::IBMQiskitRuntimeService, models::Payload, models::TaskStatus, QuantumResource};
-use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -24,6 +23,10 @@ use std::{thread, time};
 #[command(version = "0.1.0")]
 #[command(about = "QRMI for IBM Qiskit Runtime Service - Example")]
 struct Args {
+    /// backend name
+    #[arg(short, long)]
+    backend: String,
+
     /// primitive input file
     #[arg(short, long)]
     input: String,
@@ -41,20 +44,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     println!("{}", dotenv().unwrap().display());
 
-    let backend_name = env::var("QRMI_RESOURCE_ID").expect("QRMI_RESOURCE_ID");
+    let mut qrmi = IBMQiskitRuntimeService::new(&args.backend);
 
-    let mut qrmi = IBMQiskitRuntimeService::default();
-
-    let accessible = qrmi.is_accessible(&backend_name);
+    let accessible = qrmi.is_accessible();
     if !accessible {
-        panic!("{} is not accessible", backend_name);
+        panic!("{} is not accessible", args.backend);
     }
 
-    let lock = qrmi.acquire(&backend_name).unwrap();
+    let lock = qrmi.acquire().unwrap();
+    println!("acquisition token = {}", lock);
 
     println!("{:#?}", qrmi.metadata());
 
-    let target = qrmi.target(&backend_name);
+    let target = qrmi.target();
     if let Ok(v) = target {
         println!("{}", v.value);
     }

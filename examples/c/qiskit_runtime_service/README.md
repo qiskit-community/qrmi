@@ -11,7 +11,6 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| QRMI_RESOURCE_ID | Quantum backend name(e.g. `ibm_torino`) |
 | QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
 | QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -37,9 +36,9 @@ $ make
 ## How to run this example
 ```shell-session
 $ ./build/qiskit_runtime_service
-qiskit_runtime_service <primitive input file> <program id>
+qiskit_runtime_service <backend_name> <primitive input file> <program id>
 ```
 For example,
 ```shell-session
-$ ./build/qiskit_runtime_service sampler_input.json sampler
+$ ./build/qiskit_runtime_service ibm_torino sampler_input.json sampler
 ```

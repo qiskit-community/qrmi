@@ -22,25 +22,23 @@ extern const char *read_file(const char *);
 
 int main(int argc, char *argv[]) {
 
-  if (argc != 3) {
-    fprintf(stderr, "direct_access <primitive input file> <program id>\n");
+  if (argc != 4) {
+    fprintf(stderr, "direct_access <backend_name> <primitive input file> <program id>\n");
     return 0;
   }
 
   load_dotenv();
 
-  const char *backend_name = getenv("QRMI_RESOURCE_ID");
-  if (backend_name == NULL) {
-    fprintf(stderr, "QRMI_RESOURCE_ID is not set.\n");
-    return -1;
+  IBMDirectAccess *qrmi = qrmi_ibmda_new(argv[1]);
+  if (!qrmi) {
+      fprintf(stderr, "Failed to create QRMI for %s.\n", argv[1]);
+      return -1;
   }
-
-  IBMDirectAccess *qrmi = qrmi_ibmda_new();
   bool is_accessible = false;
-  int rc = qrmi_ibmda_is_accessible(qrmi, backend_name, &is_accessible);
+  int rc = qrmi_ibmda_is_accessible(qrmi, &is_accessible);
   if (rc == QRMI_SUCCESS) {
     if (is_accessible == false) {
-      fprintf(stderr, "%s cannot be accessed.\n", backend_name);
+      fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
       return -1;
     }
   } else {
@@ -48,19 +46,19 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  const char *acquisition_token = qrmi_ibmda_acquire(qrmi, backend_name);
+  const char *acquisition_token = qrmi_ibmda_acquire(qrmi);
   fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
 
   rc = qrmi_ibmda_release(qrmi, acquisition_token);
   fprintf(stdout, "qrmi_ibmda_release rc = %d\n", rc);
   qrmi_free_string((char *)acquisition_token);
 
-  const char *target = qrmi_ibmda_target(qrmi, backend_name);
+  const char *target = qrmi_ibmda_target(qrmi);
   fprintf(stdout, "target = %s\n", target);
   qrmi_free_string((char *)target);
 
-  const char *input = read_file(argv[1]);
-  const char *job_id = qrmi_ibmda_task_start(qrmi, argv[2], input);
+  const char *input = read_file(argv[2]);
+  const char *job_id = qrmi_ibmda_task_start(qrmi, argv[3], input);
   if (job_id == NULL) {
     fprintf(stderr, "failed to start a task.\n");
     free((void*)input);

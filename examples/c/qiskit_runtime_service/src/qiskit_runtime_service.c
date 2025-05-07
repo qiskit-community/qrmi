@@ -22,25 +22,19 @@ extern const char *read_file(const char *);
 
 int main(int argc, char *argv[]) {
 
-  if (argc != 3) {
-    fprintf(stderr, "direct_access <primitive input file> <program id>\n");
+  if (argc != 4) {
+    fprintf(stderr, "direct_access <backend_name> <primitive input file> <program id>\n");
     return 0;
   }
 
   load_dotenv();
 
-  const char *backend_name = getenv("QRMI_RESOURCE_ID");
-  if (backend_name == NULL) {
-    fprintf(stderr, "QRMI_RESOURCE_ID is not set.\n");
-    return -1;
-  }
-
-  IBMQiskitRuntimeService *qrmi = qrmi_ibmqrs_new();
+  IBMQiskitRuntimeService *qrmi = qrmi_ibmqrs_new(argv[1]);
   bool is_accessible = false;
-  int rc = qrmi_ibmqrs_is_accessible(qrmi, backend_name, &is_accessible);
+  int rc = qrmi_ibmqrs_is_accessible(qrmi, &is_accessible);
   if (rc == QRMI_SUCCESS) {
     if (is_accessible == false) {
-      fprintf(stderr, "%s cannot be accessed.\n", backend_name);
+      fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
       return -1;
     }
   } else {
@@ -48,19 +42,15 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  const char *acquisition_token = qrmi_ibmqrs_acquire(qrmi, backend_name);
+  const char *acquisition_token = qrmi_ibmqrs_acquire(qrmi);
   fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
 
-  rc = qrmi_ibmqrs_release(qrmi, acquisition_token);
-  fprintf(stdout, "qrmi_ibmqrs_release rc = %d\n", rc);
-  qrmi_free_string((char *)acquisition_token);
-
-  const char *target = qrmi_ibmqrs_target(qrmi, backend_name);
+  const char *target = qrmi_ibmqrs_target(qrmi);
   fprintf(stdout, "target = %s\n", target);
   qrmi_free_string((char *)target);
 
-  const char *input = read_file(argv[1]);
-  const char *job_id = qrmi_ibmqrs_task_start(qrmi, argv[2], input);
+  const char *input = read_file(argv[2]);
+  const char *job_id = qrmi_ibmqrs_task_start(qrmi, argv[3], input);
   if (job_id == NULL) {
     fprintf(stderr, "failed to start a task.\n");
     free((void*)input);
@@ -72,7 +62,8 @@ int main(int argc, char *argv[]) {
   TaskStatus status;
   while (1) {
     rc = qrmi_ibmqrs_task_status(qrmi, job_id, &status);
-    if (rc != QRMI_SUCCESS || status != RUNNING) {
+    fprintf(stdout, "rc = %d, status = %d\n", rc, status);
+    if (rc != QRMI_SUCCESS || (status != RUNNING && status != QUEUED)) {
       break;
     }
     sleep(1);
@@ -84,10 +75,20 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "%s\n", result);
     qrmi_free_string((char *)result);
   }
+  else if (status == FAILED) {
+    fprintf(stderr, "Failed.\n");
+  }
+  else if (status == CANCELLED) {
+    fprintf(stderr, "Cancelled.\n");
+  }
 
   qrmi_ibmqrs_task_stop(qrmi, job_id);
 
   qrmi_free_string((char *)job_id);
+
+  rc = qrmi_ibmqrs_release(qrmi, acquisition_token);
+  fprintf(stdout, "qrmi_ibmqrs_release rc = %d\n", rc);
+  qrmi_free_string((char *)acquisition_token);
 
   qrmi_ibmqrs_free(qrmi);
 

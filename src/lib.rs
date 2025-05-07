@@ -32,17 +32,16 @@ pub trait QuantumResource {
     ///
     /// ```no_run
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///
-    ///     let device: &str = "ibm_torino";
-    ///     let accessible = qrmi.is_accessible(device);
+    ///     let accessible = qrmi.is_accessible();
     ///     if accessible == false {
-    ///         panic!("{} is not accessible.", device);
+    ///         panic!("ibm_torino is not accessible.");
     ///     }
     ///     Ok(())
     /// }
     /// ```
-    fn is_accessible(&mut self, id: &str) -> bool;
+    fn is_accessible(&mut self) -> bool;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
     ///
@@ -54,13 +53,13 @@ pub trait QuantumResource {
     ///
     /// ```no_run
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::default();
-    ///     let token = qrmi.acquire(device).unwrap();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
+    ///     let token = qrmi.acquire().unwrap();
     ///     println!("acquisition token = {}", token);
     ///     Ok(())
     /// }
     /// ```
-    fn acquire(&mut self, id: &str) -> Result<String>;
+    fn acquire(&mut self) -> Result<String>;
 
     /// Releases quantum resource
     ///
@@ -72,7 +71,7 @@ pub trait QuantumResource {
     ///
     /// ```no_run
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     qrmi.release("your_acquisition_token").await?;
     ///     Ok(())
     /// }
@@ -93,7 +92,7 @@ pub trait QuantumResource {
     ///     use std::io::prelude::*;
     ///     use std::io::BufReader;
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///
     ///     let f = File::open("sampler_input.json").expect("file not found");
     ///     let mut buf_reader = BufReader::new(f);
@@ -121,7 +120,7 @@ pub trait QuantumResource {
     ///
     /// ```no_run
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     qrmi.task_stop("your_task_id").unwrap();
     ///     Ok(())
     /// }
@@ -140,7 +139,7 @@ pub trait QuantumResource {
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
-    ///     let mut qrmi = QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     let status = qrmi.task_status("your_task_id").unwrap();
     ///     println!("{:?}", status);
     ///     Ok(())
@@ -160,7 +159,7 @@ pub trait QuantumResource {
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
-    ///     let mut qrmi = QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     let result = qrmi.task_result(&job_id).unwrap();
     ///     println!("{:?}", result.value);
     ///     Ok(())
@@ -174,13 +173,13 @@ pub trait QuantumResource {
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
-    ///     let mut qrmi = QiskitRuntimeService::default();
-    ///     let target = qrmi.target("ibm_torino").unwrap();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
+    ///     let target = qrmi.target().unwrap();
     ///     println!("{:?}", target.value);
     ///     Ok(())
     /// }
     /// ```
-    fn target(&mut self, id: &str) -> Result<Target>;
+    fn target(&mut self) -> Result<Target>;
 
     /// Returns other specific to system or device data
     ///
@@ -190,7 +189,7 @@ pub trait QuantumResource {
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
-    ///     let mut qrmi = QiskitRuntimeService::default();
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     let metadata = qrmi.metadata();
     ///     println!("{:?}", metadata);
     ///     Ok(())

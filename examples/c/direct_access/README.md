@@ -11,7 +11,6 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| QRMI_RESOURCE_ID | Quantum backend name(e.g. `ibm_torino`) |
 | QRMI_IBM_DA_ENDPOINT | Direct Access endpoint URL |
 | QRMI_IBM_DA_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | QRMI_IBM_DA_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -40,9 +39,9 @@ $ make
 ## How to run this example
 ```shell-session
 $ ./build/direct_access
-direct_access <primitive input file> <program id>
+direct_access <backend_name> <primitive input file> <program id>
 ```
 For example,
 ```shell-session
-$ ./build/direct_access sampler_input.json sampler
+$ ./build/direct_access your_backend sampler_input.json sampler
 ```

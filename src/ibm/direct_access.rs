@@ -18,6 +18,7 @@ use direct_access_api::{
     models::Backend, models::BackendStatus, models::Job, models::JobStatus, models::LogLevel,
     models::ProgramId, AuthMethod, Client, ClientBuilder,
 };
+use log::info;
 use retry_policies::policies::ExponentialBackoff;
 use retry_policies::Jitter;
 use serde_json::json;
@@ -26,7 +27,6 @@ use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
-use log::info;
 
 // python binding
 use pyo3::prelude::*;
@@ -41,6 +41,7 @@ use std::os::raw::{c_char, c_int};
 #[pyclass]
 pub struct IBMDirectAccess {
     pub(crate) api_client: Client,
+    pub(crate) backend_name: String,
 }
 
 const DEFAULT_ENDPOINT: &str = "http://localhost:8080";
@@ -51,7 +52,6 @@ impl IBMDirectAccess {
     ///
     /// # Environment variables
     ///
-    /// * `QRMI_RESOURCE_ID`: IBM Quantum backend name
     /// * `QRMI_IBM_DA_ENDPOINT`: IBM Qiskit Runtime Direct Access API endpoint URL
     /// * `QRMI_IBM_DA_AWS_ACCESS_KEY_ID`: AWS Access Key ID to access S3 bucket
     /// * `QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key to access S3 bucket
@@ -61,11 +61,12 @@ impl IBMDirectAccess {
     /// * `QRMI_IBM_DA_IAM_ENDPOINT`: IBM Cloud IAM API endpoint URL
     /// * `QRMI_IBM_DA_IAM_APIKEY`: IBM Cloud API Key
     /// * `QRMI_IBM_DA_SERVICE_CRN`: Provisioned Direct Access Service instance
+    /// * `QRMI_JOB_TIMEOUT_SECONDS`: Time (in seconds) after which job should time out and get cancelled.
     #[new]
-    pub fn new() -> Self {
+    pub fn new(resource_id: &str) -> Self {
         // Check to see if the environment variables required to run this program are set.
-        let daapi_endpoint =
-            env::var("QRMI_IBM_DA_ENDPOINT").unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let daapi_endpoint = env::var(format!("{resource_id}_QRMI_IBM_DA_ENDPOINT"))
+            .unwrap_or(DEFAULT_ENDPOINT.to_string());
 
         let retry_policy = ExponentialBackoff::builder()
             .retry_bounds(Duration::from_secs(1), Duration::from_secs(5))
@@ -86,11 +87,11 @@ impl IBMDirectAccess {
             Ok(s3_bucket),
             Ok(s3_region),
         ) = (
-            env::var("QRMI_IBM_DA_AWS_ACCESS_KEY_ID"),
-            env::var("QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY"),
-            env::var("QRMI_IBM_DA_S3_ENDPOINT"),
-            env::var("QRMI_IBM_DA_S3_BUCKET"),
-            env::var("QRMI_IBM_DA_S3_REGION"),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID")),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY")),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_S3_ENDPOINT")),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_S3_BUCKET")),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_S3_REGION")),
         ) {
             builder.with_s3bucket(
                 &aws_access_key_id,
@@ -99,15 +100,14 @@ impl IBMDirectAccess {
                 &s3_bucket,
                 &s3_region,
             );
-        }
-        else {
+        } else {
             info!("No S3 bucket configured.");
         }
 
         if let (Ok(apikey), Ok(service_crn), Ok(iam_endpoint_url)) = (
-            env::var("QRMI_IBM_DA_IAM_APIKEY"),
-            env::var("QRMI_IBM_DA_SERVICE_CRN"),
-            env::var("QRMI_IBM_DA_IAM_ENDPOINT"),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_IAM_APIKEY")),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_SERVICE_CRN")),
+            env::var(format!("{resource_id}_QRMI_IBM_DA_IAM_ENDPOINT")),
         ) {
             let auth_method = AuthMethod::IbmCloudIam {
                 apikey,
@@ -115,24 +115,26 @@ impl IBMDirectAccess {
                 iam_endpoint_url,
             };
             builder.with_auth(auth_method);
-        }
-        else {
+        } else {
             info!("No authentication configured.");
         }
 
-        Self { api_client: builder.build().unwrap() }
+        Self {
+            api_client: builder.build().unwrap(),
+            backend_name: resource_id.to_string(),
+        }
     }
 
     /// Python binding of QRMI is_accessible() function.
     #[pyo3(name = "is_accessible")]
-    fn pyfunc_is_accessible(&mut self, id: &str) -> PyResult<bool> {
-        Ok(self.is_accessible(id))
+    fn pyfunc_is_accessible(&mut self) -> PyResult<bool> {
+        Ok(self.is_accessible())
     }
 
     /// Python binding of QRMI acquire() function.
     #[pyo3(name = "acquire")]
-    fn pyfunc_acquire(&mut self, id: &str) -> PyResult<String> {
-        match self.acquire(id) {
+    fn pyfunc_acquire(&mut self) -> PyResult<String> {
+        match self.acquire() {
             Ok(v) => Ok(v),
             Err(v) => Err(v.into()),
         }
@@ -185,8 +187,8 @@ impl IBMDirectAccess {
 
     /// Python binding of QRMI target() function.
     #[pyo3(name = "target")]
-    fn pyfunc_target(&mut self, id: &str) -> PyResult<Target> {
-        match self.target(id) {
+    fn pyfunc_target(&mut self) -> PyResult<Target> {
+        match self.target() {
             Ok(v) => Ok(v),
             Err(v) => Err(v.into()),
         }
@@ -201,15 +203,19 @@ impl IBMDirectAccess {
 
 impl Default for IBMDirectAccess {
     fn default() -> Self {
-        Self::new()
+        Self::new("")
     }
 }
 /// QuantumResource Trait implementation for IBM Direct Access
 impl IBMDirectAccess {
     /// Wrapper of async call for QRMI is_accessible() function.
     #[tokio::main]
-    async fn _is_accessible(&mut self, id: &str) -> bool {
-        match self.api_client.get_backend::<Backend>(id).await {
+    async fn _is_accessible(&mut self) -> bool {
+        match self
+            .api_client
+            .get_backend::<Backend>(&self.backend_name)
+            .await
+        {
             Ok(val) => {
                 if matches!(val.status, BackendStatus::Online) {
                     return true;
@@ -225,17 +231,10 @@ impl IBMDirectAccess {
     /// Wrapper of async call for QRMI task_start() function.
     #[tokio::main]
     async fn _task_start(&mut self, payload: Payload) -> Result<String> {
-        let backend_name = match env::var("QRMI_RESOURCE_ID") {
+        let timeout = match env::var(format!("{0}_QRMI_JOB_TIMEOUT_SECONDS", self.backend_name)) {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!("QRMI_RESOURCE_ID is not set: {}", &err));
-            }
-        };
-
-        let timeout = match env::var("QRMI_IBM_DA_TIMEOUT_SECONDS") {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_TIMEOUT_SECONDS is not set: {}", &err));
+                bail!(format!("QRMI_JOB_TIMEOUT_SECONDS is not set: {}", &err));
             }
         };
         let timeout_secs = match timeout.parse::<u64>() {
@@ -251,7 +250,7 @@ impl IBMDirectAccess {
                 match self
                     .api_client
                     .run_primitive(
-                        &backend_name,
+                        &self.backend_name,
                         program_id_enum,
                         timeout_secs,
                         LogLevel::Debug,
@@ -302,21 +301,25 @@ impl IBMDirectAccess {
     /// Wrapper of async call for QRMI task_result() function.
     #[tokio::main]
     async fn _task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let s3_bucket = match env::var("QRMI_IBM_DA_S3_BUCKET") {
+        let s3_bucket = match env::var(format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name)) {
             Ok(val) => val,
             Err(err) => {
                 bail!(format!("QRMI_IBM_DA_S3_BUCKET is not set: {}", &err));
             }
         };
 
-        let s3_endpoint = match env::var("QRMI_IBM_DA_S3_ENDPOINT") {
+        let s3_endpoint = match env::var(format!("{0}_QRMI_IBM_DA_S3_ENDPOINT", self.backend_name))
+        {
             Ok(val) => val,
             Err(err) => {
                 bail!(format!("QRMI_IBM_DA_S3_ENDPOINT is not set: {}", &err));
             }
         };
 
-        let aws_access_key_id = match env::var("QRMI_IBM_DA_AWS_ACCESS_KEY_ID") {
+        let aws_access_key_id = match env::var(format!(
+            "{0}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID",
+            self.backend_name
+        )) {
             Ok(val) => val,
             Err(err) => {
                 bail!(format!(
@@ -326,7 +329,10 @@ impl IBMDirectAccess {
             }
         };
 
-        let aws_secret_access_key = match env::var("QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY") {
+        let aws_secret_access_key = match env::var(format!(
+            "{0}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY",
+            self.backend_name
+        )) {
             Ok(val) => val,
             Err(err) => {
                 bail!(format!(
@@ -336,7 +342,7 @@ impl IBMDirectAccess {
             }
         };
 
-        let s3_region = match env::var("QRMI_IBM_DA_S3_REGION") {
+        let s3_region = match env::var(format!("{0}_QRMI_IBM_DA_S3_REGION", self.backend_name)) {
             Ok(val) => val,
             Err(err) => {
                 bail!(format!("QRMI_IBM_DA_S3_REGION is not set: {}", &err));
@@ -384,11 +390,11 @@ impl IBMDirectAccess {
 
     /// Wrapper of async call for QRMI target() function.
     #[tokio::main]
-    async fn _target(&mut self, id: &str) -> Result<Target> {
+    async fn _target(&mut self) -> Result<Target> {
         let mut resp = json!({});
         if let Ok(config) = self
             .api_client
-            .get_backend_configuration::<serde_json::Value>(id)
+            .get_backend_configuration::<serde_json::Value>(&self.backend_name)
             .await
         {
             resp["configuration"] = config;
@@ -398,7 +404,7 @@ impl IBMDirectAccess {
 
         if let Ok(props) = self
             .api_client
-            .get_backend_properties::<serde_json::Value>(id)
+            .get_backend_properties::<serde_json::Value>(&self.backend_name)
             .await
         {
             resp["properties"] = props;
@@ -413,11 +419,11 @@ impl IBMDirectAccess {
 }
 
 impl QuantumResource for IBMDirectAccess {
-    fn is_accessible(&mut self, id: &str) -> bool {
-        self._is_accessible(id)
+    fn is_accessible(&mut self) -> bool {
+        self._is_accessible()
     }
 
-    fn acquire(&mut self, _id: &str) -> Result<String> {
+    fn acquire(&mut self) -> Result<String> {
         // Direct Access does not support session concept, so simply returns dummy ID for now.
         Ok(Uuid::new_v4().to_string())
     }
@@ -443,15 +449,13 @@ impl QuantumResource for IBMDirectAccess {
         self._task_result(task_id)
     }
 
-    fn target(&mut self, id: &str) -> Result<Target> {
-        self._target(id)
+    fn target(&mut self) -> Result<Target> {
+        self._target()
     }
 
     fn metadata(&mut self) -> HashMap<String, String> {
         let mut metadata: HashMap<String, String> = HashMap::new();
-        if let Ok(backend_name) = env::var("QRMI_RESOURCE_ID") {
-            metadata.insert("backend_name".to_string(), backend_name);
-        }
+        metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
     }
 }
@@ -465,12 +469,18 @@ impl QuantumResource for IBMDirectAccess {
 ///
 /// # Safety
 ///
+/// @param (resource_id) [in] A resource identifier, i.e. backend name
 /// @return a IBMDirectAccess QRMI handle if succeeded, otherwise NULL. Must call qrmi_ibmda_free() to free if no longer used.
 /// @version 0.1.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmda_new() -> *mut IBMDirectAccess {
-    let qrmi = Box::new(IBMDirectAccess::new());
-    Box::into_raw(qrmi)
+pub unsafe extern "C" fn qrmi_ibmda_new(resource_id: *const c_char) -> *mut IBMDirectAccess {
+    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
+
+    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+        let qrmi = Box::new(IBMDirectAccess::new(id_str));
+        return Box::into_raw(qrmi);
+    }
+    std::ptr::null_mut()
 }
 
 /// @brief Returns true if device is accessible, otherwise false.
@@ -479,44 +489,24 @@ pub unsafe extern "C" fn qrmi_ibmda_new() -> *mut IBMDirectAccess {
 ///   
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
-/// * The memory pointed to by `id` must contain a valid nul terminator at the
-///   end of the string.
-///     
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
 ///
-/// * `id` must be [valid] for reads of bytes up to and including the nul terminator.
-///   This means in particular:
-///
-///     * The entire memory range of this `CStr` must be contained within a single allocated object!
-///     * `id` must be non-null even for a zero-length cstr.
-///
-/// * The memory referenced by the returned `CStr` must not be mutated for
-///   the duration of lifetime `'a`.
-///
-/// * The nul terminator must be within `isize::MAX` from `id`
-///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
-/// @param (id) [in] A resource identifier
 /// @param (outp) [out] accessible or not
 /// @return QRMI_SUCCESS(0) if succeeded, otherwise QRMI_ERROR.
 /// @version 0.1.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_is_accessible(
     qrmi: *mut IBMDirectAccess,
-    id: *const c_char,
     outp: *mut bool,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
     }
-    ffi_helpers::null_pointer_check!(id, QRMI_ERROR);
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
-    if let Ok(id_str) = CStr::from_ptr(id).to_str() {
-        *outp = (*qrmi).is_accessible(id_str);
-        return QRMI_SUCCESS;
-    }
-    QRMI_ERROR
+    *outp = (*qrmi).is_accessible();
+    QRMI_SUCCESS
 }
 
 /// @brief Frees the memory space pointed to by `ptr`, which must have been returned by a previous call to qrmi_ibmda_new(). Otherwise, or if ptr has already been freed, segmentation fault occurs.  If `ptr` is NULL, returns < 0.
@@ -544,46 +534,25 @@ pub unsafe extern "C" fn qrmi_ibmda_free(ptr: *mut IBMDirectAccess) -> c_int {
 ///   
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
-/// * The memory pointed to by `id` must contain a valid nul terminator at the
-///   end of the string.
-///     
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
 ///
-/// * `id` must be [valid] for reads of bytes up to and including the nul terminator.
-///   This means in particular:
-///
-///     * The entire memory range of this `CStr` must be contained within a single allocated object!
-///     * `id` must be non-null even for a zero-length cstr.
-///
-/// * The memory referenced by the returned `CStr` must not be mutated for
-///   the duration of lifetime `'a`.
-///
-/// * The nul terminator must be within `isize::MAX` from `id`
-///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
-/// @param (id) [in] A resource identifier
-/// @return Acquisition token if succeeded, otherwise NULL. Must call qrmi_string_free() to free if no longer used.
+/// @return Acquisition token if succeeded, otherwise NULL. Must call qrmi_free_string() to free if no longer used.
 /// @version 0.1.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmda_acquire(
-    qrmi: *mut IBMDirectAccess,
-    id: *const c_char,
-) -> *const c_char {
+pub unsafe extern "C" fn qrmi_ibmda_acquire(qrmi: *mut IBMDirectAccess) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
     }
-    ffi_helpers::null_pointer_check!(id, std::ptr::null());
 
-    if let Ok(backend_name) = CStr::from_ptr(id).to_str() {
-        match (*qrmi).acquire(backend_name) {
-            Ok(token) => {
-                if let Ok(token_cstr) = CString::new(token) {
-                    return token_cstr.into_raw();
-                }
+    match (*qrmi).acquire() {
+        Ok(token) => {
+            if let Ok(token_cstr) = CString::new(token) {
+                return token_cstr.into_raw();
             }
-            Err(err) => {
-                eprintln!("{:?}", err);
-            }
+        }
+        Err(err) => {
+            eprintln!("{:?}", err);
         }
     }
     std::ptr::null()
@@ -595,37 +564,37 @@ pub unsafe extern "C" fn qrmi_ibmda_acquire(
 ///  
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
-/// * The memory pointed to by `id` must contain a valid nul terminator at the
+/// * The memory pointed to by `acquisition_token` must contain a valid nul terminator at the
 ///   end of the string.
 ///    
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
 ///
-/// * `id` must be [valid] for reads of bytes up to and including the nul terminator.
+/// * `acquisition_token` must be [valid] for reads of bytes up to and including the nul terminator.
 ///   This means in particular:
 ///
 ///     * The entire memory range of this `CStr` must be contained within a single allocated object!
-///     * `id` must be non-null even for a zero-length cstr.
+///     * `acquisition_token` must be non-null even for a zero-length cstr.
 ///
 /// * The memory referenced by the returned `CStr` must not be mutated for
 ///   the duration of lifetime `'a`.
 ///
-/// * The nul terminator must be within `isize::MAX` from `id`
+/// * The nul terminator must be within `isize::MAX` from `acquisition_token`
 ///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
-/// @param (id) [in] A resource identifier
+/// @param (acquisition_token) [in] An acquisition token returned by qrmi_ibmda_acquire() call.
 /// @return QRMI_SUCCESS if succeeded, otherwise QRMI_ERROR.
 /// @version 0.1.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_release(
     qrmi: *mut IBMDirectAccess,
-    id: *const c_char,
+    acquisition_token: *const c_char,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
     }
-    ffi_helpers::null_pointer_check!(id, QRMI_ERROR);
+    ffi_helpers::null_pointer_check!(acquisition_token, QRMI_ERROR);
 
-    if let Ok(token) = CStr::from_ptr(id).to_str() {
+    if let Ok(token) = CStr::from_ptr(acquisition_token).to_str() {
         match (*qrmi).release(token) {
             Ok(()) => {
                 return QRMI_SUCCESS;
@@ -666,7 +635,7 @@ pub unsafe extern "C" fn qrmi_ibmda_release(
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
 /// @param (program_id) [in] Program ID (`sampler` or `estimator`)
 /// @param (input) [in] primitive input
-/// @return A task identifier if succeeded, otherwise NULL. Must call qrmi_string_free() to free if no longer used.
+/// @return A task identifier if succeeded, otherwise NULL. Must call qrmi_free_string() to free if no longer used.
 /// @version 0.1.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_task_start(
@@ -828,7 +797,7 @@ pub unsafe extern "C" fn qrmi_ibmda_task_status(
 ///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
 /// @param (task_id) [in] A task identifier
-/// @return Task result if succeeded, otherwise NULL. Must call qrmi_string_free() to free if no longer used.
+/// @return Task result if succeeded, otherwise NULL. Must call qrmi_free_string() to free if no longer used.
 /// @version 0.1.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmda_task_result(
@@ -862,45 +831,23 @@ pub unsafe extern "C" fn qrmi_ibmda_task_result(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
-/// * The memory pointed to by `id` must contain a valid nul terminator at the
-///   end of the string.
-///
-/// * `id` must be [valid] for reads of bytes up to and including the nul terminator.
-///   This means in particular:
-///
-///     * The entire memory range of this `CStr` must be contained within a single allocated object!
-///     * `id` must be non-null even for a zero-length cstr.
-///
-/// * The memory referenced by the returned `CStr` must not be mutated for
-///   the duration of lifetime `'a`.
-///
-/// * The nul terminator must be within `isize::MAX` from `id`
-///
 /// @param (qrmi) [in] A IBMDirectAccess QRMI handle
-/// @param (id) [in] A quantum resource identifier
-/// @return A serialized target data if succeeded, otherwise NULL. Must call qrmi_string_free() to free if no longer used.
+/// @return A serialized target data if succeeded, otherwise NULL. Must call qrmi_free_string() to free if no longer used.
 /// @version 0.1.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmda_target(
-    qrmi: *mut IBMDirectAccess,
-    id: *const c_char,
-) -> *const c_char {
+pub unsafe extern "C" fn qrmi_ibmda_target(qrmi: *mut IBMDirectAccess) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
     }
 
-    ffi_helpers::null_pointer_check!(id, std::ptr::null());
-
-    if let Ok(id_str) = CStr::from_ptr(id).to_str() {
-        match (*qrmi).target(id_str) {
-            Ok(v) => {
-                if let Ok(target_cstr) = CString::new(v.value) {
-                    return target_cstr.into_raw();
-                }
+    match (*qrmi).target() {
+        Ok(v) => {
+            if let Ok(target_cstr) = CString::new(v.value) {
+                return target_cstr.into_raw();
             }
-            Err(err) => {
-                eprintln!("{:?}", err);
-            }
+        }
+        Err(err) => {
+            eprintln!("{:?}", err);
         }
     }
     std::ptr::null()

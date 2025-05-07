@@ -22,21 +22,22 @@ from dotenv import load_dotenv
 from qrmi import IBMQiskitRuntimeService, Payload, TaskStatus
 
 parser = argparse.ArgumentParser(description="An example of IBM Direct Access QRMI")
+parser.add_argument("backend", help="backend name")
 parser.add_argument("input", help="primitive input file")
 parser.add_argument("program_id", help="'estimator' or 'sampler'")
 args = parser.parse_args()
 
 load_dotenv()
 
-qrmi = IBMQiskitRuntimeService()
+qrmi = IBMQiskitRuntimeService(args.backend)
 print(qrmi)
 
-print(qrmi.is_accessible(os.environ["QRMI_RESOURCE_ID"]))
+print(qrmi.is_accessible())
 
-lock = qrmi.acquire(os.environ["QRMI_RESOURCE_ID"])
+lock = qrmi.acquire()
 print(f"lock {lock}")
 
-target_json = json.loads(qrmi.target(os.environ["QRMI_RESOURCE_ID"]).value)
+target_json = json.loads(qrmi.target().value)
 print(json.dumps(target_json, indent=2))
 print(qrmi.metadata())
 

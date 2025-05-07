@@ -47,7 +47,6 @@ impl IBMQiskitRuntimeService {
     /// Constructs a QRS service instance.
     ///
     /// Environment variables used:
-    /// * QRMI_RESOURCE_ID - IBM Quantum backend name
     /// * QRMI_IBM_QRS_ENDPOINT - QRS endpoint URL
     /// * QRMI_IBM_QRS_IAM_ENDPOINT - IAM endpoint URL
     /// * QRMI_IBM_QRS_IAM_APIKEY - IAM API key for QRS
@@ -57,27 +56,30 @@ impl IBMQiskitRuntimeService {
     /// * QRMI_IBM_QRS_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
     /// * QRMI_IBM_QRS_SESSION_ID - (optional) pre‐set session ID
     #[new]
-    pub fn new() -> Self {
-        let backend_name =
-            env::var("QRMI_RESOURCE_ID").expect("QRMI_RESOURCE_ID environment variable is not set");
-        let qrs_endpoint = env::var("QRMI_IBM_QRS_ENDPOINT")
-            .expect("QRMI_IBM_QRS_ENDPOINT environment variable is not set");
-        let iam_endpoint = env::var("QRMI_IBM_QRS_IAM_ENDPOINT")
-            .expect("QRMI_IBM_QRS_IAM_ENDPOINT environment variable is not set");
-        let api_key = env::var("QRMI_IBM_QRS_IAM_APIKEY")
-            .expect("QRMI_IBM_QRS_IAM_APIKEY environment variable is not set");
-        let service_crn = env::var("QRMI_IBM_QRS_SERVICE_CRN")
-            .expect("QRMI_IBM_QRS_SERVICE_CRN environment variable is not set");
-        let session_mode =
-            env::var("QRMI_IBM_QRS_SESSION_MODE").unwrap_or_else(|_| "dedicated".to_string());
-        let session_max_ttl: u64 = env::var("QRMI_IBM_QRS_SESSION_MAX_TTL")
+    pub fn new(backend_name: &str) -> Self {
+        let qrs_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT")).expect(
+            &format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT environment variable is not set"),
+        );
+        let iam_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT")).expect(
+            &format!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT environment variable is not set"),
+        );
+        let api_key = env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY")).expect(&format!(
+            "{backend_name}_QRMI_IBM_QRS_IAM_APIKEY environment variable is not set"
+        ));
+        let service_crn = env::var(format!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN")).expect(
+            &format!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN environment variable is not set"),
+        );
+        let session_mode = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MODE"))
+            .unwrap_or_else(|_| "dedicated".to_string());
+        let session_max_ttl: u64 = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MAX_TTL"))
             .ok()
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(28800);
-        let timeout_secs: Option<u64> = env::var("QRMI_IBM_QRS_TIMEOUT_SECONDS")
-            .ok()
-            .and_then(|s| s.parse::<u64>().ok());
-        let session_id = env::var("QRMI_IBM_QRS_SESSION_ID").ok();
+        let timeout_secs: Option<u64> =
+            env::var(format!("{backend_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS"))
+                .ok()
+                .and_then(|s| s.parse::<u64>().ok());
+        let session_id = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_ID")).ok();
         let runtime = tokio::runtime::Runtime::new().unwrap();
         // Get bearer token info
         let (bearer_token, token_expiration, token_lifetime) = runtime
@@ -91,7 +93,7 @@ impl IBMQiskitRuntimeService {
 
         Self {
             config,
-            backend_name,
+            backend_name: backend_name.to_string(),
             session_id,
             timeout_secs,
             session_mode,
@@ -104,21 +106,21 @@ impl IBMQiskitRuntimeService {
     }
 
     #[pyo3(name = "is_accessible")]
-    fn pyfunc_is_accessible(&mut self, id: &str) -> PyResult<bool> {
-        Ok(self.is_accessible(id))
+    fn pyfunc_is_accessible(&mut self) -> PyResult<bool> {
+        Ok(self.is_accessible())
     }
 
     #[pyo3(name = "acquire")]
-    fn pyfunc_acquire(&mut self, id: &str) -> PyResult<String> {
-        match self.acquire(id) {
+    fn pyfunc_acquire(&mut self) -> PyResult<String> {
+        match self.acquire() {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     #[pyo3(name = "release")]
-    fn pyfunc_release(&mut self, id: &str) -> PyResult<()> {
-        match self.release(id) {
+    fn pyfunc_release(&mut self, acquisition_token: &str) -> PyResult<()> {
+        match self.release(acquisition_token) {
             Ok(()) => Ok(()),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
@@ -157,8 +159,8 @@ impl IBMQiskitRuntimeService {
     }
 
     #[pyo3(name = "target")]
-    fn pyfunc_target(&mut self, id: &str) -> PyResult<Target> {
-        match self.target(id) {
+    fn pyfunc_target(&mut self) -> PyResult<Target> {
+        match self.target() {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
@@ -177,14 +179,14 @@ impl IBMQiskitRuntimeService {
 
 impl Default for IBMQiskitRuntimeService {
     fn default() -> Self {
-        Self::new()
+        Self::new("")
     }
 }
 
 impl IBMQiskitRuntimeService {
     /// Asynchronously checks if a backend is accessible.
     #[tokio::main]
-    async fn _is_accessible(&mut self, id: &str) -> bool {
+    async fn _is_accessible(&mut self) -> bool {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -197,7 +199,7 @@ impl IBMQiskitRuntimeService {
         {
             println!("Token renewal failed: {:?}", e);
         }
-        match backends_api::get_backend_status(&self.config, id, None).await {
+        match backends_api::get_backend_status(&self.config, &self.backend_name, None).await {
             Ok(status_response) => {
                 // Print the status, using "unknown" if no status is available
                 let status_str = status_response
@@ -221,7 +223,7 @@ impl IBMQiskitRuntimeService {
     /// (including the API key, IAM token, and service CRN) from the configuration.
 
     #[tokio::main]
-    async fn _acquire(&mut self, _id: &str) -> Result<String> {
+    async fn _acquire(&mut self) -> Result<String> {
         if let Err(e) = auth::check_token(
             &self.api_key,
             &self.iam_endpoint,
@@ -273,7 +275,7 @@ impl IBMQiskitRuntimeService {
     /// This sends a DELETE request to /sessions/{session_id}/close via the qiskit_runtime_api client.
 
     #[tokio::main]
-    async fn _release(&mut self, _id: &str) -> Result<()> {
+    async fn _release(&mut self, acquisition_token: &str) -> Result<()> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -286,10 +288,8 @@ impl IBMQiskitRuntimeService {
         {
             println!("Token renewal failed: {:?}", e);
         }
-        if let Some(ref session_id) = self.session_id {
-            sessions_api::delete_session_close(&self.config, session_id, None).await?;
-            self.session_id = None;
-        }
+        sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
+        self.session_id = None;
         Ok(())
     }
 
@@ -430,7 +430,7 @@ impl IBMQiskitRuntimeService {
     /// This function combines the results of GET /backends/{id}/configuration and
     /// GET /backends/{id}/properties into a single JSON object.
     #[tokio::main]
-    async fn _target(&mut self, id: &str) -> Result<Target> {
+    async fn _target(&mut self) -> Result<Target> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -444,12 +444,15 @@ impl IBMQiskitRuntimeService {
             println!("Token renewal failed: {:?}", e);
         }
         let mut resp = json!({});
-        if let Ok(cfg) = backends_api::get_backend_configuration(&self.config, id, None).await {
+        if let Ok(cfg) =
+            backends_api::get_backend_configuration(&self.config, &self.backend_name, None).await
+        {
             resp["configuration"] = serde_json::to_value(cfg)?;
         } else {
             resp["configuration"] = json!(null);
         }
-        if let Ok(props) = backends_api::get_backend_properties(&self.config, id, None, None).await
+        if let Ok(props) =
+            backends_api::get_backend_properties(&self.config, &self.backend_name, None, None).await
         {
             resp["properties"] = serde_json::to_value(props)?;
         } else {
@@ -463,12 +466,12 @@ impl IBMQiskitRuntimeService {
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
 impl QuantumResource for IBMQiskitRuntimeService {
-    fn is_accessible(&mut self, id: &str) -> bool {
-        self._is_accessible(id)
+    fn is_accessible(&mut self) -> bool {
+        self._is_accessible()
     }
 
-    fn acquire(&mut self, id: &str) -> Result<String> {
-        self._acquire(id)
+    fn acquire(&mut self) -> Result<String> {
+        self._acquire()
     }
 
     fn release(&mut self, id: &str) -> Result<()> {
@@ -491,8 +494,8 @@ impl QuantumResource for IBMQiskitRuntimeService {
         self._task_result(task_id)
     }
 
-    fn target(&mut self, id: &str) -> Result<Target> {
-        self._target(id)
+    fn target(&mut self) -> Result<Target> {
+        self._target()
     }
 
     fn metadata(&mut self) -> HashMap<String, String> {
@@ -508,28 +511,30 @@ impl QuantumResource for IBMQiskitRuntimeService {
 // ==================== C API Bindings ====================
 
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_new() -> *mut IBMQiskitRuntimeService {
-    let service = Box::new(IBMQiskitRuntimeService::new());
-    Box::into_raw(service)
+pub unsafe extern "C" fn qrmi_ibmqrs_new(
+    resource_id: *const c_char,
+) -> *mut IBMQiskitRuntimeService {
+    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
+
+    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+        let service = Box::new(IBMQiskitRuntimeService::new(id_str));
+        return Box::into_raw(service);
+    }
+    std::ptr::null_mut()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmqrs_is_accessible(
     qrmi: *mut IBMQiskitRuntimeService,
-    id: *const c_char,
     outp: *mut bool,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
     }
-    ffi_helpers::null_pointer_check!(id, QRMI_ERROR);
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
-    if let Ok(id_str) = CStr::from_ptr(id).to_str() {
-        *outp = (*qrmi).is_accessible(id_str);
-        return QRMI_SUCCESS;
-    }
-    QRMI_ERROR
+    *outp = (*qrmi).is_accessible();
+    QRMI_SUCCESS
 }
 
 #[no_mangle]
@@ -542,25 +547,19 @@ pub unsafe extern "C" fn qrmi_ibmqrs_free(ptr: *mut IBMQiskitRuntimeService) -> 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_acquire(
-    qrmi: *mut IBMQiskitRuntimeService,
-    id: *const c_char,
-) -> *const c_char {
+pub unsafe extern "C" fn qrmi_ibmqrs_acquire(qrmi: *mut IBMQiskitRuntimeService) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
     }
-    ffi_helpers::null_pointer_check!(id, std::ptr::null());
 
-    if let Ok(id_str) = CStr::from_ptr(id).to_str() {
-        match (*qrmi).acquire(id_str) {
-            Ok(token) => {
-                if let Ok(token_cstr) = CString::new(token) {
-                    return token_cstr.into_raw();
-                }
+    match (*qrmi).acquire() {
+        Ok(token) => {
+            if let Ok(token_cstr) = CString::new(token) {
+                return token_cstr.into_raw();
             }
-            Err(err) => {
-                eprintln!("{:?}", err);
-            }
+        }
+        Err(err) => {
+            eprintln!("{:?}", err);
         }
     }
     std::ptr::null()
@@ -569,14 +568,14 @@ pub unsafe extern "C" fn qrmi_ibmqrs_acquire(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_ibmqrs_release(
     qrmi: *mut IBMQiskitRuntimeService,
-    id: *const c_char,
+    acquisition_token: *const c_char,
 ) -> c_int {
     if qrmi.is_null() {
         return QRMI_ERROR;
     }
-    ffi_helpers::null_pointer_check!(id, QRMI_ERROR);
+    ffi_helpers::null_pointer_check!(acquisition_token, QRMI_ERROR);
 
-    if let Ok(id_str) = CStr::from_ptr(id).to_str() {
+    if let Ok(id_str) = CStr::from_ptr(acquisition_token).to_str() {
         match (*qrmi).release(id_str) {
             Ok(()) => return QRMI_SUCCESS,
             Err(err) => eprintln!("{:?}", err),
@@ -687,24 +686,18 @@ pub unsafe extern "C" fn qrmi_ibmqrs_task_result(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_target(
-    qrmi: *mut IBMQiskitRuntimeService,
-    id: *const c_char,
-) -> *const c_char {
+pub unsafe extern "C" fn qrmi_ibmqrs_target(qrmi: *mut IBMQiskitRuntimeService) -> *const c_char {
     if qrmi.is_null() {
         return std::ptr::null();
     }
-    ffi_helpers::null_pointer_check!(id, std::ptr::null());
 
-    if let Ok(id_str) = CStr::from_ptr(id).to_str() {
-        match (*qrmi).target(id_str) {
-            Ok(target) => {
-                if let Ok(target_cstr) = CString::new(target.value) {
-                    return target_cstr.into_raw();
-                }
+    match (*qrmi).target() {
+        Ok(target) => {
+            if let Ok(target_cstr) = CString::new(target.value) {
+                return target_cstr.into_raw();
             }
-            Err(err) => eprintln!("{:?}", err),
         }
+        Err(err) => eprintln!("{:?}", err),
     }
     std::ptr::null()
 }

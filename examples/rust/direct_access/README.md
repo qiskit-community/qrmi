@@ -11,7 +11,6 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| QRMI_RESOURCE_ID | Quantum backend name(e.g. `ibm_torino`) |
 | QRMI_IBM_DA_ENDPOINT | Direct Access endpoint URL |
 | QRMI_IBM_DA_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | QRMI_IBM_DA_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -40,9 +39,10 @@ $ cargo build --release
 $ ../target/release/qrmi-example-direct-access --help
 QRMI for IBM Direct Access - Example
 
-Usage: qrmi-example-direct-access --input <INPUT> --program-id <PROGRAM_ID>
+Usage: qrmi-example-direct-access --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
 
 Options:
+  -b, --backend <BACKEND>        backend name
   -i, --input <INPUT>            primitive input file
   -p, --program-id <PROGRAM_ID>  program id
   -h, --help                     Print help
@@ -50,5 +50,5 @@ Options:
 ```
 For example,
 ```shell-session
-$ ../target/release/qrmi-example-direct-access -i sampler_input.json -p sampler
+$ ../target/release/qrmi-example-direct-access -b your_backend -i sampler_input.json -p sampler
 ```
