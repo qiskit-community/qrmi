@@ -19,7 +19,7 @@ import time
 import json
 import argparse
 from dotenv import load_dotenv
-from qrmi import IBMDirectAccess, Payload, TaskStatus
+from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
 parser = argparse.ArgumentParser(description="An example of IBM Direct Access QRMI")
 parser.add_argument("backend", help="backend name")
@@ -29,7 +29,7 @@ args = parser.parse_args()
 
 load_dotenv()
 
-qrmi = IBMDirectAccess(args.backend)
+qrmi = QuantumResource(args.backend, ResourceType.IBMDirectAccess)
 print(qrmi)
 
 print(qrmi.is_accessible())

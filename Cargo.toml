@@ -1,6 +1,6 @@
 [package]
 name = "qrmi"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [lib]
@@ -8,6 +8,7 @@ crate-type = ["staticlib", "rlib", "cdylib"]
 
 [features]
 default = []
+pyo3 = []
 
 [dependencies]
 retry-policies = "0.4.0"

@@ -10,13 +10,13 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+#[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
 /// A Target that contains the constraints(supported instructions, properties etc.) of a particular quantum device
 #[derive(Debug, Clone, PartialEq)]
-#[pyclass]
+#[cfg_attr(feature="pyo3", pyclass(get_all))]
 pub struct Target {
     /// Serialized data
-    #[pyo3(get)]
     pub value: String,
 }

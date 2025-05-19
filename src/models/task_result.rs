@@ -10,13 +10,13 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+#[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
 /// Task result
 #[derive(Debug, Clone, PartialEq)]
-#[pyclass(eq)]
+#[cfg_attr(feature="pyo3", pyclass(eq, get_all))]
 pub struct TaskResult {
     /// Serialized data of result
-    #[pyo3(get)]
     pub value: String,
 }

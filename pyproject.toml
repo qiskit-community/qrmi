@@ -12,4 +12,4 @@ classifiers = [
 ]
 dynamic = ["version"]
 [tool.maturin]
-features = ["pyo3/extension-module"]
+features = ["pyo3/extension-module", "pyo3/abi3", "qrmi/pyo3"]

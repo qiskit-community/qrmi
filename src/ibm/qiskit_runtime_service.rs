@@ -22,13 +22,10 @@ use std::env;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 
-// python binding
-use pyo3::prelude::*;
 // c binding
 use crate::consts::{QRMI_ERROR, QRMI_SUCCESS};
 
 /// QRMI implementation for IBM Qiskit Runtime Service.
-#[pyclass]
 pub struct IBMQiskitRuntimeService {
     pub(crate) config: configuration::Configuration,
     pub(crate) backend_name: String,
@@ -42,7 +39,6 @@ pub struct IBMQiskitRuntimeService {
     pub(crate) token_lifetime: u64,
 }
 
-#[pymethods]
 impl IBMQiskitRuntimeService {
     /// Constructs a QRS service instance.
     ///
@@ -55,7 +51,6 @@ impl IBMQiskitRuntimeService {
     /// * QRMI_IBM_QRS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
     /// * QRMI_IBM_QRS_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
     /// * QRMI_IBM_QRS_SESSION_ID - (optional) pre‐set session ID
-    #[new]
     pub fn new(backend_name: &str) -> Self {
         let qrs_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT")).expect(
             &format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT environment variable is not set"),
@@ -103,77 +98,6 @@ impl IBMQiskitRuntimeService {
             token_expiration,
             token_lifetime,
         }
-    }
-
-    #[pyo3(name = "is_accessible")]
-    fn pyfunc_is_accessible(&mut self) -> PyResult<bool> {
-        Ok(self.is_accessible())
-    }
-
-    #[pyo3(name = "acquire")]
-    fn pyfunc_acquire(&mut self) -> PyResult<String> {
-        match self.acquire() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "release")]
-    fn pyfunc_release(&mut self, acquisition_token: &str) -> PyResult<()> {
-        match self.release(acquisition_token) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "task_start")]
-    fn pyfunc_task_start(&mut self, payload: Payload) -> PyResult<String> {
-        match self.task_start(payload) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "task_stop")]
-    fn pyfunc_task_stop(&mut self, task_id: &str) -> PyResult<()> {
-        match self.task_stop(task_id) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "task_status")]
-    fn pyfunc_task_status(&mut self, task_id: &str) -> PyResult<TaskStatus> {
-        match self.task_status(task_id) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "task_result")]
-    fn pyfunc_task_result(&mut self, task_id: &str) -> PyResult<TaskResult> {
-        match self.task_result(task_id) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "target")]
-    fn pyfunc_target(&mut self) -> PyResult<Target> {
-        match self.target() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
-    }
-
-    #[pyo3(name = "metadata")]
-    fn pyfunc_metadata(&mut self) -> PyResult<HashMap<String, String>> {
-        let mut metadata = HashMap::new();
-        metadata.insert("backend_name".to_string(), self.backend_name.clone());
-        if let Some(ref session) = self.session_id {
-            metadata.insert("session_id".to_string(), session.clone());
-        }
-        Ok(metadata)
     }
 }
 

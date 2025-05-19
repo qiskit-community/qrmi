@@ -28,9 +28,6 @@ use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
-// python binding
-use pyo3::prelude::*;
-
 // c binding
 use crate::consts::{QRMI_ERROR, QRMI_SUCCESS};
 use std::ffi::CStr;
@@ -38,7 +35,6 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 
 /// QRMI implementation for IBM Qiskit Runtime Direct Access
-#[pyclass]
 pub struct IBMDirectAccess {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
@@ -46,7 +42,6 @@ pub struct IBMDirectAccess {
 
 const DEFAULT_ENDPOINT: &str = "http://localhost:8080";
 
-#[pymethods]
 impl IBMDirectAccess {
     /// Constructs a QRMI to access IBM Qiskit Runtime Direct Access Service
     ///
@@ -62,7 +57,6 @@ impl IBMDirectAccess {
     /// * `QRMI_IBM_DA_IAM_APIKEY`: IBM Cloud API Key
     /// * `QRMI_IBM_DA_SERVICE_CRN`: Provisioned Direct Access Service instance
     /// * `QRMI_JOB_TIMEOUT_SECONDS`: Time (in seconds) after which job should time out and get cancelled.
-    #[new]
     pub fn new(resource_id: &str) -> Self {
         // Check to see if the environment variables required to run this program are set.
         let daapi_endpoint = env::var(format!("{resource_id}_QRMI_IBM_DA_ENDPOINT"))
@@ -123,81 +117,6 @@ impl IBMDirectAccess {
             api_client: builder.build().unwrap(),
             backend_name: resource_id.to_string(),
         }
-    }
-
-    /// Python binding of QRMI is_accessible() function.
-    #[pyo3(name = "is_accessible")]
-    fn pyfunc_is_accessible(&mut self) -> PyResult<bool> {
-        Ok(self.is_accessible())
-    }
-
-    /// Python binding of QRMI acquire() function.
-    #[pyo3(name = "acquire")]
-    fn pyfunc_acquire(&mut self) -> PyResult<String> {
-        match self.acquire() {
-            Ok(v) => Ok(v),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI release() function.
-    #[pyo3(name = "release")]
-    fn pyfunc_release(&mut self, id: &str) -> PyResult<()> {
-        match self.release(id) {
-            Ok(()) => Ok(()),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI task_start() function.
-    #[pyo3(name = "task_start")]
-    fn pyfunc_task_start(&mut self, payload: Payload) -> PyResult<String> {
-        match self.task_start(payload) {
-            Ok(v) => Ok(v),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI task_stop() function.
-    #[pyo3(name = "task_stop")]
-    fn pyfunc_task_stop(&mut self, task_id: &str) -> PyResult<()> {
-        match self.task_stop(task_id) {
-            Ok(()) => Ok(()),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI task_status() function.
-    #[pyo3(name = "task_status")]
-    fn pyfunc_task_status(&mut self, task_id: &str) -> PyResult<TaskStatus> {
-        match self.task_status(task_id) {
-            Ok(v) => Ok(v),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI task_result() function.
-    #[pyo3(name = "task_result")]
-    fn pyfunc_task_result(&mut self, task_id: &str) -> PyResult<TaskResult> {
-        match self.task_result(task_id) {
-            Ok(v) => Ok(v),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI target() function.
-    #[pyo3(name = "target")]
-    fn pyfunc_target(&mut self) -> PyResult<Target> {
-        match self.target() {
-            Ok(v) => Ok(v),
-            Err(v) => Err(v.into()),
-        }
-    }
-
-    /// Python binding of QRMI metadata() function.
-    #[pyo3(name = "metadata")]
-    fn pyfunc_metadata(&mut self) -> PyResult<HashMap<String, String>> {
-        Ok(self.metadata())
     }
 }
 

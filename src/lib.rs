@@ -14,11 +14,11 @@ pub mod common;
 pub mod consts;
 pub mod ibm;
 pub mod models;
+#[cfg(feature = "pyo3")]
+pub mod pyext;
 
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use anyhow::Result;
-
-use pyo3::prelude::*;
 
 /// Defines interfaces to quantum resources.
 pub trait QuantumResource {
@@ -196,15 +196,4 @@ pub trait QuantumResource {
     /// }
     /// ```
     fn metadata(&mut self) -> std::collections::HashMap<String, String>;
-}
-
-/// A Python module implemented in Rust.
-#[pymodule]
-fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<crate::ibm::IBMDirectAccess>()?;
-    m.add_class::<crate::ibm::IBMQiskitRuntimeService>()?;
-    m.add_class::<crate::models::TaskStatus>()?;
-    m.add_class::<crate::models::Payload>()?;
-    m.add_class::<crate::models::TaskResult>()?;
-    Ok(())
 }

@@ -19,9 +19,9 @@ import time
 import json
 import argparse
 from dotenv import load_dotenv
-from qrmi import IBMQiskitRuntimeService, Payload, TaskStatus
+from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
-parser = argparse.ArgumentParser(description="An example of IBM Direct Access QRMI")
+parser = argparse.ArgumentParser(description="An example of IBM Qiskit Runtime Service QRMI")
 parser.add_argument("backend", help="backend name")
 parser.add_argument("input", help="primitive input file")
 parser.add_argument("program_id", help="'estimator' or 'sampler'")
@@ -29,7 +29,7 @@ args = parser.parse_args()
 
 load_dotenv()
 
-qrmi = IBMQiskitRuntimeService(args.backend)
+qrmi = QuantumResource(args.backend, ResourceType.IBMQiskitRuntimeService)
 print(qrmi)
 
 print(qrmi.is_accessible())

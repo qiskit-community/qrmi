@@ -9,11 +9,13 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
+
+#[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
 /// Task statuses.
 #[repr(C)]
-#[pyclass(eq, eq_int, hash, frozen)]
+#[cfg_attr(feature="pyo3", pyclass(eq, eq_int, hash, frozen))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TaskStatus {
     /// Task is queued
