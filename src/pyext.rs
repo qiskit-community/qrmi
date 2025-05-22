@@ -34,18 +34,17 @@ impl PyQuantumResource {
     #[new]
     pub fn new(resource_id: &str, resource_type: ResourceType) -> Self {
 
-        let qrmi: Box<dyn QuantumResource + Send + Sync>;
-        match resource_type {
+        let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
             ResourceType::IBMDirectAccess => {
-                qrmi = Box::new(IBMDirectAccess::new(resource_id));
+                Box::new(IBMDirectAccess::new(resource_id))
             }
             ResourceType::IBMQiskitRuntimeService => {
-                qrmi = Box::new(IBMQiskitRuntimeService::new(resource_id));
+                Box::new(IBMQiskitRuntimeService::new(resource_id))
             }
             ResourceType::PasqalCloud => {
-                qrmi = Box::new(PasqalCloud::new(resource_id));
+                Box::new(PasqalCloud::new(resource_id))
             }
-        }
+        };
 
         Self {
             qrmi,
