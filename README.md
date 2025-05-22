@@ -7,6 +7,7 @@
   * Amazon Linux 2023
   * RedHat Enterprise Linux 8
   * RedHat Enterprise Linux 9
+  * RedHat Enterprise Linux 10
   * Rocky Linux 8
   * Rocky Linux 9
   * SuSE 15
@@ -33,6 +34,8 @@ cargo build --release
 
 ### Setup Python virtual environment
 ```shell-session
+. ~/.cargo/env
+cargo clean
 python3.11 -m venv ~/py311_qrmi_venv
 source ~/py311_qrmi_venv/bin/activate
 pip install --upgrade pip
@@ -68,6 +71,7 @@ Required-by:
 
 * [Examples in Rust](./examples/rust)
 * [Examples in Python](./examples/python)
+* [Examples in C](./examples/c)
 
 ## How to generate Rust API document
 
