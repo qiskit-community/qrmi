@@ -10,15 +10,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
+//! QRMI implementations for Pasqal Cloud Services
 
-/// Task Payload
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature="pyo3", pyclass)]
-pub enum Payload {
-    /// Payload that contains Qiskit Primitive input.
-    QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
-    PasqalCloud { sequence: String, job_runs: i32 },
-}
+mod cloud;
+
+pub use self::cloud::PasqalCloud;

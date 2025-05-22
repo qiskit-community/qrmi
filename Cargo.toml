@@ -22,6 +22,7 @@ uuid = "1.16.0"
 log = "0.4.26"
 direct-access-api = { path = "dependencies/direct_access_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
+pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.24.0", features = ["anyhow"] }
 ffi_helpers = "0.3.0"
@@ -33,6 +34,7 @@ cbindgen = "0.26"
 members = [
     "dependencies/direct_access_client",
     "dependencies/qiskit_runtime_client",
+    "dependencies/pasqal_cloud_client",
 ]
 resolver = "2"
 
@@ -44,3 +46,4 @@ rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.
 
 [workspace.dependencies]
 direct-access-api = { path = "dependencies/direct_access_client" }
+pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }

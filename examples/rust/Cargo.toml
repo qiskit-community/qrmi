@@ -2,6 +2,7 @@
 members = [
     "direct_access",
     "qiskit_runtime_service",
+    "pasqal_cloud",
 ]
 resolver = "2"
 

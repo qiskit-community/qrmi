@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2024
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,15 +9,14 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
+//! # pasqal_cloud_client
+//!
+//! This is a Rust client to interact with Pasqal Cloud Services using the API.
+//!
 
-/// Task Payload
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature="pyo3", pyclass)]
-pub enum Payload {
-    /// Payload that contains Qiskit Primitive input.
-    QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
-    PasqalCloud { sequence: String, job_runs: i32 },
-}
+mod client;
+mod models;
+
+pub use client::{Client, ClientBuilder};
+pub use models::BatchStatus;
+pub use models::DeviceType;

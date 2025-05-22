@@ -1,0 +1,14 @@
+[package]
+name = "qrmi-example-pasqal-cloud"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/qiskit-community/spank-plugins"
+rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
+
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+dotenv = "0.15.0"
+env_logger = "0.11.7"
+qrmi = { workspace = true }

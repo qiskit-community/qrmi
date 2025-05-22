@@ -11,6 +11,7 @@
 // that they have been altered from the originals.
 
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use crate::pasqal::PasqalCloud;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use pyo3::prelude::*;
@@ -20,7 +21,7 @@ use pyo3::prelude::*;
 pub enum ResourceType {
     IBMDirectAccess,
     IBMQiskitRuntimeService,
-    //PasqalCloud,
+    PasqalCloud,
 }
 
 #[pyclass]
@@ -41,9 +42,9 @@ impl PyQuantumResource {
             ResourceType::IBMQiskitRuntimeService => {
                 qrmi = Box::new(IBMQiskitRuntimeService::new(resource_id));
             }
-            //ResourceType::PasqalCloud => {
-            //    qrmi = Box::new(PasqalCloud::new(resource_id));
-            //}
+            ResourceType::PasqalCloud => {
+                qrmi = Box::new(PasqalCloud::new(resource_id));
+            }
         }
 
         Self {

@@ -16,6 +16,7 @@ pub mod ibm;
 pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
+pub mod pasqal;
 
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use anyhow::Result;
@@ -197,3 +198,4 @@ pub trait QuantumResource {
     /// ```
     fn metadata(&mut self) -> std::collections::HashMap<String, String>;
 }
+
