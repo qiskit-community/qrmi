@@ -15,6 +15,8 @@ This Rust API client provides all functionalities provided by Direct Access API,
 * Linux
   * AlmaLinux 9
   * Amazon Linux 2023
+  * CentOS Stream 9
+  * CentOS Stream 10
   * RedHat Enterprise Linux 8
   * RedHat Enterprise Linux 9
   * RedHat Enterprise Linux 10
