@@ -34,6 +34,8 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 
+use async_trait::async_trait;
+
 /// QRMI implementation for IBM Qiskit Runtime Direct Access
 pub struct IBMDirectAccess {
     pub(crate) api_client: Client,
@@ -125,11 +127,9 @@ impl Default for IBMDirectAccess {
         Self::new("")
     }
 }
-/// QuantumResource Trait implementation for IBM Direct Access
-impl IBMDirectAccess {
-    /// Wrapper of async call for QRMI is_accessible() function.
-    #[tokio::main]
-    async fn _is_accessible(&mut self) -> bool {
+#[async_trait]
+impl QuantumResource for IBMDirectAccess {
+    async fn is_accessible(&mut self) -> bool {
         match self
             .api_client
             .get_backend::<Backend>(&self.backend_name)
@@ -139,17 +139,25 @@ impl IBMDirectAccess {
                 if matches!(val.status, BackendStatus::Online) {
                     return true;
                 }
-                return false;
+                false
             }
             Err(_err) => {
-                return false;
+                false
             }
-        };
+        }
     }
 
-    /// Wrapper of async call for QRMI task_start() function.
-    #[tokio::main]
-    async fn _task_start(&mut self, payload: Payload) -> Result<String> {
+    async fn acquire(&mut self) -> Result<String> {
+        // Direct Access does not support session concept, so simply returns dummy ID for now.
+        Ok(Uuid::new_v4().to_string())
+    }
+
+    async fn release(&mut self, _id: &str) -> Result<()> {
+        // Direct Access does not support session concept, so simply ignores
+        Ok(())
+    }
+
+    async fn task_start(&mut self, payload: Payload) -> Result<String> {
         let timeout = match env::var(format!("{0}_QRMI_JOB_TIMEOUT_SECONDS", self.backend_name)) {
             Ok(val) => val,
             Err(err) => {
@@ -194,9 +202,7 @@ impl IBMDirectAccess {
         }
     }
 
-    /// Wrapper of async call for QRMI task_stop() function.
-    #[tokio::main]
-    async fn _task_stop(&mut self, task_id: &str) -> Result<()> {
+    async fn task_stop(&mut self, task_id: &str) -> Result<()> {
         let status = self.api_client.get_job_status(task_id).await?;
         if matches!(status, JobStatus::Running) {
             let _ = self.api_client.cancel_job(task_id, false).await;
@@ -205,9 +211,7 @@ impl IBMDirectAccess {
         Ok(())
     }
 
-    /// Wrapper of async call for QRMI task_status() function.
-    #[tokio::main]
-    async fn _task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
+    async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         let status = self.api_client.get_job_status(task_id).await?;
         match status {
             JobStatus::Running => Ok(TaskStatus::Running),
@@ -217,9 +221,7 @@ impl IBMDirectAccess {
         }
     }
 
-    /// Wrapper of async call for QRMI task_result() function.
-    #[tokio::main]
-    async fn _task_result(&mut self, task_id: &str) -> Result<TaskResult> {
+    async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         let s3_bucket = match env::var(format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name)) {
             Ok(val) => val,
             Err(err) => {
@@ -307,9 +309,7 @@ impl IBMDirectAccess {
         })
     }
 
-    /// Wrapper of async call for QRMI target() function.
-    #[tokio::main]
-    async fn _target(&mut self) -> Result<Target> {
+    async fn target(&mut self) -> Result<Target> {
         let mut resp = json!({});
         if let Ok(config) = self
             .api_client
@@ -335,44 +335,8 @@ impl IBMDirectAccess {
             value: resp.to_string(),
         })
     }
-}
 
-impl QuantumResource for IBMDirectAccess {
-    fn is_accessible(&mut self) -> bool {
-        self._is_accessible()
-    }
-
-    fn acquire(&mut self) -> Result<String> {
-        // Direct Access does not support session concept, so simply returns dummy ID for now.
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    fn release(&mut self, _id: &str) -> Result<()> {
-        // Direct Access does not support session concept, so simply ignores
-        Ok(())
-    }
-
-    fn task_start(&mut self, payload: Payload) -> Result<String> {
-        self._task_start(payload)
-    }
-
-    fn task_stop(&mut self, task_id: &str) -> Result<()> {
-        self._task_stop(task_id)
-    }
-
-    fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        self._task_status(task_id)
-    }
-
-    fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        self._task_result(task_id)
-    }
-
-    fn target(&mut self) -> Result<Target> {
-        self._target()
-    }
-
-    fn metadata(&mut self) -> HashMap<String, String> {
+    async fn metadata(&mut self) -> HashMap<String, String> {
         let mut metadata: HashMap<String, String> = HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
@@ -405,7 +369,7 @@ pub unsafe extern "C" fn qrmi_ibmda_new(resource_id: *const c_char) -> *mut IBMD
 /// @brief Returns true if device is accessible, otherwise false.
 ///
 /// # Safety
-///   
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
@@ -424,7 +388,10 @@ pub unsafe extern "C" fn qrmi_ibmda_is_accessible(
     }
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
-    *outp = (*qrmi).is_accessible();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    *outp = rt.block_on(async {
+        (*qrmi).is_accessible().await
+    });
     QRMI_SUCCESS
 }
 
@@ -450,7 +417,7 @@ pub unsafe extern "C" fn qrmi_ibmda_free(ptr: *mut IBMDirectAccess) -> c_int {
 /// @brief Acquires quantum resource.
 ///
 /// # Safety
-///   
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
@@ -464,7 +431,11 @@ pub unsafe extern "C" fn qrmi_ibmda_acquire(qrmi: *mut IBMDirectAccess) -> *cons
         return std::ptr::null();
     }
 
-    match (*qrmi).acquire() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(async {
+        (*qrmi).acquire().await
+    });
+    match result {
         Ok(token) => {
             if let Ok(token_cstr) = CString::new(token) {
                 return token_cstr.into_raw();
@@ -480,12 +451,12 @@ pub unsafe extern "C" fn qrmi_ibmda_acquire(qrmi: *mut IBMDirectAccess) -> *cons
 /// @brief Releases quantum resource.
 ///
 /// # Safety
-///  
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
 /// * The memory pointed to by `acquisition_token` must contain a valid nul terminator at the
 ///   end of the string.
-///    
+///
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
 ///
 /// * `acquisition_token` must be [valid] for reads of bytes up to and including the nul terminator.
@@ -514,7 +485,11 @@ pub unsafe extern "C" fn qrmi_ibmda_release(
     ffi_helpers::null_pointer_check!(acquisition_token, QRMI_ERROR);
 
     if let Ok(token) = CStr::from_ptr(acquisition_token).to_str() {
-        match (*qrmi).release(token) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).release(token).await
+        });
+        match result {
             Ok(()) => {
                 return QRMI_SUCCESS;
             }
@@ -578,7 +553,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_start(
             program_id: program_id_str.to_string(),
         };
 
-        match (*qrmi).task_start(payload) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_start(payload).await
+        });
+        match result {
             Ok(job_id) => {
                 if let Ok(job_id_cstr) = CString::new(job_id) {
                     return job_id_cstr.into_raw();
@@ -629,7 +608,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_stop(
     ffi_helpers::null_pointer_check!(task_id, QRMI_ERROR);
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_stop(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_stop(task_id_str).await
+        });
+        match result {
             Ok(()) => {
                 return QRMI_SUCCESS;
             }
@@ -644,12 +627,12 @@ pub unsafe extern "C" fn qrmi_ibmda_task_stop(
 /// @brief Returns the status of the specified task.
 ///
 /// # Safety
-///  
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_ibmda_new().
 ///
 /// * The memory pointed to by `task_id` must contain a valid nul terminator at the
 ///   end of the string.
-///    
+///
 /// * The memory pointed to by `outp` must have enough room to store `TaskStatus` value.
 ///
 /// * `task_id` must be [valid] for reads of bytes up to and including the nul terminator.
@@ -681,7 +664,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_status(
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_status(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_status(task_id_str).await
+        });
+        match result {
             Ok(v) => {
                 *outp = v;
                 return QRMI_SUCCESS;
@@ -730,7 +717,11 @@ pub unsafe extern "C" fn qrmi_ibmda_task_result(
     ffi_helpers::null_pointer_check!(task_id, std::ptr::null());
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_result(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_result(task_id_str).await
+        });
+        match result {
             Ok(v) => {
                 if let Ok(result_cstr) = CString::new(v.value) {
                     return result_cstr.into_raw();
@@ -759,7 +750,11 @@ pub unsafe extern "C" fn qrmi_ibmda_target(qrmi: *mut IBMDirectAccess) -> *const
         return std::ptr::null();
     }
 
-    match (*qrmi).target() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(async {
+        (*qrmi).target().await
+    });
+    match result {
         Ok(v) => {
             if let Ok(target_cstr) = CString::new(v.value) {
                 return target_cstr.into_raw();

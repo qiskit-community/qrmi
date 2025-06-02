@@ -25,6 +25,8 @@ use std::os::raw::{c_char, c_int};
 // c binding
 use crate::consts::{QRMI_ERROR, QRMI_SUCCESS};
 
+use async_trait::async_trait;
+
 /// QRMI implementation for IBM Qiskit Runtime Service.
 pub struct IBMQiskitRuntimeService {
     pub(crate) config: configuration::Configuration,
@@ -79,15 +81,10 @@ impl IBMQiskitRuntimeService {
                 .ok()
                 .and_then(|s| s.parse::<u64>().ok());
         let session_id = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_ID")).ok();
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        // Get bearer token info
-        let (bearer_token, token_expiration, token_lifetime) = runtime
-            .block_on(auth::fetch_access_token(&api_key, &iam_endpoint))
-            .expect("Failed to fetch access token");
         // Set up the config
         let mut config = configuration::Configuration::new();
         config.base_path = qrs_endpoint;
-        config.bearer_access_token = Some(bearer_token);
+        config.bearer_access_token = None;
         config.crn = Some(service_crn);
 
         Self {
@@ -99,8 +96,8 @@ impl IBMQiskitRuntimeService {
             session_max_ttl,
             api_key,
             iam_endpoint,
-            token_expiration,
-            token_lifetime,
+            token_expiration: 0,
+            token_lifetime: 0,
         }
     }
 }
@@ -111,10 +108,11 @@ impl Default for IBMQiskitRuntimeService {
     }
 }
 
-impl IBMQiskitRuntimeService {
+// Implement the QuantumResource trait using the asynchronous wrappers.
+#[async_trait]
+impl QuantumResource for IBMQiskitRuntimeService {
     /// Asynchronously checks if a backend is accessible.
-    #[tokio::main]
-    async fn _is_accessible(&mut self) -> bool {
+    async fn is_accessible(&mut self) -> bool {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -149,9 +147,7 @@ impl IBMQiskitRuntimeService {
     /// This function wraps the qiskit_runtime_api client call to POST /sessions. The underlying
     /// function (sessions_api::create_session) builds the request with the required headers
     /// (including the API key, IAM token, and service CRN) from the configuration.
-
-    #[tokio::main]
-    async fn _acquire(&mut self) -> Result<String> {
+    async fn acquire(&mut self) -> Result<String> {
         if let Err(e) = auth::check_token(
             &self.api_key,
             &self.iam_endpoint,
@@ -174,7 +170,7 @@ impl IBMQiskitRuntimeService {
             if max_ttl / 100 < active_ttl {
                 return Ok(existing_session_id);
             } else {
-                let _ = self.release(&existing_session_id);
+                let _ = self.release(&existing_session_id).await?;
             }
         }
 
@@ -201,9 +197,7 @@ impl IBMQiskitRuntimeService {
     /// Deletes the current session.
     ///
     /// This sends a DELETE request to /sessions/{session_id}/close via the qiskit_runtime_api client.
-
-    #[tokio::main]
-    async fn _release(&mut self, acquisition_token: &str) -> Result<()> {
+    async fn release(&mut self, acquisition_token: &str) -> Result<()> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -225,8 +219,7 @@ impl IBMQiskitRuntimeService {
     ///
     /// This function sends a POST request to /jobs. The input payload is parsed as JSON,
     /// and the job is created using the qiskit_runtime_api client function jobs_api::create_job.
-    #[tokio::main]
-    async fn _task_start(&mut self, payload: Payload) -> Result<String> {
+    async fn task_start(&mut self, payload: Payload) -> Result<String> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -271,9 +264,7 @@ impl IBMQiskitRuntimeService {
     ///
     /// This function checks the job status via GET /jobs/{id}. If the job is still running,
     /// it sends a cancellation (POST /jobs/{id}/cancel) before deleting the job with DELETE /jobs/{id}.
-
-    #[tokio::main]
-    async fn _task_stop(&mut self, task_id: &str) -> Result<()> {
+    async fn task_stop(&mut self, task_id: &str) -> Result<()> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -301,8 +292,7 @@ impl IBMQiskitRuntimeService {
     ///
     /// This function calls GET /jobs/{id} and maps the returned status string to the
     /// TaskStatus enum.
-    #[tokio::main]
-    async fn _task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
+    async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -330,8 +320,7 @@ impl IBMQiskitRuntimeService {
     /// Retrieves the results of a completed job.
     ///
     /// This function calls GET /jobs/{id}/results and serializes the returned JSON into a string.
-    #[tokio::main]
-    async fn _task_result(&mut self, task_id: &str) -> Result<TaskResult> {
+    async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -357,8 +346,7 @@ impl IBMQiskitRuntimeService {
     ///
     /// This function combines the results of GET /backends/{id}/configuration and
     /// GET /backends/{id}/properties into a single JSON object.
-    #[tokio::main]
-    async fn _target(&mut self) -> Result<Target> {
+    async fn target(&mut self) -> Result<Target> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -390,43 +378,8 @@ impl IBMQiskitRuntimeService {
             value: resp.to_string(),
         })
     }
-}
 
-// Implement the QuantumResource trait using the asynchronous wrappers.
-impl QuantumResource for IBMQiskitRuntimeService {
-    fn is_accessible(&mut self) -> bool {
-        self._is_accessible()
-    }
-
-    fn acquire(&mut self) -> Result<String> {
-        self._acquire()
-    }
-
-    fn release(&mut self, id: &str) -> Result<()> {
-        self._release(id)
-    }
-
-    fn task_start(&mut self, payload: Payload) -> Result<String> {
-        self._task_start(payload)
-    }
-
-    fn task_stop(&mut self, task_id: &str) -> Result<()> {
-        self._task_stop(task_id)
-    }
-
-    fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        self._task_status(task_id)
-    }
-
-    fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        self._task_result(task_id)
-    }
-
-    fn target(&mut self) -> Result<Target> {
-        self._target()
-    }
-
-    fn metadata(&mut self) -> HashMap<String, String> {
+    async fn metadata(&mut self) -> HashMap<String, String> {
         let mut metadata = HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         if let Some(ref session) = self.session_id {
@@ -435,6 +388,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         metadata
     }
 }
+
 
 // ==================== C API Bindings ====================
 
@@ -461,7 +415,10 @@ pub unsafe extern "C" fn qrmi_ibmqrs_is_accessible(
     }
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
-    *outp = (*qrmi).is_accessible();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    *outp = rt.block_on(async {
+        (*qrmi).is_accessible().await
+    });
     QRMI_SUCCESS
 }
 
@@ -480,7 +437,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_acquire(qrmi: *mut IBMQiskitRuntimeService)
         return std::ptr::null();
     }
 
-    match (*qrmi).acquire() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(async {
+        (*qrmi).acquire().await
+    });
+    match result {
         Ok(token) => {
             if let Ok(token_cstr) = CString::new(token) {
                 return token_cstr.into_raw();
@@ -504,7 +465,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_release(
     ffi_helpers::null_pointer_check!(acquisition_token, QRMI_ERROR);
 
     if let Ok(id_str) = CStr::from_ptr(acquisition_token).to_str() {
-        match (*qrmi).release(id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).release(id_str).await
+        });
+        match result {
             Ok(()) => return QRMI_SUCCESS,
             Err(err) => eprintln!("{:?}", err),
         }
@@ -533,7 +498,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_task_start(
             program_id: program_id_str.to_string(),
         };
 
-        match (*qrmi).task_start(payload) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_start(payload).await
+        });
+        match result {
             Ok(job_id) => {
                 if let Ok(job_id_cstr) = CString::new(job_id) {
                     return job_id_cstr.into_raw();
@@ -558,7 +527,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_task_stop(
     ffi_helpers::null_pointer_check!(task_id, QRMI_ERROR);
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_stop(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_stop(task_id_str).await
+        });
+        match result {
             Ok(()) => return QRMI_SUCCESS,
             Err(err) => eprintln!("{:?}", err),
         }
@@ -579,7 +552,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_task_status(
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_status(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_status(task_id_str).await
+        });
+        match result {
             Ok(status) => {
                 *outp = status;
                 return QRMI_SUCCESS;
@@ -601,7 +578,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_task_result(
     ffi_helpers::null_pointer_check!(task_id, std::ptr::null());
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_result(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_result(task_id_str).await
+        });
+        match result {
             Ok(result) => {
                 if let Ok(result_cstr) = CString::new(result.value) {
                     return result_cstr.into_raw();
@@ -619,7 +600,11 @@ pub unsafe extern "C" fn qrmi_ibmqrs_target(qrmi: *mut IBMQiskitRuntimeService) 
         return std::ptr::null();
     }
 
-    match (*qrmi).target() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(async {
+        (*qrmi).target().await
+    });
+    match result {
         Ok(target) => {
             if let Ok(target_cstr) = CString::new(target.value) {
                 return target_cstr.into_raw();

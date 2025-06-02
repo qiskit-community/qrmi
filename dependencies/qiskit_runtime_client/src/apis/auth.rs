@@ -11,6 +11,7 @@
 use reqwest;
 use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::cmp::max;
 
 #[derive(Deserialize)]
 struct TokenResponse {
@@ -74,9 +75,10 @@ pub async fn check_token(
     token_lifetime: &mut u64,
 ) -> Result<(), reqwest::Error> {
     let now = current_unix_timestamp();
-    let remaining = *token_expiration - now;
 
-    if remaining < 360 || remaining < (*token_lifetime / 10) {
+    // Both token_expiration and now is u64, and token_expiration may be smaller than now.
+    // (token_expiration - now) must cause unexpected wrap around behavior.
+    if *token_expiration < now + max(360, *token_lifetime / 10) {
         let (new_token, new_expiration, new_lifetime) =
             fetch_access_token(api_key, iam_endpoint).await?;
         *current_token = Some(new_token);

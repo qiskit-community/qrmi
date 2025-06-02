@@ -1,6 +1,6 @@
 [package]
 name = "qrmi"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 [lib]
@@ -26,6 +26,7 @@ pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.24.0", features = ["anyhow"] }
 ffi_helpers = "0.3.0"
+async-trait = "0.1.88"
 
 [build-dependencies]
 cbindgen = "0.26"

@@ -15,6 +15,7 @@ use crate::pasqal::PasqalCloud;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use pyo3::prelude::*;
+use tokio::runtime::Runtime;
 
 #[pyclass(eq, eq_int, hash, frozen)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -28,6 +29,7 @@ pub enum ResourceType {
 #[pyo3(name = "QuantumResource")]
 pub struct PyQuantumResource {
     qrmi: Box<dyn QuantumResource + Send + Sync>,
+    rt: Runtime,
 }
 #[pymethods]
 impl PyQuantumResource {
@@ -48,64 +50,92 @@ impl PyQuantumResource {
 
         Self {
             qrmi,
+            rt: Runtime::new().unwrap(),
         }
     }
 
     fn is_accessible(&mut self) -> PyResult<bool> {
-        Ok(self.qrmi.is_accessible())
+        let result = self.rt.block_on(async {
+            self.qrmi.is_accessible().await
+        });
+        Ok(result)
     }
 
     fn acquire(&mut self) -> PyResult<String> {
-        match self.qrmi.acquire() {
+        let result = self.rt.block_on(async {
+            self.qrmi.acquire().await
+        });
+        match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn release(&mut self, id: &str) -> PyResult<()> {
-        match self.qrmi.release(id) {
+        let result = self.rt.block_on(async {
+            self.qrmi.release(id).await
+        });
+        match result {
             Ok(()) => Ok(()),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn task_start(&mut self, payload: Payload) -> PyResult<String> {
-        match self.qrmi.task_start(payload) {
+        let result = self.rt.block_on(async {
+            self.qrmi.task_start(payload).await
+        });
+        match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn task_stop(&mut self, task_id: &str) -> PyResult<()> {
-        match self.qrmi.task_stop(task_id) {
+        let result = self.rt.block_on(async {
+            self.qrmi.task_stop(task_id).await
+        });
+        match result {
             Ok(()) => Ok(()),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn task_status(&mut self, task_id: &str) -> PyResult<TaskStatus> {
-        match self.qrmi.task_status(task_id) {
+        let result = self.rt.block_on(async {
+            self.qrmi.task_status(task_id).await
+        });
+        match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn task_result(&mut self, task_id: &str) -> PyResult<TaskResult> {
-        match self.qrmi.task_result(task_id) {
+        let result = self.rt.block_on(async {
+            self.qrmi.task_result(task_id).await
+        });
+        match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn target(&mut self) -> PyResult<Target> {
-        match self.qrmi.target() {
+        let result = self.rt.block_on(async {
+            self.qrmi.target().await
+        });
+        match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
     fn metadata(&mut self) -> PyResult<std::collections::HashMap<String, String>> {
-        Ok(self.qrmi.metadata())
+        let result = self.rt.block_on(async {
+            self.qrmi.metadata().await
+        });
+        Ok(result)
     }
 }
 

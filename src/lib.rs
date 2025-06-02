@@ -13,16 +13,19 @@
 pub mod common;
 pub mod consts;
 pub mod ibm;
+pub mod pasqal;
+
 pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
-pub mod pasqal;
 
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use anyhow::Result;
+use async_trait::async_trait;
 
 /// Defines interfaces to quantum resources.
-pub trait QuantumResource {
+#[async_trait]
+pub trait QuantumResource: Send + Sync {
     /// Returns true if device is accessible, otherwise false.
     ///
     /// # Arguments
@@ -42,7 +45,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn is_accessible(&mut self) -> bool;
+    async fn is_accessible(&mut self) -> bool;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
     ///
@@ -60,7 +63,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn acquire(&mut self) -> Result<String>;
+    async fn acquire(&mut self) -> Result<String>;
 
     /// Releases quantum resource
     ///
@@ -77,7 +80,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn release(&mut self, id: &str) -> Result<()>;
+    async fn release(&mut self, id: &str) -> Result<()>;
 
     /// Start a task and returns an identifier of this task if succeeded.
     ///
@@ -109,7 +112,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn task_start(&mut self, payload: Payload) -> Result<String>;
+    async fn task_start(&mut self, payload: Payload) -> Result<String>;
 
     /// Stops the task specified by `task_id`. This function is called if the user cancels the job or if the time limit for job execution is exceeded. The implementation must cancel the task if it is still running.
     ///
@@ -126,7 +129,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn task_stop(&mut self, task_id: &str) -> Result<()>;
+    async fn task_stop(&mut self, task_id: &str) -> Result<()>;
 
     /// Returns the current status of the task specified by `task_id`.
     ///
@@ -146,7 +149,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn task_status(&mut self, task_id: &str) -> Result<TaskStatus>;
+    async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus>;
 
     /// Returns the results of the task.
     ///
@@ -166,7 +169,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn task_result(&mut self, task_id: &str) -> Result<TaskResult>;
+    async fn task_result(&mut self, task_id: &str) -> Result<TaskResult>;
 
     /// Returns a Target for the specified device. Vendor specific serialized data. This might contain the constraints(instructions, properteis and timing information etc.) of a particular device to allow compilers to compile an input circuit to something that works and is optimized for a device. In IBM implementation, it contains JSON representations of [BackendConfiguration](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_configuration_schema.json) and [BackendProperties](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_properties_schema.json) so that we are able to create a Target object by calling `qiskit_ibm_runtime.utils.backend_converter.convert_to_target` or uquivalent functions.
     ///
@@ -180,7 +183,7 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn target(&mut self) -> Result<Target>;
+    async fn target(&mut self) -> Result<Target>;
 
     /// Returns other specific to system or device data
     ///
@@ -196,6 +199,6 @@ pub trait QuantumResource {
     ///     Ok(())
     /// }
     /// ```
-    fn metadata(&mut self) -> std::collections::HashMap<String, String>;
+    async fn metadata(&mut self) -> std::collections::HashMap<String, String>;
 }
 

@@ -32,7 +32,8 @@ struct Args {
     input: String,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let args = Args::parse();
@@ -42,17 +43,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut qrmi = PasqalCloud::new(&args.backend);
 
-    let accessible = qrmi.is_accessible();
+    let accessible = qrmi.is_accessible().await;
     if !accessible {
         println!("{} is not accessible", args.backend); // Checks for real QPU
     }
 
-    let lock = qrmi.acquire().unwrap();
+    let lock = qrmi.acquire().await?;
     println!("acquisition token = {}", lock);
 
-    println!("{:#?}", qrmi.metadata());
+    println!("{:#?}", qrmi.metadata().await);
 
-    let target = qrmi.target();
+    let target = qrmi.target().await;
     if let Ok(v) = target {
         println!("{}", v.value);
     }
@@ -68,22 +69,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         sequence: contents, job_runs: shots
     };
 
-    let job_id = qrmi.task_start(payload).unwrap();
+    let job_id = qrmi.task_start(payload).await?;
     println!("Job ID: {}", job_id);
     let one_sec = time::Duration::from_millis(1000);
     loop {
-        let status = qrmi.task_status(&job_id).unwrap();
+        let status = qrmi.task_status(&job_id).await?;
         println!("{:?}", status);
         if matches!(status, TaskStatus::Completed) {
-            println!("{}", qrmi.task_result(&job_id).unwrap().value);
+            println!("{}", qrmi.task_result(&job_id).await?.value);
             break;
         } else if matches!(status, TaskStatus::Failed | TaskStatus::Cancelled) {
             break;
         }
         thread::sleep(one_sec);
     }
-    let _ = qrmi.task_stop(&job_id);
+    let _ = qrmi.task_stop(&job_id).await;
 
-    let _ = qrmi.release(&lock);
+    let _ = qrmi.release(&lock).await;
     Ok(())
 }

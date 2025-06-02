@@ -24,6 +24,8 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 
+use async_trait::async_trait;
+
 /// QRMI implementation for Pasqal Cloud
 pub struct PasqalCloud {
     pub(crate) api_client: Client,
@@ -57,11 +59,9 @@ impl Default for PasqalCloud {
         Self::new("")
     }
 }
-/// QuantumResource Trait implementation for PasqalCloud
-impl PasqalCloud {
-    /// Wrapper of async call for QRMI is_accessible() function.
-    #[tokio::main]
-    async fn _is_accessible(&mut self) -> bool {
+#[async_trait]
+impl QuantumResource for PasqalCloud {
+    async fn is_accessible(&mut self) -> bool {
         let fresnel = DeviceType::Fresnel.to_string();
         if self.backend_name != fresnel {
             let err = format!(
@@ -76,9 +76,19 @@ impl PasqalCloud {
         }
     }
 
-    /// Wrapper of async call for QRMI task_start() function.
-    #[tokio::main]
-    async fn _task_start(&mut self, payload: Payload) -> Result<String> {
+    async fn acquire(&mut self) -> Result<String> {
+        // TBD on cloud side for POC
+        // Pasqal Cloud does not support session concept, so simply returns dummy ID for now.
+        Ok(Uuid::new_v4().to_string())
+    }
+
+    async fn release(&mut self, _id: &str) -> Result<()> {
+        // TBD on cloud side for POC
+        // Pasqal Cloud does not support session concept, so simply ignores
+        Ok(())
+    }
+
+    async fn task_start(&mut self, payload: Payload) -> Result<String> {
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             // TODO: Make configurable (get emulator from qrmi)
             match self
@@ -94,18 +104,14 @@ impl PasqalCloud {
         }
     }
 
-    /// Wrapper of async call for QRMI task_stop() function.
-    #[tokio::main]
-    async fn _task_stop(&mut self, task_id: &str) -> Result<()> {
+    async fn task_stop(&mut self, task_id: &str) -> Result<()> {
         match self.api_client.cancel_batch(task_id).await {
             Ok(_) => Ok(()),
             Err(err) => Err(err),
         }
     }
 
-    /// Wrapper of async call for QRMI task_status() function.
-    #[tokio::main]
-    async fn _task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
+    async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         // TODO: Change for Fresnel after testing
         match self.api_client.get_batch(task_id).await {
             Ok(batch) => {
@@ -124,18 +130,14 @@ impl PasqalCloud {
         }
     }
 
-    /// Wrapper of async call for QRMI task_result() function.
-    #[tokio::main]
-    async fn _task_result(&mut self, task_id: &str) -> Result<TaskResult> {
+    async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         match self.api_client.get_batch_results(task_id).await {
             Ok(resp) => Ok(TaskResult { value: resp }),
             Err(_err) => Err(_err),
         }
     }
 
-    /// Wrapper of async call for QRMI target() function.
-    #[tokio::main]
-    async fn _target(&mut self) -> Result<Target> {
+    async fn target(&mut self) -> Result<Target> {
         let fresnel = DeviceType::Fresnel.to_string();
         if self.backend_name != fresnel {
             let err = format!(
@@ -151,46 +153,8 @@ impl PasqalCloud {
             Err(_err) => Err(_err),
         }
     }
-}
 
-impl QuantumResource for PasqalCloud {
-    fn is_accessible(&mut self) -> bool {
-        self._is_accessible()
-    }
-
-    fn acquire(&mut self) -> Result<String> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply returns dummy ID for now.
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    fn release(&mut self, _id: &str) -> Result<()> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply ignores
-        Ok(())
-    }
-
-    fn task_start(&mut self, payload: Payload) -> Result<String> {
-        self._task_start(payload)
-    }
-
-    fn task_stop(&mut self, task_id: &str) -> Result<()> {
-        self._task_stop(task_id)
-    }
-
-    fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        self._task_status(task_id)
-    }
-
-    fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        self._task_result(task_id)
-    }
-
-    fn target(&mut self) -> Result<Target> {
-        self._target()
-    }
-
-    fn metadata(&mut self) -> HashMap<String, String> {
+    async fn metadata(&mut self) -> HashMap<String, String> {
         let metadata: HashMap<String, String> = HashMap::new();
         metadata
     }
@@ -222,7 +186,7 @@ pub unsafe extern "C" fn qrmi_pasqc_new(resource_id: *const c_char) -> *mut Pasq
 /// @brief Returns true if device is accessible, otherwise false.
 ///
 /// # Safety
-///   
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_pasqc_new().
 ///
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
@@ -241,7 +205,10 @@ pub unsafe extern "C" fn qrmi_pasqc_is_accessible(
     }
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
-    *outp = (*qrmi).is_accessible();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    *outp = rt.block_on(async {
+        (*qrmi).is_accessible().await
+    });
     QRMI_SUCCESS
 }
 
@@ -267,7 +234,7 @@ pub unsafe extern "C" fn qrmi_pasqc_free(ptr: *mut PasqalCloud) -> c_int {
 /// @brief Acquires quantum resource.
 ///
 /// # Safety
-///   
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_pasqc_new().
 ///
 /// * The memory pointed to by `outp` must have enough room to store boolean value.
@@ -281,7 +248,11 @@ pub unsafe extern "C" fn qrmi_pasqc_acquire(qrmi: *mut PasqalCloud) -> *const c_
         return std::ptr::null();
     }
 
-    match (*qrmi).acquire() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(async {
+        (*qrmi).acquire().await
+    });
+    match result {
         Ok(token) => {
             if let Ok(token_cstr) = CString::new(token) {
                 return token_cstr.into_raw();
@@ -317,7 +288,11 @@ pub unsafe extern "C" fn qrmi_pasqc_release(
     ffi_helpers::null_pointer_check!(acquisition_token, QRMI_ERROR);
 
     if let Ok(token) = CStr::from_ptr(acquisition_token).to_str() {
-        match (*qrmi).release(token) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).release(token).await
+        });
+        match result {
             Ok(()) => {
                 return QRMI_SUCCESS;
             }
@@ -377,7 +352,11 @@ pub unsafe extern "C" fn qrmi_pasqc_task_start(
             job_runs,
         };
 
-        match (*qrmi).task_start(payload) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_start(payload).await
+        });
+        match result {
             Ok(job_id) => {
                 if let Ok(job_id_cstr) = CString::new(job_id) {
                     return job_id_cstr.into_raw();
@@ -428,7 +407,11 @@ pub unsafe extern "C" fn qrmi_pasqc_task_stop(
     ffi_helpers::null_pointer_check!(task_id, QRMI_ERROR);
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_stop(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_stop(task_id_str).await
+        });
+        match result {
             Ok(()) => {
                 return QRMI_SUCCESS;
             }
@@ -443,12 +426,12 @@ pub unsafe extern "C" fn qrmi_pasqc_task_stop(
 /// @brief Returns the status of the specified task.
 ///
 /// # Safety
-///  
+///
 /// * `qrmi` must have been returned by a previous call to qrmi_pasqc_new().
 ///
 /// * The memory pointed to by `task_id` must contain a valid nul terminator at the
 ///   end of the string.
-///    
+///
 /// * The memory pointed to by `outp` must have enough room to store `TaskStatus` value.
 ///
 /// * `task_id` must be [valid] for reads of bytes up to and including the nul terminator.
@@ -480,7 +463,11 @@ pub unsafe extern "C" fn qrmi_pasqc_task_status(
     ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_status(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_status(task_id_str).await
+        });
+        match result {
             Ok(v) => {
                 *outp = v;
                 return QRMI_SUCCESS;
@@ -529,7 +516,11 @@ pub unsafe extern "C" fn qrmi_pasqc_task_result(
     ffi_helpers::null_pointer_check!(task_id, std::ptr::null());
 
     if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        match (*qrmi).task_result(task_id_str) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            (*qrmi).task_result(task_id_str).await
+        });
+        match result {
             Ok(v) => {
                 if let Ok(result_cstr) = CString::new(v.value) {
                     return result_cstr.into_raw();
@@ -558,7 +549,11 @@ pub unsafe extern "C" fn qrmi_pasqc_target(qrmi: *mut PasqalCloud) -> *const c_c
         return std::ptr::null();
     }
 
-    match (*qrmi).target() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(async {
+        (*qrmi).target().await
+    });
+    match result {
         Ok(v) => {
             if let Ok(target_cstr) = CString::new(v.value) {
                 return target_cstr.into_raw();
