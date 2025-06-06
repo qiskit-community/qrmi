@@ -21,7 +21,9 @@ import argparse
 from dotenv import load_dotenv
 from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
-parser = argparse.ArgumentParser(description="An example of IBM Qiskit Runtime Service QRMI")
+parser = argparse.ArgumentParser(
+    description="An example of IBM Qiskit Runtime Service QRMI"
+)
 parser.add_argument("backend", help="backend name")
 parser.add_argument("input", help="primitive input file")
 parser.add_argument("program_id", help="'estimator' or 'sampler'")
