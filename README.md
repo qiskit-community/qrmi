@@ -107,3 +107,7 @@ $ cd examples
 $ pylint ./python
 $ black --check ./python
 ```
+
+## License
+
+[Apache-2.0](https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt)
