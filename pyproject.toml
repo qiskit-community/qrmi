@@ -4,6 +4,10 @@ build-backend = "maturin"
 
 [project]
 name = "qrmi"
+authors = [
+  {email = "qiskit@us.ibm.com"},
+  {name = "IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)"}
+]
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Rust",
@@ -11,6 +15,23 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-license-files = ["LICENSE.txt"]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+description = "Quantum Resource Management Interface(QRMI)"
+description_content_type = "text/markdown"
+keywords = [
+    "quantum-computing",
+    "quantum-programming-language",
+    "qiskit",
+    "pulser",
+    "slurm",
+    "slurm-job-scheduler",
+    "slurm-workload-manager",
+    "python",
+    "rust"
+]
+[project.urls]
+repository = "https://github.com/qiskit-community/spank-plugins"
+
 [tool.maturin]
 features = ["pyo3/extension-module", "pyo3/abi3", "qrmi/pyo3"]
