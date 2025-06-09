@@ -66,7 +66,7 @@ while True:
     status = qrmi.task_status(new_task_id)
     if status == TaskStatus.Completed:
         print("Task completed")
-        time.sleep(2)
+        time.sleep(0.5)
         break
     elif status == TaskStatus.Failed:
         print("Task failed")
