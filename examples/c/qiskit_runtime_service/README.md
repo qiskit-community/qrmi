@@ -22,7 +22,7 @@ Because QRMI is an environment variable driven software library, all configurati
 
 ## Create Qiskit Primitive input file as input
 
-Refer [this tool](../../../../commands/qrun/qiskit_pubs_gen) to generate. You can customize quantum circuits by editting the code.
+Refer [this tool](../../../../commands/task_runner/examples/qiskit) to generate. You can customize quantum circuits by editting the code.
 
 ## How to build this example
 

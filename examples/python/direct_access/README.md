@@ -28,11 +28,11 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_IBM_DA_S3_ENDPOINT | S3 endpoint URL |
 | {resource_name}_QRMI_IBM_DA_S3_BUCKET | S3 bucket name |
 | {resource_name}_QRMI_IBM_DA_S3_REGION | S3 bucket region name(e.g. `us-east`) |
-| {resource_name}_QRMI_IBM_DA_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
+| {resource_name}_QRMI_JOB_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
 
 ## Create Qiskit Primitive input file as input
 
-Refer [this tool](../../../../commands/qrun/qiskit_pubs_gen) to generate. You can customize quantum circuits by editting the code.
+Refer [this tool](../../../../commands/task_runner/examples/qiskit) to generate. You can customize quantum circuits by editting the code.
 
 ## How to run
 
@@ -61,7 +61,7 @@ export test_eagle_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
 export test_eagle_QRMI_IBM_DA_S3_ENDPOINT=https://s3.us-east.cloud-object-storage.appdomain.cloud
 export test_eagle_QRMI_IBM_DA_S3_BUCKET=test
 export test_eagle_QRMI_IBM_DA_S3_REGION=us-east
-export test_eagle_QRMI_IBM_DA_TIMEOUT_SECONDS=86400
+export test_eagle_QRMI_JOB_TIMEOUT_SECONDS=86400
 
 python example.py test_eagle sampler_input.json sampler
 ```

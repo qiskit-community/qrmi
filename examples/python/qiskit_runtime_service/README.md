@@ -29,7 +29,7 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_IBM_QRS_SESSION_ID | (Optional) Session ID, can be obtanied by acquire function. If exists, used in the target functions. |
 ## Create Qiskit Primitive input file as input
 
-Refer [this tool](../../../../commands/qrun/qiskit_pubs_gen) to generate. You can customize quantum circuits by editting the code.
+Refer [this tool](../../../../commands/task_runner/examples/qiskit) to generate. You can customize quantum circuits by editting the code.
 
 ## How to run
 
