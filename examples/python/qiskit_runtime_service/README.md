@@ -27,9 +27,13 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_IBM_QRS_SESSION_MAX_TTL | The maximum time (in seconds) for the session to run, subject to plan limits, default: `28800`. |
 | {resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS | (Optional) Cost of the job as the estimated time it should take to complete (in seconds). Should not exceed the cost of the program, default: `None`. |
 | {resource_name}_QRMI_IBM_QRS_SESSION_ID | (Optional) Session ID, can be obtanied by acquire function. If exists, used in the target functions. |
+
 ## Create Qiskit Primitive input file as input
 
 Refer [this tool](../../../../commands/task_runner/examples/qiskit) to generate. You can customize quantum circuits by editting the code.
+
+> [!NOTE]
+> Use the file with name ending with `_params_only.json`, e.g. `sampler_input_ibm_torino_params_only.json`.
 
 ## How to run
 
