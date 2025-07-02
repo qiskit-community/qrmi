@@ -77,7 +77,6 @@ async fn test_list_jobs() {
                 "reason_code": 1517,
                 "created_time": "2024-11-04T20:47:34.46209Z",
                 "end_time": "2024-11-04T20:47:38.203455Z",
-                "usage": {},
             },
         ],
     });
@@ -101,13 +100,14 @@ async fn test_list_jobs() {
     assert_eq!(ProgramId::Sampler, jobs[0].program_id);
     assert_eq!("backend_1", jobs[0].backend);
     assert_eq!(JobStatus::Completed, jobs[0].status);
-    assert!(jobs[0].usage.quantum_nanoseconds.is_some());
+    assert!(jobs[0].usage.is_some());
+    assert!(jobs[0].usage.clone().unwrap().quantum_nanoseconds.is_some());
 
     assert_eq!("d7f06eda-ddfe-412e-a94b-747da412a955", jobs[1].id);
     assert_eq!(ProgramId::Estimator, jobs[1].program_id);
     assert_eq!("backend_2", jobs[1].backend);
     assert_eq!(JobStatus::Failed, jobs[1].status);
-    assert!(jobs[1].usage.quantum_nanoseconds.is_none());
+    assert!(jobs[1].usage.is_none());
 }
 
 /// Test Client.get_job().
@@ -171,7 +171,6 @@ async fn test_get_job() {
                 "reason_code": 1517,
                 "created_time": "2024-11-04T20:47:34.46209Z",
                 "end_time": "2024-11-04T20:47:38.203455Z",
-                "usage": {},
             },
         ],
     });
@@ -210,7 +209,13 @@ async fn test_get_job() {
     assert_eq!(ProgramId::Sampler, actual_job.program_id);
     assert_eq!("backend_1", actual_job.backend);
     assert_eq!(JobStatus::Completed, actual_job.status);
-    assert!(actual_job.usage.quantum_nanoseconds.is_some());
+    assert!(actual_job.usage.is_some());
+    assert!(actual_job
+        .usage
+        .clone()
+        .unwrap()
+        .quantum_nanoseconds
+        .is_some());
 
     // get a job with unknown job id. Client.get_job() should be failed with error message.
     let failed = client.get_job::<serde_json::Value>("unknown").await;
@@ -276,7 +281,6 @@ async fn test_get_job_status() {
                 "reason_code": 1517,
                 "created_time": "2024-11-04T20:47:34.46209Z",
                 "end_time": "2024-11-04T20:47:38.203455Z",
-                "usage": {},
             },
         ],
     });

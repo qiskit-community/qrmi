@@ -242,7 +242,9 @@ pub struct Job {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub timeout_secs: Option<i64>,
-    pub usage: Usage,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub usage: Option<Usage>,
 }
 
 #[allow(dead_code)]
