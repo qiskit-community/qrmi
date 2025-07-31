@@ -15,7 +15,7 @@ use pyo3::prelude::*;
 
 /// Task result
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature="pyo3", pyclass(eq, get_all))]
+#[cfg_attr(feature = "pyo3", pyclass(eq, get_all))]
 pub struct TaskResult {
     /// Serialized data of result
     pub value: String,

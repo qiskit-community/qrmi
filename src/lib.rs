@@ -15,6 +15,7 @@ pub mod consts;
 pub mod ibm;
 pub mod pasqal;
 
+pub mod cext;
 pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
@@ -201,4 +202,3 @@ pub trait QuantumResource: Send + Sync {
     /// ```
     async fn metadata(&mut self) -> std::collections::HashMap<String, String>;
 }
-

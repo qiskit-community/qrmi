@@ -15,7 +15,7 @@ use pyo3::prelude::*;
 
 /// A Target that contains the constraints(supported instructions, properties etc.) of a particular quantum device
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature="pyo3", pyclass(get_all))]
+#[cfg_attr(feature = "pyo3", pyclass(get_all))]
 pub struct Target {
     /// Serialized data
     pub value: String,

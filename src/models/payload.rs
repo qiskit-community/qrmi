@@ -15,7 +15,7 @@ use pyo3::prelude::*;
 
 /// Task Payload
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature="pyo3", pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub enum Payload {
     /// Payload that contains Qiskit Primitive input.
     QiskitPrimitive { input: String, program_id: String },

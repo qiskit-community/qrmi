@@ -15,18 +15,8 @@ fn main() {
     for (key, value) in std::env::vars() {
         eprintln!("{key}: {value}");
     }
-    let mut config = cbindgen::Config::default();
-    config.pragma_once = true;
-    config.language = cbindgen::Language::C;
-    config.documentation_style = cbindgen::DocumentationStyle::Doxy;
-    config.cpp_compat = true;
-    config.sort_by = cbindgen::SortKey::Name;
-    config.usize_is_size_t = true;
-    let enum_config = cbindgen::EnumConfig {
-        rename_variants: cbindgen::RenameRule::UpperCase,
-        ..Default::default()
-    };
-    config.enumeration = enum_config;
+    // Pull the config from the cbindgen.toml file.
+    let config = cbindgen::Config::from_file("cbindgen.toml").unwrap();
 
     match cbindgen::generate_with_config(".", config) {
         Ok(value) => {

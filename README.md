@@ -23,9 +23,10 @@
 
 * Rust 1.85.1 or above
 * Python 3.11 or 3.12
+* doxygen (for generating C API document)
 
 
-## How to build Rust/C library
+## How to build Rust/C API library
 ```shell-session
 . ~/.cargo/env
 cargo clean
@@ -111,6 +112,26 @@ pip install /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.1-cp312-abi3-manyl
 . ~/.cargo/env
 cargo doc --no-deps --open
 ```
+
+## How to generate C API document
+
+### Installing doxygen
+#### Linux
+```shell-session
+dnf install doxygen
+```
+
+#### MacOS
+```shell-session
+brew install doxygen
+```
+
+### Generating API document
+```shell-session
+doxygen Doxyfile
+```
+
+HTML document will be created under `./html` directory. Open `html/index.html` in your web browser. 
 
 ## Contributing
 

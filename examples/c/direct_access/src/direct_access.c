@@ -23,71 +23,119 @@ extern const char *read_file(const char *);
 int main(int argc, char *argv[]) {
 
   if (argc != 4) {
-    fprintf(stderr, "direct_access <backend_name> <primitive input file> <program id>\n");
-    return 0;
+    fprintf(
+        stderr,
+        "direct_access <backend_name> <primitive input file> <program id>\n");
+    return EXIT_SUCCESS;
   }
 
   load_dotenv();
 
-  IBMDirectAccess *qrmi = qrmi_ibmda_new(argv[1]);
+  QrmiQuantumResource *qrmi =
+      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
   if (!qrmi) {
-      fprintf(stderr, "Failed to create QRMI for %s.\n", argv[1]);
-      return -1;
+    fprintf(stderr, "Failed to create QRMI for %s.\n", argv[1]);
+    return EXIT_FAILURE;
   }
+
+  QrmiResourceMetadata *metadata = NULL;
+  QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    size_t num_keys = 0;
+    char **metadata_keys = NULL;
+    rc = qrmi_resource_metadata_keys(metadata, &num_keys, &metadata_keys);
+    if (rc == QRMI_RETURN_CODE_SUCCESS) {
+      for (int i = 0; i < num_keys; i++) {
+        char *value = qrmi_resource_metadata_value(metadata, metadata_keys[i]);
+        printf("metadata key=[%s], value=[%s]\n", metadata_keys[i], value);
+        qrmi_string_free(value);
+      }
+      qrmi_string_array_free(num_keys, metadata_keys);
+    }
+    qrmi_resource_metadata_free(metadata);
+  }
+
   bool is_accessible = false;
-  int rc = qrmi_ibmda_is_accessible(qrmi, &is_accessible);
-  if (rc == QRMI_SUCCESS) {
+  rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
     if (is_accessible == false) {
       fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
-      return -1;
+      goto error;
     }
   } else {
-    fprintf(stderr, "qrmi_ibmda_is_accessible() failed.\n");
-    return -1;
+    fprintf(stderr, "qrmi_resource_is_accessible() failed.\n");
+    goto error;
   }
 
-  const char *acquisition_token = qrmi_ibmda_acquire(qrmi);
+  char *acquisition_token = NULL;
+  rc = qrmi_resource_acquire(qrmi, &acquisition_token);
+  if (rc != QRMI_RETURN_CODE_SUCCESS) {
+    fprintf(stdout, "qrmi_resource_acquire() failed.\n");
+    goto error;
+  }
   fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
 
-  rc = qrmi_ibmda_release(qrmi, acquisition_token);
-  fprintf(stdout, "qrmi_ibmda_release rc = %d\n", rc);
-  qrmi_free_string((char *)acquisition_token);
+  rc = qrmi_resource_release(qrmi, acquisition_token);
+  fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
+  qrmi_string_free((char *)acquisition_token);
 
-  const char *target = qrmi_ibmda_target(qrmi);
-  fprintf(stdout, "target = %s\n", target);
-  qrmi_free_string((char *)target);
+  char *target = NULL;
+  rc = qrmi_resource_target(qrmi, &target);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    fprintf(stdout, "target = %s\n", target);
+    qrmi_string_free((char *)target);
+  } else {
+    fprintf(stderr, "qrmi_resource_target() failed.\n");
+    goto error;
+  }
 
   const char *input = read_file(argv[2]);
-  const char *job_id = qrmi_ibmda_task_start(qrmi, argv[3], input);
-  if (job_id == NULL) {
+
+  QrmiPayload payload;
+  payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
+  payload.QISKIT_PRIMITIVE.input = (char *)input;
+  payload.QISKIT_PRIMITIVE.program_id = argv[3];
+
+  char *job_id = NULL;
+  rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
+  if (rc != QRMI_RETURN_CODE_SUCCESS) {
     fprintf(stderr, "failed to start a task.\n");
-    free((void*)input);
-    return -1;
+    free((void *)input);
+    goto error;
   }
   fprintf(stdout, "Job ID: %s\n", job_id);
-  free((void*)input);
+  free((void *)input);
 
-  TaskStatus status;
+  QrmiTaskStatus status;
   while (1) {
-    rc = qrmi_ibmda_task_status(qrmi, job_id, &status);
-    if (rc != QRMI_SUCCESS || status != RUNNING) {
+    rc = qrmi_resource_task_status(qrmi, job_id, &status);
+    if (rc != QRMI_RETURN_CODE_SUCCESS || status != QRMI_TASK_STATUS_RUNNING) {
       break;
     }
     sleep(1);
   }
 
-  rc = qrmi_ibmda_task_status(qrmi, job_id, &status);
-  if (rc == QRMI_SUCCESS && status == COMPLETED) {
-    const char *result = qrmi_ibmda_task_result(qrmi, job_id);
+  rc = qrmi_resource_task_status(qrmi, job_id, &status);
+  if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
+    char *result = NULL;
+    qrmi_resource_task_result(qrmi, job_id, &result);
     fprintf(stdout, "%s\n", result);
-    qrmi_free_string((char *)result);
+    qrmi_string_free((char *)result);
+  } else if (status == QRMI_TASK_STATUS_FAILED) {
+    fprintf(stderr, "Failed.\n");
+  } else if (status == QRMI_TASK_STATUS_CANCELLED) {
+    fprintf(stderr, "Cancelled.\n");
   }
 
-  qrmi_ibmda_task_stop(qrmi, job_id);
+  qrmi_resource_task_stop(qrmi, job_id);
 
-  qrmi_free_string((char *)job_id);
+  qrmi_string_free(job_id);
 
-  qrmi_ibmda_free(qrmi);
+  qrmi_resource_free(qrmi);
 
-  return 0;
+  return EXIT_SUCCESS;
+
+error:
+  qrmi_resource_free(qrmi);
+  return EXIT_FAILURE;
 }

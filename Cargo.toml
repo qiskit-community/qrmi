@@ -1,6 +1,6 @@
 [package]
 name = "qrmi"
-version = "0.5.2"
+version = "0.6.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Quantum Resource Management Interface(QRMI)"
@@ -17,6 +17,7 @@ pyo3 = []
 retry-policies = "0.4.0"
 tokio = { version = "1.40.0", features = ["full"] }
 env_logger = "0.11.5"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 libc = "0.2.169"
 futures = "0.3.31"
@@ -32,7 +33,7 @@ ffi_helpers = "0.3.0"
 async-trait = "0.1.88"
 
 [build-dependencies]
-cbindgen = "0.26"
+cbindgen = "0.29"
 
 [workspace]
 members = [

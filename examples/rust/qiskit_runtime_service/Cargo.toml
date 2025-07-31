@@ -4,7 +4,7 @@ version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/qiskit-community/spank-plugins"
-rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
+rust-version = "1.86" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
 
 
 [dependencies]

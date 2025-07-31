@@ -31,11 +31,6 @@ use qiskit_runtime_client::models::create_session_request_one_of::Mode;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_int};
-
-// c binding
-use crate::consts::{QRMI_ERROR, QRMI_SUCCESS};
 
 use async_trait::async_trait;
 
@@ -63,8 +58,8 @@ impl IBMQiskitRuntimeService {
     /// * QRMI_IBM_QRS_SERVICE_CRN - QRS service instance CRN
     /// * QRMI_IBM_QRS_SESSION_MODE - Session mode (default: dedicated)
     /// * QRMI_IBM_QRS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
-    /// * QRMI_IBM_QRS_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
-    /// * QRMI_IBM_QRS_SESSION_ID - (optional) pre‐set session ID
+    /// * QRMI_IBM_QRS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
+    /// * QRMI_IBM_QRS_SESSION_ID or QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(backend_name: &str) -> Self {
         let qrs_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT"))
             .unwrap_or_else(|_| {
@@ -91,8 +86,11 @@ impl IBMQiskitRuntimeService {
         let timeout_secs: Option<u64> =
             env::var(format!("{backend_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS"))
                 .ok()
+                .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_TIMEOUT_SECONDS")).ok())
                 .and_then(|s| s.parse::<u64>().ok());
-        let session_id = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_ID")).ok();
+        let session_id = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_ID"))
+            .ok()
+            .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok());
         // Set up the config
         let mut config = configuration::Configuration::new();
         config.base_path = qrs_endpoint;
@@ -399,230 +397,4 @@ impl QuantumResource for IBMQiskitRuntimeService {
         }
         metadata
     }
-}
-
-
-// ==================== C API Bindings ====================
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_new(
-    resource_id: *const c_char,
-) -> *mut IBMQiskitRuntimeService {
-    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
-
-    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
-        let service = Box::new(IBMQiskitRuntimeService::new(id_str));
-        return Box::into_raw(service);
-    }
-    std::ptr::null_mut()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_is_accessible(
-    qrmi: *mut IBMQiskitRuntimeService,
-    outp: *mut bool,
-) -> c_int {
-    if qrmi.is_null() {
-        return QRMI_ERROR;
-    }
-    ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
-
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    *outp = rt.block_on(async {
-        (*qrmi).is_accessible().await
-    });
-    QRMI_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_free(ptr: *mut IBMQiskitRuntimeService) -> c_int {
-    if ptr.is_null() {
-        return QRMI_ERROR;
-    }
-    let _ = Box::from_raw(ptr);
-    QRMI_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_acquire(qrmi: *mut IBMQiskitRuntimeService) -> *const c_char {
-    if qrmi.is_null() {
-        return std::ptr::null();
-    }
-
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        (*qrmi).acquire().await
-    });
-    match result {
-        Ok(token) => {
-            if let Ok(token_cstr) = CString::new(token) {
-                return token_cstr.into_raw();
-            }
-        }
-        Err(err) => {
-            eprintln!("{:?}", err);
-        }
-    }
-    std::ptr::null()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_release(
-    qrmi: *mut IBMQiskitRuntimeService,
-    acquisition_token: *const c_char,
-) -> c_int {
-    if qrmi.is_null() {
-        return QRMI_ERROR;
-    }
-    ffi_helpers::null_pointer_check!(acquisition_token, QRMI_ERROR);
-
-    if let Ok(id_str) = CStr::from_ptr(acquisition_token).to_str() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(async {
-            (*qrmi).release(id_str).await
-        });
-        match result {
-            Ok(()) => return QRMI_SUCCESS,
-            Err(err) => eprintln!("{:?}", err),
-        }
-    }
-    QRMI_ERROR
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_task_start(
-    qrmi: *mut IBMQiskitRuntimeService,
-    program_id: *const c_char,
-    input: *const c_char,
-) -> *const c_char {
-    if qrmi.is_null() {
-        return std::ptr::null();
-    }
-    ffi_helpers::null_pointer_check!(program_id, std::ptr::null());
-    ffi_helpers::null_pointer_check!(input, std::ptr::null());
-
-    if let (Ok(program_id_str), Ok(input_str)) = (
-        CStr::from_ptr(program_id).to_str(),
-        CStr::from_ptr(input).to_str(),
-    ) {
-        let payload = Payload::QiskitPrimitive {
-            input: input_str.to_string(),
-            program_id: program_id_str.to_string(),
-        };
-
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(async {
-            (*qrmi).task_start(payload).await
-        });
-        match result {
-            Ok(job_id) => {
-                if let Ok(job_id_cstr) = CString::new(job_id) {
-                    return job_id_cstr.into_raw();
-                }
-            }
-            Err(err) => {
-                eprintln!("{:?}", err);
-            }
-        }
-    }
-    std::ptr::null()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_task_stop(
-    qrmi: *mut IBMQiskitRuntimeService,
-    task_id: *const c_char,
-) -> c_int {
-    if qrmi.is_null() {
-        return QRMI_ERROR;
-    }
-    ffi_helpers::null_pointer_check!(task_id, QRMI_ERROR);
-
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(async {
-            (*qrmi).task_stop(task_id_str).await
-        });
-        match result {
-            Ok(()) => return QRMI_SUCCESS,
-            Err(err) => eprintln!("{:?}", err),
-        }
-    }
-    QRMI_ERROR
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_task_status(
-    qrmi: *mut IBMQiskitRuntimeService,
-    task_id: *const c_char,
-    outp: *mut TaskStatus,
-) -> c_int {
-    if qrmi.is_null() {
-        return QRMI_ERROR;
-    }
-    ffi_helpers::null_pointer_check!(task_id, QRMI_ERROR);
-    ffi_helpers::null_pointer_check!(outp, QRMI_ERROR);
-
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(async {
-            (*qrmi).task_status(task_id_str).await
-        });
-        match result {
-            Ok(status) => {
-                *outp = status;
-                return QRMI_SUCCESS;
-            }
-            Err(err) => eprintln!("{:?}", err),
-        }
-    }
-    QRMI_ERROR
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_task_result(
-    qrmi: *mut IBMQiskitRuntimeService,
-    task_id: *const c_char,
-) -> *const c_char {
-    if qrmi.is_null() {
-        return std::ptr::null();
-    }
-    ffi_helpers::null_pointer_check!(task_id, std::ptr::null());
-
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(async {
-            (*qrmi).task_result(task_id_str).await
-        });
-        match result {
-            Ok(result) => {
-                if let Ok(result_cstr) = CString::new(result.value) {
-                    return result_cstr.into_raw();
-                }
-            }
-            Err(err) => eprintln!("{:?}", err),
-        }
-    }
-    std::ptr::null()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_ibmqrs_target(qrmi: *mut IBMQiskitRuntimeService) -> *const c_char {
-    if qrmi.is_null() {
-        return std::ptr::null();
-    }
-
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        (*qrmi).target().await
-    });
-    match result {
-        Ok(target) => {
-            if let Ok(target_cstr) = CString::new(target.value) {
-                return target_cstr.into_raw();
-            }
-        }
-        Err(err) => eprintln!("{:?}", err),
-    }
-    std::ptr::null()
 }

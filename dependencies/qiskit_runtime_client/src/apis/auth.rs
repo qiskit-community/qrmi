@@ -10,8 +10,8 @@
 
 use reqwest;
 use serde::Deserialize;
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::cmp::max;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Deserialize)]
 struct TokenResponse {

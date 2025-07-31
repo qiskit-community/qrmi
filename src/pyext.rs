@@ -11,8 +11,8 @@
 // that they have been altered from the originals.
 
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
-use crate::pasqal::PasqalCloud;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::pasqal::PasqalCloud;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use tokio::runtime::Runtime;
@@ -35,17 +35,12 @@ pub struct PyQuantumResource {
 impl PyQuantumResource {
     #[new]
     pub fn new(resource_id: &str, resource_type: ResourceType) -> Self {
-
         let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
-            ResourceType::IBMDirectAccess => {
-                Box::new(IBMDirectAccess::new(resource_id))
-            }
+            ResourceType::IBMDirectAccess => Box::new(IBMDirectAccess::new(resource_id)),
             ResourceType::IBMQiskitRuntimeService => {
                 Box::new(IBMQiskitRuntimeService::new(resource_id))
             }
-            ResourceType::PasqalCloud => {
-                Box::new(PasqalCloud::new(resource_id))
-            }
+            ResourceType::PasqalCloud => Box::new(PasqalCloud::new(resource_id)),
         };
 
         Self {
@@ -55,16 +50,12 @@ impl PyQuantumResource {
     }
 
     fn is_accessible(&mut self) -> PyResult<bool> {
-        let result = self.rt.block_on(async {
-            self.qrmi.is_accessible().await
-        });
+        let result = self.rt.block_on(async { self.qrmi.is_accessible().await });
         Ok(result)
     }
 
     fn acquire(&mut self) -> PyResult<String> {
-        let result = self.rt.block_on(async {
-            self.qrmi.acquire().await
-        });
+        let result = self.rt.block_on(async { self.qrmi.acquire().await });
         match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -72,9 +63,7 @@ impl PyQuantumResource {
     }
 
     fn release(&mut self, id: &str) -> PyResult<()> {
-        let result = self.rt.block_on(async {
-            self.qrmi.release(id).await
-        });
+        let result = self.rt.block_on(async { self.qrmi.release(id).await });
         match result {
             Ok(()) => Ok(()),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -82,9 +71,9 @@ impl PyQuantumResource {
     }
 
     fn task_start(&mut self, payload: Payload) -> PyResult<String> {
-        let result = self.rt.block_on(async {
-            self.qrmi.task_start(payload).await
-        });
+        let result = self
+            .rt
+            .block_on(async { self.qrmi.task_start(payload).await });
         match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -92,9 +81,9 @@ impl PyQuantumResource {
     }
 
     fn task_stop(&mut self, task_id: &str) -> PyResult<()> {
-        let result = self.rt.block_on(async {
-            self.qrmi.task_stop(task_id).await
-        });
+        let result = self
+            .rt
+            .block_on(async { self.qrmi.task_stop(task_id).await });
         match result {
             Ok(()) => Ok(()),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -102,9 +91,9 @@ impl PyQuantumResource {
     }
 
     fn task_status(&mut self, task_id: &str) -> PyResult<TaskStatus> {
-        let result = self.rt.block_on(async {
-            self.qrmi.task_status(task_id).await
-        });
+        let result = self
+            .rt
+            .block_on(async { self.qrmi.task_status(task_id).await });
         match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -112,9 +101,9 @@ impl PyQuantumResource {
     }
 
     fn task_result(&mut self, task_id: &str) -> PyResult<TaskResult> {
-        let result = self.rt.block_on(async {
-            self.qrmi.task_result(task_id).await
-        });
+        let result = self
+            .rt
+            .block_on(async { self.qrmi.task_result(task_id).await });
         match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -122,9 +111,7 @@ impl PyQuantumResource {
     }
 
     fn target(&mut self) -> PyResult<Target> {
-        let result = self.rt.block_on(async {
-            self.qrmi.target().await
-        });
+        let result = self.rt.block_on(async { self.qrmi.target().await });
         match result {
             Ok(v) => Ok(v),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
@@ -132,15 +119,13 @@ impl PyQuantumResource {
     }
 
     fn metadata(&mut self) -> PyResult<std::collections::HashMap<String, String>> {
-        let result = self.rt.block_on(async {
-            self.qrmi.metadata().await
-        });
+        let result = self.rt.block_on(async { self.qrmi.metadata().await });
         Ok(result)
     }
 }
 
 /// A Python module implemented in Rust.
-#[pymodule] 
+#[pymodule]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyQuantumResource>()?;
     m.add_class::<ResourceType>()?;

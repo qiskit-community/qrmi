@@ -12,7 +12,7 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{pasqal::PasqalCloud, models::Payload, models::TaskStatus, QuantumResource};
+use qrmi::{models::Payload, models::TaskStatus, pasqal::PasqalCloud, QuantumResource};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -66,7 +66,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shots = 100;
 
     let payload = Payload::PasqalCloud {
-        sequence: contents, job_runs: shots
+        sequence: contents,
+        job_runs: shots,
     };
 
     let job_id = qrmi.task_start(payload).await?;

@@ -10,16 +10,23 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Dataclasses(Models) used in QRMI.
+use clap::Parser;
+use qrmi::models::Config;
 
-mod config;
-mod payload;
-mod target;
-mod task_result;
-mod task_status;
+#[derive(Parser, Debug)]
+#[command(version = "0.1.0")]
+#[command(about = "Parsing qrmi_config.json file")]
+struct Args {
+    /// qrmi_config.json file
+    #[arg(short, long)]
+    file: String,
+}
 
-pub use self::config::{Config, ResourceDef, ResourceType};
-pub use self::payload::Payload;
-pub use self::target::Target;
-pub use self::task_result::TaskResult;
-pub use self::task_status::TaskStatus;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+    let config = Config::load(&args.file).unwrap();
+
+    println!("{:#?}", config.resource_map);
+
+    Ok(())
+}
