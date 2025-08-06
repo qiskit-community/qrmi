@@ -1,0 +1,3 @@
+qiskit>=1.4.2
+qiskit-pasqal-provider>=0.1.0
+pulser>=1.5.3

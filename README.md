@@ -22,7 +22,7 @@
 ## Prerequisites
 
 * Rust 1.85.1 or above
-* Python 3.11 or 3.12
+* Python 3.11, 3.12 or 3.13
 * doxygen (for generating C API document)
 
 
@@ -54,11 +54,11 @@ maturin develop --release
 Once you successfully build and install, `qrmi` package is ready to use.
 ```shell-session
 $ pip list
-qrmi                   0.5.1       /Users/devuser/git/spank-plugins/qrmi
+qrmi                   0.5.2       /Users/devuser/git/spank-plugins/qrmi
 
 $ pip show qrmi
 Name: qrmi
-Version: 0.5.1
+Version: 0.5.2
 Summary: Quantum Resource Management Interface(QRMI)
 Home-page: 
 Author: IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)
@@ -85,26 +85,26 @@ maturin build --release
 🔗 Found pyo3 bindings with abi3 support
 🐍 Found CPython 3.12 at /shared/pyenv/bin/python
 📡 Using build options features from pyproject.toml
-   Compiling qrmi v0.5.1 (/shared/spank-plugins/qrmi)
+   Compiling qrmi v0.5.2 (/shared/spank-plugins/qrmi)
     Finished `release` profile [optimized] target(s) in 12.76s
 🖨  Copied external shared libraries to package qrmi.libs directory:
     /usr/lib64/libssl.so.3.2.2
     /usr/lib64/libcrypto.so.3.2.2
-📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.1-cp312-abi3-manylinux_2_34_aarch64.whl
+📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
 Wheel is created under `./target/wheels` directory. You can distribute and install on your hosts by `pip install <wheel>`.
 
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-pip install /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.1-cp312-abi3-manylinux_2_34_aarch64.whl
+pip install /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
 ## Examples
 
-* [Examples in Rust](./examples/rust)
-* [Examples in Python](./examples/python)
-* [Examples in C](./examples/c)
+* [Examples in Rust](./examples/qrmi/rust)
+* [Examples in Python](./examples/qrmi/python)
+* [Examples in C](./examples/qrmi/c)
 
 ## How to generate Rust API document
 

@@ -125,7 +125,7 @@ impl PyQuantumResource {
 }
 
 /// A Python module implemented in Rust.
-#[pymodule]
+#[pymodule(name = "_core")]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyQuantumResource>()?;
     m.add_class::<ResourceType>()?;

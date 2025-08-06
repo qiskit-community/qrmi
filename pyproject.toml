@@ -13,6 +13,11 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
 ]
 dynamic = ["version"]
 license = {file = "LICENSE.txt"}
@@ -30,8 +35,23 @@ keywords = [
     "python",
     "rust"
 ]
+dependencies = [
+  "qiskit_ibm_runtime>=0.30.0",
+  "qiskit_qasm3_import",
+  "qiskit-pasqal-provider>=0.1.1",
+  "pulser>=1.5.3",
+]
 [project.urls]
 repository = "https://github.com/qiskit-community/spank-plugins"
 
 [tool.maturin]
+python-source = "python"
+module-name   = "qrmi._core" 
 features = ["pyo3/extension-module", "pyo3/abi3", "qrmi/pyo3"]
+python-packages = [
+    "qrmi",
+    "qrmi.pulser_backend",
+    "qrmi.primitives",
+    "qrmi.primitives.ibm",
+    "qrmi.primitives.pasqal",
+]
