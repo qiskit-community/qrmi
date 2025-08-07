@@ -45,6 +45,12 @@ pip install --upgrade pip
 pip install -r requirements-dev.txt
 ```
 
+### Create stub file for python code
+```shell-session
+. ~/.cargo/env
+cargo run --bin stubgen --features=pyo3
+```
+
 ### Build Python module and install to your Python virtual environment
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
@@ -69,6 +75,7 @@ Editable project location: /shared/spank-plugins/qrmi
 Requires: 
 Required-by: qiskit-qrmi-primitives
 ```
+
 
 ### Create a wheel for distribution
 
@@ -111,11 +118,6 @@ cargo build -p task_runner
 `task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
 For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
 
-## How to generate stub file for python code
-```shell-session
-. ~/.cargo/env
-cargo run --bin stubgen --features=pyo3
-```
 
 ## Examples
 
