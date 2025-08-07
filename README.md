@@ -1,193 +1,51 @@
-# Quantum Resource Management Interface(QRMI)
+Quantum Resource Management Interface(QRMI)
+===============================
 
-## Supported OS
+This is repository with Quantum Resource Management Interface(QRMI).
 
-* Linux
-  * AlmaLinux 9
-  * Amazon Linux 2023
-  * CentOS Stream 9
-  * CentOS Stream 10
-  * RedHat Enterprise Linux 8
-  * RedHat Enterprise Linux 9
-  * RedHat Enterprise Linux 10
-  * Rocky Linux 8
-  * Rocky Linux 9
-  * SuSE 15
-  * Ubuntu 22.04
-  * Ubuntu 24.04
+### Table of Contents
 
-* macOS
-  * Sequoia 15.1 or above
+##### For Users
 
-## Prerequisites
-
-* Rust 1.85.1 or above
-* Python 3.11, 3.12 or 3.13
-* doxygen (for generating C API document)
+1. [Installation](INSTALL.md)
+1. [How to Give Feedback](#how-to-give-feedback)
+1. [How to Cite This Work](#how-to-cite-this-work)
+1. [Contribution Guidelines](#contribution-guidelines)
+1. [References and Acknowledgements](#references-and-acknowledgements)
 
 
-## How to build Rust/C API library
-```shell-session
-. ~/.cargo/env
-cargo clean
-cargo build --release
-```
+----------------------------------------------------------------------------------------------------
 
-## How to build & install QRMI Python package
+### How to Give Feedback
 
-### Setup Python virtual environment
-```shell-session
-. ~/.cargo/env
-cargo clean
-python3.12 -m venv ~/py312_qrmi_venv
-source ~/py312_qrmi_venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements-dev.txt
-```
+We encourage your feedback! You can share your thoughts with us by:
+- [Opening an issue](https://github.com/qiskit-community/qrmi/issues) in the repository
 
-### Build Python module and install to your Python virtual environment
-```shell-session
-source ~/py312_qrmi_venv/bin/activate
-CARGO_TARGET_DIR=./target/release/maturin maturin develop --release
-```
 
-Once you successfully build and install, `qrmi` package is ready to use.
-```shell-session
-$ pip list
-qrmi                   0.5.2       /Users/devuser/git/spank-plugins/qrmi
+----------------------------------------------------------------------------------------------------
 
-$ pip show qrmi
-Name: qrmi
-Version: 0.5.2
-Summary: Quantum Resource Management Interface(QRMI)
-Home-page: 
-Author: IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)
-Author-email: qiskit@us.ibm.com
-License: Apache-2.0
-Location: /shared/pyenv/lib64/python3.12/site-packages
-Editable project location: /shared/spank-plugins/qrmi
-Requires: 
-Required-by: qiskit-qrmi-primitives
-```
+### How to Cite This Work
 
-### Create a wheel for distribution
+If you use the “Quantum Spank plugin” in your research or projects, please consider citing the associated overview paper  [Quantum resources in resource management systems](https://arxiv.org/abs/2506.10052). 
+This helps support the continued development and visibility of the repository. 
+The BibTeX citation handle can be found in the [CITATION.bib](CITATION.bib) file.
 
-`CARGO_TARGET_DIR=./target/release/maturin maturin develop --release` actually skips the wheel generation part and installs directly in the current environment. `maturin build` on the other hand will produce a wheel you can distribute.
-name = "qrmi"
+Note that the overview paper is a work  in progress, and we expect multiple versions to be released as the project evolves.
 
-```shell-session
-source ~/py312_qrmi_venv/bin/activate
-CARGO_TARGET_DIR=./target/release/maturin maturin build --release
-```
+----------------------------------------------------------------------------------------------------
 
-For example,
-```shell-session
-CARGO_TARGET_DIR=./target/release/maturin maturin build --release
-🔗 Found pyo3 bindings with abi3 support
-🐍 Found CPython 3.12 at /shared/pyenv/bin/python
-📡 Using build options features from pyproject.toml
-   Compiling qrmi v0.5.2 (/shared/spank-plugins/qrmi)
-    Finished `release` profile [optimized] target(s) in 12.76s
-🖨  Copied external shared libraries to package qrmi.libs directory:
-    /usr/lib64/libssl.so.3.2.2
-    /usr/lib64/libcrypto.so.3.2.2
-📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
-```
+### Contribution Guidelines
 
-Wheel is created under `./target/release/maturin/wheels` directory. You can distribute and install on your hosts by `pip install <wheel>`.
+For information on how to contribute to this project, please take a look at our [contribution guidelines](CONTRIBUTING.md).
 
-```shell-session
-source ~/py312_qrmi_venv/bin/activate
-pip install /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
-```
 
-## How to build task_runner for Rust version
-```shell-session
-. ~/.cargo/env
-cargo build -p task_runner 
-```
+----------------------------------------------------------------------------------------------------
 
-## How to run task_runner for Python version
-`task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
-For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
-
-## How to generate stub file for python code
-```shell-session
-. ~/.cargo/env
-cargo run --bin stubgen --features=pyo3
-```
-
-## Examples
-
-* [Examples in Rust](./examples/qrmi/rust)
-* [Examples in Python](./examples/qrmi/python)
-* [Examples in C](./examples/qrmi/c)
-
-## How to generate Rust API document
-
-```shell-session
-. ~/.cargo/env
-cargo doc --no-deps --open
-```
-
-## Note
-`get_target` method has been refactored into a library, so we updated the import statement.
-
-Before
-```
-from target import get_target
-```
-After
-```
-from qrmi.primitives.ibm import get_target
-```
-
-## How to generate C API document
-
-### Installing doxygen
-#### Linux
-```shell-session
-dnf install doxygen
-```
-
-#### MacOS
-```shell-session
-brew install doxygen
-```
-
-### Generating API document
-```shell-session
-doxygen Doxyfile
-```
-
-HTML document will be created under `./html` directory. Open `html/index.html` in your web browser. 
-
-## Contributing
-
-Regardless if you are part of the core team or an external contributor, welcome and thank you for contributing to QRMI implementations!
-
-### Solving linting/format issues
-
-Contributor must execute the commands below and fix any issues before submitting Pull Request.
-
-#### Rust code
-```shell-session
-$ . ~/.cargo/env
-$ cargo fmt --all -- --check
-$ cargo clippy --all-targets -- -D warnings
-$ cd examples/rust
-$ cargo fmt --all -- --check
-$ cargo clippy --all-targets -- -D warnings
-```
-
-#### Python code
-```shell-session
-$ source ~/py312_qrmi_venv/bin/activate
-$ cd examples
-$ pylint ./python
-$ black --check ./python
-```
-
-## License
-
-[Apache-2.0](https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt)
+## References and Acknowledgements
+1. Quantum spank plugins for Slurm https://github.com/qiskit-community/spank-plugins
+1. Slurm documentation https://slurm.schedmd.com/
+2. Qiskit https://www.ibm.com/quantum/qiskit
+3. IBM Quantum https://www.ibm.com/quantum
+4. Pasqal https://pasqal.com
+5. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
+6. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
