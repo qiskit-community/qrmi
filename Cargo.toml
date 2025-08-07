@@ -1,0 +1,78 @@
+[package]
+name = "qrmi"
+version = "0.7.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Quantum Resource Management Interface(QRMI)"
+readme = "README.md"
+
+[lib]
+crate-type = ["staticlib", "rlib", "cdylib"]
+
+[[bin]]
+name = "stubgen"
+path = "src/bin/stubgen.rs"
+required-features = ["pyo3"] 
+
+[features]
+default = []
+pyo3 = []
+
+[dependencies]
+retry-policies = "0.4.0"
+tokio = { version = "1.40.0", features = ["full"] }
+env_logger = "0.11.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+libc = "0.2.169"
+futures = "0.3.31"
+clap = { version = "4.5.29", features = ["derive"] }
+uuid = "1.16.0"
+log = "0.4.26"
+direct-access-api = { path = "dependencies/direct_access_client" }
+qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
+pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
+anyhow = { version = "1.0.97", features = ["backtrace"] }
+pyo3 = { version = "0.25.0", features = ["anyhow"] }
+ffi_helpers = "0.3.0"
+async-trait = "0.1.88"
+dotenv = "0.15.0"
+pyo3-stub-gen = "0.10.0"
+
+[build-dependencies]
+cbindgen = "0.29"
+
+[workspace]
+members = [
+    "dependencies/direct_access_client",
+    "dependencies/qiskit_runtime_client",
+    "dependencies/pasqal_cloud_client",
+    "bin/task_runner",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/qiskit-community/spank-plugins"
+rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
+
+[workspace.dependencies]
+direct-access-api = { path = "dependencies/direct_access_client" }
+pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
+
+[package.metadata.maturin]
+python-source = "python"
+module-name   = "qrmi._core"
+
+[[example]]
+name = "qrmi-example-qiskit-runtime-service"
+path = "examples/qrmi/rust/qiskit_runtime_service/src/main.rs"
+
+[[example]]
+name = "qrmi-example-direct-access"
+path = "examples/qrmi/rust/direct_access/src/main.rs"
+
+[[example]]
+name = "qrmi-example-pasqal-cloud"
+path = "examples/qrmi/rust/pasqal_cloud/src/main.rs"
