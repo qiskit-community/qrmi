@@ -9,19 +9,11 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
+use pyo3_stub_gen::Result;
+use qrmi::pyext::stub_info;
 
-#[cfg(feature = "pyo3")]
-use {
-    pyo3::prelude::*,
-    pyo3_stub_gen::{define_stub_info_gatherer, derive::*},
-};
-
-/// A Target that contains the constraints(supported instructions, properties etc.) of a particular quantum device
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "pyo3", pyclass(get_all), gen_stub_pyclass)]
-pub struct Target {
-    /// Serialized data
-    pub value: String,
+fn main() -> Result<()> {
+    let stub = stub_info()?;
+    stub.generate()?;
+    Ok(())
 }
-#[cfg(feature = "pyo3")]
-define_stub_info_gatherer!(stub_info);

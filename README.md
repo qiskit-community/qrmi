@@ -48,7 +48,7 @@ pip install -r requirements-dev.txt
 ### Build Python module and install to your Python virtual environment
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-maturin develop --release
+CARGO_TARGET_DIR=./target/release/maturin maturin develop --release
 ```
 
 Once you successfully build and install, `qrmi` package is ready to use.
@@ -72,16 +72,17 @@ Required-by: qiskit-qrmi-primitives
 
 ### Create a wheel for distribution
 
-`maturin develop --release` actually skips the wheel generation part and installs directly in the current environment. `maturin build` on the other hand will produce a wheel you can distribute.
+`CARGO_TARGET_DIR=./target/release/maturin maturin develop --release` actually skips the wheel generation part and installs directly in the current environment. `maturin build` on the other hand will produce a wheel you can distribute.
+name = "qrmi"
 
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-maturin build --release
+CARGO_TARGET_DIR=./target/release/maturin maturin build --release
 ```
 
 For example,
 ```shell-session
-maturin build --release
+CARGO_TARGET_DIR=./target/release/maturin maturin build --release
 🔗 Found pyo3 bindings with abi3 support
 🐍 Found CPython 3.12 at /shared/pyenv/bin/python
 📡 Using build options features from pyproject.toml
@@ -90,14 +91,30 @@ maturin build --release
 🖨  Copied external shared libraries to package qrmi.libs directory:
     /usr/lib64/libssl.so.3.2.2
     /usr/lib64/libcrypto.so.3.2.2
-📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
-Wheel is created under `./target/wheels` directory. You can distribute and install on your hosts by `pip install <wheel>`.
+Wheel is created under `./target/release/maturin/wheels` directory. You can distribute and install on your hosts by `pip install <wheel>`.
 
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-pip install /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+pip install /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+```
+
+## How to build task_runner for Rust version
+```shell-session
+. ~/.cargo/env
+cargo build -p task_runner 
+```
+
+## How to run task_runner for Python version
+`task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
+For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
+
+## How to generate stub file for python code
+```shell-session
+. ~/.cargo/env
+cargo run --bin stubgen --features=pyo3
 ```
 
 ## Examples
@@ -111,6 +128,18 @@ pip install /shared/spank-plugins/qrmi/target/wheels/qrmi-0.5.2-cp312-abi3-manyl
 ```shell-session
 . ~/.cargo/env
 cargo doc --no-deps --open
+```
+
+## Note
+`get_target` method has been refactored into a library, so we updated the import statement.
+
+Before
+```
+from target import get_target
+```
+After
+```
+from qrmi.primitives.ibm import get_target
 ```
 
 ## How to generate C API document

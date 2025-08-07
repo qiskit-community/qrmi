@@ -11,12 +11,17 @@
 // that they have been altered from the originals.
 
 #[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
+use {
+    pyo3::prelude::*,
+    pyo3_stub_gen::{define_stub_info_gatherer, derive::*},
+};
 
 /// Task result
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "pyo3", pyclass(eq, get_all))]
+#[cfg_attr(feature = "pyo3", pyclass(eq, get_all), gen_stub_pyclass)]
 pub struct TaskResult {
     /// Serialized data of result
     pub value: String,
 }
+#[cfg(feature = "pyo3")]
+define_stub_info_gatherer!(stub_info);

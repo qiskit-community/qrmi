@@ -11,11 +11,18 @@
 // that they have been altered from the originals.
 
 #[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
+use {
+    pyo3::prelude::*,
+    pyo3_stub_gen::{define_stub_info_gatherer, derive::*},
+};
 
 /// Task statuses.
 #[repr(C)]
-#[cfg_attr(feature = "pyo3", pyclass(eq, eq_int, hash, frozen))]
+#[cfg_attr(
+    feature = "pyo3",
+    pyclass(eq, eq_int, hash, frozen),
+    gen_stub_pyclass_enum
+)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TaskStatus {
     /// Task is queued
@@ -29,3 +36,5 @@ pub enum TaskStatus {
     /// Task was cancelled
     Cancelled,
 }
+#[cfg(feature = "pyo3")]
+define_stub_info_gatherer!(stub_info);

@@ -19,9 +19,7 @@ from dotenv import load_dotenv
 from qiskit.circuit.library import efficient_su2
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import SamplerV2
-
-from target import get_target
+from qrmi.primitives.ibm import SamplerV2, get_target
 
 # Create QRMI
 load_dotenv()

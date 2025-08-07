@@ -13,3 +13,4 @@
 """IBM implementations of Primitive"""
 
 from .sampler import Sampler as SamplerV2  # Todo, fix upstream rename base as SamplerV2
+from .target import get_device, get_target

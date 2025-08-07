@@ -9,6 +9,11 @@ readme = "README.md"
 [lib]
 crate-type = ["staticlib", "rlib", "cdylib"]
 
+[[bin]]
+name = "stubgen"
+path = "src/bin/stubgen.rs"
+required-features = ["pyo3"] 
+
 [features]
 default = []
 pyo3 = []
@@ -28,10 +33,11 @@ direct-access-api = { path = "dependencies/direct_access_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
-pyo3 = { version = "0.24.0", features = ["anyhow"] }
+pyo3 = { version = "0.25.0", features = ["anyhow"] }
 ffi_helpers = "0.3.0"
 async-trait = "0.1.88"
 dotenv = "0.15.0"
+pyo3-stub-gen = "0.10.0"
 
 [build-dependencies]
 cbindgen = "0.29"

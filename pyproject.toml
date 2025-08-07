@@ -33,13 +33,14 @@ keywords = [
     "slurm-job-scheduler",
     "slurm-workload-manager",
     "python",
-    "rust"
+    "rust",
 ]
 dependencies = [
   "qiskit_ibm_runtime>=0.30.0",
   "qiskit_qasm3_import",
   "qiskit-pasqal-provider>=0.1.1",
   "pulser>=1.5.3",
+  "python-dotenv",
 ]
 [project.urls]
 repository = "https://github.com/qiskit-community/spank-plugins"
@@ -55,3 +56,10 @@ python-packages = [
     "qrmi.primitives.ibm",
     "qrmi.primitives.pasqal",
 ]
+include = [
+  "python/qrmi/py.typed",
+  "python/qrmi/*.pyi",      
+]
+
+[project.scripts]
+task_runner = "qrmi.tools.task_runner.main:run"
