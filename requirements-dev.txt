@@ -1,0 +1,4 @@
+maturin[patchelf]
+pylint
+black
+pytest

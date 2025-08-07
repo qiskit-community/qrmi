@@ -1,0 +1,44 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "QRMI Payload",
+    "description": "The input to QPU resource",
+    "version": "0.1.0",
+    "type": "object",
+    "oneOf": [
+	{
+            "type": "object",
+            "description": "Payload for `direct-access` and `qiskit-runtime-service` QPU resource",
+	    "required": ["program_id", "parameters"],
+            "properties": {
+                "program_id": {
+                    "type": "string",
+                    "enum": [
+                        "estimator",
+                        "sampler"
+                    ],
+                    "description": "ID of the primitive to be executed."
+		},
+                "parameters": {
+                    "type": "object",
+                    "description": "Parameters to inject into the primitive. Estimator schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json, Sampler schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json"
+                }
+            }
+	},
+	{
+            "type": "object",
+            "description": "Payload for `pasqal-cloud` QPU resource",
+	    "required": ["job_runs", "sequence"],
+            "properties": {
+	        "job_runs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of times the pulser sequence is repeated."
+                },
+                "sequence": {
+                    "type": "object",
+                    "description": "Pulser sequence. Refer https://pulser.readthedocs.io/en/stable/tutorials/serialization.html for creation."
+                }
+            }
+        }
+    ]
+}
