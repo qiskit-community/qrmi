@@ -944,7 +944,6 @@ pub unsafe extern "C" fn qrmi_resource_target(
     ReturnCode::Error
 }
 
-
 /// @ingroup QrmiQuantumResource
 /// Returns a resource metadata
 ///
@@ -976,9 +975,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
         .runtime
         .block_on(async { (*qrmi).inner.metadata().await });
 
-    let boxed_metadata = Box::new(ResourceMetadata {
-        inner: metadata,
-    });
+    let boxed_metadata = Box::new(ResourceMetadata { inner: metadata });
     unsafe {
         *outp = Box::into_raw(boxed_metadata);
     }
@@ -996,7 +993,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
 ///     QrmiResourceMetadata *metadata = NULL;
 ///     QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
 ///     if (retval == QRMI_RETURN_CODE_SUCCESS) {
-///         qrmi_resource_metadata_free(metadata); 
+///         qrmi_resource_metadata_free(metadata);
 ///     }
 ///
 /// @param (ptr) [in] A QrmiResourceMetadata handle to be free
@@ -1006,7 +1003,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
 pub unsafe extern "C" fn qrmi_resource_metadata_free(ptr: *mut ResourceMetadata) -> ReturnCode {
     if ptr.is_null() {
         return ReturnCode::NullPointerError;
-    }   
+    }
     unsafe {
         let _ = Box::from_raw(ptr);
     };

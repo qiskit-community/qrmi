@@ -63,14 +63,8 @@ impl Client {
             Ok(resp) => {
                 let status = resp.status();
                 if status.is_success() {
-                    match resp.json::<ServiceVersion>().await {
-                        Ok(ServiceVersion::V2(v2resp)) => Ok(v2resp.version.ibm_api_version),
-                        Ok(ServiceVersion::V1(v1resp)) => Ok(v1resp.version),
-                        Err(e) => {
-                            error!("Unsupported response returned. {:#?}", e);
-                            Err(e.into())
-                        }
-                    }
+                    let json_data = resp.json::<ServiceVersion>().await?;
+                    Ok(json_data.version)
                 } else {
                     match resp.json::<ExtendedErrorResponse>().await {
                         Ok(ExtendedErrorResponse::Json(error)) => {
