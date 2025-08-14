@@ -18,7 +18,7 @@ use retry_policies::policies::ExponentialBackoff;
 use std::time::Duration;
 
 #[allow(unused_imports)]
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use reqwest_retry::RetryTransientMiddleware;
@@ -28,8 +28,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+#[cfg(feature = "skip_tls_cert_verify")]
+use std::env;
+
 use crate::middleware::auth::{AuthMiddleware, TokenManager};
-use crate::models::errors::ErrorResponse;
+use crate::models::errors::ExtendedErrorResponse;
 
 /// Authorization method and credentials.
 #[derive(Debug, Clone, PartialEq)]
@@ -78,22 +81,43 @@ pub struct Client {
 
 impl Client {
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let resp = self
+        let resp_ = self
             .client
             .get(url)
             .header("Content-Type", "application/json")
             .send()
-            .await?;
-        if resp.status().is_success() {
-            let json_text = resp.text().await?;
-            debug!("{}", json_text);
-            Ok(serde_json::from_str::<T>(&json_text)?)
-        } else {
-            let error_resp = resp.json::<ErrorResponse>().await?;
-            bail!(format!(
-                "{} ({}) {:?}",
-                error_resp.title, error_resp.status_code, error_resp.errors
-            ));
+            .await;
+        match resp_ {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    let json_text = resp.text().await?;
+                    debug!("{}", json_text);
+                    Ok(serde_json::from_str::<T>(&json_text)?)
+                } else {
+                    match resp.json::<ExtendedErrorResponse>().await {
+                        Ok(ExtendedErrorResponse::Json(error)) => {
+                            error!("{:#?}", error);
+                            bail!(format!(
+                                "{} ({}) ({}) {:?}",
+                                error.title, error.status_code, error.trace, error.errors
+                            ));
+                        }
+                        Ok(ExtendedErrorResponse::Text(message)) => {
+                            error!("{}", message);
+                            bail!(format!("{} ({})", status, message));
+                        }
+                        Err(_) => {
+                            error!("{} {}", status, url);
+                            bail!(format!("{} {}", status, url));
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!("{:#?}", e);
+                Err(e.into())
+            }
         }
     }
 }
@@ -318,6 +342,17 @@ impl ClientBuilder {
     /// ```
     pub fn build(&mut self) -> Result<Client> {
         let mut reqwest_client_builder = reqwest::Client::builder();
+
+        #[cfg(feature = "skip_tls_cert_verify")]
+        if let Ok(skip_cert_verify_envvar) = env::var("DANGER_TLS_SKIP_CERT_VERIFY") {
+            if skip_cert_verify_envvar == "true" || skip_cert_verify_envvar == "1" {
+                warn!("Insecure HTTPS request is being made. Disabling DANGER_TLS_SKIP_CERT_VERIFY is strongly advised for production.");
+                reqwest_client_builder = reqwest_client_builder
+                    .danger_accept_invalid_certs(true)
+                    .danger_accept_invalid_hostnames(true);
+            }
+        }
+
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
         if let Some(v) = self.timeout {
             reqwest_client_builder = reqwest_client_builder.timeout(v)

@@ -9,9 +9,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::models::errors::ExtendedErrorResponse;
 use crate::{Client, PrimitiveJob};
 use anyhow::{bail, Result};
 use http::StatusCode;
+use log::error;
 
 impl Client {
     /// Cancels the specified job if it has not yet terminated. Also deletes the job
@@ -48,21 +50,45 @@ impl Client {
     /// - an internal server error occurs.
     pub async fn cancel_job(&self, job_id: &str, delete_job: bool) -> Result<()> {
         let url = format!("{}/v1/jobs/{}/cancel", self.base_url, &job_id);
-        let resp = self
+        let resp_ = self
             .client
-            .post(url)
+            .post(&url)
             .header("Content-Type", "application/json")
             .send()
-            .await?;
-        let status_code = resp.status();
-        if status_code == StatusCode::NO_CONTENT {
-            if !delete_job {
-                return Ok(());
+            .await;
+
+        match resp_ {
+            Ok(resp) => {
+                let status_code = resp.status();
+                if status_code == StatusCode::NO_CONTENT {
+                    if !delete_job {
+                        return Ok(());
+                    }
+                    self.delete_job(job_id).await
+                } else {
+                    match resp.json::<ExtendedErrorResponse>().await {
+                        Ok(ExtendedErrorResponse::Json(error)) => {
+                            error!("{:#?}", error);
+                            bail!(format!(
+                                "{} ({}) ({}) {:?}",
+                                error.title, error.status_code, error.trace, error.errors
+                            ));
+                        }
+                        Ok(ExtendedErrorResponse::Text(message)) => {
+                            error!("{}", message);
+                            bail!(format!("{} ({})", status_code, message));
+                        }
+                        Err(_) => {
+                            error!("{} {}", status_code, url);
+                            bail!(format!("{} {}", status_code, url));
+                        }
+                    }
+                }
             }
-            self.delete_job(job_id).await
-        } else {
-            let json_data = resp.json::<serde_json::Value>().await?;
-            bail!(json_data.to_string())
+            Err(e) => {
+                error!("{:#?}", e);
+                Err(e.into())
+            }
         }
     }
 }

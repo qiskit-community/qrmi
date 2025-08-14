@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2024, 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -25,5 +25,5 @@ pub use self::backend_configuration::{
 };
 pub use self::backend_properties::{BackendProperties, Gate, Nduv};
 pub use self::backends::{Backend, BackendStatus, Backends};
-pub use self::errors::{Error, ErrorResponse};
+pub use self::errors::{Error, ErrorResponse, ExtendedErrorResponse};
 pub use self::jobs::{Job, JobStatus, Jobs, LogLevel, ProgramId, Storage, StorageOption, Usage};

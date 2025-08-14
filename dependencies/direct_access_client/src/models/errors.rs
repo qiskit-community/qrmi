@@ -37,6 +37,14 @@ pub struct ErrorResponse {
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum ExtendedErrorResponse {
+    Json(ErrorResponse),
+    Text(String),
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct IAMErrorResponse {
     #[serde(rename(deserialize = "errorCode"))]
     pub code: String,
