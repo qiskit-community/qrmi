@@ -31,7 +31,7 @@ This Rust API client provides all functionalities provided by Direct Access API,
 
 ## Prerequisites
 
-* Rust 1.81.0 or above
+* Rust 1.86.0 or above
 
 ## How to build
 ```shell-session
@@ -78,6 +78,22 @@ Provides the support of internal shared key authentication, which was removed fr
 ### features = ["api_version"]
 
 Allow clients to specify IBM-API-Version HTTP header value while calling Direct Access API. This was removed from Direct Access API Beta specification. This is just backward compatibility. 
+
+### features = ["skip_tls_cert_verify"]
+  
+Allow clients to establish SSL/TLS connection with disabling TLS certificate verification.
+Once this crate is built with this feature, user can disable TLS certificate verification by setting an environment variable like below.
+  
+```bash
+export DANGER_TLS_SKIP_CERT_VERIFY=1
+``` 
+or
+```bash
+export DANGER_TLS_SKIP_CERT_VERIFY=true
+```
+
+> [!CAUTION]
+> Insecure HTTPS request is being made by this feature. Disabling DANGER_TLS_SKIP_CERT_VERIFY is strongly advised for production.
 
 
 ## Programming Guide
