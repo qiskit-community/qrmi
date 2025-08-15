@@ -12,8 +12,6 @@
 //! Direct Access API Client
 
 use anyhow::{bail, Result};
-#[cfg(feature = "api_version")]
-use chrono::Utc;
 use retry_policies::policies::ExponentialBackoff;
 use std::time::Duration;
 
@@ -130,7 +128,7 @@ pub struct ClientBuilder {
     base_url: String,
     /// `IBM-API-Version` HTTP header value
     #[cfg(feature = "api_version")]
-    api_version: String,
+    api_version: Option<String>,
     /// The authentication method & credentials
     auth_method: AuthMethod,
     /// The timeout
@@ -163,7 +161,7 @@ impl ClientBuilder {
         Self {
             base_url: url,
             #[cfg(feature = "api_version")]
-            api_version: Utc::now().format("%Y-%m-%d").to_string(),
+            api_version: None,
             auth_method: AuthMethod::None,
             timeout: None,
             connect_timeout: None,
@@ -276,7 +274,7 @@ impl ClientBuilder {
     #[cfg(feature = "api_version")]
     pub fn with_api_version(&mut self, api_version: impl Into<String>) -> &mut Self {
         let api_version: String = api_version.into();
-        self.api_version = api_version;
+        self.api_version = Some(api_version);
         self
     }
 
@@ -369,8 +367,8 @@ impl ClientBuilder {
         #[allow(unused_mut)]
         let mut headers = header::HeaderMap::new();
         #[cfg(feature = "api_version")]
-        {
-            let api_ver_value = header::HeaderValue::from_str(self.api_version.as_str())?;
+        if let Some(api_ver_value) = &self.api_version {
+            let api_ver_value = header::HeaderValue::from_str(api_ver_value.as_str())?;
             headers.insert("IBM-API-Version", api_ver_value);
         }
         #[cfg(feature = "internal_shared_key_auth")]
