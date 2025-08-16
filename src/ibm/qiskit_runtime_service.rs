@@ -31,6 +31,7 @@ use qiskit_runtime_client::models::create_session_request_one_of::Mode;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
+use log::error;
 
 use async_trait::async_trait;
 
@@ -135,7 +136,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
         match backends_api::get_backend_status(&self.config, &self.backend_name, None).await {
             Ok(status_response) => {
@@ -148,7 +149,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
             }
             Err(e) => {
                 // Print a message indicating an error occurred
-                println!("status: error ({:?})", e);
+                error!("status: error ({:?})", e);
                 false
             }
         }
@@ -169,7 +170,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
 
         if let Some(existing_session_id) = self.session_id.clone() {
@@ -220,7 +221,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
         sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
         self.session_id = None;
@@ -242,7 +243,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
         if let Payload::QiskitPrimitive { input, program_id } = payload {
             let input_json: Value = serde_json::from_str(&input)?;
@@ -287,7 +288,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
         let job_details = jobs_api::get_job_details_jid(&self.config, task_id, None, None).await?;
         let status = job_details.status;
@@ -315,7 +316,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
         let job_details = jobs_api::get_job_details_jid(&self.config, task_id, None, None).await?;
         let status = job_details.status;
@@ -343,7 +344,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         } // Check if the task is completed before fetching the results.
         let job_details = jobs_api::get_job_details_jid(&self.config, task_id, None, None).await?;
         let status = job_details.status;
@@ -369,7 +370,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         )
         .await
         {
-            println!("Token renewal failed: {:?}", e);
+            error!("Token renewal failed: {:?}", e);
         }
         let mut resp = json!({});
         if let Ok(cfg) =
