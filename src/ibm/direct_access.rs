@@ -54,6 +54,8 @@ impl IBMDirectAccess {
     /// * `QRMI_IBM_DA_SERVICE_CRN`: Provisioned Direct Access Service instance
     /// * `QRMI_JOB_TIMEOUT_SECONDS`: Time (in seconds) after which job should time out and get cancelled.
     pub fn new(resource_id: &str) -> Self {
+        crate::common::initialize();
+
         // Check to see if the environment variables required to run this program are set.
         let daapi_endpoint = env::var(format!("{resource_id}_QRMI_IBM_DA_ENDPOINT"))
             .unwrap_or(DEFAULT_ENDPOINT.to_string());

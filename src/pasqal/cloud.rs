@@ -36,6 +36,8 @@ impl PasqalCloud {
     ///
     /// Let's hardcode the rest for now
     pub fn new(backend_name: &str) -> Self {
+        crate::common::initialize();
+
         // Check to see if the environment variables required to run this program are set.
         let project_id = env::var(format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID"))
             .unwrap_or_else(|_| panic!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID"));

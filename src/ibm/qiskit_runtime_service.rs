@@ -61,6 +61,8 @@ impl IBMQiskitRuntimeService {
     /// * QRMI_IBM_QRS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
     /// * QRMI_IBM_QRS_SESSION_ID or QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(backend_name: &str) -> Self {
+        crate::common::initialize();
+
         let qrs_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT"))
             .unwrap_or_else(|_| {
                 panic!("{backend_name}_QRMI_IBM_QRS_ENDPOINT environment variable is not set")

@@ -79,9 +79,6 @@ Required-by: qiskit-qrmi-primitives
 
 ### Create a wheel for distribution
 
-`CARGO_TARGET_DIR=./target/release/maturin maturin develop --release` actually skips the wheel generation part and installs directly in the current environment. `maturin build` on the other hand will produce a wheel you can distribute.
-name = "qrmi"
-
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
 CARGO_TARGET_DIR=./target/release/maturin maturin build --release
@@ -117,6 +114,22 @@ cargo build -p task_runner
 ## How to run task_runner for Python version
 `task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
 For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
+
+## Logging
+
+QRMI supports [standard Rust logging mechanism](https://docs.rs/log/latest/log/) for logging. You can find the detailed QRMI runtime logs by specifying `RUST_LOG` environment variable with log level. Supported levels are `error`, `warn`, `info`, `debug` and `trace`. Default level is `warn`. 
+
+If you specify `trace`, you can find underlying HTTP transaction logs.
+
+
+```shell-session
+RUST_LOG=trace <your QRMI executable>
+```
+
+```shell-session
+[2025-08-16T03:47:38Z DEBUG reqwest::connect] starting new connection: https://iam.cloud.ibm.com/
+[2025-08-16T03:47:38Z DEBUG direct_access_api::middleware::auth] current token ...
+```
 
 
 ## Examples
