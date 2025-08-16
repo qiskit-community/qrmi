@@ -112,6 +112,7 @@ pub struct QuantumResource {
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_string_free(ptr: *mut c_char) -> ReturnCode {
+    crate::common::initialize();
     ffi_helpers::null_pointer_check!(ptr, ReturnCode::NullPointerError);
     unsafe {
         drop(CString::from_raw(ptr));
@@ -150,6 +151,7 @@ pub unsafe extern "C" fn qrmi_string_array_free(
     size: usize,
     array: *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if array.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -184,6 +186,7 @@ pub unsafe extern "C" fn qrmi_string_array_free(
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_load(filename: *const c_char) -> *mut Config {
+    crate::common::initialize();
     ffi_helpers::null_pointer_check!(filename, std::ptr::null_mut());
 
     if let Ok(file) = CStr::from_ptr(filename).to_str() {
@@ -193,7 +196,7 @@ pub unsafe extern "C" fn qrmi_config_load(filename: *const c_char) -> *mut Confi
                 return Box::into_raw(Box::new(v));
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                log::error!("{:?}", err);
             }
         }
     }
@@ -217,6 +220,7 @@ pub unsafe extern "C" fn qrmi_config_load(filename: *const c_char) -> *mut Confi
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_free(ptr: *mut Config) -> ReturnCode {
+    crate::common::initialize();
     if ptr.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -259,6 +263,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
     config: *mut Config,
     resource_id: *const c_char,
 ) -> *mut ResourceDef {
+    crate::common::initialize();
     if config.is_null() {
         return std::ptr::null_mut();
     }
@@ -307,6 +312,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_resource_type_to_str(r#type: ResourceType) -> *const c_char {
+    crate::common::initialize();
     if let Ok(type_as_str) = CString::new(r#type.as_str()) {
         return type_as_str.into_raw();
     }
@@ -336,6 +342,7 @@ pub unsafe extern "C" fn qrmi_config_resource_type_to_str(r#type: ResourceType) 
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_resource_def_free(ptr: *mut ResourceDef) -> ReturnCode {
+    crate::common::initialize();
     if ptr.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -396,6 +403,7 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
     num_names: *mut usize,
     names: *mut *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if config.is_null() || names.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -445,6 +453,7 @@ pub unsafe extern "C" fn qrmi_resource_new(
     resource_id: *const c_char,
     resource_type: ResourceType,
 ) -> *mut QuantumResource {
+    crate::common::initialize();
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
 
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
@@ -481,6 +490,7 @@ pub unsafe extern "C" fn qrmi_resource_new(
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_free(ptr: *mut QuantumResource) -> ReturnCode {
+    crate::common::initialize();
     if ptr.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -520,6 +530,7 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
     qrmi: *mut QuantumResource,
     outp: *mut bool,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -560,6 +571,7 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
     qrmi: *mut QuantumResource,
     acquisition_token: *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() || acquisition_token.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -577,7 +589,7 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
             }
         }
         Err(err) => {
-            eprintln!("{:?}", err);
+            log::error!("{:?}", err);
         }
     }
     ReturnCode::Error
@@ -614,6 +626,7 @@ pub unsafe extern "C" fn qrmi_resource_release(
     qrmi: *mut QuantumResource,
     acquisition_token: *const c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -628,7 +641,7 @@ pub unsafe extern "C" fn qrmi_resource_release(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                log::error!("{:?}", err);
             }
         }
     }
@@ -677,6 +690,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
     payload: *const Payload,
     task_id: *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() || task_id.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -715,7 +729,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
                 }
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                log::error!("{:?}", err);
             }
         }
     }
@@ -750,6 +764,7 @@ pub unsafe extern "C" fn qrmi_resource_task_stop(
     qrmi: *mut QuantumResource,
     task_id: *const c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -765,7 +780,7 @@ pub unsafe extern "C" fn qrmi_resource_task_stop(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                log::error!("{:?}", err);
             }
         }
     }
@@ -807,6 +822,7 @@ pub unsafe extern "C" fn qrmi_resource_task_status(
     task_id: *const c_char,
     status: *mut TaskStatus,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -824,7 +840,7 @@ pub unsafe extern "C" fn qrmi_resource_task_status(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                log::error!("{:?}", err);
             }
         }
     }
@@ -865,6 +881,7 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
     task_id: *const c_char,
     outp: *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -886,7 +903,7 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
                 }
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                log::error!("{:?}", err);
             }
         }
     }
@@ -921,6 +938,7 @@ pub unsafe extern "C" fn qrmi_resource_target(
     qrmi: *mut QuantumResource,
     outp: *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() {
         return ReturnCode::Error;
     }
@@ -938,7 +956,7 @@ pub unsafe extern "C" fn qrmi_resource_target(
             }
         }
         Err(err) => {
-            eprintln!("{:?}", err);
+            log::error!("{:?}", err);
         }
     }
     ReturnCode::Error
@@ -967,6 +985,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
     qrmi: *mut QuantumResource,
     outp: *mut *mut ResourceMetadata,
 ) -> ReturnCode {
+    crate::common::initialize();
     if qrmi.is_null() || outp.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -1001,6 +1020,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_metadata_free(ptr: *mut ResourceMetadata) -> ReturnCode {
+    crate::common::initialize();
     if ptr.is_null() {
         return ReturnCode::NullPointerError;
     }
@@ -1036,6 +1056,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata_value(
     metadata: *mut ResourceMetadata,
     key: *const c_char,
 ) -> *mut c_char {
+    crate::common::initialize();
     if metadata.is_null() {
         return std::ptr::null_mut();
     }
@@ -1083,6 +1104,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata_keys(
     num_keys: *mut usize,
     key_names: *mut *mut *mut c_char,
 ) -> ReturnCode {
+    crate::common::initialize();
     if metadata.is_null() {
         return ReturnCode::NullPointerError;
     }

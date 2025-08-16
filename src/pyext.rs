@@ -39,6 +39,7 @@ pub struct PyQuantumResource {
 impl PyQuantumResource {
     #[new]
     pub fn new(resource_id: &str, resource_type: ResourceType) -> Self {
+        crate::common::initialize();
         let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
             ResourceType::IBMDirectAccess => Box::new(IBMDirectAccess::new(resource_id)),
             ResourceType::IBMQiskitRuntimeService => {
@@ -54,11 +55,13 @@ impl PyQuantumResource {
     }
 
     fn is_accessible(&mut self) -> PyResult<bool> {
+        crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.is_accessible().await });
         Ok(result)
     }
 
     fn acquire(&mut self) -> PyResult<String> {
+        crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.acquire().await });
         match result {
             Ok(v) => Ok(v),
@@ -67,6 +70,7 @@ impl PyQuantumResource {
     }
 
     fn release(&mut self, id: &str) -> PyResult<()> {
+        crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.release(id).await });
         match result {
             Ok(()) => Ok(()),
@@ -75,6 +79,7 @@ impl PyQuantumResource {
     }
 
     fn task_start(&mut self, payload: Payload) -> PyResult<String> {
+        crate::common::initialize();
         let result = self
             .rt
             .block_on(async { self.qrmi.task_start(payload).await });
@@ -85,6 +90,7 @@ impl PyQuantumResource {
     }
 
     fn task_stop(&mut self, task_id: &str) -> PyResult<()> {
+        crate::common::initialize();
         let result = self
             .rt
             .block_on(async { self.qrmi.task_stop(task_id).await });
@@ -95,6 +101,7 @@ impl PyQuantumResource {
     }
 
     fn task_status(&mut self, task_id: &str) -> PyResult<TaskStatus> {
+        crate::common::initialize();
         let result = self
             .rt
             .block_on(async { self.qrmi.task_status(task_id).await });
@@ -105,6 +112,7 @@ impl PyQuantumResource {
     }
 
     fn task_result(&mut self, task_id: &str) -> PyResult<TaskResult> {
+        crate::common::initialize();
         let result = self
             .rt
             .block_on(async { self.qrmi.task_result(task_id).await });
@@ -115,6 +123,7 @@ impl PyQuantumResource {
     }
 
     fn target(&mut self) -> PyResult<Target> {
+        crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.target().await });
         match result {
             Ok(v) => Ok(v),
@@ -123,6 +132,7 @@ impl PyQuantumResource {
     }
 
     fn metadata(&mut self) -> PyResult<std::collections::HashMap<String, String>> {
+        crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.metadata().await });
         Ok(result)
     }
