@@ -117,7 +117,7 @@ For detailed instructions on how to use it, please refer to this [README](./bin/
 
 ## Logging
 
-QRMI supports [standard Rust logging mechanism](https://docs.rs/log/latest/log/) for logging. You can find the detailed QRMI runtime logs by specifying `RUST_LOG` environment variable with log level. Supported levels are `error`, `warn`, `info`, `debug` and `trace`. Default level is `warn`. 
+QRMI supports [log crate](https://crates.io/crates/log) for logging. You can find the detailed QRMI runtime logs by specifying `RUST_LOG` environment variable with log level. Supported levels are `error`, `warn`, `info`, `debug` and `trace`. Default level is `warn`. 
 
 If you specify `trace`, you can find underlying HTTP transaction logs.
 
