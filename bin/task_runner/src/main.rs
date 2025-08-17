@@ -11,11 +11,11 @@
 
 #![allow(unused_imports)]
 use eyre::{eyre, WrapErr};
-use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::fs;
 
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,7 +28,7 @@ use signal_hook_tokio::Signals;
 
 use clap::builder::TypedValueParser as _;
 use clap::{Parser, Subcommand, ValueEnum};
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 
 use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
 use qrmi::pasqal::PasqalCloud;
@@ -111,7 +111,13 @@ impl ResourceType {
         let payload = match fs::read_to_string(&args.input) {
             Ok(v) => v,
             Err(err) => {
-                return Err(eyre!("Failed to open {}. reason = {}", args.input, err).into());
+                return Err(
+                    eyre!(
+                        "Failed to open {}. reason = {}",
+                        args.input,
+                        err
+                    ).into()
+                );
             }
         };
         let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
@@ -119,13 +125,23 @@ impl ResourceType {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
                 None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "parameters").into());
+                    return Err(
+                        eyre!(
+                            "Missing property: {} in the payload.",
+                            "parameters"
+                        ).into()
+                    );
                 }
             };
             let program_id = match &deserialized.program_id {
                 Some(v) => v.clone(),
                 None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "program_id").into());
+                    return Err(
+                        eyre!(
+                            "Missing property: {} in the payload.",
+                            "program_id"
+                        ).into()
+                    );
                 }
             };
             Ok(Self::IBMDirectAccess { input, program_id })
@@ -133,13 +149,23 @@ impl ResourceType {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
                 None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "parameters").into());
+                    return Err(
+                        eyre!(
+                            "Missing property: {} in the payload.",
+                            "parameters"
+                        ).into()
+                    );
                 }
             };
             let program_id = match &deserialized.program_id {
                 Some(v) => v.clone(),
                 None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "program_id").into());
+                    return Err(
+                        eyre!(
+                            "Missing property: {} in the payload.",
+                            "program_id"
+                        ).into()
+                    );
                 }
             };
             Ok(Self::QiskitRuntimeService { input, program_id })
@@ -147,19 +173,26 @@ impl ResourceType {
             let job_runs = match &deserialized.job_runs {
                 Some(v) => v,
                 None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "job_runs").into());
+                    return Err(
+                        eyre!(
+                            "Missing property: {} in the payload.",
+                            "job_runs"
+                        ).into()
+                    );
                 }
             };
             let sequence = match &deserialized.sequence {
                 Some(v) => v.to_string(),
                 None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "sequence").into());
+                    return Err(
+                        eyre!(
+                            "Missing property: {} in the payload.",
+                            "sequence"
+                        ).into()
+                    );
                 }
             };
-            Ok(Self::PasqalCloud {
-                sequence,
-                job_runs: *job_runs,
-            })
+            Ok(Self::PasqalCloud { sequence, job_runs: *job_runs })
         } else {
             Err(
                 eyre!(
@@ -186,10 +219,12 @@ impl ResourceType {
                     program_id: program_id.as_str().to_string(),
                 })
             }
-            ResourceType::PasqalCloud { sequence, job_runs } => Some(Payload::PasqalCloud {
-                sequence: sequence.to_string(),
-                job_runs: *job_runs,
-            }),
+            ResourceType::PasqalCloud { sequence, job_runs } => {
+                Some(Payload::PasqalCloud {
+                    sequence: sequence.to_string(),
+                    job_runs: *job_runs,
+                })
+            }
         }
     }
     fn create_qrmi(&self, qpu_name: &str) -> Box<dyn QuantumResource> {
