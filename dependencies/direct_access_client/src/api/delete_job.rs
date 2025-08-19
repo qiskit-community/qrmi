@@ -9,9 +9,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::models::errors::ExtendedErrorResponse;
 use crate::{Client, PrimitiveJob};
 use anyhow::{bail, Result};
 use http::StatusCode;
+use log::error;
 
 impl Client {
     /// Delete the specified job if it has terminated.
@@ -46,18 +48,42 @@ impl Client {
     ///
     pub async fn delete_job(&self, job_id: &str) -> Result<()> {
         let url = format!("{}/v1/jobs/{}", self.base_url, &job_id);
-        let resp = self
+        let resp_ = self
             .client
-            .delete(url)
+            .delete(&url)
             .header("Content-Type", "application/json")
             .send()
-            .await?;
-        let status_code = resp.status();
-        if status_code == StatusCode::NO_CONTENT {
-            Ok(())
-        } else {
-            let json_data = resp.json::<serde_json::Value>().await?;
-            bail!(json_data.to_string())
+            .await;
+
+        match resp_ {
+            Ok(resp) => {
+                let status_code = resp.status();
+                if status_code == StatusCode::NO_CONTENT {
+                    Ok(())
+                } else {
+                    match resp.json::<ExtendedErrorResponse>().await {
+                        Ok(ExtendedErrorResponse::Json(error)) => {
+                            error!("{:#?}", error);
+                            bail!(format!(
+                                "{} ({}) ({}) {:?}",
+                                error.title, error.status_code, error.trace, error.errors
+                            ));
+                        }
+                        Ok(ExtendedErrorResponse::Text(message)) => {
+                            error!("{}", message);
+                            bail!(format!("{} ({})", status_code, message));
+                        }
+                        Err(_) => {
+                            error!("{} {}", status_code, url);
+                            bail!(format!("{} {}", status_code, url));
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!("{:#?}", e);
+                Err(e.into())
+            }
         }
     }
 }

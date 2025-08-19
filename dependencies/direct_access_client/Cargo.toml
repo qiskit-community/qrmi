@@ -5,7 +5,7 @@ description = "Direct Access API client library for Rust"
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 
 [features]
@@ -13,10 +13,11 @@ default = []
 ibmcloud_appid_auth = []
 internal_shared_key_auth = []
 api_version = []
+skip_tls_cert_verify = []
 
 [dependencies]
 anyhow = { version = "1.0.90", features = ["backtrace"] }
-reqwest = { version = "=0.12.12", features = ["json"] }
+reqwest = { version = "0.12.12", features = ["json", "native-tls-alpn"] }
 thiserror = "1.0.64"
 retry-policies = "0.4.0"
 chrono = "0.4.38"

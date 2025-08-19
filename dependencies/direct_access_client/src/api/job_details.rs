@@ -9,22 +9,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::jobs::{Job, Jobs};
 use crate::{Client, PrimitiveJob};
-use anyhow::{bail, Result};
+use anyhow::Result;
 use serde::de::DeserializeOwned;
 
 impl Client {
-    pub(crate) async fn find_job(&self, job_id: &str) -> Result<Job> {
-        let jobs = self.list_jobs::<Jobs>().await?;
-        for job in jobs.jobs {
-            if job.id == job_id {
-                return Ok(job);
-            }
-        }
-        bail!("Job not found. Job ID: {}", job_id)
-    }
-
     /// Returns the details of the job associated with the specified `job_id`.
     ///
     /// # Example
@@ -56,10 +45,8 @@ impl Client {
     /// - authentication failed.
     /// - specified job is not found.
     pub async fn get_job<T: DeserializeOwned>(&self, job_id: &str) -> Result<T> {
-        let job = self.find_job(job_id).await?;
-        let job_json = serde_json::to_value(job)?;
-        let job = serde_json::from_value::<T>(job_json)?;
-        Ok(job)
+        let url = format!("{}/v1/jobs/{}", self.base_url, job_id);
+        self.get::<T>(&url).await
     }
 }
 

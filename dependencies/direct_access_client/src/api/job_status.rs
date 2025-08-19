@@ -9,7 +9,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::jobs::JobStatus;
+use crate::models::jobs::{Job, JobStatus};
 use crate::{Client, PrimitiveJob};
 use anyhow::Result;
 
@@ -45,7 +45,7 @@ impl Client {
     /// - authentication failed.
     /// - specified job is not found.
     pub async fn get_job_status(&self, job_id: &str) -> Result<JobStatus> {
-        let job = self.find_job(job_id).await?;
+        let job = self.get_job::<Job>(job_id).await?;
         Ok(job.status)
     }
 }
@@ -158,7 +158,7 @@ impl PrimitiveJob {
     /// - authentication failed.
     /// - job has already been deleted.
     pub async fn is_in_final_state(&self) -> Result<bool> {
-        let job = self.client.find_job(&self.job_id).await?;
+        let job = self.client.get_job::<Job>(&self.job_id).await?;
         if let JobStatus::Running = job.status {
             Ok(false)
         } else {

@@ -63,7 +63,7 @@ impl Client {
                 }
             }
 
-            let job = self.find_job(job_id).await?;
+            let job = self.get_job::<Job>(job_id).await?;
             if let JobStatus::Running = job.status {
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
             } else {

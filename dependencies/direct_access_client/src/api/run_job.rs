@@ -9,9 +9,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::models::errors::ExtendedErrorResponse;
 use crate::Client;
 use anyhow::{bail, Result};
 use http::StatusCode;
+
+use log::error;
 
 impl Client {
     /// Run a job. Refer Direct Access API specifications for more details of the payload format.
@@ -73,18 +76,43 @@ impl Client {
     /// - per backend concurrent job limit has been reached.
     pub async fn run_job(&self, payload: &serde_json::Value) -> Result<String> {
         let url = format!("{}/v1/jobs", self.base_url);
-        let resp = self
+        let resp_ = self
             .client
-            .post(url)
+            .post(&url)
             .header("Content-Type", "application/json")
             .body(payload.to_string())
             .send()
-            .await?;
-        let status_code = resp.status();
-        if status_code == StatusCode::NO_CONTENT {
-            return Ok(payload["id"].as_str().unwrap().to_string());
+            .await;
+
+        match resp_ {
+            Ok(resp) => {
+                let status_code = resp.status();
+                if status_code == StatusCode::NO_CONTENT {
+                    Ok(payload["id"].as_str().unwrap().to_string())
+                } else {
+                    match resp.json::<ExtendedErrorResponse>().await {
+                        Ok(ExtendedErrorResponse::Json(error)) => {
+                            error!("{:#?}", error);
+                            bail!(format!(
+                                "{} ({}) ({}) {:?}",
+                                error.title, error.status_code, error.trace, error.errors
+                            ));
+                        }
+                        Ok(ExtendedErrorResponse::Text(message)) => {
+                            error!("{}", message);
+                            bail!(format!("{} ({})", status_code, message));
+                        }
+                        Err(_) => {
+                            error!("{} {}", status_code, url);
+                            bail!(format!("{} {}", status_code, url));
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!("{:#?}", e);
+                Err(e.into())
+            }
         }
-        let json_data = resp.json::<serde_json::Value>().await?;
-        bail!(json_data.to_string())
     }
 }
