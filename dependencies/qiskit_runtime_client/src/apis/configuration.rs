@@ -36,10 +36,17 @@ impl Configuration {
 
 impl Default for Configuration {
     fn default() -> Self {
+        let client = reqwest::Client::builder()
+            // Enabling this option will emit log messages at the TRACE level for
+            // read and write operations on connections.
+            .connection_verbose(true)
+            .build()
+            .unwrap();
+
         Configuration {
             base_path: "/api".to_owned(),
             user_agent: Some("SLURM-QRMI-QRS".to_owned()),
-            client: reqwest::Client::new(),
+            client,
             basic_auth: None,
             oauth_access_token: None,
             bearer_access_token: None,
