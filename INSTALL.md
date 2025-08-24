@@ -117,6 +117,10 @@ Optional packages that are available in QRMI repository.
 
 
 ### How to build task_runner for Rust version
+
+> [!WARNING]
+> Rust version of task_runner is now obsoleted. Use Python version.
+
 ```shell-session
 . ~/.cargo/env
 cargo build -p task_runner 
