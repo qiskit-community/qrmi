@@ -10,12 +10,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-pub mod common;
-pub mod consts;
+pub(crate) mod common;
+pub(crate) mod consts;
 pub mod ibm;
 pub mod pasqal;
 
-pub mod cext;
+mod cext;
 pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
