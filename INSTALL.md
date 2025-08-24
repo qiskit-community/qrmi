@@ -27,7 +27,6 @@
 
 ## 📋 Content
 
-- [Building core QRMI library](#building-core-qrmi-libraries)
 - [🔶 Building core QRMI library](#building-core-qrmi-libraries)
   - [🦀/©️ Rust and C](#how-to-build-rustc-api-library)
   - [🐍 Python](#how-to-build--install-qrmi-python-package)
