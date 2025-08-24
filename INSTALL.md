@@ -51,32 +51,6 @@ pip install -r requirements-dev.txt
 cargo run --bin stubgen --features=pyo3
 ```
 
-#### Build Python module and install to your Python virtual environment
-```shell-session
-source ~/py312_qrmi_venv/bin/activate
-CARGO_TARGET_DIR=./target/release/maturin maturin develop --release
-```
-
-Once you successfully build and install, `qrmi` package is ready to use.
-```shell-session
-$ pip list
-qrmi                   0.5.2       /Users/devuser/git/spank-plugins/qrmi
-
-$ pip show qrmi
-Name: qrmi
-Version: 0.5.2
-Summary: Quantum Resource Management Interface(QRMI)
-Home-page: 
-Author: IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)
-Author-email: qiskit@us.ibm.com
-License: Apache-2.0
-Location: /shared/pyenv/lib64/python3.12/site-packages
-Editable project location: /shared/spank-plugins/qrmi
-Requires: 
-Required-by: qiskit-qrmi-primitives
-```
-
-
 #### Create a wheel for distribution
 
 ```shell-session
@@ -87,22 +61,27 @@ CARGO_TARGET_DIR=./target/release/maturin maturin build --release
 For example,
 ```shell-session
 CARGO_TARGET_DIR=./target/release/maturin maturin build --release
+
+🍹 Building a mixed python/rust project
 🔗 Found pyo3 bindings with abi3 support
-🐍 Found CPython 3.12 at /shared/pyenv/bin/python
+🐍 Found CPython 3.12 at /root/py312_qrmi_venv/bin/python
 📡 Using build options features from pyproject.toml
-   Compiling qrmi v0.5.2 (/shared/spank-plugins/qrmi)
-    Finished `release` profile [optimized] target(s) in 12.76s
+   ...
+   Compiling qrmi v0.7.1 (/shared/qrmi)
+    Finished `release` profile [optimized] target(s) in 1m 10s
 🖨  Copied external shared libraries to package qrmi.libs directory:
-    /usr/lib64/libssl.so.3.2.2
     /usr/lib64/libcrypto.so.3.2.2
-📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+    /usr/lib64/libssl.so.3.2.2
+📦 Including files matching "python/qrmi/py.typed"
+📦 Including files matching "python/qrmi/*.pyi"
+📦 Built wheel for abi3 Python ≥ 3.12 to /shared/qrmi/target/release/maturin/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
 Wheel is created under `./target/release/maturin/wheels` directory. You can distribute and install on your hosts by `pip install <wheel>`.
 
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-pip install /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+pip install /shared/qrmi/target/release/maturin/wheels/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
 ## Building optional libraries
@@ -154,32 +133,36 @@ RUST_LOG=trace <your QRMI executable>
 cargo doc --no-deps --open
 ```
 
-#### Note
-`get_target` method has been refactored into a library, so we updated the import statement.
+#### How to generate Python API document
 
-Before
+```shell-session
+cd qrmi
+python -m pydoc -p 8290
+Server ready at http://localhost:8290/
+Server commands: [b]rowser, [q]uit
+server> b
 ```
-from target import get_target
+
+Open the following page in your browser.
+```shell-session
+http://localhost:8290/qrmi.html 
 ```
-After
-```
-from qrmi.primitives.ibm import get_target
+
+Quit server.
+```shell-session
+server> q
 ```
 
 #### How to generate C API document
 
 #### Installing doxygen
-##### Linux
-```shell-session
-dnf install doxygen
-```
 
-##### MacOS
-```shell-session
-brew install doxygen
-```
+| OS | command |
+| ---- | ---- |
+| Linux | ```shell-sessiondnf install doxygen```  |
+| MacOS | ```shell-sessionbrew install doxygen``` |
 
-#### Generating API document
+##### Generating API document
 ```shell-session
 doxygen Doxyfile
 ```
