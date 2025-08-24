@@ -10,11 +10,13 @@
   * make/cmake (make/cmake RPM for RHEL compatible OS)
   * openssl (openssl-devel RPM for RHEL compatible OS)
   * zlib (zlib-devel RPM for RHEL compatible OS)
+  * Python 3.11, 3.12 or 3.13 (For Python API)
 
 * Runtime requires the following tools:
   * gcc (libgcc RPM for RHEL compatible OS)
   * openssl (openssl-libs RPM for RHEL compatible OS)
   * zlib (zlib RPM for RHEL compatible OS)
+  * Python 3.11, 3.12 or 3.13 (For Python API)
 
 * Doxygen (for generating C API document)
   * ```dnf install doxygen``` for Linux(RHEL/CentOS/Rocky Linux etc)
