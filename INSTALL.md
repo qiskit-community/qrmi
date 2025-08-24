@@ -17,6 +17,7 @@
   - [📃 Logging](#logging)
   - [📄 Generate API docs](#api-docs)
     - [🦀 Rust API docs](#how-to-generate-rust-api-document)
+    - [🐍 Pythoni API docs](#how-to-generate-python-api-document)
     - [©️ C API docs](#how-to-generate-c-api-document)
   - [Contributing](#contributing)
 
@@ -135,8 +136,10 @@ cargo doc --no-deps --open
 
 #### How to generate Python API document
 
+Prerequisites: QRMI Python package is installed in your python virtual environment(e.g. `~/py312_qrmi_venv`)
+
 ```shell-session
-cd qrmi
+source ~/py312_qrmi_venv/bin/activate
 python -m pydoc -p 8290
 Server ready at http://localhost:8290/
 Server commands: [b]rowser, [q]uit
