@@ -9,6 +9,7 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
+#![allow(dead_code)]
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;

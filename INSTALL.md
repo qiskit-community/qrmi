@@ -2,7 +2,27 @@
 
 > **Supported OS**: AlmaLinux 9, Amazon Linux 2023, CentOS Stream 9, CentOS Stream 10, RedHat Enterprise Linux 8, RedHat Enterprise Linux 9, RedHat Enterprise Linux 10, Rocky Linux 8, Rocky Linux 9, SuSE 15, Ubuntu 22.04, Ubuntu 24.04, MacOS Sequoia 15.1 or above
 
-> **Prerequisites**: Rust 1.85.1 or above, Python 3.11, 3.12 and doxygen (for generating C API document)or 3.13
+## Prerequisites
+
+* Compilation requires the following tools:
+  * Rust compiler 1.86 or above [Link](https://www.rust-lang.org/tools/install)
+  * A C compiler: for example, GCC(gcc) on Linux and Clang(clang-tools-extra) for Rust unknown targets/cross compilations. QRMI is compatible with a compiler conforming to the C11 standard.
+  * make/cmake (make/cmake RPM for RHEL compatible OS)
+  * openssl (openssl-devel RPM for RHEL compatible OS)
+  * zlib (zlib-devel RPM for RHEL compatible OS)
+  * Python 3.11, 3.12 or 3.13 (For Python API)
+
+* Runtime requires the following tools:
+  * gcc (libgcc RPM for RHEL compatible OS)
+  * openssl (openssl-libs RPM for RHEL compatible OS)
+  * zlib (zlib RPM for RHEL compatible OS)
+  * Python 3.11, 3.12 or 3.13 (For Python API)
+
+* Doxygen (for generating C API document)
+  * ```dnf install doxygen``` for Linux(RHEL/CentOS/Rocky Linux etc)
+  * ```apt install doxygen``` for Linux(Ubuntu etc.)
+  * ```brew install doxygen```for MacOS
+
 
 ## 📋 Content
 
@@ -17,8 +37,10 @@
   - [📃 Logging](#logging)
   - [📄 Generate API docs](#api-docs)
     - [🦀 Rust API docs](#how-to-generate-rust-api-document)
+    - [🐍 Pythoni API docs](#how-to-generate-python-api-document)
     - [©️ C API docs](#how-to-generate-c-api-document)
   - [Contributing](#contributing)
+
 
 ## Building core QRMI libraries
 
@@ -45,35 +67,11 @@ pip install --upgrade pip
 pip install -r requirements-dev.txt
 ```
 
+
 #### Create stub file for python code
 ```shell-session
 . ~/.cargo/env
 cargo run --bin stubgen --features=pyo3
-```
-
-#### Build Python module and install to your Python virtual environment
-```shell-session
-source ~/py312_qrmi_venv/bin/activate
-CARGO_TARGET_DIR=./target/release/maturin maturin develop --release
-```
-
-Once you successfully build and install, `qrmi` package is ready to use.
-```shell-session
-$ pip list
-qrmi                   0.5.2       /Users/devuser/git/spank-plugins/qrmi
-
-$ pip show qrmi
-Name: qrmi
-Version: 0.5.2
-Summary: Quantum Resource Management Interface(QRMI)
-Home-page: 
-Author: IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)
-Author-email: qiskit@us.ibm.com
-License: Apache-2.0
-Location: /shared/pyenv/lib64/python3.12/site-packages
-Editable project location: /shared/spank-plugins/qrmi
-Requires: 
-Required-by: qiskit-qrmi-primitives
 ```
 
 
@@ -87,23 +85,29 @@ CARGO_TARGET_DIR=./target/release/maturin maturin build --release
 For example,
 ```shell-session
 CARGO_TARGET_DIR=./target/release/maturin maturin build --release
+
+🍹 Building a mixed python/rust project
 🔗 Found pyo3 bindings with abi3 support
-🐍 Found CPython 3.12 at /shared/pyenv/bin/python
+🐍 Found CPython 3.12 at /root/py312_qrmi_venv/bin/python
 📡 Using build options features from pyproject.toml
-   Compiling qrmi v0.5.2 (/shared/spank-plugins/qrmi)
-    Finished `release` profile [optimized] target(s) in 12.76s
+   ...
+   Compiling qrmi v0.7.1 (/shared/qrmi)
+    Finished `release` profile [optimized] target(s) in 1m 10s
 🖨  Copied external shared libraries to package qrmi.libs directory:
-    /usr/lib64/libssl.so.3.2.2
     /usr/lib64/libcrypto.so.3.2.2
-📦 Built wheel for abi3 Python ≥ 3.12 to /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+    /usr/lib64/libssl.so.3.2.2
+📦 Including files matching "python/qrmi/py.typed"
+📦 Including files matching "python/qrmi/*.pyi"
+📦 Built wheel for abi3 Python ≥ 3.12 to /shared/qrmi/target/release/maturin/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
 Wheel is created under `./target/release/maturin/wheels` directory. You can distribute and install on your hosts by `pip install <wheel>`.
 
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-pip install /shared/spank-plugins/qrmi/target/release/maturin/wheels/qrmi-0.5.2-cp312-abi3-manylinux_2_34_aarch64.whl
+pip install /shared/qrmi/target/release/maturin/wheels/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
+
 
 ## Building optional libraries
 
@@ -111,23 +115,32 @@ Optional packages that are available in QRMI repository.
 
 `task_runner` is command line command to execute quantum payload againts quantum hardware. Under the hood it is using QRMI library.
 
+
 ### How to build task_runner for Rust version
+
+> [!WARNING]
+> Rust version of task_runner is now obsoleted. Use Python version.
+
 ```shell-session
 . ~/.cargo/env
 cargo build -p task_runner 
 ```
 
+
 ### How to run task_runner for Python version
-`task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
-For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
+`task_runner` for Python version is already included in QRMI Python package. User can use task_runner command after installing qrmi. 
+For detailed instructions on how to use it, please refer to this [README](./python/qrmi/tools/task_runner/README.md).
+
 
 ## Other
+
 
 ### Examples
 
 * [Examples in Rust](./examples/qrmi/rust)
 * [Examples in Python](./examples/qrmi/python)
 * [Examples in C](./examples/qrmi/c)
+
 
 ### Logging
 
@@ -145,7 +158,9 @@ RUST_LOG=trace <your QRMI executable>
 [2025-08-16T03:47:38Z DEBUG direct_access_api::middleware::auth] current token ...
 ```
 
+
 ### API Docs
+
 
 #### How to generate Rust API document
 
@@ -154,45 +169,49 @@ RUST_LOG=trace <your QRMI executable>
 cargo doc --no-deps --open
 ```
 
-#### Note
-`get_target` method has been refactored into a library, so we updated the import statement.
 
-Before
+#### How to generate Python API document
+
+Prerequisites: QRMI Python package is installed in your python virtual environment(e.g. `~/py312_qrmi_venv`)
+
+```shell-session
+source ~/py312_qrmi_venv/bin/activate
+python -m pydoc -p 8290
+Server ready at http://localhost:8290/
+Server commands: [b]rowser, [q]uit
+server> b
 ```
-from target import get_target
+
+Open the following page in your browser.
+```shell-session
+http://localhost:8290/qrmi.html 
 ```
-After
+
+Quit server.
+```shell-session
+server> q
 ```
-from qrmi.primitives.ibm import get_target
-```
+
 
 #### How to generate C API document
 
-#### Installing doxygen
-##### Linux
-```shell-session
-dnf install doxygen
-```
-
-##### MacOS
-```shell-session
-brew install doxygen
-```
-
-#### Generating API document
+##### Generating API document
 ```shell-session
 doxygen Doxyfile
 ```
 
 HTML document will be created under `./html` directory. Open `html/index.html` in your web browser. 
 
+
 ### Contributing
 
 Regardless if you are part of the core team or an external contributor, welcome and thank you for contributing to QRMI implementations!
 
+
 ### Solving linting/format issues
 
 Contributor must execute the commands below and fix any issues before submitting Pull Request.
+
 
 #### Rust code
 ```shell-session
@@ -204,6 +223,7 @@ $ cargo fmt --all -- --check
 $ cargo clippy --all-targets -- -D warnings
 ```
 
+
 #### Python code
 ```shell-session
 $ source ~/py312_qrmi_venv/bin/activate
@@ -211,6 +231,7 @@ $ cd examples
 $ pylint ./python
 $ black --check ./python
 ```
+
 
 ## License
 
