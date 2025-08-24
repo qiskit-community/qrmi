@@ -7,7 +7,7 @@ This executable receives SIGCONT/SIGTERM signals sent by Slurm infrastructure an
 ## Prerequisites
 
 * Python 3.11, 3.12 or 3.13
-* [QRMI Python package](../../../../INSTALL.md#how-to-build--install-qrmi-python-package) is installed on your python virtual environment.
+* [QRMI Python package](../../../../INSTALL.md#how-to-build--install-qrmi-python-package) is installed on your python virtual environment. This document assumes your python virtual environment is created under `~/py312_qrmi_venv` directory.
 
 
 ## How to run
@@ -119,6 +119,8 @@ You can run `task_runner` on your host locally for your development or testing b
 Example:
 
 ```shell-session
+source ~/py312_qrmi_venv/bin/activate
+
 export SLURM_JOB_QPU_RESOURCES=test_heron
 export SLURM_JOB_QPU_TYPES=direct-access
 export test_heron_QRMI_IBM_DA_ENDPOINT=http://localhost:8080
@@ -150,6 +152,8 @@ task_runner test_heron /shared/input/estimator_input.json
 Example:
 
 ```shell-session
+source ~/py312_qrmi_venv/bin/activate
+
 export SLURM_JOB_QPU_RESOURCES=ibm_marrakesh
 export SLURM_JOB_QPU_TYPES=qiskit-runtime-service
 export test_heron_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
@@ -172,6 +176,8 @@ task_runner ibm_marrakesh /shared/input/estimator_input.json
 Example:
 
 ```shell-session
+source ~/py312_qrmi_venv/bin/activate
+
 export SLURM_JOB_QPU_RESOURCES=FRESNEL
 export SLURM_JOB_QPU_TYPES=pasqal-cloud
 export FRESNEL_QRMI_PASQAL_CLOUD_PROJECT_ID=<your project ID>
