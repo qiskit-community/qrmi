@@ -20,11 +20,9 @@
   * zlib (zlib RPM for RHEL compatible OS)
 
 * Doxygen (for generating C API document)
-| Platforms | Installation command |
-| ---- | ---- |
-| Linux(RHEL/CentOS/Rocky Linux etc) | ```dnf install doxygen```  |
-| Linux(Ubuntu etc.) | ```apt install doxygen```  |
-| MacOS | ```brew install doxygen``` |
+  * ```dnf install doxygen``` for Linux(RHEL/CentOS/Rocky Linux etc)
+  * ```apt install doxygen``` for Linux(Ubuntu etc.)
+  * ```brew install doxygen```for MacOS
 
 
 ## 📋 Content
