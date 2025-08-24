@@ -157,10 +157,11 @@ server> q
 
 #### Installing doxygen
 
-| OS | command |
+| Platforms | Installation command |
 | ---- | ---- |
-| Linux | ```shell-sessiondnf install doxygen```  |
-| MacOS | ```shell-sessionbrew install doxygen``` |
+| Linux(RHEL/CentOS/Rocky Linux etc) | ```dnf install doxygen```  |
+| Linux(Ubuntu etc.) | ```apt install doxygen```  |
+| MacOS | ```brew install doxygen``` |
 
 ##### Generating API document
 ```shell-session
