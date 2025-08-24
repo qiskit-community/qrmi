@@ -2,10 +2,34 @@
 
 > **Supported OS**: AlmaLinux 9, Amazon Linux 2023, CentOS Stream 9, CentOS Stream 10, RedHat Enterprise Linux 8, RedHat Enterprise Linux 9, RedHat Enterprise Linux 10, Rocky Linux 8, Rocky Linux 9, SuSE 15, Ubuntu 22.04, Ubuntu 24.04, MacOS Sequoia 15.1 or above
 
-> **Prerequisites**: Rust 1.85.1 or above, Python 3.11, 3.12 and doxygen (for generating C API document)or 3.13
+## Prerequisites
+
+* Compilation requires the following tools:
+  * Rust compiler 1.86 or above [Link](https://www.rust-lang.org/tools/install)
+  * A C compiler: for example, GCC(gcc) on Linux and Clang(clang-tools-extra) for Rust unknown targets/cross compilations. QRMI and its Spank plugin are compatible with a compiler conforming to the C11 standard.
+  * make/cmake (make/cmake RPM for RHEL compatible OS
+  * openssl (openssl-devel RPM for RHEL compatible OS)
+  * zlib (zlib-devel RPM for RHEL compatible OS)
+  * Slurm header & library
+    * slurm/slurm.h must be available under /usr/include
+    * libslurm.so must be available under /usr/lib64 or /usr/lib/x86_64-linux-gnu
+
+* Runtime requires the following tools:
+  * gcc (libgcc RPM for RHEL compatible OS)
+  * openssl (openssl-libs RPM for RHEL compatible OS)
+  * zlib (zlib RPM for RHEL compatible OS)
+
+* Doxygen (for generating C API document)
+| Platforms | Installation command |
+| ---- | ---- |
+| Linux(RHEL/CentOS/Rocky Linux etc) | ```dnf install doxygen```  |
+| Linux(Ubuntu etc.) | ```apt install doxygen```  |
+| MacOS | ```brew install doxygen``` |
+
 
 ## 📋 Content
 
+- [Building core QRMI library](#building-core-qrmi-libraries)
 - [🔶 Building core QRMI library](#building-core-qrmi-libraries)
   - [🦀/©️ Rust and C](#how-to-build-rustc-api-library)
   - [🐍 Python](#how-to-build--install-qrmi-python-package)
@@ -20,6 +44,7 @@
     - [🐍 Pythoni API docs](#how-to-generate-python-api-document)
     - [©️ C API docs](#how-to-generate-c-api-document)
   - [Contributing](#contributing)
+
 
 ## Building core QRMI libraries
 
@@ -46,11 +71,13 @@ pip install --upgrade pip
 pip install -r requirements-dev.txt
 ```
 
+
 #### Create stub file for python code
 ```shell-session
 . ~/.cargo/env
 cargo run --bin stubgen --features=pyo3
 ```
+
 
 #### Create a wheel for distribution
 
@@ -85,11 +112,13 @@ source ~/py312_qrmi_venv/bin/activate
 pip install /shared/qrmi/target/release/maturin/wheels/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 ```
 
+
 ## Building optional libraries
 
 Optional packages that are available in QRMI repository.
 
 `task_runner` is command line command to execute quantum payload againts quantum hardware. Under the hood it is using QRMI library.
+
 
 ### How to build task_runner for Rust version
 ```shell-session
@@ -97,17 +126,21 @@ Optional packages that are available in QRMI repository.
 cargo build -p task_runner 
 ```
 
+
 ### How to run task_runner for Python version
 `task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
 For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
 
+
 ## Other
+
 
 ### Examples
 
 * [Examples in Rust](./examples/qrmi/rust)
 * [Examples in Python](./examples/qrmi/python)
 * [Examples in C](./examples/qrmi/c)
+
 
 ### Logging
 
@@ -125,7 +158,9 @@ RUST_LOG=trace <your QRMI executable>
 [2025-08-16T03:47:38Z DEBUG direct_access_api::middleware::auth] current token ...
 ```
 
+
 ### API Docs
+
 
 #### How to generate Rust API document
 
@@ -133,6 +168,7 @@ RUST_LOG=trace <your QRMI executable>
 . ~/.cargo/env
 cargo doc --no-deps --open
 ```
+
 
 #### How to generate Python API document
 
@@ -156,15 +192,8 @@ Quit server.
 server> q
 ```
 
+
 #### How to generate C API document
-
-#### Installing doxygen
-
-| Platforms | Installation command |
-| ---- | ---- |
-| Linux(RHEL/CentOS/Rocky Linux etc) | ```dnf install doxygen```  |
-| Linux(Ubuntu etc.) | ```apt install doxygen```  |
-| MacOS | ```brew install doxygen``` |
 
 ##### Generating API document
 ```shell-session
@@ -173,13 +202,16 @@ doxygen Doxyfile
 
 HTML document will be created under `./html` directory. Open `html/index.html` in your web browser. 
 
+
 ### Contributing
 
 Regardless if you are part of the core team or an external contributor, welcome and thank you for contributing to QRMI implementations!
 
+
 ### Solving linting/format issues
 
 Contributor must execute the commands below and fix any issues before submitting Pull Request.
+
 
 #### Rust code
 ```shell-session
@@ -191,6 +223,7 @@ $ cargo fmt --all -- --check
 $ cargo clippy --all-targets -- -D warnings
 ```
 
+
 #### Python code
 ```shell-session
 $ source ~/py312_qrmi_venv/bin/activate
@@ -198,6 +231,7 @@ $ cd examples
 $ pylint ./python
 $ black --check ./python
 ```
+
 
 ## License
 
