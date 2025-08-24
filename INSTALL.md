@@ -128,8 +128,8 @@ cargo build -p task_runner
 
 
 ### How to run task_runner for Python version
-`task_runner` for Python version is already included in qrmi package. User can use task_runner command after installing qrmi. 
-For detailed instructions on how to use it, please refer to this [README](./bin/task_runner/README.md).
+`task_runner` for Python version is already included in QRMI Python package. User can use task_runner command after installing qrmi. 
+For detailed instructions on how to use it, please refer to this [README](./python/qrmi/tools/task_runner/README.md).
 
 
 ## Other
