@@ -123,7 +123,7 @@ Optional packages that are available in QRMI repository.
 
 ```shell-session
 . ~/.cargo/env
-cargo build -p task_runner 
+cargo build --bin task_runner --release --features=build-binary
 ```
 
 
