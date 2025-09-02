@@ -24,6 +24,39 @@ use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 
+enum SystemState { 
+    //System is doing something 
+    InUse, 
+    //Some error occured 
+    ErrorState, 
+    //System is not doing anything 
+    NotInUse 
+} 
+enum Calibration{ 
+    //Time taken 
+    CalibrationTime, 
+} 
+//Resource metadata for task and system 
+struct ResourceMetadataTask{ 
+    //Utilization metric 
+    utilization:f32,
+    //Energy Consumption 
+    power_draw:f64, 
+    //Memory Used 
+    memory_use:f64,
+    //qubit usage 
+    qubit_usage:i32 
+} 
+struct ResourceMetadataSystem{ 
+    //State of the system 
+    stateof_system:SystemState,
+    //Calbration 
+    calibration: Calibration,
+    //How much of the system is in use 
+    system_utilization: f32,
+    //Energy consumption 
+    power_draw: f64, 
+}
 /// Defines interfaces to quantum resources.
 #[async_trait]
 pub trait QuantumResource: Send + Sync {
