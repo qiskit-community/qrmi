@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2024, 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -15,6 +15,7 @@ use direct_access_api::{
     models::Job, models::JobStatus, models::Jobs, models::ProgramId, ClientBuilder,
 };
 use serde_json::json;
+use uuid::Uuid;
 
 /// Test Client.list_jobs().
 /// This test will compare the deserialized values in Jobs object with expected values.
@@ -119,86 +120,45 @@ async fn test_get_job() {
 
     let mut server = mockito::Server::new_async().await;
 
-    let expected = json!({
-        "jobs": [
-            {
-                "id": "77b65b44-07bc-4557-80e2-7f73a6be8ea4",
-                "program_id": "sampler",
-                "backend": "backend_1",
-                "timeout_secs": 10000,
-                "storage": {
-                    "input": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/input-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
-                    },
-                    "results": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/results-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
-                    },
-                    "logs": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/logs-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
-                    },
+    let expected = json!(
+        {
+            "id": "77b65b44-07bc-4557-80e2-7f73a6be8ea4",
+            "program_id": "sampler",
+            "backend": "backend_1",
+            "timeout_secs": 10000,
+            "storage": {
+                "input": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/input-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
                 },
-                "status": "Completed",
-                "created_time": "2024-11-05T17:21:58.011168Z",
-                "end_time": "2024-11-05T17:22:37.439083Z",
-                "usage": {
-                    "quantum_nanoseconds": 4902824512i64,
+                "results": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/results-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
+                },
+                "logs": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/logs-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
                 },
             },
-            {
-                "id": "d7f06eda-ddfe-412e-a94b-747da412a955",
-                "program_id": "estimator",
-                "backend": "backend_2",
-                "timeout_secs": 10000,
-                "storage": {
-                    "input": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/input-d7f06eda-ddfe-412e-a94b-747da412a955"
-                    },
-                    "results": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/results-d7f06eda-ddfe-412e-a94b-747da412a955"
-                    },
-                    "logs": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/logs-d7f06eda-ddfe-412e-a94b-747da412a955"
-                    },
-                },
-                "status": "Failed",
-                "reason_message": "Reason why this job was failed.",
-                "reason_code": 1517,
-                "created_time": "2024-11-04T20:47:34.46209Z",
-                "end_time": "2024-11-04T20:47:38.203455Z",
+            "status": "Completed",
+            "created_time": "2024-11-05T17:21:58.011168Z",
+            "end_time": "2024-11-05T17:22:37.439083Z",
+            "usage": {
+                "quantum_nanoseconds": 4902824512i64,
             },
-        ],
-    });
+        }
+    );
 
     server
-        .mock("GET", "/v1/jobs")
+        .mock("GET", "/v1/jobs/77b65b44-07bc-4557-80e2-7f73a6be8ea4")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(expected.to_string())
         .create_async()
         .await;
 
-    // get a job with deserializing to JSON object. All comparison should be succeeded.
     let base_url = server.url();
     let client = ClientBuilder::new(&base_url).build().unwrap();
-    let actual = client
-        .get_job::<serde_json::Value>("77b65b44-07bc-4557-80e2-7f73a6be8ea4")
-        .await
-        .unwrap();
-    let mut expected_job = json!({});
-    if let Some(jobs) = expected["jobs"].as_array() {
-        for job in jobs {
-            if job["id"] == "77b65b44-07bc-4557-80e2-7f73a6be8ea4" {
-                expected_job = job.clone();
-            }
-        }
-    }
-    assert_json_include!(actual: actual, expected: expected_job);
 
     // get a job with deserializing to Job object. All comparison should be succeeded.
     let actual_job = client
@@ -229,67 +189,76 @@ async fn test_get_job_status() {
 
     let mut server = mockito::Server::new_async().await;
 
-    let expected = json!({
-        "jobs": [
-            {
-                "id": "77b65b44-07bc-4557-80e2-7f73a6be8ea4",
-                "program_id": "sampler",
-                "backend": "backend_1",
-                "timeout_secs": 10000,
-                "storage": {
-                    "input": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/input-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
-                    },
-                    "results": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/results-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
-                    },
-                    "logs": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/logs-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
-                    },
+    let expected = json!(
+        {
+            "id": "77b65b44-07bc-4557-80e2-7f73a6be8ea4",
+            "program_id": "sampler",
+            "backend": "backend_1",
+            "timeout_secs": 10000,
+            "storage": {
+                "input": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/input-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
                 },
-                "status": "Completed",
-                "created_time": "2024-11-05T17:21:58.011168Z",
-                "end_time": "2024-11-05T17:22:37.439083Z",
-                "usage": {
-                    "quantum_nanoseconds": 4902824512i64,
+                "results": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/results-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
+                },
+                "logs": {
+                    "type": "s3_compatible",
+                     "presigned_url": "https://s3endpoint/s3bucket/logs-77b65b44-07bc-4557-80e2-7f73a6be8ea4"
                 },
             },
-            {
-                "id": "d7f06eda-ddfe-412e-a94b-747da412a955",
-                "program_id": "estimator",
-                "backend": "backend_2",
-                "timeout_secs": 10000,
-                "storage": {
-                    "input": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/input-d7f06eda-ddfe-412e-a94b-747da412a955"
-                    },
-                    "results": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/results-d7f06eda-ddfe-412e-a94b-747da412a955"
-                    },
-                    "logs": {
-                        "type": "s3_compatible",
-                        "presigned_url": "https://s3endpoint/s3bucket/logs-d7f06eda-ddfe-412e-a94b-747da412a955"
-                    },
-                },
-                "status": "Failed",
-                "reason_message": "Reason why this job was failed.",
-                "reason_code": 1517,
-                "created_time": "2024-11-04T20:47:34.46209Z",
-                "end_time": "2024-11-04T20:47:38.203455Z",
+            "status": "Completed",
+            "created_time": "2024-11-05T17:21:58.011168Z",
+            "end_time": "2024-11-05T17:22:37.439083Z",
+            "usage": {
+                "quantum_nanoseconds": 4902824512i64,
             },
-        ],
-    });
+        }
+    );
 
     server
-        .mock("GET", "/v1/jobs")
+        .mock("GET", "/v1/jobs/77b65b44-07bc-4557-80e2-7f73a6be8ea4")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(expected.to_string())
+        .create_async()
+        .await;
+
+    let expected_job_failed = json!(
+        {
+            "id": "d7f06eda-ddfe-412e-a94b-747da412a955",
+            "program_id": "sampler",
+            "backend": "backend_1",
+            "timeout_secs": 10000,
+            "storage": {
+                "input": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/input-d7f06eda-ddfe-412e-a94b-747da412a955"
+                },
+                "results": {
+                    "type": "s3_compatible",
+                    "presigned_url": "https://s3endpoint/s3bucket/results-d7f06eda-ddfe-412e-a94b-747da412a955"
+                },
+                "logs": {
+                    "type": "s3_compatible",
+                     "presigned_url": "https://s3endpoint/s3bucket/logs-d7f06eda-ddfe-412e-a94b-747da412a955"
+                },
+            },
+            "status": "Failed",
+            "reason_message": "Reason why this job was failed.",
+            "reason_code": 1517,
+            "created_time": "2024-11-04T20:47:34.46209Z",
+            "end_time": "2024-11-04T20:47:38.203455Z",
+        }
+    );
+
+    server
+        .mock("GET", "/v1/jobs/d7f06eda-ddfe-412e-a94b-747da412a955")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(expected_job_failed.to_string())
         .create_async()
         .await;
 
@@ -333,7 +302,8 @@ async fn test_cancel_job() {
     let not_found = json!({
         "status_code": 404,
         "title": "Job not found. Job ID: unknown",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1291",
@@ -410,7 +380,8 @@ async fn test_delete_job() {
     let not_found = json!({
         "status_code": 404,
         "title": "Job not found. Job ID: unknown",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1291",

@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2024, 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -13,6 +13,7 @@ mod common;
 use assert_json_diff::assert_json_include;
 use direct_access_api::{models::Backend, models::BackendStatus, models::Backends, ClientBuilder};
 use serde_json::json;
+use uuid::Uuid;
 
 /// Test Client.get_backend_configuration().
 /// In this test, test will be run with existing and unknown backend name.
@@ -31,7 +32,8 @@ async fn test_backend_configuration() {
     let not_found = json!({
         "status_code": 404,
         "title": "Backend unknown not found.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors":[
             {
                 "code":"1216",
@@ -88,7 +90,8 @@ async fn test_backend_properties() {
     let not_found = json!({
         "status_code": 404,
         "title": "Backend unknown not found.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors":[
             {
                 "code":"1216",
@@ -133,6 +136,7 @@ async fn test_backend_properties() {
 /// Client.get_backend_pulse_defaults() should return the pulse defaults JSON if backend is existing, otherwise
 /// it should be failed with error message.
 #[tokio::test]
+#[cfg(feature = "pulse_defaults")]
 async fn test_backend_pulse_defaults() {
     common::setup();
 
@@ -145,7 +149,8 @@ async fn test_backend_pulse_defaults() {
     let not_found = json!({
         "status_code": 404,
         "title": "Backend unknown not found.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors":[
             {
                 "code":"1216",
@@ -203,7 +208,8 @@ async fn test_backend_details() {
     let not_found = json!({
         "status_code": 404,
         "title": "Backend unknown not found.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors":[
             {
                 "code":"1216",

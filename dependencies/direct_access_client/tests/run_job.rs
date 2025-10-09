@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2024, 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -93,7 +93,8 @@ async fn test_run_job_failed() {
     let error = json!({
         "status_code": 423,
         "title": "The requested backend is currently reserved and cannot run jobs outside of the reservation.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1233",

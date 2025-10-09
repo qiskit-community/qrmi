@@ -9,6 +9,7 @@ members = [
     "run_primitive",
     "version",
     "utility",
+    "api_versions",
 ]
 resolver = "2"
 
@@ -17,4 +18,4 @@ version = "0.2.0"
 edition = "2021"
 
 [workspace.dependencies]
-direct-access-api = { path = ".." }
+direct-access-api = { path = "..", features = ["skip_tls_cert_verify"] }

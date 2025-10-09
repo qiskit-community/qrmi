@@ -60,17 +60,15 @@ impl TokenManager {
                 .header(reqwest::header::CONTENT_TYPE, "application/json")
                 .send()
                 .await?;
-            if response.status().is_success() {
+            let status = response.status();
+            if status.is_success() {
                 let token_response: GetAccessTokenResponse = response.json().await?;
                 self.access_token = Some(token_response.access_token);
                 self.token_expiry =
                     Some(Instant::now() + Duration::from_secs(token_response.expires_in));
             } else {
-                let error_response = response.json::<ErrorResponse>().await?;
-                bail!(format!(
-                    "{} ({}) {:?}",
-                    error_response.title, error_response.status_code, error_response.errors
-                ));
+                let reason = status.canonical_reason().unwrap_or_default().to_string();
+                bail!(format!("{} ({})", reason, status));
             }
         }
         if let AuthMethod::IbmCloudIam { apikey, .. } = self.auth_method.clone() {

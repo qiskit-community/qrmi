@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -9,21 +9,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-pub mod backend_config;
-pub mod backend_details;
-pub mod backend_props;
-#[cfg(feature = "pulse_defaults")]
-pub mod backend_pulse_defaults;
-pub mod list_backends;
+#[allow(unused_imports)]
+use serde::{Deserialize, Serialize};
 
-pub mod cancel_job;
-pub mod delete_job;
-pub mod job_details;
-pub mod job_status;
-pub mod job_wait_for_final_state;
-pub mod list_jobs;
-pub mod run_job;
-pub mod run_primitive;
-
-pub mod list_api_versions;
-pub mod service_version;
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListAPIVersions {
+    #[serde(default)]
+    pub versions: Option<Vec<String>>,
+}

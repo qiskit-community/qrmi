@@ -19,11 +19,12 @@ pub(crate) mod auth;
 pub(crate) mod errors;
 pub(crate) mod jobs;
 pub(crate) mod version;
+pub(crate) mod versions;
 
 pub use self::backend_configuration::{
     BackendConfiguration, GateConfig, ProcessorType, TimingConstraints,
 };
 pub use self::backend_properties::{BackendProperties, Gate, Nduv};
 pub use self::backends::{Backend, BackendStatus, Backends};
-pub use self::errors::{Error, ErrorResponse, ExtendedErrorResponse};
+pub use self::errors::{Error, ErrorResponse, ExtendedErrorResponse, Target};
 pub use self::jobs::{Job, JobStatus, Jobs, LogLevel, ProgramId, Storage, StorageOption, Usage};

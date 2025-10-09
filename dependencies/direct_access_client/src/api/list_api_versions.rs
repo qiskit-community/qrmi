@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024, 2025
+// (C) Copyright IBM 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::models::errors::ExtendedErrorResponse;
-use crate::models::version::ServiceVersion;
+use crate::models::versions::ListAPIVersions;
 use crate::Client;
 use anyhow::{bail, Result};
 use log::error;
@@ -18,7 +18,7 @@ use log::error;
 use std::env;
 
 impl Client {
-    /// Returns the latest supported API version.
+    /// Returns the list of supported API versions.
     ///
     /// # Example
     ///
@@ -30,7 +30,7 @@ impl Client {
     ///     let client = ClientBuilder::new("http://localhost:8080")
     ///         .build()
     ///         .unwrap();
-    ///     let version = client.get_service_version().await?;
+    ///     let versions = client.list_api_versions().await?;
     ///     Ok(())
     /// }
     /// ```
@@ -40,8 +40,8 @@ impl Client {
     /// This function will return an error variant when:
     /// - connection failed.
     ///
-    pub async fn get_service_version(&self) -> Result<String> {
-        let url = format!("{}/version", self.base_url,);
+    pub async fn list_api_versions(&self) -> Result<Vec<String>> {
+        let url = format!("{}/versions", self.base_url,);
         #[allow(unused_mut)]
         let mut builder = reqwest::Client::builder().connection_verbose(true);
         #[cfg(feature = "skip_tls_cert_verify")]
@@ -63,8 +63,8 @@ impl Client {
             Ok(resp) => {
                 let status = resp.status();
                 if status.is_success() {
-                    let json_data = resp.json::<ServiceVersion>().await?;
-                    Ok(json_data.version)
+                    let json_data = resp.json::<ListAPIVersions>().await?;
+                    Ok(json_data.versions.unwrap_or_default())
                 } else {
                     match resp.json::<ExtendedErrorResponse>().await {
                         Ok(ExtendedErrorResponse::Json(error)) => {
