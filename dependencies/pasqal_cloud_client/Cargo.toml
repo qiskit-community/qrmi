@@ -10,7 +10,7 @@ edition.workspace = true
 
 [dependencies]
 anyhow = { version = "1.0.90", features = ["backtrace"] }
-reqwest = { version = "=0.12.12", features = ["json"] }
+reqwest = { version = "0.12.14", features = ["json"] }
 thiserror = "1.0.64"
 retry-policies = "0.4.0"
 chrono = "0.4.38"

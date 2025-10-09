@@ -95,11 +95,9 @@ impl Client {
                 } else {
                     match resp.json::<ExtendedErrorResponse>().await {
                         Ok(ExtendedErrorResponse::Json(error)) => {
-                            error!("{:#?}", error);
-                            bail!(format!(
-                                "{} ({}) ({}) {:?}",
-                                error.title, error.status_code, error.trace, error.errors
-                            ));
+                            let serialized = serde_json::to_value(&error).unwrap();
+                            error!("{}", &serialized);
+                            bail!(serialized);
                         }
                         Ok(ExtendedErrorResponse::Text(message)) => {
                             error!("{}", message);
@@ -254,6 +252,26 @@ impl ClientBuilder {
         self
     }
 
+    /// Specify a retry policy of REST API calls.
+    ///
+    /// Default is no retry.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::time::Duration;
+    /// use retry_policies::policies::ExponentialBackoff;
+    /// use retry_policies::Jitter;
+    /// use direct_access_api::ClientBuilder;
+    ///
+    /// let retry_policy = ExponentialBackoff::builder()
+    ///     .retry_bounds(Duration::from_secs(1), Duration::from_secs(5))
+    ///     .jitter(Jitter::Bounded)
+    ///     .base(2)
+    ///     .build_with_max_retries(5);
+    /// let _builder = ClientBuilder::new("http://localhost:8280")
+    ///     .with_retry_policy(retry_policy);
+    /// ```
     pub fn with_retry_policy(&mut self, policy: ExponentialBackoff) -> &mut Self {
         self.retry_policy = Some(policy);
         self
@@ -434,8 +452,9 @@ impl ClientBuilder {
 /// An asynchronous client to interact with running primitive jobs.
 #[derive(Debug, Clone)]
 pub struct PrimitiveJob {
-    /// Job identifier
+    /// Job identifier. Recommended to be UUID.
     pub job_id: String,
+    /// HTTP client
     pub(crate) client: Client,
     /// S3 client to work with S3 bucket
     pub(crate) s3_client: aws_sdk_s3::Client,

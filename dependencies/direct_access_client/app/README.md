@@ -13,6 +13,21 @@ cargo build --release
 
 ## Examples
 
+### api_versions
+Get the list of supported API version.
+
+Source: [api_versions/src/main.rs](./api_versions/src/main.rs)
+
+Usage:
+```bash
+Usage: api_versions
+```
+
+Example:
+```bash
+./target/release/api_versions
+```
+
 ### backend
 Invoke Backend APIs.
 
@@ -151,7 +166,7 @@ Example:
 ```
 
 ### version
-Show service version.
+Show the latest supported API version.
 
 Source: [version/src/main.rs](./version/src/main.rs)
 

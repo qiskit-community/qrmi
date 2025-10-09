@@ -20,6 +20,7 @@ use chrono::Utc;
 use hmac::{Hmac, Mac};
 use jwt::{RegisteredClaims, SignWithKey};
 use sha2::Sha256;
+use uuid::Uuid;
 
 /// Generates new JWT token for access-token authentication
 fn new_token() -> Result<String, &'static str> {
@@ -121,7 +122,8 @@ async fn test_auth_invalid_appid() {
     let expected = json!({
         "status_code": 400,
         "title": "Error authenticating user.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1219",
@@ -172,7 +174,8 @@ async fn test_auth_invalid_access_token() {
     let expected = json!({
         "status_code": 401,
         "title": "Invalid credentials.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1201",
@@ -293,7 +296,8 @@ async fn test_invalid_internal_shared_key() {
     let expected = json!({
         "status_code": 401,
         "title": "Invalid credentials.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1201",
@@ -416,7 +420,8 @@ async fn test_auth_invalid_iam_apikey() {
     let expected = json!({
         "status_code": 400,
         "title": "Error authenticating user.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1219",
@@ -472,7 +477,8 @@ async fn test_auth_invalid_iam_bearer_token() {
     let expected = json!({
         "status_code": 401,
         "title": "Invalid credentials.",
-        "trace": "",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
         "errors": [
             {
                 "code": "1201",

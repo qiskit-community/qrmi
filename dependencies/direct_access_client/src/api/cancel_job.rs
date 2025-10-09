@@ -68,11 +68,9 @@ impl Client {
                 } else {
                     match resp.json::<ExtendedErrorResponse>().await {
                         Ok(ExtendedErrorResponse::Json(error)) => {
-                            error!("{:#?}", error);
-                            bail!(format!(
-                                "{} ({}) ({}) {:?}",
-                                error.title, error.status_code, error.trace, error.errors
-                            ));
+                            let serialized = serde_json::to_value(&error).unwrap();
+                            error!("{}", &serialized);
+                            bail!(serialized);
                         }
                         Ok(ExtendedErrorResponse::Text(message)) => {
                             error!("{}", message);
