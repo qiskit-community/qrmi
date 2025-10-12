@@ -40,6 +40,7 @@ dependencies = [
   "qiskit-pasqal-provider>=0.1.1",
   "pulser>=1.5.3",
   "python-dotenv",
+  "python-dateutil",
 ]
 [project.urls]
 repository = "https://github.com/qiskit-community/spank-plugins"

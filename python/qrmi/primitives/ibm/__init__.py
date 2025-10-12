@@ -15,3 +15,4 @@
 from .sampler import SamplerV2
 from .estimator import EstimatorV2
 from .target import get_target
+from .backend import get_backend
