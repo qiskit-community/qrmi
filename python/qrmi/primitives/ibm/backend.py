@@ -72,12 +72,7 @@ class QRMIBackend(BackendV2):
             backend_version=config_dict["backend_version"],
         )
         if fields:
-            for field in fields:
-                if field not in self._options:
-                    raise AttributeError(
-                        f"Options field {field} is not valid for this backend"
-                    )
-            self._options.update_options(**fields)
+            self.set_options(**fields)
 
         self._configuration = configuration_from_server_data(
             config_dict, use_fractional_gates=self.options.use_fractional_gates
