@@ -13,8 +13,7 @@
 """IBMBackend implementation with IBM QRMI"""
 
 import json
-from typing import Any, List, Dict, Optional
-from datetime import datetime as python_datetime
+from typing import Any, List, Optional
 import dateutil
 
 from qiskit import QuantumCircuit
@@ -31,8 +30,9 @@ from qiskit_ibm_runtime.exceptions import IBMBackendError
 from qiskit_ibm_runtime.models import (
     BackendProperties,
     QasmBackendConfiguration,
+    BackendStatus,
 )
-from qrmi import QuantumResource
+from qrmi import QuantumResource  # pylint: disable=no-name-in-module
 
 
 def get_backend(
@@ -46,11 +46,8 @@ def get_backend(
     Returns:
         qiskit.transpiler.target.Target: Qiskit Transpiler target
     """
-    target = qrmi.target()
-    target = json.loads(target.value)
     return QRMIBackend(
-        target["configuration"],
-        target["properties"],
+        qrmi,
         use_fractional_gates=use_fractional_gates,
     )
 
@@ -60,14 +57,19 @@ class QRMIBackend(BackendV2):
 
     def __init__(
         self,
-        configuration: Dict,
-        properties: Dict,
+        qrmi: QuantumResource,
         **fields,
     ):
+        self._qrmi = qrmi
+        target = self._qrmi.target()
+        target = json.loads(target.value)
+        config_dict = target["configuration"]
+        prop_dict = target["properties"]
+
         super().__init__(
-            name=configuration["backend_name"],
-            online_date=dateutil.parser.isoparse(configuration["online_date"]),
-            backend_version=configuration["backend_version"],
+            name=config_dict["backend_name"],
+            online_date=dateutil.parser.isoparse(config_dict["online_date"]),
+            backend_version=config_dict["backend_version"],
         )
         if fields:
             for field in fields:
@@ -78,10 +80,10 @@ class QRMIBackend(BackendV2):
             self._options.update_options(**fields)
 
         self._configuration = configuration_from_server_data(
-            configuration, use_fractional_gates=self.options.use_fractional_gates
+            config_dict, use_fractional_gates=self.options.use_fractional_gates
         )
         self._properties = properties_from_server_data(
-            properties, use_fractional_gates=self.options.use_fractional_gates
+            prop_dict, use_fractional_gates=self.options.use_fractional_gates
         )
         self._target = convert_to_target(
             configuration=self._configuration,  # type: ignore[arg-type]
@@ -134,6 +136,24 @@ class QRMIBackend(BackendV2):
             seed_simulator=None,
         )
 
+    def _convert_to_target(self, refresh: bool = False) -> None:
+        """Converts backend configuration and properties to Target object"""
+        if refresh or not self._target:
+            target = self._qrmi.target()
+            target = json.loads(target.value)
+            self._configuration = configuration_from_server_data(
+                target["configuration"],
+                use_fractional_gates=self.options.use_fractional_gates,
+            )
+            self._properties = properties_from_server_data(
+                target["properties"],
+                use_fractional_gates=self.options.use_fractional_gates,
+            )
+            self._target = convert_to_target(
+                configuration=self._configuration,  # type: ignore[arg-type]
+                prperties=self._properties,
+            )
+
     @property
     def dtm(self) -> float:
         """Return the system time resolution of output signals
@@ -162,6 +182,10 @@ class QRMIBackend(BackendV2):
             meas_map: The grouping of measurements which are multiplexed
         """
         return self._configuration.meas_map
+
+    def refresh(self) -> None:
+        """Retrieve the newest backend configuration and refresh the current backend target."""
+        self._convert_to_target(refresh=True)
 
     @property
     def target(self) -> Target:
@@ -200,7 +224,8 @@ class QRMIBackend(BackendV2):
         return self._configuration
 
     def properties(
-        self, _refresh: bool = False, _datetime: Optional[python_datetime] = None
+        self,
+        refresh: bool = False,
     ) -> Optional[BackendProperties]:
         """Return the backend properties, subject to optional filtering.
 
@@ -215,9 +240,6 @@ class QRMIBackend(BackendV2):
         Args:
             refresh: If ``True``, re-query the server for the backend properties.
                 Otherwise, return a cached version.
-            datetime: By specifying `datetime`, this function returns an instance
-                of the :class:`BackendProperties<~.providers.models.BackendProperties>`
-                whose timestamp is closest to, but older than, the specified `datetime`.
 
         Returns:
             The backend properties or ``None`` if the backend properties are not
@@ -227,6 +249,14 @@ class QRMIBackend(BackendV2):
             TypeError: If an input argument is not of the correct type.
             NotImplementedError: If `datetime` is specified when cloud runtime is used.
         """
+        if refresh or self._properties is None:
+            target = self._qrmi.target()
+            target = json.loads(target.value)
+            self._properties = properties_from_server_data(
+                target["properties"],
+                use_fractional_gates=self.options.use_fractional_gates,
+            )
+
         return self._properties
 
     def check_faulty(self, circuit: QuantumCircuit) -> None:
@@ -282,3 +312,21 @@ class QRMIBackend(BackendV2):
         if not self.options.use_fractional_gates:
             return "ibm_dynamic_circuits"
         return "ibm_dynamic_and_fractional"
+
+    def status(self) -> BackendStatus:
+        """Return the backend status.
+
+        Returns:
+            The status of the backend.
+
+        """
+
+        api_status = {
+            "backend_name": self._configuration.backend_name,
+            "backend_version": self._configuration.backend_version,
+            "status_msg": "",
+            "operational": self._qrmi.is_accessible(),
+            "pending_jobs": 0,
+        }
+
+        return BackendStatus.from_dict(api_status)
