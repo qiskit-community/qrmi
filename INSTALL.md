@@ -11,7 +11,7 @@
   * openssl (openssl-devel RPM for RHEL compatible OS)
   * zlib (zlib-devel RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
-    * Libraries and header files needed for Python development(python3.xx-devel RPM for RHEL compatible OS)
+    * Libraries and header files needed for Python development(python3.1x-devel RPM for RHEL compatible OS)
       * /usr/include/python3.1x
       * /usr/lib64/libpython3.1x.so
 
