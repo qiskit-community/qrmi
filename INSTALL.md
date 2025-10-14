@@ -11,12 +11,16 @@
   * openssl (openssl-devel RPM for RHEL compatible OS)
   * zlib (zlib-devel RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
+    * Libraries and header files needed for Python development(python3.xx-devel RPM for RHEL compatible OS)
+      * /usr/include/python3.1x
+      * /usr/lib64/libpython3.1x.so
 
 * Runtime requires the following tools:
   * gcc (libgcc RPM for RHEL compatible OS)
   * openssl (openssl-libs RPM for RHEL compatible OS)
   * zlib (zlib RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
+    * Libraries and header files needed for Python development(python3.1x-devel RPM for RHEL compatible OS)
 
 * Doxygen (for generating C API document)
   * ```dnf install doxygen``` for Linux(RHEL/CentOS/Rocky Linux etc)
