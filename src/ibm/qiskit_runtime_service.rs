@@ -22,16 +22,20 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::ibm::qiskit_runtime_service::models::{
+    CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
+};
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{bail, Result};
+use log::error;
 use qiskit_runtime_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
 use qiskit_runtime_client::models;
 use qiskit_runtime_client::models::create_session_request_one_of::Mode;
+use qiskit_runtime_client::models::create_job_request_one_of::LogLevel;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
-use log::error;
 
 use async_trait::async_trait;
 
@@ -40,9 +44,10 @@ pub struct IBMQiskitRuntimeService {
     pub(crate) config: configuration::Configuration,
     pub(crate) backend_name: String,
     pub(crate) session_id: Option<String>,
-    pub(crate) timeout_secs: Option<u64>,
+    pub(crate) calibration_id: Option<String>,
+    pub(crate) timeout_secs: Option<i32>,
     pub(crate) session_mode: String,
-    pub(crate) session_max_ttl: u64,
+    pub(crate) session_max_ttl: i32,
     pub(crate) api_key: String,
     pub(crate) iam_endpoint: String,
     pub(crate) token_expiration: u64,
@@ -80,15 +85,15 @@ impl IBMQiskitRuntimeService {
             });
         let session_mode = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MODE"))
             .unwrap_or_else(|_| "dedicated".to_string());
-        let session_max_ttl: u64 = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MAX_TTL"))
+        let session_max_ttl: i32 = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MAX_TTL"))
             .ok()
-            .and_then(|s| s.parse::<u64>().ok())
+            .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(28800);
-        let timeout_secs: Option<u64> =
+        let timeout_secs: Option<i32> =
             env::var(format!("{backend_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS"))
                 .ok()
                 .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_TIMEOUT_SECONDS")).ok())
-                .and_then(|s| s.parse::<u64>().ok());
+                .and_then(|s| s.parse::<i32>().ok());
         let session_id = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_ID"))
             .ok()
             .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok());
@@ -102,6 +107,7 @@ impl IBMQiskitRuntimeService {
             config,
             backend_name: backend_name.to_string(),
             session_id,
+            calibration_id: None,
             timeout_secs,
             session_mode,
             session_max_ttl,
@@ -173,8 +179,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
 
         if let Some(existing_session_id) = self.session_id.clone() {
             let response =
-                sessions_api::get_session_information(&self.config, &existing_session_id, None)
-                    .await?;
+                sessions_api::get_session(&self.config, &existing_session_id, None).await?;
             let active_ttl = response.active_ttl.unwrap_or(1);
             let max_ttl = response.max_ttl.unwrap_or(1);
 
@@ -193,7 +198,8 @@ impl QuantumResource for IBMQiskitRuntimeService {
         let create_session_request_one_of = models::CreateSessionRequestOneOf {
             max_ttl: Some(self.session_max_ttl),
             mode: mode_value,
-            backend: self.backend_name.clone(),
+            backend: Some(self.backend_name.clone()),
+            backend_name: Some(self.backend_name.clone()),
         };
         let create_session_request = models::CreateSessionRequest::CreateSessionRequestOneOf(
             Box::new(create_session_request_one_of),
@@ -244,20 +250,37 @@ impl QuantumResource for IBMQiskitRuntimeService {
             error!("Token renewal failed: {:?}", e);
         }
         if let Payload::QiskitPrimitive { input, program_id } = payload {
-            let input_json: Value = serde_json::from_str(&input)?;
-            let params = match input_json {
-                Value::Object(map) => Some(map.into_iter().collect::<HashMap<String, Value>>()),
-                _ => None,
+            let params = match program_id.as_ref() {
+                "sampler" => {
+                    let val: Value = serde_json::from_str(&input)?;
+                    let parsed = serde_json::from_value::<SamplerV2Input>(val)?;
+                    CreateJobRequestOneOfAllOfParams::SamplerV2Input(Box::new(parsed))
+                }
+                "estimator" => {
+                    let val: Value = serde_json::from_str(&input)?;
+                    let parsed = serde_json::from_value::<EstimatorV2Input>(val)?;
+                    CreateJobRequestOneOfAllOfParams::EstimatorV2Input(Box::new(parsed))
+                }
+                "noiselearner" => {
+                    let val: Value = serde_json::from_str(&input)?;
+                    let parsed = serde_json::from_value::<NoiseLearnerInput>(val)?;
+                    CreateJobRequestOneOfAllOfParams::NoiseLearnerInput(Box::new(parsed))
+                }
+                &_ => {
+                    bail!("Unsupported program id: {:?}", program_id);
+                }
             };
             let create_job_request_one_of = models::CreateJobRequestOneOf {
                 program_id,
                 backend: self.backend_name.clone(),
                 runtime: None,
                 tags: None,
-                log_level: None, // or Some(LogLevel::Debug) if needed
+                log_level: Some(LogLevel::Debug),
                 cost: self.timeout_secs,
                 session_id: self.session_id.clone(),
-                params,
+                calibration_id: self.calibration_id.clone(),
+                params: Some(Box::new(params)),
+                private: Some(false),
             };
             let create_job_request = models::CreateJobRequest::CreateJobRequestOneOf(Box::new(
                 create_job_request_one_of,
@@ -288,7 +311,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         {
             error!("Token renewal failed: {:?}", e);
         }
-        let job_details = jobs_api::get_job_details_jid(&self.config, task_id, None, None).await?;
+        let job_details = jobs_api::get_job(&self.config, task_id, None, None).await?;
         let status = job_details.status;
         if status == models::job_response::Status::Running
             || status == models::job_response::Status::Queued
@@ -316,7 +339,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         {
             error!("Token renewal failed: {:?}", e);
         }
-        let job_details = jobs_api::get_job_details_jid(&self.config, task_id, None, None).await?;
+        let job_details = jobs_api::get_job(&self.config, task_id, None, None).await?;
         let status = job_details.status;
         match status {
             models::job_response::Status::Running => Ok(TaskStatus::Running),
@@ -344,7 +367,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         {
             error!("Token renewal failed: {:?}", e);
         } // Check if the task is completed before fetching the results.
-        let job_details = jobs_api::get_job_details_jid(&self.config, task_id, None, None).await?;
+        let job_details = jobs_api::get_job(&self.config, task_id, None, None).await?;
         let status = job_details.status;
         if status != models::job_response::Status::Completed {
             bail!("Task is not completed. Current status: {:?}", status);
@@ -378,8 +401,14 @@ impl QuantumResource for IBMQiskitRuntimeService {
         } else {
             resp["configuration"] = json!(null);
         }
-        if let Ok(props) =
-            backends_api::get_backend_properties(&self.config, &self.backend_name, None, None).await
+        if let Ok(props) = backends_api::get_backend_properties(
+            &self.config,
+            &self.backend_name,
+            None,
+            None,
+            self.calibration_id.as_deref(),
+        )
+        .await
         {
             resp["properties"] = serde_json::to_value(props)?;
         } else {
