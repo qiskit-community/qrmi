@@ -90,7 +90,7 @@ impl Config {
         let f = match File::open(filename) {
             Ok(v) => v,
             Err(err) => {
-                bail!("Failed to open {}. reason = {}", filename, err.to_string());
+                bail!("Failed to open {}. reason = {}", filename, err);
             }
         };
 
