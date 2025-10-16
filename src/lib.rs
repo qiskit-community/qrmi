@@ -172,6 +172,26 @@ pub trait QuantumResource: Send + Sync {
     /// ```
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult>;
 
+    /// Returns the log messages of the task.
+    ///
+    /// # Arguments
+    ///
+    /// * `task_id`: Identifier of the task.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{QiskitRuntimeService};
+    ///
+    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
+    ///     let log = qrmi.task_log(&job_id).unwrap();
+    ///     println!("{:?}", log);
+    ///     Ok(())
+    /// }
+    /// ```
+    async fn task_logs(&mut self, task_id: &str) -> Result<String>;
+
     /// Returns a Target for the specified device. Vendor specific serialized data. This might contain the constraints(instructions, properteis and timing information etc.) of a particular device to allow compilers to compile an input circuit to something that works and is optimized for a device. In IBM implementation, it contains JSON representations of [BackendConfiguration](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_configuration_schema.json) and [BackendProperties](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_properties_schema.json) so that we are able to create a Target object by calling `qiskit_ibm_runtime.utils.backend_converter.convert_to_target` or uquivalent functions.
     ///
     /// ```no_run

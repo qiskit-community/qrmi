@@ -122,6 +122,17 @@ impl PyQuantumResource {
         }
     }
 
+    fn task_logs(&mut self, task_id: &str) -> PyResult<String> {
+        crate::common::initialize();
+        let result = self
+            .rt
+            .block_on(async { self.qrmi.task_logs(task_id).await });
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
     fn target(&mut self) -> PyResult<Target> {
         crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.target().await });

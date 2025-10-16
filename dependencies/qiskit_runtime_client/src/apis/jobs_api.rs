@@ -91,7 +91,7 @@ pub enum GetJobResultsJidError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`get_jog_logs_jid`]
+/// struct for typed errors of method [`get_job_logs_jid`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum GetJogLogsJidError {
@@ -551,7 +551,7 @@ pub async fn get_job_results_jid(
 }
 
 /// List all job logs for the specified job.
-pub async fn get_jog_logs_jid(
+pub async fn get_job_logs_jid(
     configuration: &configuration::Configuration,
     id: &str,
     ibm_api_version: Option<&str>,

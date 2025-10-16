@@ -376,6 +376,13 @@ impl QuantumResource for IBMQiskitRuntimeService {
         Ok(TaskResult { value: results })
     }
 
+    /// Returns the log messages of the task.
+    ///
+    async fn task_logs(&mut self, task_id: &str) -> Result<String> {
+        let logs = jobs_api::get_job_logs_jid(&self.config, task_id, None).await?;
+        Ok(logs)
+    }
+
     /// Retrieves target details.
     ///
     /// This function combines the results of GET /backends/{id}/configuration and
