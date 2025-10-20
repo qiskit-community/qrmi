@@ -453,6 +453,7 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 pub unsafe extern "C" fn qrmi_resource_new(
     resource_id: *const c_char,
     resource_type: ResourceType,
+    error: *mut *mut c_char,
 ) -> *mut QuantumResource {
     crate::common::initialize();
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
@@ -463,6 +464,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     log::error!("{:?}", err);
+                    if !error.is_null() {
+                        if let Ok(error_cstr) = CString::new(format!("{}", err)) {
+                            unsafe {
+                                *error = error_cstr.into_raw();
+                            }
+                        }
+                    }
                     return std::ptr::null_mut();
                 }
             },
@@ -470,6 +478,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     log::error!("{:?}", err);
+                    if !error.is_null() {
+                        if let Ok(error_cstr) = CString::new(format!("{}", err)) {
+                            unsafe {
+                                *error = error_cstr.into_raw();
+                            }
+                        }
+                    }
                     return std::ptr::null_mut();
                 }
             },
@@ -477,6 +492,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     log::error!("{:?}", err);
+                    if !error.is_null() {
+                        if let Ok(error_cstr) = CString::new(format!("{}", err)) {
+                            unsafe {
+                                *error = error_cstr.into_raw();
+                            }
+                        }
+                    }
                     return std::ptr::null_mut();
                 }
             },
