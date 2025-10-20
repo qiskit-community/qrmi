@@ -25,6 +25,12 @@ class QRMIService:
     """Class for interacting with the QRMI resources"""
 
     def __init__(self):
+        # if resource acquisition failed in QRMI plugin,
+        # error reason may be available via environment variable.
+        plugin_error = os.environ.get("QRMI_PLUGIN_ERROR")
+        if plugin_error is not None:
+            raise RuntimeError(plugin_error)
+
         qpus = os.environ["SLURM_JOB_QPU_RESOURCES"]
         logger.debug("qpus: %s", qpus)
         if len(qpus) == 0:
