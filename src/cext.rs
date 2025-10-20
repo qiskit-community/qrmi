@@ -459,9 +459,27 @@ pub unsafe extern "C" fn qrmi_resource_new(
 
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
         let res: Box<dyn crate::QuantumResource> = match resource_type {
-            ResourceType::IBMDirectAccess => Box::new(IBMDirectAccess::new(id_str)),
-            ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::new(id_str)),
-            ResourceType::PasqalCloud => Box::new(PasqalCloud::new(id_str)),
+            ResourceType::IBMDirectAccess => match IBMDirectAccess::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    log::error!("{:?}", err);
+                    return std::ptr::null_mut();
+                }
+            },
+            ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeService::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    log::error!("{:?}", err);
+                    return std::ptr::null_mut();
+                }
+            },
+            ResourceType::PasqalCloud => match PasqalCloud::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    log::error!("{:?}", err);
+                    return std::ptr::null_mut();
+                }
+            },
         };
         let qrmi = Box::new(QuantumResource {
             inner: res,

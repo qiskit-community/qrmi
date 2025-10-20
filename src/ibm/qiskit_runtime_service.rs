@@ -27,12 +27,12 @@ use crate::ibm::qiskit_runtime_service::models::{
 };
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use log::error;
 use qiskit_runtime_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
 use qiskit_runtime_client::models;
-use qiskit_runtime_client::models::create_session_request_one_of::Mode;
 use qiskit_runtime_client::models::create_job_request_one_of::LogLevel;
+use qiskit_runtime_client::models::create_session_request_one_of::Mode;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
@@ -66,23 +66,23 @@ impl IBMQiskitRuntimeService {
     /// * QRMI_IBM_QRS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
     /// * QRMI_IBM_QRS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
     /// * QRMI_IBM_QRS_SESSION_ID or QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
-    pub fn new(backend_name: &str) -> Self {
-        let qrs_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT"))
-            .unwrap_or_else(|_| {
-                panic!("{backend_name}_QRMI_IBM_QRS_ENDPOINT environment variable is not set")
-            });
-        let iam_endpoint = env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT"))
-            .unwrap_or_else(|_| {
-                panic!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT environment variable is not set")
-            });
+    pub fn new(backend_name: &str) -> Result<Self> {
+        let qrs_endpoint =
+            env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QRS_ENDPOINT environment variable is not set")
+            })?;
+        let iam_endpoint =
+            env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT environment variable is not set")
+            })?;
         let api_key =
-            env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY")).unwrap_or_else(|_| {
-                panic!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY environment variable is not set")
-            });
-        let service_crn = env::var(format!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN"))
-            .unwrap_or_else(|_| {
-                panic!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN environment variable is not set")
-            });
+            env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY environment variable is not set")
+            })?;
+        let service_crn =
+            env::var(format!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN environment variable is not set")
+            })?;
         let session_mode = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MODE"))
             .unwrap_or_else(|_| "dedicated".to_string());
         let session_max_ttl: i32 = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MAX_TTL"))
@@ -103,7 +103,7 @@ impl IBMQiskitRuntimeService {
         config.bearer_access_token = None;
         config.crn = Some(service_crn);
 
-        Self {
+        Ok(Self {
             config,
             backend_name: backend_name.to_string(),
             session_id,
@@ -115,13 +115,7 @@ impl IBMQiskitRuntimeService {
             iam_endpoint,
             token_expiration: 0,
             token_lifetime: 0,
-        }
-    }
-}
-
-impl Default for IBMQiskitRuntimeService {
-    fn default() -> Self {
-        Self::new("")
+        })
     }
 }
 
