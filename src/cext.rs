@@ -447,6 +447,7 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 ///
 /// @param (resource_id) [in] A resource identifier, i.e. backend name
 /// @param (resource_type) [in] QrmiResourceType variant
+/// @param (error) [out] Returns an error message if the operation fails. This can be NULL if the error message is not required. If a non-NULL string is returned, you must call qrmi_string_free() to free the memory when it is no longer needed.
 /// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
 /// @version 0.6.0
 #[no_mangle]

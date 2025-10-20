@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   load_dotenv();
 
   QrmiQuantumResource *qrmi =
-      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
+      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS, NULL);
   if (!qrmi) {
     fprintf(stderr, "Failed to create QRMI for %s.\n", argv[1]);
     return EXIT_FAILURE;
