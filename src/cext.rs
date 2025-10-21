@@ -447,14 +447,14 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 ///
 /// @param (resource_id) [in] A resource identifier, i.e. backend name
 /// @param (resource_type) [in] QrmiResourceType variant
-/// @param (error) [out] Returns an error message if the operation fails. This can be NULL if the error message is not required. If a non-NULL string is returned, you must call qrmi_string_free() to free the memory when it is no longer needed.
+/// @param (error_reason) [out] Returns an error message if the operation fails. This can be NULL if the error message is not required. If a non-NULL string is returned, you must call qrmi_string_free() to free the memory when it is no longer needed.
 /// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_new(
     resource_id: *const c_char,
     resource_type: ResourceType,
-    error: *mut *mut c_char,
+    error_reason: *mut *mut c_char,
 ) -> *mut QuantumResource {
     crate::common::initialize();
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
@@ -465,10 +465,10 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     log::error!("{:?}", err);
-                    if !error.is_null() {
+                    if !error_reason.is_null() {
                         if let Ok(error_cstr) = CString::new(format!("{}", err)) {
                             unsafe {
-                                *error = error_cstr.into_raw();
+                                *error_reason = error_cstr.into_raw();
                             }
                         }
                     }
@@ -479,10 +479,10 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     log::error!("{:?}", err);
-                    if !error.is_null() {
+                    if !error_reason.is_null() {
                         if let Ok(error_cstr) = CString::new(format!("{}", err)) {
                             unsafe {
-                                *error = error_cstr.into_raw();
+                                *error_reason = error_cstr.into_raw();
                             }
                         }
                     }
@@ -493,10 +493,10 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     log::error!("{:?}", err);
-                    if !error.is_null() {
+                    if !error_reason.is_null() {
                         if let Ok(error_cstr) = CString::new(format!("{}", err)) {
                             unsafe {
-                                *error = error_cstr.into_raw();
+                                *error_reason = error_cstr.into_raw();
                             }
                         }
                     }
