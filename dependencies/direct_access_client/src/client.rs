@@ -75,6 +75,8 @@ pub struct Client {
     pub(crate) s3_config: Option<aws_sdk_s3::Config>,
     /// The name of S3 bucket
     pub(crate) s3_bucket: Option<String>,
+    /// The configuration to create [`S3Client`](aws_sdk_s3::Client) for accessing from DA API service. Depending on the network configuration, the IP address used to access S3 may differ between access from the API client and access from the DA API service. In such cases, this property should specify the URL used when accessing S3 from the DA API service.
+    pub(crate) s3_config_for_daapi: Option<aws_sdk_s3::Config>,
 }
 
 impl Client {
@@ -141,6 +143,8 @@ pub struct ClientBuilder {
     s3_config: Option<aws_sdk_s3::Config>,
     /// The name of S3 Bucket used by this [`Client`]
     s3_bucket: Option<String>,
+    /// The configuration to create [`S3Client`](aws_sdk_s3::Client). Depending on the network configuration, the IP address used to access S3 may differ between access from the API client and access from the DA API service. In such cases, this property should specify the URL used when accessing S3 from the DA API service.
+    s3_config_for_daapi: Option<aws_sdk_s3::Config>,
 }
 
 impl ClientBuilder {
@@ -167,6 +171,7 @@ impl ClientBuilder {
             retry_policy: None,
             s3_config: None,
             s3_bucket: None,
+            s3_config_for_daapi: None,
         }
     }
 
@@ -298,6 +303,8 @@ impl ClientBuilder {
 
     /// Set the S3 bucket connection parameters for this client.
     ///
+    /// Depending on the network configuration, the IP address used to access S3 may differ between access from the API client and access from the DA API service. In such cases, `s3_endpoint_url_for_daapi` argument should specify the URL used when accessing S3 from the DA API service.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -319,6 +326,7 @@ impl ClientBuilder {
         s3_endpoint_url: impl Into<String>,
         s3_bucket: impl Into<String>,
         s3_region: impl Into<String>,
+        s3_endpoint_url_for_daapi: Option<impl Into<String>>,
     ) -> &mut Self {
         let cred = aws_credential_types::Credentials::new(
             aws_access_key_id.into(),
@@ -327,13 +335,25 @@ impl ClientBuilder {
             None,
             "direct_access_client",
         );
-        let s3_config = aws_sdk_s3::config::Builder::new()
-            .endpoint_url(s3_endpoint_url.into())
-            .credentials_provider(cred)
+
+        let config_builder = aws_sdk_s3::config::Builder::new()
+            .credentials_provider(cred.clone())
             .region(aws_sdk_s3::config::Region::new(s3_region.into()))
-            .force_path_style(true)
+            .force_path_style(true);
+        let s3_config = config_builder
+            .clone()
+            .endpoint_url(s3_endpoint_url.into())
             .build();
         self.s3_config = Some(s3_config);
+
+        if let Some(endpoint_for_daapi) = s3_endpoint_url_for_daapi {
+            let s3_config_for_daapi = config_builder
+                .clone()
+                .endpoint_url(endpoint_for_daapi.into())
+                .build();
+            self.s3_config_for_daapi = Some(s3_config_for_daapi);
+        }
+
         self.s3_bucket = Some(s3_bucket.into());
         self
     }
@@ -445,6 +465,7 @@ impl ClientBuilder {
             client,
             s3_config: self.s3_config.clone(),
             s3_bucket: self.s3_bucket.clone(),
+            s3_config_for_daapi: self.s3_config_for_daapi.clone(),
         })
     }
 }
