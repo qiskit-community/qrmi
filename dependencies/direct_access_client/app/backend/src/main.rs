@@ -58,11 +58,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
         println!("{}", serde_json::to_string_pretty(&props).unwrap());
 
-        println!("backend pulse defaults for {}", backend.name);
-        let pulse_defaults = client
-            .get_backend_pulse_defaults::<serde_json::Value>(&backend.name)
-            .await?;
-        println!("{}", serde_json::to_string_pretty(&pulse_defaults).unwrap());
+        #[cfg(feature = "pulse_defaults")]
+        {
+            println!("backend pulse defaults for {}", backend.name);
+            let pulse_defaults = client
+                .get_backend_pulse_defaults::<serde_json::Value>(&backend.name)
+                .await?;
+            println!("{}", serde_json::to_string_pretty(&pulse_defaults).unwrap());
+        }
 
         println!("backend details for {}", backend.name);
         let backend_details = client.get_backend::<Backend>(&backend.name).await?;
