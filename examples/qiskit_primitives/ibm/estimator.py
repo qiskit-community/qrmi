@@ -76,3 +76,6 @@ result = job.result()
 print(f">>> {result}")
 print(f"  > Expectation value: {result[0].data.evs}")
 print(f"  > Metadata: {result[0].metadata}")
+
+if job.errored():
+    print(qrmi.task_logs(job.job_id()))

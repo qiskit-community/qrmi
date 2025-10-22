@@ -127,6 +127,15 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Cancelled.\n");
   }
 
+  char *logs = NULL;
+  rc = qrmi_resource_task_logs(qrmi, job_id, &logs);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    fprintf(stdout, "%s\n", logs);
+    qrmi_string_free(logs);
+  } else {
+    fprintf(stderr, "Failed to retrieve job logs.\n");
+  }
+
   qrmi_resource_task_stop(qrmi, job_id);
 
   qrmi_string_free(job_id);
