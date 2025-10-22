@@ -68,3 +68,6 @@ result = job.result()
 # Get results for the first (and only) PUB
 pub_result = result[0]
 print(f"Counts for the 'meas' output register: {pub_result.data.meas.get_counts()}")
+
+if job.errored():
+    print(qrmi.task_logs(job.job_id()))

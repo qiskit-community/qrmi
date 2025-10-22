@@ -305,6 +305,68 @@ impl QuantumResource for IBMDirectAccess {
         })
     }
 
+    async fn task_logs(&mut self, task_id: &str) -> Result<String> {
+        let s3_bucket = match env::var(format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name)) {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_S3_BUCKET is not set: {}", &err));
+            }
+        };
+
+        let s3_endpoint = match env::var(format!("{0}_QRMI_IBM_DA_S3_ENDPOINT", self.backend_name))
+        {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_S3_ENDPOINT is not set: {}", &err));
+            }
+        };
+
+        let aws_access_key_id = match env::var(format!(
+            "{0}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID",
+            self.backend_name
+        )) {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!(
+                    "QRMI_IBM_DA_AWS_ACCESS_KEY_ID is not set: {}",
+                    &err
+                ));
+            }
+        };
+
+        let aws_secret_access_key = match env::var(format!(
+            "{0}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY",
+            self.backend_name
+        )) {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!(
+                    "QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY is not set: {}",
+                    &err
+                ));
+            }
+        };
+
+        let s3_region = match env::var(format!("{0}_QRMI_IBM_DA_S3_REGION", self.backend_name)) {
+            Ok(val) => val,
+            Err(err) => {
+                bail!(format!("QRMI_IBM_DA_S3_REGION is not set: {}", &err));
+            }
+        };
+
+        let s3_client = S3Client::new(
+            s3_endpoint,
+            aws_access_key_id,
+            aws_secret_access_key,
+            s3_region,
+        );
+
+        let s3_object_key = format!("logs_{}.json", task_id);
+        let object = s3_client.get_object(&s3_bucket, &s3_object_key).await?;
+        let retrieved_txt = String::from_utf8(object)?;
+        Ok(retrieved_txt)
+    }
+
     async fn target(&mut self) -> Result<Target> {
         let mut resp = json!({});
         if let Ok(config) = self

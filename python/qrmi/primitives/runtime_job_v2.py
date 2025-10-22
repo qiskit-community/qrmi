@@ -96,6 +96,14 @@ class RuntimeJobV2(BasePrimitiveJob[PrimitiveResult, TaskStatus]):
         """Return whether the job has been cancelled."""
         return self.status() == JobStatus.CANCELLED
 
+    def errored(self) -> bool:
+        """Return whether the job has failed."""
+        return self.status() == JobStatus.ERROR
+
     def in_final_state(self) -> bool:
         """Return whether the job is in a final job state such as ``DONE`` or ``ERROR``."""
         return self.status() in JOB_FINAL_STATES
+
+    def logs(self) -> str:
+        """Return job logs."""
+        return qrmi.task_logs(self._job_id)

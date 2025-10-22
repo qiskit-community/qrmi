@@ -131,6 +131,10 @@ impl QuantumResource for PasqalCloud {
         }
     }
 
+    async fn task_logs(&mut self, _task_id: &str) -> Result<String> {
+        Ok("There are no logs for this job.".to_string())
+    }
+
     async fn target(&mut self) -> Result<Target> {
         let fresnel = DeviceType::Fresnel.to_string();
         if self.backend_name != fresnel {
