@@ -47,6 +47,7 @@ impl IBMDirectAccess {
     /// * `QRMI_IBM_DA_AWS_ACCESS_KEY_ID`: AWS Access Key ID to access S3 bucket
     /// * `QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key to access S3 bucket
     /// * `QRMI_IBM_DA_S3_ENDPOINT`: S3 API endpoint URL
+    /// * `QRMI_IBM_DA_S3_ENDPOINT_FOR_DAAPI`: S3 API endpoint URL accessed from DA API service. Depending on the network configuration, the IP address used to access S3 may differ between access from the API client and access from the DA API service. In such cases, this environment variable should specify the URL used when accessing S3 from the DA API service.
     /// * `QRMI_IBM_DA_S3_BUCKET`: S3 Bucket name
     /// * `QRMI_IBM_DA_S3_REGION`: S3 Region name
     /// * `QRMI_IBM_DA_IAM_ENDPOINT`: IBM Cloud IAM API endpoint URL
@@ -70,6 +71,8 @@ impl IBMDirectAccess {
             .with_timeout(Duration::from_secs(60))
             .with_retry_policy(retry_policy);
 
+        let s3_endpoint_for_daapi =
+            env::var(format!("{resource_id}_QRMI_IBM_DA_S3_ENDPOINT_FOR_DAAPI")).ok();
         if let (
             Ok(aws_access_key_id),
             Ok(aws_secret_access_key),
@@ -89,6 +92,7 @@ impl IBMDirectAccess {
                 &s3_endpoint,
                 &s3_bucket,
                 &s3_region,
+                s3_endpoint_for_daapi,
             );
         } else {
             info!("No S3 bucket configured.");

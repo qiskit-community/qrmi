@@ -98,7 +98,15 @@ impl Client {
             "S3 bucket is not configured. Use ClientBuilder.with_s3_bucket() to use this function.",
         )?;
 
+        let s3_config_remote: aws_sdk_s3::Config;
+        if let Some(v) = self.s3_config_for_daapi.clone() {
+            s3_config_remote = v;
+        } else {
+            s3_config_remote = s3_config.clone();
+        }
+
         let s3_client = aws_sdk_s3::Client::from_conf(s3_config);
+        let s3_client_remote = aws_sdk_s3::Client::from_conf(s3_config_remote);
         let id;
         if let Some(value) = job_id {
             id = value;
@@ -127,17 +135,24 @@ impl Client {
         };
 
         let input_presigned_url =
-            crate::storages::s3::get_presigned_url(&s3_client, &s3_bucket, &job_param_key).await?;
+            crate::storages::s3::get_presigned_url(&s3_client_remote, &s3_bucket, &job_param_key)
+                .await?;
 
         let results_key = format!("{}{}.json", S3KEY_RESULTS_PREFIX, id);
-        let results_presigned_url =
-            crate::storages::s3::get_presigned_url_for_put(&s3_client, &s3_bucket, &results_key)
-                .await?;
+        let results_presigned_url = crate::storages::s3::get_presigned_url_for_put(
+            &s3_client_remote,
+            &s3_bucket,
+            &results_key,
+        )
+        .await?;
 
         let logs_key = format!("{}{}.json", S3KEY_LOGS_PREFIX, id);
-        let logs_presigned_url =
-            crate::storages::s3::get_presigned_url_for_put(&s3_client, &s3_bucket, &logs_key)
-                .await?;
+        let logs_presigned_url = crate::storages::s3::get_presigned_url_for_put(
+            &s3_client_remote,
+            &s3_bucket,
+            &logs_key,
+        )
+        .await?;
 
         let job_param = serde_json::json!({
             "id": id,
@@ -160,6 +175,7 @@ impl Client {
                 },
             }
         });
+        debug!("{:#?}", job_param);
         let job_id = self.run_job(&job_param).await?;
         Ok(PrimitiveJob {
             job_id,
