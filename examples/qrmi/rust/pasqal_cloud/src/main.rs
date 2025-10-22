@@ -80,6 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{}", qrmi.task_result(&job_id).await?.value);
             break;
         } else if matches!(status, TaskStatus::Failed | TaskStatus::Cancelled) {
+            println!("{}", qrmi.task_logs(&job_id).await?);
             break;
         }
         thread::sleep(one_sec);

@@ -57,6 +57,8 @@ with open(args.input, encoding="utf-8") as f:
     print(f"Task ended - {qrmi.task_status(job_id)}")
     print(qrmi.task_result(job_id).value)
 
+    print(qrmi.task_logs(job_id))
+
     qrmi.task_stop(job_id)
 
 qrmi.release(lock)

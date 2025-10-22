@@ -953,6 +953,69 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
 }
 
 /// @ingroup QrmiQuantumResource
+/// Returns the log messages of a task.
+///
+/// # Safety
+///
+/// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
+///
+/// * `outp` must be non nul.
+///
+/// * The memory pointed to by `task_id` must contain a valid nul terminator.
+///
+/// * The nul terminator must be within `isize::MAX` from `task_id`
+///
+/// # Example
+///
+///     QrmiReturnCode rc = qrmi_resource_task_status(qrmi, job_id, &status);
+///     if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
+///         char *logs = NULL;
+///         qrmi_resource_task_logs(qrmi, job_id, &logs);
+///         printf("%s\n", logs);
+///         qrmi_string_free((char *)logs);
+///     }
+///
+/// @param (qrmi) [in] A QrmiQuantumResource handle
+/// @param (task_id) [in] A task identifier
+/// @param (outp) [out] Task log messages if succeeded. Must call qrmi_string_free() to free if no longer used.
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.1.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_task_logs(
+    qrmi: *mut QuantumResource,
+    task_id: *const c_char,
+    outp: *mut *mut c_char,
+) -> ReturnCode {
+    crate::common::initialize();
+    if qrmi.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    ffi_helpers::null_pointer_check!(task_id, ReturnCode::Error);
+    ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
+
+    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
+        let result = (*qrmi)
+            .runtime
+            .block_on(async { (*qrmi).inner.task_logs(task_id_str).await });
+        match result {
+            Ok(v) => {
+                if let Ok(result_cstr) = CString::new(v) {
+                    unsafe {
+                        *outp = result_cstr.into_raw();
+                    }
+                    return ReturnCode::Success;
+                }
+            }
+            Err(err) => {
+                log::error!("{:?}", err);
+            }
+        }
+    }
+    ReturnCode::Error
+}
+
+/// @ingroup QrmiQuantumResource
 /// Returns a Target for the specified device. Vendor specific serialized data. This might contain the constraints(instructions, properties and timing information etc.) of a particular device to allow compilers to compile an input circuit to something that works and is optimized for a device. In IBM implementation, it contains JSON representations of [BackendConfiguration](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_configuration_schema.json) and [BackendProperties](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_properties_schema.json) so that we are able to create a Target object by calling `qiskit_ibm_runtime.utils.backend_converter.convert_to_target` or uquivalent functions.
 ///
 /// # Safety
