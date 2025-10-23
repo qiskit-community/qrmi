@@ -58,18 +58,20 @@ impl PasqalCloud {
 
 #[async_trait]
 impl QuantumResource for PasqalCloud {
-    async fn is_accessible(&mut self) -> bool {
+    async fn is_accessible(&mut self) -> Result<bool> {
         let fresnel = DeviceType::Fresnel.to_string();
         if self.backend_name != fresnel {
             let err = format!(
                 "Device {} is invalid. Only {} device can receive jobs.",
                 self.backend_name, fresnel,
             );
-            panic!("{}", err);
+            bail!(format!("{}", &err));
         };
         match self.api_client.get_device(DeviceType::Fresnel).await {
-            Ok(device) => device.data.status == "UP",
-            Err(_err) => false,
+            Ok(device) => Ok(device.data.status == "UP"),
+            Err(err) => {
+                bail!(format!("Failed to get device: {}", &err));
+            }
         }
     }
 

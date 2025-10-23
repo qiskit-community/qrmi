@@ -32,9 +32,11 @@ int main(int argc, char *argv[]) {
   load_dotenv();
 
   QrmiQuantumResource *qrmi =
-      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS, NULL);
+      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
   if (!qrmi) {
-    fprintf(stderr, "Failed to create QRMI for %s.\n", argv[1]);
+    const char* last_error = qrmi_get_last_error();
+    fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);
+    qrmi_string_free((char *)last_error);
     return EXIT_FAILURE;
   }
 
@@ -63,7 +65,9 @@ int main(int argc, char *argv[]) {
       goto error;
     }
   } else {
-    fprintf(stderr, "qrmi_resource_is_accessible() failed.\n");
+    const char* last_error = qrmi_get_last_error();
+    fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
+    qrmi_string_free((char *)last_error);
     goto error;
   }
 

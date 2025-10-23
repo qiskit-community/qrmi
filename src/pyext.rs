@@ -72,7 +72,10 @@ impl PyQuantumResource {
     fn is_accessible(&mut self) -> PyResult<bool> {
         crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.is_accessible().await });
-        Ok(result)
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
     }
 
     fn acquire(&mut self) -> PyResult<String> {

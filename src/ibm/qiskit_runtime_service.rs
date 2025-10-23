@@ -123,7 +123,7 @@ impl IBMQiskitRuntimeService {
 #[async_trait]
 impl QuantumResource for IBMQiskitRuntimeService {
     /// Asynchronously checks if a backend is accessible.
-    async fn is_accessible(&mut self) -> bool {
+    async fn is_accessible(&mut self) -> Result<bool> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
             &self.api_key,
@@ -143,12 +143,12 @@ impl QuantumResource for IBMQiskitRuntimeService {
                     .status
                     .unwrap_or_else(|| "unknown".to_string());
                 // Return true if status is "active" or "online"
-                status_str.to_lowercase() == "active" || status_str.to_lowercase() == "online"
+                Ok(status_str.to_lowercase() == "active" || status_str.to_lowercase() == "online")
             }
-            Err(e) => {
+            Err(err) => {
                 // Print a message indicating an error occurred
-                error!("status: error ({:?})", e);
-                false
+                error!("status: error ({:?})", err);
+                bail!(format!("Failed to get backend status: {:?}", &err));
             }
         }
     }

@@ -13,6 +13,7 @@
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
+use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::sync::Arc;
@@ -89,6 +90,22 @@ pub struct ResourceMetadata {
 pub struct QuantumResource {
     inner: Box<dyn crate::QuantumResource>,
     runtime: Arc<tokio::runtime::Runtime>,
+}
+
+// Last error
+thread_local! {
+    static LAST_ERROR: RefCell<Option<CString>> = const { RefCell::new(None) };
+}
+
+/// Set last error message text
+fn _set_last_error(msg: String) {
+    log::error!("{}", msg);
+    LAST_ERROR.with(|cell| {
+        *cell.borrow_mut() =
+            Some(CString::new(msg).unwrap_or_else(|_| {
+                CString::new("Failed to generate a C-compatible string").unwrap()
+            }));
+    });
 }
 
 /// @ingroup Qrmi
@@ -197,7 +214,7 @@ pub unsafe extern "C" fn qrmi_config_load(filename: *const c_char) -> *mut Confi
                 return Box::into_raw(Box::new(v));
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                _set_last_error(format!("{:?}", err));
             }
         }
     }
@@ -428,6 +445,40 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
     ReturnCode::Success
 }
 
+/// @ingroup Qrmi
+/// Returns the last error message that occurred during an FFI call from C to Rust.
+/// This function is designed to be thread-safe by using thread-local storage, ensuring that
+/// each thread retrieves its own error message independently.etrieves the most recent error
+/// encountered during API call.
+///
+/// # Behavior
+/// * If an error was previously set in the current thread via set_last_error(), this function returns a pointer to a null-terminated C string (const char*) containing the error message.
+/// * If no error was set, it returns a null pointer (NULL).
+/// * After returning the error message, the internal error state is cleared for the current thread. Subsequent calls will return NULL until a new error is set.
+///
+/// # Thread Safety
+/// This function uses Rust's thread_local! macro and RefCell to store error messages per thread.
+/// This design mirrors the behavior of errno in POSIX and GetLastError() in Windows, ensuring compatibility with multithreaded C environments.
+///
+/// # Example
+///
+///     const char * last_error = qrmi_get_last_error();
+///     if (last_error != NULL) {
+///         printf("last error = %s\n", last_error);
+///         qrmi_string_free(last_error);
+///     }
+///
+/// @return message text of the most recent error
+/// @version 0.8.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_get_last_error() -> *const c_char {
+    crate::common::initialize();
+    LAST_ERROR.with(|cell| match &*cell.borrow() {
+        Some(cstr) => cstr.as_ptr(),
+        None => std::ptr::null(),
+    })
+}
+
 /// @ingroup QrmiQuantumResource
 /// Returns a QrmiQuantumResource handle.
 ///
@@ -447,14 +498,12 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 ///
 /// @param (resource_id) [in] A resource identifier, i.e. backend name
 /// @param (resource_type) [in] QrmiResourceType variant
-/// @param (error_reason) [out] Returns an error message if the operation fails. This can be NULL if the error message is not required. If a non-NULL string is returned, you must call qrmi_string_free() to free the memory when it is no longer needed.
 /// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_new(
     resource_id: *const c_char,
     resource_type: ResourceType,
-    error_reason: *mut *mut c_char,
 ) -> *mut QuantumResource {
     crate::common::initialize();
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
@@ -464,42 +513,21 @@ pub unsafe extern "C" fn qrmi_resource_new(
             ResourceType::IBMDirectAccess => match IBMDirectAccess::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    log::error!("{:?}", err);
-                    if !error_reason.is_null() {
-                        if let Ok(error_cstr) = CString::new(format!("{}", err)) {
-                            unsafe {
-                                *error_reason = error_cstr.into_raw();
-                            }
-                        }
-                    }
+                    _set_last_error(format!("{}", err));
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeService::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    log::error!("{:?}", err);
-                    if !error_reason.is_null() {
-                        if let Ok(error_cstr) = CString::new(format!("{}", err)) {
-                            unsafe {
-                                *error_reason = error_cstr.into_raw();
-                            }
-                        }
-                    }
+                    _set_last_error(format!("{}", err));
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::PasqalCloud => match PasqalCloud::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    log::error!("{:?}", err);
-                    if !error_reason.is_null() {
-                        if let Ok(error_cstr) = CString::new(format!("{}", err)) {
-                            unsafe {
-                                *error_reason = error_cstr.into_raw();
-                            }
-                        }
-                    }
+                    _set_last_error(format!("{}", err));
                     return std::ptr::null_mut();
                 }
             },
@@ -578,10 +606,19 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
     }
     ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
 
-    *outp = (*qrmi)
+    let result = (*qrmi)
         .runtime
         .block_on(async { (*qrmi).inner.is_accessible().await });
-    ReturnCode::Success
+    match result {
+        Ok(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            ReturnCode::Error
+        }
+    }
 }
 
 /// @ingroup QrmiQuantumResource
@@ -631,7 +668,7 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
             }
         }
         Err(err) => {
-            log::error!("{:?}", err);
+            _set_last_error(format!("{:?}", err));
         }
     }
     ReturnCode::Error
@@ -683,7 +720,7 @@ pub unsafe extern "C" fn qrmi_resource_release(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                _set_last_error(format!("{:?}", err));
             }
         }
     }

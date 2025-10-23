@@ -41,9 +41,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     println!("{}", dotenv().unwrap().display());
 
-    let mut qrmi = PasqalCloud::new(&args.backend);
+    let mut qrmi = PasqalCloud::new(&args.backend)?;
 
-    let accessible = qrmi.is_accessible().await;
+    let accessible = qrmi.is_accessible().await?;
     if !accessible {
         println!("{} is not accessible", args.backend); // Checks for real QPU
     }
