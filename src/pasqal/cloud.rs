@@ -12,7 +12,7 @@
 
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use pasqal_cloud_api::{BatchStatus, Client, ClientBuilder, DeviceType};
 use std::collections::HashMap;
 use std::env;
@@ -35,38 +35,43 @@ impl PasqalCloud {
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN`: Pasqal Cloud Auth Token
     ///
     /// Let's hardcode the rest for now
-    pub fn new(backend_name: &str) -> Self {
+    pub fn new(backend_name: &str) -> Result<Self> {
         // Check to see if the environment variables required to run this program are set.
-        let project_id = env::var(format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID"))
-            .unwrap_or_else(|_| panic!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID"));
-        let auth_token = env::var(format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN"))
-            .unwrap_or_else(|_| panic!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN"));
-        Self {
+        let project_id =
+            env::var(format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID")).map_err(|_| {
+                anyhow!(
+                    "{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID environment variable is not set"
+                )
+            })?;
+        let auth_token =
+            env::var(format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN")).map_err(|_| {
+                anyhow!(
+                    "{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN environment variable is not set"
+                )
+            })?;
+        Ok(Self {
             api_client: ClientBuilder::new(auth_token, project_id).build().unwrap(),
             backend_name: backend_name.to_string(),
-        }
+        })
     }
 }
 
-impl Default for PasqalCloud {
-    fn default() -> Self {
-        Self::new("")
-    }
-}
 #[async_trait]
 impl QuantumResource for PasqalCloud {
-    async fn is_accessible(&mut self) -> bool {
+    async fn is_accessible(&mut self) -> Result<bool> {
         let fresnel = DeviceType::Fresnel.to_string();
         if self.backend_name != fresnel {
             let err = format!(
                 "Device {} is invalid. Only {} device can receive jobs.",
                 self.backend_name, fresnel,
             );
-            panic!("{}", err);
+            bail!(format!("{}", &err));
         };
         match self.api_client.get_device(DeviceType::Fresnel).await {
-            Ok(device) => device.data.status == "UP",
-            Err(_err) => false,
+            Ok(device) => Ok(device.data.status == "UP"),
+            Err(err) => {
+                bail!(format!("Failed to get device: {}", &err));
+            }
         }
     }
 

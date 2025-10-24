@@ -38,26 +38,44 @@ pub struct PyQuantumResource {
 #[pymethods]
 impl PyQuantumResource {
     #[new]
-    pub fn new(resource_id: &str, resource_type: ResourceType) -> Self {
+    pub fn new(resource_id: &str, resource_type: ResourceType) -> PyResult<Self> {
         crate::common::initialize();
         let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
-            ResourceType::IBMDirectAccess => Box::new(IBMDirectAccess::new(resource_id)),
+            ResourceType::IBMDirectAccess => match IBMDirectAccess::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
             ResourceType::IBMQiskitRuntimeService => {
-                Box::new(IBMQiskitRuntimeService::new(resource_id))
+                match IBMQiskitRuntimeService::new(resource_id) {
+                    Ok(v) => Box::new(v),
+                    Err(e) => {
+                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    }
+                }
             }
-            ResourceType::PasqalCloud => Box::new(PasqalCloud::new(resource_id)),
+            ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
         };
 
-        Self {
+        Ok(Self {
             qrmi,
             rt: Runtime::new().unwrap(),
-        }
+        })
     }
 
     fn is_accessible(&mut self) -> PyResult<bool> {
         crate::common::initialize();
         let result = self.rt.block_on(async { self.qrmi.is_accessible().await });
-        Ok(result)
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
     }
 
     fn acquire(&mut self) -> PyResult<String> {

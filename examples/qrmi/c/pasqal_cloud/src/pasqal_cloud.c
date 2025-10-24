@@ -32,7 +32,9 @@ int main(int argc, char *argv[]) {
   QrmiQuantumResource *qrmi =
       qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_PASQAL_CLOUD);
   if (!qrmi) {
-    fprintf(stderr, "Failed to create QRMI for %s.\n", argv[1]);
+    const char* last_error = qrmi_get_last_error();
+    fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);
+    qrmi_string_free((char *)last_error);
     return EXIT_FAILURE;
   }
 
@@ -44,14 +46,18 @@ int main(int argc, char *argv[]) {
       // return -1; // Fresnel currently inaccessible
     }
   } else {
-    fprintf(stderr, "qrmi_resource_is_accessible() failed.\n");
+    const char* last_error = qrmi_get_last_error();
+    fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
+    qrmi_string_free((char *)last_error);
     goto error;
   }
 
   char *acquisition_token = NULL;
   rc = qrmi_resource_acquire(qrmi, &acquisition_token);
   if (rc != QRMI_RETURN_CODE_SUCCESS) {
-    fprintf(stdout, "qrmi_resource_acquire() failed.\n");
+    const char* last_error = qrmi_get_last_error();
+    fprintf(stdout, "qrmi_resource_acquire() failed. %s\n", last_error);
+    qrmi_string_free((char *)last_error);
     goto error;
   }
   fprintf(stdout, "acquisition_token = %s\n", acquisition_token);

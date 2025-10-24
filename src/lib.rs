@@ -39,14 +39,14 @@ pub trait QuantumResource: Send + Sync {
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///
-    ///     let accessible = qrmi.is_accessible();
+    ///     let accessible = qrmi.is_accessible()?;
     ///     if accessible == false {
     ///         panic!("ibm_torino is not accessible.");
     ///     }
     ///     Ok(())
     /// }
     /// ```
-    async fn is_accessible(&mut self) -> bool;
+    async fn is_accessible(&mut self) -> Result<bool>;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
     ///
