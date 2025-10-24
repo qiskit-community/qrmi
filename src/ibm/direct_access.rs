@@ -159,16 +159,14 @@ impl QuantumResource for IBMDirectAccess {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let timeout = match env::var(format!("{0}_QRMI_JOB_TIMEOUT_SECONDS", self.backend_name)) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_JOB_TIMEOUT_SECONDS is not set: {}", &err));
-            }
-        };
+        let timeout_env_name = format!("{0}_QRMI_JOB_TIMEOUT_SECONDS", self.backend_name);
+        let timeout = env::var(&timeout_env_name)
+            .map_err(|_| anyhow!("{0} environment variable is not set", timeout_env_name))?;
+
         let timeout_secs = match timeout.parse::<u64>() {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!("Failed to parse timeout value: {}", &err));
+                bail!(format!("Failed to parse timeout value: {:#?}", &err));
             }
         };
 
@@ -190,7 +188,7 @@ impl QuantumResource for IBMDirectAccess {
                     Ok(val) => Ok(val.job_id),
                     Err(err) => {
                         bail!(format!(
-                            "An error occurred during starting a task: {}",
+                            "An error occurred during starting a task: {:#?}",
                             &err
                         ));
                     }
@@ -223,53 +221,32 @@ impl QuantumResource for IBMDirectAccess {
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let s3_bucket = match env::var(format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name)) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_S3_BUCKET is not set: {}", &err));
-            }
-        };
+        let s3_bucket_env_name = format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name);
+        let s3_bucket = env::var(&s3_bucket_env_name)
+            .map_err(|_| anyhow!("{0} environment variable is not set", s3_bucket_env_name))?;
 
-        let s3_endpoint = match env::var(format!("{0}_QRMI_IBM_DA_S3_ENDPOINT", self.backend_name))
-        {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_S3_ENDPOINT is not set: {}", &err));
-            }
-        };
+        let s3_endpoint_env_name = format!("{0}_QRMI_IBM_DA_S3_ENDPOINT", self.backend_name);
+        let s3_endpoint = env::var(&s3_endpoint_env_name)
+            .map_err(|_| anyhow!("{0} environment variable is not set", s3_endpoint_env_name))?;
 
-        let aws_access_key_id = match env::var(format!(
-            "{0}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID",
-            self.backend_name
-        )) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!(
-                    "QRMI_IBM_DA_AWS_ACCESS_KEY_ID is not set: {}",
-                    &err
-                ));
-            }
-        };
+        let aws_access_key_id_env_name =
+            format!("{0}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID", self.backend_name);
+        let aws_access_key_id = env::var(&aws_access_key_id_env_name).map_err(|_| {
+            anyhow!(
+                "{0} environment variable is not set",
+                aws_access_key_id_env_name
+            )
+        })?;
 
-        let aws_secret_access_key = match env::var(format!(
-            "{0}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY",
-            self.backend_name
-        )) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!(
-                    "QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY is not set: {}",
-                    &err
-                ));
-            }
-        };
+        let aws_secret_access_key_env_name =
+            format!("{0}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY", self.backend_name);
+        let aws_secret_access_key = env::var(&aws_secret_access_key_env_name).map_err(|_| {
+            anyhow!("{aws_secret_access_key_env_name} environment variable is not set")
+        })?;
 
-        let s3_region = match env::var(format!("{0}_QRMI_IBM_DA_S3_REGION", self.backend_name)) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_S3_REGION is not set: {}", &err));
-            }
-        };
+        let s3_region_env_name = format!("{0}_QRMI_IBM_DA_S3_REGION", self.backend_name);
+        let s3_region = env::var(&s3_region_env_name)
+            .map_err(|_| anyhow!("{s3_region_env_name} environment variable is not set"))?;
 
         let s3_client = S3Client::new(
             s3_endpoint,
@@ -311,53 +288,32 @@ impl QuantumResource for IBMDirectAccess {
     }
 
     async fn task_logs(&mut self, task_id: &str) -> Result<String> {
-        let s3_bucket = match env::var(format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name)) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_S3_BUCKET is not set: {}", &err));
-            }
-        };
+        let s3_bucket_env_name = format!("{0}_QRMI_IBM_DA_S3_BUCKET", self.backend_name);
+        let s3_bucket = env::var(&s3_bucket_env_name)
+            .map_err(|_| anyhow!("{0} environment variable is not set", s3_bucket_env_name))?;
 
-        let s3_endpoint = match env::var(format!("{0}_QRMI_IBM_DA_S3_ENDPOINT", self.backend_name))
-        {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_S3_ENDPOINT is not set: {}", &err));
-            }
-        };
+        let s3_endpoint_env_name = format!("{0}_QRMI_IBM_DA_S3_ENDPOINT", self.backend_name);
+        let s3_endpoint = env::var(&s3_endpoint_env_name)
+            .map_err(|_| anyhow!("{0} environment variable is not set", s3_endpoint_env_name))?;
 
-        let aws_access_key_id = match env::var(format!(
-            "{0}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID",
-            self.backend_name
-        )) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!(
-                    "QRMI_IBM_DA_AWS_ACCESS_KEY_ID is not set: {}",
-                    &err
-                ));
-            }
-        };
+        let aws_access_key_id_env_name =
+            format!("{0}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID", self.backend_name);
+        let aws_access_key_id = env::var(&aws_access_key_id_env_name).map_err(|_| {
+            anyhow!(
+                "{0} environment variable is not set",
+                aws_access_key_id_env_name
+            )
+        })?;
 
-        let aws_secret_access_key = match env::var(format!(
-            "{0}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY",
-            self.backend_name
-        )) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!(
-                    "QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY is not set: {}",
-                    &err
-                ));
-            }
-        };
+        let aws_secret_access_key_env_name =
+            format!("{0}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY", self.backend_name);
+        let aws_secret_access_key = env::var(&aws_secret_access_key_env_name).map_err(|_| {
+            anyhow!("{aws_secret_access_key_env_name} environment variable is not set")
+        })?;
 
-        let s3_region = match env::var(format!("{0}_QRMI_IBM_DA_S3_REGION", self.backend_name)) {
-            Ok(val) => val,
-            Err(err) => {
-                bail!(format!("QRMI_IBM_DA_S3_REGION is not set: {}", &err));
-            }
-        };
+        let s3_region_env_name = format!("{0}_QRMI_IBM_DA_S3_REGION", self.backend_name);
+        let s3_region = env::var(&s3_region_env_name)
+            .map_err(|_| anyhow!("{s3_region_env_name} environment variable is not set"))?;
 
         let s3_client = S3Client::new(
             s3_endpoint,
