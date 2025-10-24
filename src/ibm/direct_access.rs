@@ -143,7 +143,7 @@ impl QuantumResource for IBMDirectAccess {
                 Ok(false)
             }
             Err(err) => {
-                bail!(format!("Failed to get backend details: {}", &err));
+                bail!(format!("Failed to get backend details: {:#?}", &err));
             }
         }
     }
