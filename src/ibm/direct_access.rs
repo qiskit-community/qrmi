@@ -19,8 +19,8 @@ use direct_access_api::{
     models::ProgramId, AuthMethod, Client, ClientBuilder,
 };
 use log::info;
-use retry_policies::policies::ExponentialBackoff;
-use retry_policies::Jitter;
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::Jitter;
 use serde_json::json;
 use std::collections::HashMap;
 use std::env;

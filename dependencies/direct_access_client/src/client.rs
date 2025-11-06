@@ -12,14 +12,17 @@
 //! Direct Access API Client
 
 use anyhow::{bail, Result};
-use retry_policies::policies::ExponentialBackoff;
 use std::time::Duration;
 
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
-use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::{
+    default_on_request_failure, default_on_request_success, Jitter, RetryTransientMiddleware,
+    Retryable, RetryableStrategy,
+};
 use serde::de::DeserializeOwned;
 #[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
@@ -31,6 +34,35 @@ use std::env;
 
 use crate::middleware::auth::{AuthMiddleware, TokenManager};
 use crate::models::errors::ExtendedErrorResponse;
+
+struct RetryExcept429;
+impl RetryableStrategy for RetryExcept429 {
+    fn handle(
+        &self,
+        res: &Result<reqwest::Response, reqwest_middleware::Error>,
+    ) -> Option<Retryable> {
+        match res {
+            Ok(success) if success.status() == 429 => None,
+            Ok(success) => default_on_request_success(success),
+            Err(error) => default_on_request_failure(error),
+        }
+    }
+}
+
+struct Retry429;
+impl RetryableStrategy for Retry429 {
+    fn handle(
+        &self,
+        res: &Result<reqwest::Response, reqwest_middleware::Error>,
+    ) -> Option<Retryable> {
+        match res {
+            Ok(success) if success.status() == 429 => Some(Retryable::Transient),
+            Ok(_success) => None,
+            // but maybe retry a request failure
+            Err(error) => default_on_request_failure(error),
+        }
+    }
+}
 
 /// Authorization method and credentials.
 #[derive(Debug, Clone, PartialEq)]
@@ -430,7 +462,21 @@ impl ClientBuilder {
         let mut reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
 
         if let Some(v) = self.retry_policy {
-            reqwest_builder = reqwest_builder.with(RetryTransientMiddleware::new_with_policy(v))
+            let mut retry_policy_429 = ExponentialBackoff::builder()
+                .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
+                .jitter(Jitter::Bounded)
+                .base(2)
+                .build_with_max_retries(1);
+            retry_policy_429.max_n_retries = None;
+            reqwest_builder = reqwest_builder
+                .with(RetryTransientMiddleware::new_with_policy_and_strategy(
+                    v,
+                    RetryExcept429,
+                ))
+                .with(RetryTransientMiddleware::new_with_policy_and_strategy(
+                    retry_policy_429,
+                    Retry429,
+                ))
         }
 
         #[cfg(feature = "ibmcloud_appid_auth")]
