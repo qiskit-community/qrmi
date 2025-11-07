@@ -1,6 +1,6 @@
 [package]
 name = "qrmi"
-version = "0.10.0"
+version = "0.10.1"
 edition = "2021"
 license = "Apache-2.0"
 description = "Quantum Resource Management Interface(QRMI)"
