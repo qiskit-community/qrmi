@@ -22,7 +22,7 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 #[cfg(feature = "iqp_retry_policy")]
 use reqwest_retry::{
-    default_on_request_failure, default_on_request_success,
+    default_on_request_failure, default_on_request_success, Jitter,
     Retryable, RetryableStrategy,
 };
 use serde::de::DeserializeOwned;
