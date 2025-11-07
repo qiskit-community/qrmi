@@ -19,8 +19,10 @@ use log::{debug, error, info, warn};
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::RetryTransientMiddleware;
+#[cfg(feature = "iqp_retry_policy")]
 use reqwest_retry::{
-    default_on_request_failure, default_on_request_success, Jitter, RetryTransientMiddleware,
+    default_on_request_failure, default_on_request_success,
     Retryable, RetryableStrategy,
 };
 use serde::de::DeserializeOwned;
@@ -37,6 +39,7 @@ use crate::models::errors::ExtendedErrorResponse;
 
 #[cfg(feature = "iqp_retry_policy")]
 struct RetryStrategyExcept429;
+#[cfg(feature = "iqp_retry_policy")]
 impl RetryableStrategy for RetryStrategyExcept429 {
     fn handle(
         &self,
@@ -52,6 +55,7 @@ impl RetryableStrategy for RetryStrategyExcept429 {
 
 #[cfg(feature = "iqp_retry_policy")]
 struct RetryStrategy429;
+#[cfg(feature = "iqp_retry_policy")]
 impl RetryableStrategy for RetryStrategy429 {
     fn handle(
         &self,
@@ -299,8 +303,8 @@ impl ClientBuilder {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use retry_policies::policies::ExponentialBackoff;
-    /// use retry_policies::Jitter;
+    /// use reqwest_retry::policies::ExponentialBackoff;
+    /// use reqwest_retry::Jitter;
     /// use direct_access_api::ClientBuilder;
     ///
     /// let retry_policy = ExponentialBackoff::builder()
