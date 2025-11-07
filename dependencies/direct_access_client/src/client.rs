@@ -22,8 +22,7 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 #[cfg(feature = "iqp_retry_policy")]
 use reqwest_retry::{
-    default_on_request_failure, default_on_request_success, Jitter,
-    Retryable, RetryableStrategy,
+    default_on_request_failure, default_on_request_success, Jitter, Retryable, RetryableStrategy,
 };
 use serde::de::DeserializeOwned;
 #[allow(unused_imports)]
@@ -46,7 +45,7 @@ impl RetryableStrategy for RetryStrategyExcept429 {
         res: &Result<reqwest::Response, reqwest_middleware::Error>,
     ) -> Option<Retryable> {
         match res {
-            Ok(success) if success.status() == 429 => None,
+            Ok(success) if success.status() == 429 || success.status() == 423 => None,
             Ok(success) => default_on_request_success(success),
             Err(error) => default_on_request_failure(error),
         }
@@ -62,7 +61,9 @@ impl RetryableStrategy for RetryStrategy429 {
         res: &Result<reqwest::Response, reqwest_middleware::Error>,
     ) -> Option<Retryable> {
         match res {
-            Ok(success) if success.status() == 429 => Some(Retryable::Transient),
+            Ok(success) if success.status() == 429 || success.status() == 423 => {
+                Some(Retryable::Transient)
+            }
             Ok(_success) => None,
             // but maybe retry a request failure
             Err(error) => default_on_request_failure(error),
