@@ -15,6 +15,7 @@ internal_shared_key_auth = []
 api_version = []
 pulse_defaults = []
 skip_tls_cert_verify = []
+iqp_retry_policy = []
 
 [dependencies]
 anyhow = { version = "1.0.90", features = ["backtrace"] }

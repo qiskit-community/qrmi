@@ -35,8 +35,9 @@ use std::env;
 use crate::middleware::auth::{AuthMiddleware, TokenManager};
 use crate::models::errors::ExtendedErrorResponse;
 
-struct RetryExcept429;
-impl RetryableStrategy for RetryExcept429 {
+#[cfg(feature = "iqp_retry_policy")]
+struct RetryStrategyExcept429;
+impl RetryableStrategy for RetryStrategyExcept429 {
     fn handle(
         &self,
         res: &Result<reqwest::Response, reqwest_middleware::Error>,
@@ -49,8 +50,9 @@ impl RetryableStrategy for RetryExcept429 {
     }
 }
 
-struct Retry429;
-impl RetryableStrategy for Retry429 {
+#[cfg(feature = "iqp_retry_policy")]
+struct RetryStrategy429;
+impl RetryableStrategy for RetryStrategy429 {
     fn handle(
         &self,
         res: &Result<reqwest::Response, reqwest_middleware::Error>,
@@ -462,21 +464,28 @@ impl ClientBuilder {
         let mut reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
 
         if let Some(v) = self.retry_policy {
-            let mut retry_policy_429 = ExponentialBackoff::builder()
-                .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
-                .jitter(Jitter::Bounded)
-                .base(2)
-                .build_with_max_retries(1);
-            retry_policy_429.max_n_retries = None;
-            reqwest_builder = reqwest_builder
-                .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-                    v,
-                    RetryExcept429,
-                ))
-                .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-                    retry_policy_429,
-                    Retry429,
-                ))
+            #[cfg(feature = "iqp_retry_policy")]
+            {
+                let mut retry_policy_429 = ExponentialBackoff::builder()
+                    .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
+                    .jitter(Jitter::Bounded)
+                    .base(2)
+                    .build_with_max_retries(1);
+                retry_policy_429.max_n_retries = None;
+                reqwest_builder = reqwest_builder
+                    .with(RetryTransientMiddleware::new_with_policy_and_strategy(
+                        v,
+                        RetryStrategyExcept429,
+                    ))
+                    .with(RetryTransientMiddleware::new_with_policy_and_strategy(
+                        retry_policy_429,
+                        RetryStrategy429,
+                    ))
+            }
+            #[cfg(not(feature = "iqp_retry_policy"))]
+            {
+                reqwest_builder = reqwest_builder.with(RetryTransientMiddleware::new_with_policy(v))
+            }
         }
 
         #[cfg(feature = "ibmcloud_appid_auth")]

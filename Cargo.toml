@@ -20,7 +20,7 @@ path = "src/bin/task_runner.rs"
 required-features = ["build-binary"]
 
 [features]
-default = []
+default = ["direct-access-api/iqp_retry_policy"]
 pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen"]
 build-binary = ["dep:signal-hook-tokio", "dep:signal-hook", "dep:eyre"]
 
