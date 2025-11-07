@@ -36,18 +36,15 @@ impl SamplerV2InputOptionsExecution {
     }
 }
 /// How to process and return measurement results
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum MeasType {
     #[serde(rename = "classified")]
+    #[default]
     Classified,
     #[serde(rename = "kerneled")]
     Kerneled,
     #[serde(rename = "avg_kerneled")]
     AvgKerneled,
-}
-
-impl Default for MeasType {
-    fn default() -> MeasType {
-        Self::Classified
-    }
 }

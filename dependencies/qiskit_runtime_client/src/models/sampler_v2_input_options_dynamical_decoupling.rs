@@ -47,9 +47,12 @@ impl SamplerV2InputOptionsDynamicalDecoupling {
     }
 }
 /// Which dynamical decoupling sequence to use
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum SequenceType {
     #[serde(rename = "XX")]
+    #[default]
     Xx,
     #[serde(rename = "XpXm")]
     XpXm,
@@ -57,36 +60,26 @@ pub enum SequenceType {
     Xy4,
 }
 
-impl Default for SequenceType {
-    fn default() -> SequenceType {
-        Self::Xx
-    }
-}
 /// Where to put extra timing delays due to rounding issues
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum ExtraSlackDistribution {
     #[serde(rename = "middle")]
+    #[default]
     Middle,
     #[serde(rename = "edges")]
     Edges,
 }
 
-impl Default for ExtraSlackDistribution {
-    fn default() -> ExtraSlackDistribution {
-        Self::Middle
-    }
-}
 /// Whether to schedule gates as soon as ('asap') or as late as ('alap') possible
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum SchedulingMethod {
     #[serde(rename = "alap")]
+    #[default]
     Alap,
     #[serde(rename = "asap")]
     Asap,
-}
-
-impl Default for SchedulingMethod {
-    fn default() -> SchedulingMethod {
-        Self::Alap
-    }
 }

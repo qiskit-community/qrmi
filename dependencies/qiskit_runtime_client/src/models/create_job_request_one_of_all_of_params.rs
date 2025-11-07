@@ -25,14 +25,11 @@ impl Default for CreateJobRequestOneOfAllOfParams {
     }
 }
 /// For NoiseLearner, should always be 2
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Version {
     #[serde(rename = "2")]
+    #[default]
     Variant2,
-}
-
-impl Default for Version {
-    fn default() -> Version {
-        Self::Variant2
-    }
 }

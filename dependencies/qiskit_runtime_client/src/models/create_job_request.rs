@@ -24,9 +24,12 @@ impl Default for CreateJobRequest {
     }
 }
 /// Logging level of the program
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum LogLevel {
     #[serde(rename = "critical")]
+    #[default]
     Critical,
     #[serde(rename = "error")]
     Error,
@@ -36,10 +39,4 @@ pub enum LogLevel {
     Info,
     #[serde(rename = "debug")]
     Debug,
-}
-
-impl Default for LogLevel {
-    fn default() -> LogLevel {
-        Self::Critical
-    }
 }

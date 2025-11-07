@@ -27,16 +27,13 @@ impl BackendsResponseV2DevicesInnerClops {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Type {
     #[serde(rename = "virtual")]
+    #[default]
     Virtual,
     #[serde(rename = "hardware")]
     Hardware,
-}
-
-impl Default for Type {
-    fn default() -> Type {
-        Self::Virtual
-    }
 }

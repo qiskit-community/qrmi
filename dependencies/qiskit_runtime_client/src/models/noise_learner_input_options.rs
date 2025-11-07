@@ -63,9 +63,12 @@ impl NoiseLearnerInputOptions {
     }
 }
 /// The strategy of twirling qubits in identified layers of 2-qubit twirled gates
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum TwirlingStrategy {
     #[serde(rename = "active")]
+    #[default]
     Active,
     #[serde(rename = "active-circuit")]
     ActiveCircuit,
@@ -73,10 +76,4 @@ pub enum TwirlingStrategy {
     ActiveAccum,
     #[serde(rename = "all")]
     All,
-}
-
-impl Default for TwirlingStrategy {
-    fn default() -> TwirlingStrategy {
-        Self::Active
-    }
 }

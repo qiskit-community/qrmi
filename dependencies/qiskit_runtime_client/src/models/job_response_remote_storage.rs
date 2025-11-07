@@ -62,30 +62,24 @@ impl JobResponseRemoteStorage {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Type {
     #[serde(rename = "ibmcloud_cos")]
+    #[default]
     IbmcloudCos,
 }
 
-impl Default for Type {
-    fn default() -> Type {
-        Self::IbmcloudCos
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum RegionType {
     #[serde(rename = "regional")]
+    #[default]
     Regional,
     #[serde(rename = "cross-region")]
     CrossRegion,
     #[serde(rename = "single-site")]
     SingleSite,
-}
-
-impl Default for RegionType {
-    fn default() -> RegionType {
-        Self::Regional
-    }
 }

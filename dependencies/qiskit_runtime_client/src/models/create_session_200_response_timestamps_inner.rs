@@ -29,9 +29,12 @@ impl CreateSession200ResponseTimestampsInner {
     }
 }
 /// The state of the session. - open: The session is waiting to run jobs. - active: The session has priority to run jobs on the backend and is running jobs or is waiting for more jobs to run. - inactive: The session does not have priority and is not running any jobs. - closed: The session is not running any jobs and will not accept/run new jobs.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Status {
     #[serde(rename = "open")]
+    #[default]
     Open,
     #[serde(rename = "active")]
     Active,
@@ -39,10 +42,4 @@ pub enum Status {
     Inactive,
     #[serde(rename = "closed")]
     Closed,
-}
-
-impl Default for Status {
-    fn default() -> Status {
-        Self::Open
-    }
 }
