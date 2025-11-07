@@ -49,9 +49,12 @@ impl EstimatorV2InputOptionsResilienceZne {
     }
 }
 /// Technique to use for amplifying noise.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Amplifier {
     #[serde(rename = "gate_folding")]
+    #[default]
     GateFolding,
     #[serde(rename = "gate_folding_front")]
     GateFoldingFront,
@@ -59,10 +62,4 @@ pub enum Amplifier {
     GateFoldingBack,
     #[serde(rename = "pea")]
     Pea,
-}
-
-impl Default for Amplifier {
-    fn default() -> Amplifier {
-        Self::GateFolding
-    }
 }

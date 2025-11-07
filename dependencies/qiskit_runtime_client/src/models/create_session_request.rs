@@ -24,16 +24,13 @@ impl Default for CreateSessionRequest {
     }
 }
 /// Execution mode to run the session in
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Mode {
     #[serde(rename = "batch")]
+    #[default]
     Batch,
     #[serde(rename = "dedicated")]
     Dedicated,
-}
-
-impl Default for Mode {
-    fn default() -> Mode {
-        Self::Batch
-    }
 }

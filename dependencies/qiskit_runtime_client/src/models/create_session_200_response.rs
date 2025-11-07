@@ -91,9 +91,12 @@ impl CreateSession200Response {
     }
 }
 /// The state of the session. - open: The session is waiting to run jobs. - active: The session has priority to run jobs on the backend and is running jobs or is waiting for more jobs to run. - inactive: The session does not have priority and is not running any jobs. - closed: The session is not running any jobs and will not accept/run new jobs.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum State {
     #[serde(rename = "open")]
+    #[default]
     Open,
     #[serde(rename = "active")]
     Active,
@@ -103,22 +106,14 @@ pub enum State {
     Closed,
 }
 
-impl Default for State {
-    fn default() -> State {
-        Self::Open
-    }
-}
 /// Execution mode to run the session in
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Mode {
     #[serde(rename = "batch")]
+    #[default]
     Batch,
     #[serde(rename = "dedicated")]
     Dedicated,
-}
-
-impl Default for Mode {
-    fn default() -> Mode {
-        Self::Batch
-    }
 }

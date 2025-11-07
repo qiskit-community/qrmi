@@ -31,7 +31,7 @@ This Rust API client provides all functionalities provided by Direct Access API,
 
 ## Prerequisites
 
-* Rust 1.86.0 or above
+* Rust 1.91.0 or above
 
 ## How to build
 ```shell-session
@@ -69,11 +69,11 @@ The direct_access_api crate defines some [Cargo features](https://doc.rust-lang.
 
 ### features = ["ibmcloud_appid_auth"]
 
-Provides the support of IBM Cloud App ID authentication. This is deprecated authentication method. This is just backward compatibility.
+(Deprecated) Provides the support of IBM Cloud App ID authentication. This is deprecated authentication method. This is just backward compatibility.
 
 ### features = ["internal_shared_key_auth"]
 
-Provides the support of internal shared key authentication, which was removed from Direct Access API Beta specification. This is just backward compatibility.
+(Deprecated) Provides the support of internal shared key authentication, which was removed from Direct Access API Beta specification. This is just backward compatibility.
 
 ### features = ["api_version"]
 
@@ -95,6 +95,10 @@ export DANGER_TLS_SKIP_CERT_VERIFY=true
 > [!CAUTION]
 > Insecure HTTPS request is being made by this feature. Disabling DANGER_TLS_SKIP_CERT_VERIFY is strongly advised for production.
 
+### features = ["iqp_retry_ppolicy"]
+  
+Enable retry behavior consistent with the IBM Quantum Platform when execution lanes are full. Rather than returning an HTTP 429 error, the client library automatically retries job submission.
+  
 
 ## Programming Guide
 

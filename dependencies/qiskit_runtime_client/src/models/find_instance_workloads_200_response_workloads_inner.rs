@@ -90,9 +90,12 @@ impl FindInstanceWorkloads200ResponseWorkloadsInner {
     }
 }
 /// Workload mode: job, session or batch
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Mode {
     #[serde(rename = "job")]
+    #[default]
     Job,
     #[serde(rename = "session")]
     Session,
@@ -100,15 +103,13 @@ pub enum Mode {
     Batch,
 }
 
-impl Default for Mode {
-    fn default() -> Mode {
-        Self::Job
-    }
-}
 /// State for the workload.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Status {
     #[serde(rename = "completed")]
+    #[default]
     Completed,
     #[serde(rename = "canceled")]
     Canceled,
@@ -118,10 +119,4 @@ pub enum Status {
     Pending,
     #[serde(rename = "in_progress")]
     InProgress,
-}
-
-impl Default for Status {
-    fn default() -> Status {
-        Self::Completed
-    }
 }

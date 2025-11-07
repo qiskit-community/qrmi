@@ -98,9 +98,12 @@ impl JobResponse {
     }
 }
 /// Current status of the job
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Status {
     #[serde(rename = "Queued")]
+    #[default]
     Queued,
     #[serde(rename = "Running")]
     Running,
@@ -112,10 +115,4 @@ pub enum Status {
     CancelledRanTooLong,
     #[serde(rename = "Failed")]
     Failed,
-}
-
-impl Default for Status {
-    fn default() -> Status {
-        Self::Queued
-    }
 }

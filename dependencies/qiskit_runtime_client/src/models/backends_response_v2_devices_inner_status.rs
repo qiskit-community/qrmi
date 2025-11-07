@@ -29,18 +29,15 @@ impl BackendsResponseV2DevicesInnerStatus {
     }
 }
 /// The status name of the backend device
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Name {
     #[serde(rename = "online")]
+    #[default]
     Online,
     #[serde(rename = "paused")]
     Paused,
     #[serde(rename = "offline")]
     Offline,
-}
-
-impl Default for Name {
-    fn default() -> Name {
-        Self::Online
-    }
 }

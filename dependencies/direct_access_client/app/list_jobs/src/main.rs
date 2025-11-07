@@ -9,8 +9,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use retry_policies::policies::ExponentialBackoff;
-use retry_policies::Jitter;
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::Jitter;
 use std::time::Duration;
 
 use direct_access_api::{AuthMethod, ClientBuilder};

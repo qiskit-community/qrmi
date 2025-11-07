@@ -46,9 +46,12 @@ impl SamplerV2InputOptionsTwirling {
     }
 }
 /// The strategy of twirling qubits in identified layers of 2-qubit twirled gates
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub enum Strategy {
     #[serde(rename = "active")]
+    #[default]
     Active,
     #[serde(rename = "active-circuit")]
     ActiveCircuit,
@@ -56,10 +59,4 @@ pub enum Strategy {
     ActiveAccum,
     #[serde(rename = "all")]
     All,
-}
-
-impl Default for Strategy {
-    fn default() -> Strategy {
-        Self::Active
-    }
 }

@@ -20,12 +20,12 @@ path = "src/bin/task_runner.rs"
 required-features = ["build-binary"]
 
 [features]
-default = []
+default = ["direct-access-api/iqp_retry_policy"]
 pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen"]
 build-binary = ["dep:signal-hook-tokio", "dep:signal-hook", "dep:eyre"]
 
 [dependencies]
-retry-policies = "0.4.0"
+reqwest-retry = "0.7.0"
 tokio = { version = "1.40.0", features = ["full"] }
 env_logger = "0.11.5"
 serde = { version = "1.0", features = ["derive"] }

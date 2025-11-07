@@ -10,8 +10,8 @@
 // that they have been altered from the originals.
 
 use clap::Parser;
-use retry_policies::policies::ExponentialBackoff;
-use retry_policies::Jitter;
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::Jitter;
 use std::time::Duration;
 
 use direct_access_api::models::Job;
