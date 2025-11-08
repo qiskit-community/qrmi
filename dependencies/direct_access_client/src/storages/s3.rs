@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2024, 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -23,8 +23,13 @@ use aws_sdk_s3::error::ProvideErrorMetadata;
 /// * `bucket_name` - S3 bucket name.
 /// * `key` - S3 object key.
 ///     
-pub async fn get_presigned_url(client: &Client, bucket_name: &str, key: &str) -> Result<String> {
-    let expires_in = Duration::from_secs(3600);
+pub async fn get_presigned_url(
+    client: &Client,
+    bucket_name: &str,
+    key: &str,
+    expiration: u64,
+) -> Result<String> {
+    let expires_in = Duration::from_secs(expiration);
     let presigned_config = PresigningConfig::expires_in(expires_in)?;
     let presigned_url = match client
         .get_object()
@@ -53,8 +58,9 @@ pub async fn get_presigned_url_for_put(
     client: &Client,
     bucket_name: &str,
     obj_key: &str,
+    expiration: u64,
 ) -> Result<String> {
-    let expires_in = Duration::from_secs(3600);
+    let expires_in = Duration::from_secs(expiration);
     let presigned_config = PresigningConfig::expires_in(expires_in)?;
     let presigned_url = match client
         .put_object()

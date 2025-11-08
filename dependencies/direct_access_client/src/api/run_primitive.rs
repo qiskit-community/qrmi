@@ -134,15 +134,20 @@ impl Client {
             }
         };
 
-        let input_presigned_url =
-            crate::storages::s3::get_presigned_url(&s3_client_remote, &s3_bucket, &job_param_key)
-                .await?;
+        let input_presigned_url = crate::storages::s3::get_presigned_url(
+            &s3_client_remote,
+            &s3_bucket,
+            &job_param_key,
+            timeout_secs,
+        )
+        .await?;
 
         let results_key = format!("{}{}.json", S3KEY_RESULTS_PREFIX, id);
         let results_presigned_url = crate::storages::s3::get_presigned_url_for_put(
             &s3_client_remote,
             &s3_bucket,
             &results_key,
+            timeout_secs,
         )
         .await?;
 
@@ -151,6 +156,7 @@ impl Client {
             &s3_client_remote,
             &s3_bucket,
             &logs_key,
+            timeout_secs,
         )
         .await?;
 
@@ -250,7 +256,8 @@ impl PrimitiveJob {
 
         let key = format!("{}{}.json", S3KEY_RESULTS_PREFIX, self.job_id);
         let presigned_url =
-            crate::storages::s3::get_presigned_url(&self.s3_client, &self.s3_bucket, &key).await?;
+            crate::storages::s3::get_presigned_url(&self.s3_client, &self.s3_bucket, &key, 3600)
+                .await?;
         debug!("{}", presigned_url);
 
         let client = reqwest::Client::new();
@@ -328,7 +335,8 @@ impl PrimitiveJob {
 
         let key = format!("{}{}.json", S3KEY_LOGS_PREFIX, self.job_id);
         let presigned_url =
-            crate::storages::s3::get_presigned_url(&self.s3_client, &self.s3_bucket, &key).await?;
+            crate::storages::s3::get_presigned_url(&self.s3_client, &self.s3_bucket, &key, 3600)
+                .await?;
         debug!("{}", presigned_url);
 
         let client = reqwest::Client::new();
