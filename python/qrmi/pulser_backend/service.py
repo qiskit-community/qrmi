@@ -45,20 +45,20 @@ class QRMIService:
         self._qrmi_resources = {}
         for i, qpu in enumerate(qpus):
             qpu = qpu.strip()
-            qrmi = None
+            resource = None
             if qpu_types[i] == "direct-access":
-                qrmi = QuantumResource(qpu, ResourceType.IBMDirectAccess)
+                resource = QuantumResource(qpu, ResourceType.IBMDirectAccess)
             elif qpu_types[i] == "qiskit-runtime-service":
-                qrmi = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
+                resource = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
             elif qpu_types[i] == "pasqal-cloud":
-                qrmi = QuantumResource(qpu, ResourceType.PasqalCloud)
+                resource = QuantumResource(qpu, ResourceType.PasqalCloud)
             else:
                 logger.warning(
                     "Unsupported resource type: %s specified for %s", qpu_types[i], qpu
                 )
 
-            if qrmi.is_accessible() is False:
-                self._qrmi_resources[qpu] = qrmi
+            if resource.is_accessible():
+                self._qrmi_resources[qpu] = resource
             else:
                 logger.debug("%s is not accessible now. ignored.", qpu)
 

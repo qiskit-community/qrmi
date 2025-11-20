@@ -43,12 +43,14 @@ impl PasqalCloud {
                     "{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID environment variable is not set"
                 )
             })?;
-        let auth_token =
-            env::var(format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN")).map_err(|_| {
-                anyhow!(
-                    "{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN environment variable is not set"
-                )
-            })?;
+        // Allow empty tokens: some devices are public on Pasqal Cloud
+        // so their specs can be queried without a token
+        let var_name = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN");
+        let auth_token = env::var(&var_name).unwrap_or_else(|_| {
+            eprintln!("Warning: {var_name} is not set; proceeding with empty auth token.");
+            String::new()
+        });
+
         Ok(Self {
             api_client: ClientBuilder::new(auth_token, project_id).build().unwrap(),
             backend_name: backend_name.to_string(),
@@ -59,19 +61,25 @@ impl PasqalCloud {
 #[async_trait]
 impl QuantumResource for PasqalCloud {
     async fn is_accessible(&mut self) -> Result<bool> {
-        let fresnel = DeviceType::Fresnel.to_string();
-        if self.backend_name != fresnel {
-            let err = format!(
-                "Device {} is invalid. Only {} device can receive jobs.",
-                self.backend_name, fresnel,
-            );
-            bail!(format!("{}", &err));
-        };
-        match self.api_client.get_device(DeviceType::Fresnel).await {
-            Ok(device) => Ok(device.data.status == "UP"),
-            Err(err) => {
-                bail!(format!("Failed to get device: {}", &err));
+        let device_type = match self.backend_name.parse::<DeviceType>() {
+            Ok(dt) => dt,
+            Err(_) => {
+                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let err = format!(
+                    "Device '{}' is invalid. Valid devices: {}",
+                    self.backend_name,
+                    valid_devices.join(", ")
+                );
+                bail!(err);
             }
+        };
+
+        // The device may be down temporarily but jobs can still
+        // be submitted and queued through the cloud
+        // Thus we only check that the device is not retired 
+        match self.api_client.get_device(device_type).await {
+            Ok(device) => Ok(device.availability == "ACTIVE"),
+            Err(err) => bail!("Failed to get device: {}", err),
         }
     }
 
@@ -89,10 +97,22 @@ impl QuantumResource for PasqalCloud {
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
-            // TODO: Make configurable (get emulator from qrmi)
+            let device_type = match self.backend_name.parse::<DeviceType>() {
+                Ok(dt) => dt,
+                Err(_) => {
+                    let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE"];
+                    let err = format!(
+                        "Device '{}' is invalid. Valid devices: {}",
+                        self.backend_name,
+                        valid_devices.join(", ")
+                    );
+                    bail!(err);
+                }
+            };
+
             match self
                 .api_client
-                .create_batch(sequence, job_runs, DeviceType::EmuFree)
+                .create_batch(sequence, job_runs, device_type)
                 .await
             {
                 Ok(batch) => Ok(batch.data.id),
@@ -141,19 +161,24 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn target(&mut self) -> Result<Target> {
-        let fresnel = DeviceType::Fresnel.to_string();
-        if self.backend_name != fresnel {
-            let err = format!(
-                "Device {} is invalid. Only {} device can receive jobs.",
-                self.backend_name, fresnel
-            );
-            panic!("{}", err);
+        let device_type = match self.backend_name.parse::<DeviceType>() {
+            Ok(dt) => dt,
+            Err(_) => {
+                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE"];
+                let err = format!(
+                    "Device '{}' is invalid. Valid devices: {}",
+                    self.backend_name,
+                    valid_devices.join(", ")
+                );
+                panic!("{}", err);
+            }
         };
-        match self.api_client.get_device_specs(DeviceType::Fresnel).await {
+
+        match self.api_client.get_device_specs(device_type).await {
             Ok(resp) => Ok(Target {
                 value: resp.data.specs,
             }),
-            Err(_err) => Err(_err),
+            Err(err) => Err(err),
         }
     }
 

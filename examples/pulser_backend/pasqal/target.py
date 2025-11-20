@@ -21,7 +21,7 @@ import pulser
 import pulser.abstract_repr
 from dotenv import load_dotenv
 from pulser.devices import Device
-from pulser_qrmi_backend.service import QRMIService
+from qrmi.pulser_backend.service import QRMIService
 
 from qrmi import QuantumResource
 
