@@ -13,11 +13,13 @@
 use serde::{Deserialize, Serialize};
 
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "UPPERCASE"))]
 pub enum DeviceType {
     Fresnel,
+    Fresnel_Can1,
     EmuMps,
     EmuFree,
 }
@@ -26,9 +28,25 @@ impl fmt::Display for DeviceType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name = match self {
             DeviceType::Fresnel => "FRESNEL",
+            DeviceType::Fresnel_Can1 => "FRESNEL_CAN1",
             DeviceType::EmuMps => "EMU_MPS",
             DeviceType::EmuFree => "EMU_FREE",
         };
         write!(f, "{}", name)
     }
 }
+
+impl FromStr for DeviceType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "FRESNEL" => Ok(DeviceType::Fresnel),
+            "FRESNEL_CAN1" => Ok(DeviceType::Fresnel_Can1),
+            "EMU_MPS" => Ok(DeviceType::EmuMps),
+            "EMU_FREE" => Ok(DeviceType::EmuFree),
+            _ => Err(()),
+        }
+    }
+}
+

@@ -40,6 +40,7 @@ pub struct Response<T> {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetDeviceResponseData {
     pub status: String,
+    pub availability: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,13 +83,19 @@ impl Client {
     pub async fn get_device(
         &self,
         device_type: DeviceType,
-    ) -> Result<Response<GetDeviceResponseData>> {
+    ) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
         );
-        self.get(&url).await
+        let resp: Response<Vec<GetDeviceResponseData>> = self.get(&url).await?;
+
+        resp.data
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("No devices found for type {:?}", device_type))
     }
+
     /// Pasqal Cloud works with batches of jobs rather than
     /// individual jobs, see:
     /// https://docs.pasqal.com/cloud/batches/
