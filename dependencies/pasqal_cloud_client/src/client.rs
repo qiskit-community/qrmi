@@ -15,7 +15,7 @@ use anyhow::{bail, Result};
 
 use crate::models::batch::BatchStatus;
 use crate::models::device::DeviceType;
-use log::info;
+use log::debug;
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
@@ -40,6 +40,7 @@ pub struct Response<T> {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetDeviceResponseData {
     pub status: String,
+    pub availability: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,13 +83,19 @@ impl Client {
     pub async fn get_device(
         &self,
         device_type: DeviceType,
-    ) -> Result<Response<GetDeviceResponseData>> {
+    ) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
         );
-        self.get(&url).await
+        let resp: Response<Vec<GetDeviceResponseData>> = self.get(&url).await?;
+
+        resp.data
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("No devices found for type {:?}", device_type))
     }
+
     /// Pasqal Cloud works with batches of jobs rather than
     /// individual jobs, see:
     /// https://docs.pasqal.com/cloud/batches/
@@ -188,7 +195,7 @@ impl Client {
     async fn handle_request<T: DeserializeOwned>(&self, resp: reqwest::Response) -> Result<T> {
         if resp.status().is_success() {
             let json_text = resp.text().await?;
-            info!("{}", json_text);
+            debug!("{}", json_text);
             let val = serde_json::from_str(&json_text)?;
             Ok(val)
         } else {
