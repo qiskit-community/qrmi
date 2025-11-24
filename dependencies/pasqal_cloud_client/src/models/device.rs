@@ -22,6 +22,7 @@ pub enum DeviceType {
     FresnelCan1,
     EmuMps,
     EmuFree,
+    EmuFresnel,
 }
 
 impl fmt::Display for DeviceType {
@@ -31,6 +32,7 @@ impl fmt::Display for DeviceType {
             DeviceType::FresnelCan1 => "FRESNEL_CAN1",
             DeviceType::EmuMps => "EMU_MPS",
             DeviceType::EmuFree => "EMU_FREE",
+            DeviceType::EmuFresnel => "EMU_FRESNEL",
         };
         write!(f, "{}", name)
     }
@@ -44,6 +46,7 @@ impl FromStr for DeviceType {
             "FRESNEL" => Ok(DeviceType::Fresnel),
             "FRESNEL_CAN1" => Ok(DeviceType::FresnelCan1),
             "EMU_MPS" => Ok(DeviceType::EmuMps),
+            "EMU_FRESNEL" => Ok(DeviceType::EmuFresnel),
             "EMU_FREE" => Ok(DeviceType::EmuFree),
             _ => Err(()),
         }
