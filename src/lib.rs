@@ -14,6 +14,7 @@ pub(crate) mod common;
 pub(crate) mod consts;
 pub mod ibm;
 pub mod pasqal;
+pub mod ionq;
 
 mod cext;
 pub mod models;
