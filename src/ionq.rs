@@ -13,5 +13,8 @@
 //! QRMI implementations for IonQ Cloud Services
 
 mod cloud;
+mod mock;
 
 pub use self::cloud::IonQCloud;
+pub use mock::IonQMock;
+
