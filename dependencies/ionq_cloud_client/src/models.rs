@@ -9,8 +9,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-pub mod device;
+pub mod backend;
 pub mod job;
 
-pub use self::device::DeviceType;
+pub use self::backend::Backend;
 pub use self::job::JobStatus;

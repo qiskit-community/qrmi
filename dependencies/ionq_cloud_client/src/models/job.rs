@@ -13,7 +13,6 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "UPPERCASE", deserialize = "UPPERCASE"))]
 pub enum JobStatus {
     Submitted,
     Ready,

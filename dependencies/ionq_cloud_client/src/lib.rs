@@ -17,6 +17,6 @@
 mod client;
 mod models;
 
-pub use client::{Client, ClientBuilder};
+pub use client::{Client, ClientBuilder, SessionData, SessionRequestData};
+pub use models::Backend;
 pub use models::JobStatus;
-pub use models::DeviceType;
