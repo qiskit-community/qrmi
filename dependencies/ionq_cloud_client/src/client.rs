@@ -90,6 +90,22 @@ pub struct IonQJob {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct CreateJobRequest<'a> {
+    #[serde(rename = "type")]
+    job_type: &'a str,
+    backend: String,
+    shots: i32,
+    name: &'a str,
+    input: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    session_id: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metadata: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    settings: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct SessionRequestData {
     pub backend: String,
     // IonQ API calls this "settings" in v0.4 docs; keep our internal name
@@ -114,7 +130,6 @@ impl Client {
 
     pub async fn create_session(
         &self,
-        _backend: Backend,
         session_request_data: &SessionRequestData,
     ) -> Result<SessionData> {
         let url = format!("{}/sessions", self.base_url);
@@ -146,27 +161,18 @@ impl Client {
             bail!("shots must be > 0");
         }
 
-        let mut req = serde_json::Map::new();
-        req.insert("type".to_string(), Value::String(job_type.to_string()));
-        req.insert("backend".to_string(), Value::String(backend.to_string()));
-        req.insert(
-            "shots".to_string(),
-            Value::Number(serde_json::Number::from(shots as i64)),
-        );
-        req.insert("name".to_string(), Value::String(name.to_string()));
-        req.insert("input".to_string(), input);
+        let req = CreateJobRequest {
+            job_type,
+            backend: backend.to_string(),
+            shots,
+            name,
+            input,
+            session_id,
+            metadata,
+            settings,
+        };
 
-        if let Some(sid) = session_id {
-            req.insert("session_id".to_string(), Value::String(sid.to_string()));
-        }
-        if let Some(m) = metadata {
-            req.insert("metadata".to_string(), m);
-        }
-        if let Some(s) = settings {
-            req.insert("settings".to_string(), s);
-        }
-
-        let raw: Value = self.post(&url, Value::Object(req)).await?;
+        let raw: Value = self.post(&url, req).await?;
         extract_job(raw)
     }
 
@@ -371,8 +377,8 @@ impl ClientBuilder {
     /// let _client = ClientBuilder::new(api_key).build().unwrap();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
-        let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        let mut reqwest_client_builder =
+            reqwest::Client::builder().connection_verbose(log::log_enabled!(log::Level::Trace));
 
         let mut headers = header::HeaderMap::new();
 

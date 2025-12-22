@@ -1,12 +1,12 @@
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use log::{debug, info, warn};
 use qrmi::ionq::{IonQCloud, IonQMock};
 use qrmi::models::{Payload, TaskResult, TaskStatus, Target};
 use qrmi::QuantumResource;
 use std::fs;
-use std::time::{Duration, Instant};
-use tokio::time::sleep;
+use std::time::Duration;
+use tokio::time::{sleep, timeout};
 
 const DEFAULT_QASM2: &str = r#"OPENQASM 2.0;
 include "qelib1.inc";
@@ -23,6 +23,13 @@ h q[0];
 c[0] = measure q[0];
 "#;
 
+#[derive(ValueEnum, Debug, Clone)]
+enum Format {
+    Qasm2,
+    Qasm3,
+    Qir,
+}
+
 #[derive(Parser, Debug)]
 #[command(name = "qrmi-ionq-cloud-example")]
 #[command(about = "Run a simple QRMI IonQCloud job (or IonQMock offline).")]
@@ -36,13 +43,12 @@ struct Args {
     shots: i32,
 
     /// Use the in-process offline mock (no network / no key required)
-    #[arg(long, default_value_t = false)]
+    #[arg(long)]
     mock: bool,
 
-    /// Input format used only to choose the default program when --input/--input-file is not set.
-    /// Options: qasm2 | qasm3 | qir
-    #[arg(long, default_value = "qasm2")]
-    format: String,
+    /// Default input format (only used when --input/--input-file is not set)
+    #[arg(long, value_enum, default_value_t = Format::Qasm2)]
+    format: Format,
 
     /// Provide program text directly
     #[arg(long)]
@@ -61,56 +67,58 @@ struct Args {
     timeout_s: u64,
 }
 
-fn pick_default_program(format: &str) -> String {
-    match format.to_lowercase().as_str() {
-        "qasm3" => DEFAULT_QASM3.to_string(),
-        // For QIR, you almost certainly want to pass --input-file with a real module.
-        "qir" => {
-            warn!("format=qir selected but no default QIR module is provided; using a placeholder. Prefer --input-file.");
+fn default_program(fmt: &Format) -> String {
+    match fmt {
+        Format::Qasm2 => DEFAULT_QASM2.to_string(),
+        Format::Qasm3 => DEFAULT_QASM3.to_string(),
+        Format::Qir => {
+            warn!("format=qir selected but no default QIR module is provided; prefer --input-file");
             "; QIR placeholder - pass --input-file with real IR\n".to_string()
         }
-        _ => DEFAULT_QASM2.to_string(),
     }
 }
 
-fn looks_final(status: &TaskStatus) -> bool {
-    // Avoid hard-coding enum variants here so the example remains robust if
-    // TaskStatus evolves. We just rely on Debug string contents.
-    let s = format!("{status:?}").to_lowercase();
-    s.contains("completed") || s.contains("failed") || s.contains("cancel")
+fn load_program(args: &Args) -> Result<String> {
+    if let Some(s) = &args.input {
+        return Ok(s.clone());
+    }
+    if let Some(p) = &args.input_file {
+        return fs::read_to_string(p).with_context(|| format!("failed reading --input-file={p}"));
+    }
+    Ok(default_program(&args.format))
 }
 
-async fn try_print_target(qr: &mut dyn QuantumResource) {
+fn is_final(st: &TaskStatus) -> bool {
+    matches!(
+        st,
+        TaskStatus::Completed | TaskStatus::Failed | TaskStatus::Cancelled
+    )
+}
+
+async fn best_effort_target(qr: &mut dyn QuantumResource) {
     match qr.target().await {
-        Ok(Target { value }) => {
-            info!("target:\n{value}");
-        }
-        Err(e) => {
-            warn!("target() failed: {e}");
-        }
+        Ok(Target { value }) => info!("target:\n{value}"),
+        Err(e) => warn!("target() failed: {e}"),
     }
 }
 
-async fn try_print_logs(qr: &mut dyn QuantumResource, task_id: &str) {
-    match qr.task_logs(task_id).await {
-        Ok(logs) => info!("task logs:\n{logs}"),
-        Err(e) => warn!("task_logs() failed: {e}"),
-    }
-}
-
-async fn try_print_result(qr: &mut dyn QuantumResource, task_id: &str) {
+async fn best_effort_result(qr: &mut dyn QuantumResource, task_id: &str) {
     match qr.task_result(task_id).await {
         Ok(TaskResult { value }) => info!("task result:\n{value}"),
         Err(e) => warn!("task_result() failed: {e}"),
     }
 }
 
+async fn best_effort_logs(qr: &mut dyn QuantumResource, task_id: &str) {
+    match qr.task_logs(task_id).await {
+        Ok(logs) => info!("task logs:\n{logs}"),
+        Err(e) => warn!("task_logs() failed: {e}"),
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Logging: use RUST_LOG to control verbosity.
-    // Example: RUST_LOG=info,qrmi=debug,ionq_cloud_api=debug
     env_logger::init();
-
     let args = Args::parse();
 
     if !args.mock {
@@ -124,41 +132,18 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Resolve program text
-    let program = if let Some(s) = args.input {
-        s
-    } else if let Some(p) = args.input_file {
-        fs::read_to_string(&p).with_context(|| format!("failed reading --input-file={p}"))?
-    } else {
-        pick_default_program(&args.format)
-    };
-
+    let program = load_program(&args)?;
     debug!("program bytes={}", program.len());
 
-    // Pick implementation (real vs mock)
     let mut qr: Box<dyn QuantumResource> = if args.mock {
         Box::new(IonQMock::new(&args.backend)?)
     } else {
         Box::new(IonQCloud::new(&args.backend)?)
     };
 
-    // Accessibility probe
-    let accessible = qr.is_accessible().await?;
-    info!("is_accessible={accessible}");
-    if !accessible && !args.mock {
-        warn!("Backend '{}' reports not accessible; continuing anyway.", args.backend);
-    }
+    info!("is_accessible={}", qr.is_accessible().await?);
+    best_effort_target(qr.as_mut()).await;
 
-    // Sessions are OPTIONAL (session_id is optional in create-job), and simulator runs
-    // end-to-end fine without them. 
-    // If you want to experiment with sessions on non-simulator backends, uncomment:
-    // let session_id = qr.acquire().await?;
-    // info!("acquired session_id={session_id}");
-
-    // Optional: print target info if implemented
-    try_print_target(qr.as_mut()).await;
-
-    // Start task
     let payload = Payload::IonQCloud {
         input: program,
         target: args.backend.clone(),
@@ -168,34 +153,38 @@ async fn main() -> Result<()> {
     let task_id = qr.task_start(payload).await?;
     info!("task_id={task_id}");
 
-    // Poll status
-    let deadline = Instant::now() + Duration::from_secs(args.timeout_s);
-    loop {
-        let st = qr.task_status(&task_id).await?;
-        info!("status={st:?}");
+    let poll = Duration::from_secs(args.poll_s);
+    let wait = Duration::from_secs(args.timeout_s);
 
-        if looks_final(&st) {
-            break;
+    let final_status = match timeout(wait, async {
+        loop {
+            let st = qr.task_status(&task_id).await?;
+            info!("status={st:?}");
+            if is_final(&st) {
+                return Ok::<TaskStatus, anyhow::Error>(st);
+            }
+            sleep(poll).await;
         }
-
-        if Instant::now() >= deadline {
-            warn!("timeout reached; attempting to stop task...");
-            // Best-effort cancel
+    })
+    .await
+    {
+        Ok(r) => r?,
+        Err(_) => {
+            warn!("timeout reached; attempting to cancel task...");
             let _ = qr.task_stop(&task_id).await;
-            break;
+            // best-effort readback:
+            qr.task_status(&task_id).await.unwrap_or(TaskStatus::Cancelled)
         }
+    };
 
-        sleep(Duration::from_secs(args.poll_s)).await;
+    if matches!(final_status, TaskStatus::Completed) {
+        best_effort_result(qr.as_mut(), &task_id).await;
+    } else {
+        warn!("job finished in non-completed state: {final_status:?}");
+        // still try to print result/logs for debugging
+        best_effort_result(qr.as_mut(), &task_id).await;
     }
-
-    // Try to fetch result/logs (best-effort)
-    try_print_result(qr.as_mut(), &task_id).await;
-    try_print_logs(qr.as_mut(), &task_id).await;
-
-    // Release session (disabled for the simulator demo).
-    // If you re-enable acquire() above, re-enable this too:
-    // qr.release(&session_id).await?;
-    // info!("released session_id={session_id}");
+    best_effort_logs(qr.as_mut(), &task_id).await;
 
     Ok(())
 }
