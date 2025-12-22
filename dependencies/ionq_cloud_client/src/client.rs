@@ -258,8 +258,20 @@ impl Client {
         if resp.status().is_success() {
             let json_text = resp.text().await?;
             debug!("{}", json_text);
-            let val = serde_json::from_str(&json_text)?;
-            Ok(val)
+
+            let val: Value = serde_json::from_str(&json_text)?;
+
+            // Try direct decode first.
+            if let Ok(out) = serde_json::from_value::<T>(val.clone()) {
+                return Ok(out);
+            }
+
+            // Then try the common { "data": ... } envelope.
+            if let Ok(wrapper) = serde_json::from_value::<Response<T>>(val.clone()) {
+                return Ok(wrapper.data);
+            }
+
+            bail!("Unexpected IonQ response shape: {val}");
         } else {
             let status = resp.status();
             let json_text = resp.text().await?;
