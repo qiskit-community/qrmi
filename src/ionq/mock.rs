@@ -31,7 +31,7 @@ struct MockJob {
 
 /// Simple in-process mock for an IonQ device.
 ///
-/// This implementation never talks to the real IonQ APIs. It’s intended
+/// This implementation never talks to the real IonQ APIs. It's intended
 /// for testing QRMI wiring (config, C/Python bindings, etc.) without
 /// needing credentials or network access.
 #[derive(Debug)]

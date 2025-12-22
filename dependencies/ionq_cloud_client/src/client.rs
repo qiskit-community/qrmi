@@ -122,6 +122,12 @@ pub struct SessionLimits {
 }
 
 impl Client {
+    pub async fn create_job_raw(&self, body: Value) -> Result<IonQJob> {
+        let url = format!("{}/jobs", self.base_url);
+        let raw: Value = self.post(&url, body).await?;
+        extract_job(raw)
+    }
+
     pub async fn get_backend(&self, backend: Backend) -> Result<IonQBackend> {
         let url = format!("{}/backends/{}", self.base_url, backend);
         let data: IonQBackend = self.get(&url).await?;

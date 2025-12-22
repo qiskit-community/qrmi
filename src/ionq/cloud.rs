@@ -17,12 +17,16 @@ use crate::QuantumResource;
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ionq_cloud_api::{Backend, Client, ClientBuilder, IonQJob, SessionRequestData};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::env;
 use uuid::Uuid;
 
-const IONQ_JOB_TYPE: &str = "ionq.circuit.v1";
+// Job types (IonQ API v0.4).
+const JOB_TYPE_CIRCUIT: &str = "ionq.circuit.v1";
+const JOB_TYPE_QASM2: &str = "ionq.qasm2.v1";
+const JOB_TYPE_QASM3: &str = "ionq.qasm3.v1";
+const JOB_TYPE_QIR: &str = "ionq.qir.v1";
 
 pub struct IonQCloud {
     api_client: Client,
@@ -49,30 +53,150 @@ impl IonQCloud {
         })
     }
 
-    fn build_ionq_input(program: &str) -> Result<Value> {
+    fn backend_str(&self) -> String {
+        self.backend.to_string()
+    }
+
+    fn default_noise(&self) -> Option<Value> {
+        // Noise model makes sense for the simulator; leave it out for QPUs.
+        if self.backend == Backend::Simulator {
+            Some(serde_json::json!({ "model": "ideal" }))
+        } else {
+            None
+        }
+    }
+
+    fn looks_like_schema_rejection(err: &anyhow::Error) -> bool {
+        // ionq_cloud_api errors look like: "Status: 400, Fail { ... }"
+        let msg = err.to_string();
+        msg.contains("Status: 400") || msg.contains("Status: 422")
+    }
+
+    fn build_job_body(
+        job_type: &str,
+        name: &str,
+        shots: i32,
+        target_field: &str, // "target" or "backend"
+        target_value: &str, // e.g. "simulator"
+        input: Value,       // either {data: "..."} or circuit JSON
+        session_id: Option<&str>,
+        noise: Option<Value>,
+    ) -> Result<Value> {
+        if shots <= 0 {
+            bail!("shots must be > 0");
+        }
+
+        let mut m: Map<String, Value> = Map::new();
+        m.insert("type".into(), Value::String(job_type.to_string()));
+        m.insert("name".into(), Value::String(name.to_string()));
+        m.insert(
+            "shots".into(),
+            Value::Number(serde_json::Number::from(shots as i64)),
+        );
+        m.insert(target_field.into(), Value::String(target_value.to_string()));
+        m.insert("input".into(), input);
+
+        if let Some(sid) = session_id {
+            m.insert("session_id".into(), Value::String(sid.to_string()));
+        }
+        if let Some(noise) = noise {
+            m.insert("noise".into(), noise);
+        }
+
+        Ok(Value::Object(m))
+    }
+
+    fn detect_job_type_and_input(program: &str) -> Result<(&'static str, Value)> {
         let s = program.trim_start();
 
-        // If it's JSON and looks like an IonQ v0.4 "input" object, accept it.
-        // IonQ v0.4 Create Job expects type=ionq.circuit.v1 and an input object
-        // (QIS or native circuit).
+        // If it's an IonQ circuit JSON *input object* (not a full job request), keep supporting it:
+        // { "qubits": ..., "circuit": [...] }
         if s.starts_with('{') {
-            let v: Value =
-                serde_json::from_str(s).context("input looked like JSON but failed to parse")?;
-            if v.get("qubits").is_some() && v.get("circuit").is_some() {
-                return Ok(v);
+            if let Ok(v) = serde_json::from_str::<Value>(s) {
+                if v.get("qubits").is_some() && v.get("circuit").is_some() {
+                    return Ok((JOB_TYPE_CIRCUIT, v));
+                }
             }
         }
 
-        // Otherwise treat it as OpenQASM (2 or 3) and translate (minimal demo support).
-        if s.to_ascii_uppercase().contains("OPENQASM") {
-            return qasm_to_ionq_qis(program);
+        // Otherwise, treat it as source text and wrap it.
+        // Use the header to decide between QASM2 vs QASM3; default to QIR.
+        let first_line = s.lines().next().unwrap_or("").trim();
+        let first_uc = first_line.to_ascii_uppercase();
+
+        if first_uc.starts_with("OPENQASM 2") {
+            return Ok((JOB_TYPE_QASM2, serde_json::json!({ "data": program })));
+        }
+        if first_uc.starts_with("OPENQASM 3") {
+            return Ok((JOB_TYPE_QASM3, serde_json::json!({ "data": program })));
         }
 
-        bail!(
-            "IonQCloud input must be either:\n\
-             - IonQ circuit JSON (the v0.4 `input` object with `qubits` + `circuit`), or\n\
-             - OpenQASM 2/3 text (limited gate support in built-in demo translator)."
-        );
+        Ok((JOB_TYPE_QIR, serde_json::json!({ "data": program })))
+    }
+
+    async fn submit_qasm_like_with_target_fallback(
+        &self,
+        job_type: &str,
+        name: &str,
+        shots: i32,
+        input: Value,
+    ) -> Result<IonQJob> {
+        let target_value = self.backend_str();
+        let session_id = self.session_id.as_deref();
+        let noise = self.default_noise();
+
+        // 1) Preferred (your structure): "target"
+        let body_target = Self::build_job_body(
+            job_type,
+            name,
+            shots,
+            "target",
+            &target_value,
+            input.clone(),
+            session_id,
+            noise.clone(),
+        )?;
+
+        match self.api_client.create_job_raw(body_target).await {
+            Ok(job) => Ok(job),
+            Err(e) => {
+                // 2) Retry once with documented v0.4 key name: "backend"
+                if Self::looks_like_schema_rejection(&e) {
+                    let body_backend = Self::build_job_body(
+                        job_type,
+                        name,
+                        shots,
+                        "backend",
+                        &target_value,
+                        input,
+                        session_id,
+                        noise,
+                    )?;
+                    return self.api_client.create_job_raw(body_backend).await;
+                }
+                Err(e)
+            }
+        }
+    }
+
+    async fn submit_circuit_job(&self, name: &str, shots: i32, input: Value) -> Result<IonQJob> {
+        let backend_value = self.backend_str();
+        let session_id = self.session_id.as_deref();
+        let noise = self.default_noise();
+
+        // For the documented circuit job type, IonQ v0.4 docs show "backend".
+        let body = Self::build_job_body(
+            JOB_TYPE_CIRCUIT,
+            name,
+            shots,
+            "backend",
+            &backend_value,
+            input,
+            session_id,
+            noise,
+        )?;
+
+        self.api_client.create_job_raw(body).await
     }
 }
 
@@ -88,11 +212,6 @@ fn map_ionq_status(s: &str) -> TaskStatus {
 }
 
 fn extract_probabilities(raw: Value) -> Value {
-    // Accept common shapes:
-    // 1) { "0": 0.5, "1": 0.5 }
-    // 2) { "probabilities": { ... } }
-    // 3) { "results": { "probabilities": { ... } } }
-    // 4) { "data": ... } variants
     const PTRS: [&str; 4] = [
         "/probabilities",
         "/results/probabilities",
@@ -105,97 +224,6 @@ fn extract_probabilities(raw: Value) -> Value {
         }
     }
     raw
-}
-
-fn parse_bracket_index(s: &str) -> Option<u32> {
-    let s = s.trim();
-    let l = s.find('[')? + 1;
-    let r = s[l..].find(']')? + l;
-    s[l..r].trim().parse::<u32>().ok()
-}
-
-fn qasm_to_ionq_qis(qasm: &str) -> Result<Value> {
-    // Minimal translator for examples:
-    // - reads qubit count from `qreg q[n];` (QASM2) or `qubit[n] q;` (QASM3)
-    // - supports: h/x/y/z/s/t and cx/cnot
-    // - ignores measurement lines (IonQ returns final-state probabilities)
-    let mut n_qubits: Option<u32> = None;
-    let mut circuit: Vec<Value> = Vec::new();
-
-    for raw in qasm.lines() {
-        let line = raw.split("//").next().unwrap_or(raw).trim();
-        if line.is_empty() {
-            continue;
-        }
-        let stmt = line.trim_end_matches(';').trim();
-        let lower = stmt.to_ascii_lowercase();
-
-        // Headers / decls
-        if lower.starts_with("openqasm") || lower.starts_with("include ") {
-            continue;
-        }
-        if lower.starts_with("qreg ") || lower.starts_with("qubit") {
-            if let Some(n) = parse_bracket_index(stmt) {
-                n_qubits = Some(n);
-            }
-            continue;
-        }
-        if lower.starts_with("creg ") || lower.starts_with("bit") {
-            continue;
-        }
-
-        // Ignore measurement statements (QASM2 and QASM3 forms)
-        if lower.starts_with("measure ") || lower.contains("= measure") {
-            continue;
-        }
-
-        // gate + operands
-        let gate = stmt.split_whitespace().next().unwrap_or("");
-        let rest = stmt[gate.len()..].trim();
-        let gate_lc = gate.to_ascii_lowercase();
-
-        match gate_lc.as_str() {
-            "h" | "x" | "y" | "z" | "s" | "t" => {
-                let target = parse_bracket_index(rest).with_context(|| {
-                    format!("failed to parse single-qubit target in stmt: '{stmt}'")
-                })?;
-                circuit.push(serde_json::json!({
-                    "gate": gate_lc,
-                    "target": target,
-                }));
-            }
-            "cx" | "cnot" => {
-                let mut parts = rest.split(',').map(|s| s.trim());
-                let c = parts
-                    .next()
-                    .and_then(parse_bracket_index)
-                    .ok_or_else(|| anyhow::anyhow!("failed to parse control in stmt: '{stmt}'"))?;
-                let t = parts
-                    .next()
-                    .and_then(parse_bracket_index)
-                    .ok_or_else(|| anyhow::anyhow!("failed to parse target in stmt: '{stmt}'"))?;
-                if parts.next().is_some() {
-                    bail!("too many operands for cx/cnot in stmt: '{stmt}'");
-                }
-                circuit.push(serde_json::json!({
-                    "gate": "cnot",
-                    "control": c,
-                    "target": t,
-                }));
-            }
-            other => bail!(
-                "Unsupported gate '{other}' in QASM for IonQ demo translator. \
-                 Supported: h/x/y/z/s/t/cx (cnot). Offending stmt: '{stmt}'"
-            ),
-        }
-    }
-
-    let qubits = n_qubits.unwrap_or(1);
-    Ok(serde_json::json!({
-        "qubits": qubits,
-        "gateset": "qis",
-        "circuit": circuit,
-    }))
 }
 
 #[async_trait]
@@ -211,7 +239,6 @@ impl QuantumResource for IonQCloud {
 
     async fn acquire(&mut self) -> Result<String> {
         // Sessions are beta; only use if caller explicitly wants them.
-        // POST /v0.4/sessions
         let req = SessionRequestData {
             backend: self.backend.to_string(),
             limits: None,
@@ -228,7 +255,6 @@ impl QuantumResource for IonQCloud {
     }
 
     async fn release(&mut self, id: &str) -> Result<()> {
-        // POST /v0.4/sessions/{session_id}/end
         self.api_client
             .end_session(id)
             .await
@@ -259,23 +285,63 @@ impl QuantumResource for IonQCloud {
             );
         }
 
-        let ionq_input = Self::build_ionq_input(&input)?;
-
         let job_name = format!("qrmi-ionq-{}", Uuid::new_v4());
-        let job: IonQJob = self
-            .api_client
-            .create_job(
-                self.backend,
-                IONQ_JOB_TYPE,
-                shots,
-                &job_name,
-                self.session_id.as_deref(),
-                None,
-                None,
-                ionq_input,
-            )
-            .await
-            .context("create_job failed")?;
+
+        // If the payload `input` is already a full IonQ create-job JSON body
+        // (i.e. it contains "type" and "input"), submit it "as a job" after normalizing
+        // a couple fields to match the QRMI request.
+        let trimmed = input.trim_start();
+        if trimmed.starts_with('{') {
+            if let Ok(Value::Object(mut obj)) = serde_json::from_str::<Value>(trimmed) {
+                if obj.contains_key("type") && obj.contains_key("input") {
+                    // Normalize name/shots
+                    obj.entry("name".to_string())
+                        .or_insert(Value::String(job_name.clone()));
+                    obj.insert(
+                        "shots".to_string(),
+                        Value::Number(serde_json::Number::from(shots as i64)),
+                    );
+
+                    // Ensure target/backend is present and consistent
+                    let b = self.backend_str();
+                    let has_target = obj.get("target").and_then(|v| v.as_str()).is_some();
+                    let has_backend = obj.get("backend").and_then(|v| v.as_str()).is_some();
+
+                    if has_target {
+                        obj.insert("target".to_string(), Value::String(b.clone()));
+                    } else if has_backend {
+                        obj.insert("backend".to_string(), Value::String(b.clone()));
+                    } else {
+                        // Default to documented key for v0.4.
+                        obj.insert("backend".to_string(), Value::String(b.clone()));
+                    }
+
+                    // Optional session/noise defaults if omitted
+                    if let Some(sid) = self.session_id.as_deref() {
+                        obj.entry("session_id".to_string())
+                            .or_insert(Value::String(sid.to_string()));
+                    }
+                    if let Some(noise) = self.default_noise() {
+                        obj.entry("noise".to_string()).or_insert(noise);
+                    }
+
+                    let job = self.api_client.create_job_raw(Value::Object(obj)).await?;
+                    return Ok(job.id);
+                }
+            }
+        }
+
+        // Normal path: wrap raw QASM/QIR (or IonQ circuit JSON input object)
+        let (job_type, job_input) = Self::detect_job_type_and_input(&input)?;
+
+        let job: IonQJob = if job_type == JOB_TYPE_CIRCUIT {
+            self.submit_circuit_job(&job_name, shots, job_input).await?
+        } else {
+            // QASM/QIR: submit using your preferred "target" structure first,
+            // and retry once with "backend" if the API rejects it.
+            self.submit_qasm_like_with_target_fallback(job_type, &job_name, shots, job_input)
+                .await?
+        };
 
         Ok(job.id)
     }
@@ -331,7 +397,7 @@ impl QuantumResource for IonQCloud {
     }
 
     async fn task_logs(&mut self, task_id: &str) -> Result<String> {
-        // IonQ doesn’t expose “logs” like IBM Runtime; best-effort fallback.
+        // IonQ doesn't expose "logs" like IBM Runtime; best-effort fallback.
         let job = self.api_client.get_job(task_id.to_string()).await?;
         Ok(format!(
             "IonQ job logs fallback (job details):\n{}",
