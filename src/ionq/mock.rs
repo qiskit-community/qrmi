@@ -113,16 +113,18 @@ impl QuantumResource for IonQMock {
                     "input_preview": preview,
                 });
 
-                (summary, TaskResult { value: result_json.to_string() })
+                (
+                    summary,
+                    TaskResult {
+                        value: result_json.to_string(),
+                    },
+                )
             }
 
             other => {
                 // This backend is meant primarily for IonQCloud payloads;
                 // everything else is still accepted but flagged.
-                let summary = format!(
-                    "Unsupported payload variant for IonQMock: {:?}",
-                    other
-                );
+                let summary = format!("Unsupported payload variant for IonQMock: {:?}", other);
 
                 let result_json = json!({
                     "backend": self.backend_name,
@@ -131,7 +133,12 @@ impl QuantumResource for IonQMock {
                     "warning": "unsupported payload variant for IonQ mock backend",
                 });
 
-                (summary, TaskResult { value: result_json.to_string() })
+                (
+                    summary,
+                    TaskResult {
+                        value: result_json.to_string(),
+                    },
+                )
             }
         };
 

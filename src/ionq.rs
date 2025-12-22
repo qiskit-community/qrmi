@@ -17,4 +17,3 @@ mod mock;
 
 pub use self::cloud::IonQCloud;
 pub use mock::IonQMock;
-

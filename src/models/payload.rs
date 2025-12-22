@@ -25,7 +25,11 @@ pub enum Payload {
     /// Payload for Pasqal Cloud
     PasqalCloud { sequence: String, job_runs: i32 },
     /// Mock IonQ Cloud jobs
-    IonQCloud { input: String, target: String, shots: i32 },
+    IonQCloud {
+        input: String,
+        target: String,
+        shots: i32,
+    },
 }
 #[cfg(feature = "pyo3")]
 define_stub_info_gatherer!(stub_info);

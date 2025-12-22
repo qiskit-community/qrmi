@@ -80,10 +80,7 @@ pub struct Batch {
 }
 
 impl Client {
-    pub async fn get_device(
-        &self,
-        device_type: DeviceType,
-    ) -> Result<GetDeviceResponseData> {
+    pub async fn get_device(&self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,

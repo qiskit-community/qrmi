@@ -3,6 +3,7 @@ members = [
     "direct_access",
     "qiskit_runtime_service",
     "pasqal_cloud",
+    "ionq_cloud",
     "qrmi_config",
 ]
 resolver = "2"
