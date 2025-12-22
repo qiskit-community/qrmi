@@ -12,6 +12,7 @@
 //! IonQ Cloud API Client
 
 use crate::models::backend::Backend;
+use reqwest::StatusCode;
 //use crate::models::batch::BatchStatus;
 use anyhow::{bail, Result};
 use log::debug;
@@ -67,8 +68,10 @@ pub struct SessionData {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SessionSettings {
-    pub job_count_limit: u32,
-    pub duration_limit_min: u32,
+    // IonQ may omit these fields depending on backend / defaults (notably simulator).
+    // Make them optional to avoid failing decode.
+    pub job_count_limit: Option<u32>,
+    pub duration_limit_min: Option<u32>,
     pub cost_limit: Option<SessionCostLimit>,
     pub expires_at: String,
 }
@@ -89,7 +92,9 @@ pub struct IonQJob {
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionRequestData {
     pub backend: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    // IonQ API calls this "settings" in v0.4 docs; keep our internal name
+    // but serialize with the expected field name.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "settings")]
     pub limits: Option<SessionLimits>,
 }
 
@@ -132,7 +137,7 @@ impl Client {
         session_id: Option<&str>,
         metadata: Option<Value>,
         settings: Option<Value>,
-        input_data: &str,
+        input: Value,
     ) -> Result<IonQJob> {
         // POST /jobs
         let url = format!("{}/jobs", self.base_url);
@@ -140,10 +145,6 @@ impl Client {
         if shots <= 0 {
             bail!("shots must be > 0");
         }
-
-        // For your new “type + input.data string” method:
-        // input is always { "data": "<qasm2|qasm3|qir|...>" }
-        let input_val = serde_json::json!({ "data": input_data });
 
         let mut req = serde_json::Map::new();
         req.insert("type".to_string(), Value::String(job_type.to_string()));
@@ -153,7 +154,7 @@ impl Client {
             Value::Number(serde_json::Number::from(shots as i64)),
         );
         req.insert("name".to_string(), Value::String(name.to_string()));
-        req.insert("input".to_string(), input_val);
+        req.insert("input".to_string(), input);
 
         if let Some(sid) = session_id {
             req.insert("session_id".to_string(), Value::String(sid.to_string()));
@@ -178,7 +179,7 @@ impl Client {
         session_id: Option<&str>,
         metadata: Option<Value>,
         settings: Option<Value>,
-        inputs: &[&str],
+        inputs: &[Value],
     ) -> Result<Vec<IonQJob>> {
         // IonQ may have batch facilities, but to keep QRMI reliable and simple,
         // do a client-side batch submission (N independent jobs).
@@ -194,7 +195,7 @@ impl Client {
                     session_id,
                     metadata.clone(),
                     settings.clone(),
-                    input,
+                    input.clone(),
                 )
                 .await?;
             out.push(job);
@@ -224,10 +225,24 @@ impl Client {
     }
 
     pub async fn get_job_probabilities(&self, id: &str) -> Result<Value> {
-        // Results endpoint exists in IonQ v0.4 API surface.
-        let url = format!("{}/jobs/{}/results/probabilities", self.base_url, id);
-        let raw: Value = self.get(&url).await?;
-        Ok(raw)
+        // Different IonQ deployments have used either:
+        // - /jobs/{id}/results/probabilities
+        // - /jobs/{id}/results
+        // Try probabilities first, then fall back to results on 404.
+        let url_probs = format!("{}/jobs/{}/results/probabilities", self.base_url, id);
+        let resp = self.client.get(&url_probs).send().await?;
+        if resp.status().is_success() {
+            return self.handle_request(resp).await;
+        }
+        if resp.status() == StatusCode::NOT_FOUND {
+            let url_results = format!("{}/jobs/{}/results", self.base_url, id);
+            let resp2 = self.client.get(&url_results).send().await?;
+            return self.handle_request(resp2).await;
+        }
+
+        let status = resp.status();
+        let json_text = resp.text().await?;
+        bail!("Status: {}, Fail {}", status, json_text);
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {

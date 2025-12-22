@@ -149,9 +149,11 @@ async fn main() -> Result<()> {
         warn!("Backend '{}' reports not accessible; continuing anyway.", args.backend);
     }
 
-    // Acquire session (IonQ uses sessions; your implementation should store/track it internally)
-    let session_id = qr.acquire().await?;
-    info!("acquired session_id={session_id}");
+    // Sessions are OPTIONAL (session_id is optional in create-job), and simulator runs
+    // end-to-end fine without them. 
+    // If you want to experiment with sessions on non-simulator backends, uncomment:
+    // let session_id = qr.acquire().await?;
+    // info!("acquired session_id={session_id}");
 
     // Optional: print target info if implemented
     try_print_target(qr.as_mut()).await;
@@ -190,9 +192,10 @@ async fn main() -> Result<()> {
     try_print_result(qr.as_mut(), &task_id).await;
     try_print_logs(qr.as_mut(), &task_id).await;
 
-    // Release session
-    qr.release(&session_id).await?;
-    info!("released session_id={session_id}");
+    // Release session (disabled for the simulator demo).
+    // If you re-enable acquire() above, re-enable this too:
+    // qr.release(&session_id).await?;
+    // info!("released session_id={session_id}");
 
     Ok(())
 }
