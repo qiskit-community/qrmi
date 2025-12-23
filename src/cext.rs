@@ -11,8 +11,9 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
-use crate::models::{Config, ResourceType, TaskStatus};
+use crate::ionq::IonQCloud;
 use crate::pasqal::PasqalCloud;
+use crate::models::{Config, ResourceType, TaskStatus};
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -38,6 +39,15 @@ pub enum Payload {
         input: *mut c_char,
         /// "estimator" or "sampler"
         program_id: *mut c_char,
+    },
+    /// Payload for IonQ Cloud
+    IonQCloud {
+        /// IonQ input
+        input: *mut c_char,
+        /// Target device
+        target: *mut c_char,
+        /// Number of shots
+        shots: i32,
     },
     /// Payload for Pasqal Cloud
     PasqalCloud {
@@ -524,6 +534,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                     return std::ptr::null_mut();
                 }
             },
+            ResourceType::IonQCloud => match IonQCloud::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
+                    return std::ptr::null_mut();
+                }
+            },
             ResourceType::PasqalCloud => match PasqalCloud::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
@@ -783,6 +800,22 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             qrmi_payload = Some(crate::models::Payload::QiskitPrimitive {
                 input: input_str.to_string(),
                 program_id: program_id_str.to_string(),
+            });
+        }
+    } else if let Payload::IonQCloud {
+        input,
+        target,
+        shots,
+    } = *payload
+    {
+        if let (Ok(input_str), Ok(target_str)) = (
+            CStr::from_ptr(input).to_str(),
+            CStr::from_ptr(target).to_str(),
+        ) {
+            qrmi_payload = Some(crate::models::Payload::IonQCloud {
+                input: input_str.to_string(),
+                target: target_str.to_string(),
+                shots,
             });
         }
     } else if let Payload::PasqalCloud { sequence, job_runs } = *payload {

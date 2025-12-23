@@ -5,10 +5,13 @@
     "version": "0.1.0",
     "type": "object",
     "oneOf": [
-	{
+        {
             "type": "object",
             "description": "Payload for `direct-access` and `qiskit-runtime-service` QPU resource",
-	    "required": ["program_id", "parameters"],
+            "required": [
+                "program_id",
+                "parameters"
+            ],
             "properties": {
                 "program_id": {
                     "type": "string",
@@ -17,19 +20,46 @@
                         "sampler"
                     ],
                     "description": "ID of the primitive to be executed."
-		},
+                },
                 "parameters": {
                     "type": "object",
                     "description": "Parameters to inject into the primitive. Estimator schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json, Sampler schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json"
                 }
             }
-	},
-	{
+        },
+        {
+            "type": "object",
+            "description": "Payload for `ionq-cloud` QPU resource",
+            "required": [
+                "input",
+                "target",
+                "shots"
+            ],
+            "properties": {
+                "sequence": {
+                    "input": "object",
+                    "description": "IonQ input data. Refer to https://docs.ionq.com/api-reference/v0.4/introduction for details."
+                },
+                "target": {
+                    "input": "string",
+                    "description": "IonQ target device."
+                },
+                "shots": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of shots to execute."
+                }
+            }
+        },
+        {
             "type": "object",
             "description": "Payload for `pasqal-cloud` QPU resource",
-	    "required": ["job_runs", "sequence"],
+            "required": [
+                "job_runs",
+                "sequence"
+            ],
             "properties": {
-	        "job_runs": {
+                "job_runs": {
                     "type": "integer",
                     "minimum": 1,
                     "description": "Number of times the pulser sequence is repeated."

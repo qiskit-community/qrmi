@@ -11,6 +11,7 @@
 // that they have been altered from the originals.
 
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use crate::ionq::IonQCloud;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::QuantumResource;
@@ -24,6 +25,7 @@ use tokio::runtime::Runtime;
 pub enum ResourceType {
     IBMDirectAccess,
     IBMQiskitRuntimeService,
+    IonQCloud,
     PasqalCloud,
 }
 
@@ -55,6 +57,12 @@ impl PyQuantumResource {
                     }
                 }
             }
+            ResourceType::IonQCloud => match IonQCloud::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
             ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
