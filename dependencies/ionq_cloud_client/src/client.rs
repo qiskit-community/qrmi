@@ -224,7 +224,7 @@ impl Client {
 
     pub async fn cancel_job(&self, id: String) -> Result<IonQJob> {
         // PUT /jobs/{id}/cancel
-        let url = format!("{}/jobs/{}/cancel", self.base_url, id);
+        let url = format!("{}/jobs/{}/status/cancel", self.base_url, id);
         let raw: Value = self.put(&url).await?;
         extract_job(raw)
     }
