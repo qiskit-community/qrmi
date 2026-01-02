@@ -17,9 +17,9 @@ $ pip install -r ../requirements.txt
 
 Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
 
-| Environment variables | Descriptions |
-
-| QRMI_IONQ_CLOUD_API_KEY | IonQ API Key |
+| Environment variables      | Description              |
+|----------------------------|--------------------------|
+| QRMI_IONQ_CLOUD_API_KEY    | IonQ Cloud API key       |
 
 ## Create and input file with JSON data:
 
@@ -73,7 +73,7 @@ options:
   -h, --help  show this help message and exit
 ```
 
-For example,
+For example:
 
 ```shell-session
 $ python example.py simulator 10000 job.json
