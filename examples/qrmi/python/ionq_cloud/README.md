@@ -76,6 +76,6 @@ options:
 For example,
 
 ```shell-session
-$ python example.py simulator 1000000 job.json
+$ python example.py simulator 10000 job.json
 ```
 
