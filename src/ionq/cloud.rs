@@ -24,6 +24,7 @@ use uuid::Uuid;
 
 // Job types (IonQ API v0.4).
 const JOB_TYPE_CIRCUIT: &str = "ionq.circuit.v1";
+const JOB_TYPE_MULTI_CIRCUIT: &str = "ionq.multi-circuit.v1";
 const JOB_TYPE_QASM2: &str = "ionq.qasm2.v1";
 const JOB_TYPE_QASM3: &str = "ionq.qasm3.v1";
 const JOB_TYPE_QIR: &str = "ionq.qir.v1";
@@ -111,8 +112,20 @@ impl IonQCloud {
 
         // If it's an IonQ circuit JSON *input object* (not a full job request), keep supporting it:
         // { "qubits": ..., "circuit": [...] }
+        // { "qubits": ..., "circuits": [ ... "circuit": [...]] }
         if s.starts_with('{') {
             if let Ok(v) = serde_json::from_str::<Value>(s) {
+                if let Some(input) = v.get("input") {
+                    if input.get("qubits").is_some() && input.get("circuits").is_some() {
+                        return Ok((JOB_TYPE_MULTI_CIRCUIT, input.clone()));
+                    }
+                    if input.get("qubits").is_some() && input.get("circuit").is_some() {
+                        return Ok((JOB_TYPE_CIRCUIT, input.clone()));
+                    }
+                }
+                if v.get("qubits").is_some() && v.get("circuits").is_some() {
+                    return Ok((JOB_TYPE_MULTI_CIRCUIT, v));
+                }
                 if v.get("qubits").is_some() && v.get("circuit").is_some() {
                     return Ok((JOB_TYPE_CIRCUIT, v));
                 }
@@ -179,14 +192,14 @@ impl IonQCloud {
         }
     }
 
-    async fn submit_circuit_job(&self, name: &str, shots: i32, input: Value) -> Result<IonQJob> {
+    async fn submit_circuit_job(&self, name: &str, job_type: &str, shots: i32, input: Value) -> Result<IonQJob> {
         let backend_value = self.backend_str();
         let session_id = self.session_id.as_deref();
         let noise = self.default_noise();
 
         // For the documented circuit job type, IonQ v0.4 docs show "backend".
         let body = Self::build_job_body(
-            JOB_TYPE_CIRCUIT,
+            job_type,
             name,
             shots,
             "backend",
@@ -333,9 +346,8 @@ impl QuantumResource for IonQCloud {
 
         // Normal path: wrap raw QASM/QIR (or IonQ circuit JSON input object)
         let (job_type, job_input) = Self::detect_job_type_and_input(&input)?;
-
-        let job: IonQJob = if job_type == JOB_TYPE_CIRCUIT {
-            self.submit_circuit_job(&job_name, shots, job_input).await?
+        let job: IonQJob = if job_type == JOB_TYPE_CIRCUIT || job_type == JOB_TYPE_MULTI_CIRCUIT {
+            self.submit_circuit_job(&job_name, job_type, shots, job_input).await?
         } else {
             // QASM/QIR: submit using your preferred "target" structure first,
             // and retry once with "backend" if the API rejects it.

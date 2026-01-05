@@ -246,6 +246,12 @@ impl Client {
         if resp.status().is_success() {
             return self.handle_request(resp).await;
         }
+        // TODO is this ok? and what about /jobs/{id}/results ?
+        let url_probs = format!("{}/jobs/{}/results/probabilities/aggregated", self.base_url, id);
+        let resp = self.client.get(&url_probs).send().await?;
+        if resp.status().is_success() {
+            return self.handle_request(resp).await;
+        }
         if resp.status() == StatusCode::NOT_FOUND {
             let url_results = format!("{}/jobs/{}/results", self.base_url, id);
             let resp2 = self.client.get(&url_results).send().await?;

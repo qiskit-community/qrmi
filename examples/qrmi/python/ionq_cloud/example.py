@@ -26,7 +26,7 @@ parser.add_argument("input", help="job input file")
 args = parser.parse_args()
 
 with open(args.input, encoding="utf-8") as f:
-    json_data = f.read()
+    job_data = f.read()
 
 # instantiate a QRMI
 qrmi = QuantumResource(args.backend, ResourceType.IonQCloud)
@@ -41,7 +41,7 @@ print("QR Target %s" % target.value)
 
 # Start a task
 task_id = qrmi.task_start(
-    Payload.IonQCloud(input=json_data, target=args.backend, shots=int(args.shots))
+    Payload.IonQCloud(input=job_data, target=args.backend, shots=int(args.shots))
 )
 print("Task ID: %s" % task_id)
 
@@ -56,7 +56,7 @@ print("Status after cancelation %s" % qrmi.task_status(task_id))
 
 # Send send another task
 new_task_id = qrmi.task_start(
-    Payload.IonQCloud(input=json_data, target=args.backend, shots=100)
+    Payload.IonQCloud(input=job_data, target=args.backend, shots=100)
 )
 print("New Task ID: %s" % new_task_id)
 
@@ -76,3 +76,9 @@ while True:
 
 # Get the results
 print("Results: %s" % qrmi.task_result(new_task_id).value)
+
+# Print logs
+print("Logs: %s" % qrmi.task_logs(new_task_id))
+
+# Print QRMI metadata
+print("QRMI metadata: %s" % qrmi.metadata())

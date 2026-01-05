@@ -24,7 +24,7 @@ Because QRMI is an environment variable driven software library, all configurati
 ## Create and input file with JSON data:
 
 Checkout this resource for input data format: https://docs.ionq.com/api-reference/v0.4/introduction
-For the purpose of testing save this data as a file named job.json:
+For the purpose of testing save this data as a file named circuit-job.json:
 
 ```{
   "type" : "ionq.circuit.v1",
@@ -56,6 +56,55 @@ For the purpose of testing save this data as a file named job.json:
 }
 ```
 
+or multi-circuit-job.json:
+
+```
+{
+  "type": "ionq.multi-circuit.v1",
+  "name": "Sample circuit",
+  "metadata": {
+    "fizz": "buzz",
+    "foo": "bar"
+  },
+  "settings": {
+    "error_mitigation": {
+      "debiasing": false
+    }
+  },
+  "noise": {
+    "model": "aria-1"
+  },
+  "input": {
+    "qubits": 2,
+    "gateset": "qis",
+    "circuits": [
+      {
+        "name": "qc1",
+        "circuit": [
+          {
+            "gate": "h",
+            "targets": [
+              0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "qc2",
+        "circuit": [
+          {
+            "gate": "x",
+            "targets": [
+              0
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ## How to run
 
 ```shell-session
@@ -76,6 +125,6 @@ options:
 For example:
 
 ```shell-session
-$ python example.py simulator 10000 job.json
+$ python example.py simulator 10000 circuit-job.json
 ```
 
