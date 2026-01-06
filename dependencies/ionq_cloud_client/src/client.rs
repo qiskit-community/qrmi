@@ -241,26 +241,35 @@ impl Client {
         // - /jobs/{id}/results/probabilities
         // - /jobs/{id}/results
         // Try probabilities first, then fall back to results on 404.
-        let url_probs = format!("{}/jobs/{}/results/probabilities", self.base_url, id);
-        let resp = self.client.get(&url_probs).send().await?;
-        if resp.status().is_success() {
-            return self.handle_request(resp).await;
-        }
-        // TODO is this ok? and what about /jobs/{id}/results ?
-        let url_probs = format!("{}/jobs/{}/results/probabilities/aggregated", self.base_url, id);
-        let resp = self.client.get(&url_probs).send().await?;
-        if resp.status().is_success() {
-            return self.handle_request(resp).await;
-        }
-        if resp.status() == StatusCode::NOT_FOUND {
-            let url_results = format!("{}/jobs/{}/results", self.base_url, id);
-            let resp2 = self.client.get(&url_results).send().await?;
-            return self.handle_request(resp2).await;
+        let candidates = [
+            // TODO add aggregated /jobs/{id}/results ???
+            format!("{}/jobs/{}/results/probabilities", self.base_url, id),
+            format!("{}/jobs/{}/results/probabilities/aggregated", self.base_url, id),
+            format!("{}/jobs/{}/results", self.base_url, id),
+        ];
+
+        for url in &candidates {
+            let resp = self.client.get(url).send().await?;
+            let status = resp.status();
+
+            if status.is_success() {
+                return self.handle_request(resp).await;
+            }
+
+            if status == StatusCode::NOT_FOUND {
+                continue;
+            }
+
+            // Any other status is a "real" failure; include body for diagnostics.
+            let body = resp.text().await.unwrap_or_else(|_| "<failed to read body>".to_string());
+            bail!("GET {} failed: status={}, body={}", url, status, body);
         }
 
-        let status = resp.status();
-        let json_text = resp.text().await?;
-        bail!("Status: {}, Fail {}", status, json_text);
+        bail!(
+            "No results/probabilities endpoint found for job id {}. Tried: {}",
+            id,
+            candidates.join(", ")
+        );
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {

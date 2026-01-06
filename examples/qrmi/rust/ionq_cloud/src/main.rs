@@ -146,7 +146,6 @@ async fn main() -> Result<()> {
 
     let payload = Payload::IonQCloud {
         input: program,
-        target: args.backend.clone(),
         shots: args.shots,
     };
 

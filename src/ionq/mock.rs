@@ -94,12 +94,12 @@ impl QuantumResource for IonQMock {
         let (summary, result) = match &payload {
             Payload::IonQCloud {
                 input,
-                target,
                 shots,
             } => {
                 let preview: String = input.chars().take(128).collect();
+                let backend = &self.backend_name;
                 let summary = format!(
-                    "IonQ mock job on target='{target}', shots={shots}, input_preview='{}'",
+                    "IonQ mock job on backend='{backend}', shots={shots}, input_preview='{}'",
                     preview
                 );
 
@@ -108,7 +108,6 @@ impl QuantumResource for IonQMock {
                     "job_id": job_id,
                     "mock": true,
                     "provider": "ionq",
-                    "target": target,
                     "shots": shots,
                     "input_preview": preview,
                 });

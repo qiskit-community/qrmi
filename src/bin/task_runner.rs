@@ -231,11 +231,9 @@ impl ResourceType {
                 })
             }
             ResourceType::IonQCloud {
-                target,
                 shots,
                 input,
             } => Some(Payload::IonQCloud {
-                target: target.to_string(),
                 shots: *shots,
                 input: input.to_string(),
             }),

@@ -147,16 +147,45 @@ impl IonQCloud {
         Ok((JOB_TYPE_QIR, serde_json::json!({ "data": program })))
     }
 
+    fn extract_noise_model(program: &str) -> Result<Option<Value>> {
+        let s = program.trim_start();
+
+        if !s.starts_with('{') {
+            return Ok(None);
+        }
+
+        let v: Value = match serde_json::from_str::<Value>(s) {
+            Ok(v) => v,
+            Err(_) => return Ok(None),
+        };
+
+        let model = v
+            .get("noise")
+            .and_then(|noise| noise.get("model"))
+            .and_then(|m| m.as_str());
+
+        if let Some(model_str) = model {
+            return Ok(Some(serde_json::json!({ "model": model_str })));
+        }
+
+        Ok(None)
+    }
+
     async fn submit_qasm_like_with_target_fallback(
         &self,
         job_type: &str,
         name: &str,
         shots: i32,
+        noise_model: &Option<Value>,
         input: Value,
     ) -> Result<IonQJob> {
         let target_value = self.backend_str();
         let session_id = self.session_id.as_deref();
-        let noise = self.default_noise();
+        let noise: Option<Value> = match noise_model {
+            Some(Value::Null) => self.default_noise(),
+            Some(v) => Some(v.clone()),
+            None => self.default_noise(),
+        };
 
         // 1) Preferred (your structure): "target"
         let body_target = Self::build_job_body(
@@ -192,10 +221,14 @@ impl IonQCloud {
         }
     }
 
-    async fn submit_circuit_job(&self, name: &str, job_type: &str, shots: i32, input: Value) -> Result<IonQJob> {
+    async fn submit_circuit_job(&self, name: &str, job_type: &str, shots: i32, noise_model: &Option<Value>, input: Value) -> Result<IonQJob> {
         let backend_value = self.backend_str();
         let session_id = self.session_id.as_deref();
-        let noise = self.default_noise();
+        let noise: Option<Value> = match noise_model {
+            Some(Value::Null) => self.default_noise(),
+            Some(v) => Some(v.clone()),
+            None => self.default_noise(),
+        };
 
         // For the documented circuit job type, IonQ v0.4 docs show "backend".
         let body = Self::build_job_body(
@@ -279,24 +312,11 @@ impl QuantumResource for IonQCloud {
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         let Payload::IonQCloud {
             input,
-            target,
             shots,
         } = payload
         else {
             bail!("IonQCloud backend only supports Payload::IonQCloud");
         };
-
-        // Ensure payload target matches this resource.
-        let payload_backend: Backend = target
-            .parse()
-            .with_context(|| format!("payload target '{target}' is not a valid IonQ backend"))?;
-        if payload_backend != self.backend {
-            bail!(
-                "payload target '{}' does not match IonQCloud backend '{}'",
-                payload_backend,
-                self.backend
-            );
-        }
 
         let job_name = format!("qrmi-ionq-{}", Uuid::new_v4());
 
@@ -346,12 +366,13 @@ impl QuantumResource for IonQCloud {
 
         // Normal path: wrap raw QASM/QIR (or IonQ circuit JSON input object)
         let (job_type, job_input) = Self::detect_job_type_and_input(&input)?;
+        let noise_model = Self::extract_noise_model(&input)?;
         let job: IonQJob = if job_type == JOB_TYPE_CIRCUIT || job_type == JOB_TYPE_MULTI_CIRCUIT {
-            self.submit_circuit_job(&job_name, job_type, shots, job_input).await?
+            self.submit_circuit_job(&job_name, job_type, shots, &noise_model, job_input).await?
         } else {
             // QASM/QIR: submit using your preferred "target" structure first,
             // and retry once with "backend" if the API rejects it.
-            self.submit_qasm_like_with_target_fallback(job_type, &job_name, shots, job_input)
+            self.submit_qasm_like_with_target_fallback(job_type, &job_name, shots, &noise_model, job_input)
                 .await?
         };
 

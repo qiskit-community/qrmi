@@ -41,7 +41,7 @@ print("QR Target %s" % target.value)
 
 # Start a task
 task_id = qrmi.task_start(
-    Payload.IonQCloud(input=job_data, target=args.backend, shots=int(args.shots))
+    Payload.IonQCloud(input=job_data, shots=int(args.shots))
 )
 print("Task ID: %s" % task_id)
 
@@ -56,7 +56,7 @@ print("Status after cancelation %s" % qrmi.task_status(task_id))
 
 # Send send another task
 new_task_id = qrmi.task_start(
-    Payload.IonQCloud(input=job_data, target=args.backend, shots=100)
+    Payload.IonQCloud(input=job_data, shots=100)
 )
 print("New Task ID: %s" % new_task_id)
 

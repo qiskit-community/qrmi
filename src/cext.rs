@@ -44,8 +44,6 @@ pub enum Payload {
     IonQCloud {
         /// IonQ input
         input: *mut c_char,
-        /// Target device
-        target: *mut c_char,
         /// Number of shots
         shots: i32,
     },
@@ -804,17 +802,13 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         }
     } else if let Payload::IonQCloud {
         input,
-        target,
         shots,
     } = *payload
     {
-        if let (Ok(input_str), Ok(target_str)) = (
-            CStr::from_ptr(input).to_str(),
-            CStr::from_ptr(target).to_str(),
-        ) {
+        if let Ok(input_str) = CStr::from_ptr(input).to_str()
+        {
             qrmi_payload = Some(crate::models::Payload::IonQCloud {
                 input: input_str.to_string(),
-                target: target_str.to_string(),
                 shots,
             });
         }

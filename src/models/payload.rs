@@ -27,7 +27,6 @@ pub enum Payload {
     /// Mock IonQ Cloud jobs
     IonQCloud {
         input: String,
-        target: String,
         shots: i32,
     },
 }

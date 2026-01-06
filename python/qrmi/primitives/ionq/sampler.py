@@ -12,17 +12,13 @@
 
 """Sampler V2 base class for IonQ Cloud QRMI"""
 
-import os
 import time
 
 from dataclasses import dataclass, field
-from qiskit import transpile
+from qiskit import qasm3
 from qiskit.circuit import QuantumCircuit
-from qiskit_ionq.ionq_job import IonQJob
+from qiskit.primitives.base import BaseSamplerV2
 from qrmi import Payload, QuantumResource, ResourceType, TaskStatus
-from typing import Iterable
-
-from qrmi import Payload, QuantumResource, TaskStatus
 
 
 @dataclass
@@ -39,7 +35,7 @@ class Options:
     """
 
 
-class IonQSamplerV2:
+class IonQSamplerV2(BaseSamplerV2):
     """Sampler V2 base class for IonQ QPUs"""
 
     def __init__(
@@ -51,36 +47,41 @@ class IonQSamplerV2:
         self._qrmi = qrmi
         self._options = Options(**options) if options else Options()
 
-    def run(self, pubs: Iterable[QuantumCircuit], shots: int | None = None) -> IonQJob:
+    def run(self, circuit: QuantumCircuit, shots: int | None = None):
 
         if shots is None:
             shots = self._options.default_shots
 
-        # Work in progress ..
+        qasm3_str = qasm3.dumps(
+            circuit,
+            disable_constants=True,
+            allow_aliasing=True,
+            experimental=qasm3.ExperimentalFeatures.SWITCH_CASE_V1,
+        )
 
-        # payload = Payload.IonQCloud(input=input, target=target, shots=shots)
-        # new_task_id = self._qrmi.task_start(payload)
-        # results = []
-        # while True:
-        #     status = self._qrmi.task_status(new_task_id)
-        #     if status == TaskStatus.Completed:
-        #         time.sleep(0.5)
-        #         # Get the results
-        #         results.append(self._qrmi.task_result(new_task_id).value)
-        #         break
-        #     elif status == TaskStatus.Failed:
-        #         break
-        #     else:
-        #         print("Task status %s, waiting 1s" % status, flush=True)
-        #         time.sleep(1)
-
-        # return results
+        payload = Payload.IonQCloud(input=qasm3_str, shots=shots)
+        new_task_id = self._qrmi.task_start(payload)
+        while True:
+            status = self._qrmi.task_status(new_task_id)
+            if status == TaskStatus.Completed:
+                time.sleep(0.5)
+                # Get the results
+                return self._qrmi.task_result(new_task_id).value
+            elif status == TaskStatus.Failed:
+                break
+            else:
+                print("Task status %s, waiting 1s" % status, flush=True)
+                time.sleep(1)
 
 
 def main():
+    bell_state = QuantumCircuit(2, 2)
+    bell_state.h(0)
+    bell_state.cx(0, 1)
+    bell_state.measure([0, 1], [0, 1])
     qrmi = QuantumResource("simulator", ResourceType.IonQCloud)
     sampler = IonQSamplerV2(qrmi)
-    sampler.run([], shots=100)
+    sampler.run(bell_state, shots=100)
 
 
 if __name__ == "__main__":
