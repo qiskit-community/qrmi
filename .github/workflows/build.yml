@@ -1,0 +1,102 @@
+name: Build
+on:
+  pull_request:
+    branches: [ "main" ]
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    # Install packages
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y openssl cmake zlib1g gcc
+
+    ###
+    # Rust
+    ###
+
+    # Rust setup
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        components: rustfmt, clippy
+
+    # Rust format check (libqrmi, examples, binaries)
+    - name: cargo-fmt-check all targets
+      run: cargo fmt --all -- --check
+
+    # Rust lint check
+    - name: cargo-clippy all targets
+      run: |
+        # libqrmi and examples
+        cargo clippy --all-targets -- -D warnings
+        # binaries
+        cargo clippy --bin task_runner --features="build-binary" -- -D warnings
+        cargo clippy --bin stubgen --features="pyo3" -- -D warnings
+
+    # Build all targets
+    - name: Build all targets
+      run: |
+        # libqrmi and examples
+        cargo build --all-targets --release
+        # binaries
+        cargo build --bin task_runner --release --features="build-binary"
+        cargo build --bin stubgen --release --features="pyo3"
+
+    # Unittest all targets
+    - name: Unittest all targets
+      run: |
+        # libqrmi and examples
+        cargo test --all-targets --release
+        # binaries
+        cargo test --bin task_runner --release --features="build-binary"
+        cargo test --bin stubgen --release --features="pyo3"
+
+    ###
+    # Python
+    ###
+
+    # Python setup
+    - name: Setup python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        architecture: 'x64'
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+    - name: Create and activate virtual environment
+      run: |
+        python -m venv venv
+        echo "VIRTUAL_ENV=$(pwd)/venv" >> $GITHUB_ENV  # Set VIRTUAL_ENV for future steps
+        echo "$(pwd)/venv/bin" >> $GITHUB_PATH         # Add venv/bin to PATH
+    - name: Upgrade pip
+      run: python -m pip install --upgrade pip
+    - name: Install python dependencies
+      run: pip install -r requirements-dev.txt
+
+    # TODO: fix python lint before enabling this step
+    # Python lint check
+    #- name: Python lint check
+    #  run: pylint ./python
+
+    # Python format check
+    - name: Python format check
+      run: black --check ./python
+
+    # Build python package
+    - name: Build python package using maturin
+      run: maturin build --release
+
+    # Install python package
+    - name: Install python package
+      run: pip install target/wheels/qrmi-*.whl
+
+    # Python unittest
+    - name: Python unit tests
+      run: pytest -v ./python/tests
