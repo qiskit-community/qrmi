@@ -1,0 +1,33 @@
+---
+# This reusable workflow builds the QRMI binaries.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - [not uploaded] task_runner binary
+# - [not uploaded] stubgen binary
+#
+# Workflow dependencies:
+# - None. It does not dependend on any other workflow.
+name: Build QRMI binaries
+on:
+  workflow_call:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Build task_runner
+      run: cargo build --bin task_runner --release --features="build-binary"
+
+    - name: Build stubgen
+      run: cargo build --bin stubgen --release --features="pyo3"
+

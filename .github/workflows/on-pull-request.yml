@@ -1,0 +1,55 @@
+---
+# This workflow defines the CI pipeline for pull requests to the main branch.
+# Other workflows are called as jobs, preferably in parallel. The jobs annotated with the needs keyword will run sequentially.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - qrmi-wheels artifact (uploaded in the build-wheels job)
+#
+# Workflow dependencies:
+# - All reusable workflows called in the jobs section
+name: Pull request
+on:
+  pull_request:
+    branches: [ "main" ]
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+jobs:
+  build-libqrmi:
+    if: github.repository_owner == 'qiskit-community'
+    name: Build libqrmi
+    uses: ./.github/workflows/build-libqrmi.yml
+  build-qrmi-bins:
+    if: github.repository_owner == 'qiskit-community'
+    name: Build QRMI binaries
+    uses: ./.github/workflows/build-qrmi-bins.yml
+  lint-fmt-rust:
+    if: github.repository_owner == 'qiskit-community'
+    name: Lint and format check Rust code
+    uses: ./.github/workflows/lint-fmt-rust.yml
+  unittest-rust:
+    if: github.repository_owner == 'qiskit-community'
+    name: Unittest Rust code
+    uses: ./.github/workflows/unittest-rust.yml
+  build-wheels:
+    if: github.repository_owner == 'qiskit-community'
+    name: Build wheels
+    uses: ./.github/workflows/build-wheels.yml
+    with:
+      python-version: "3.12"
+  lint-fmt-python:
+    if: github.repository_owner == 'qiskit-community'
+    needs: build-wheels
+    uses: ./.github/workflows/lint-fmt-python.yml
+    with:
+      python-version: "3.12"
+  unittest-python:
+    if: github.repository_owner == 'qiskit-community'
+    needs: build-wheels
+    uses: ./.github/workflows/unittest-python.yml
+    with:
+      python-version: "3.12"
+

@@ -1,0 +1,66 @@
+---
+# This reusable workflow builds the libqrmi.so and the C examples
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - [not uploaded] libqrmi.so
+# - [not uploaded] qrmi.h
+# - [not uploaded] rust dependencies from the dependencies directory
+#   [not uploaded] rust examples from the examples/qrmi/rust directory
+# - [not uploaded] C examples from the examples/qrmi/c directory
+#
+# Workflow dependencies:
+# - None. It does not dependend on any other workflow.
+name: Build libqrmi.so
+on:
+  workflow_call:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    # --all-targets does not include the binaries, hence they need
+    # to be built separately
+    - name: Build libqrmi.so (includes the rust dependencies and examples)
+      run: cargo build --all-targets --release
+
+    #
+    # Build C examples. They depend on the libqrmi.so and qrmi.h built in the previous step.
+    #
+
+    - name: Build examples/qrmi/c/config
+      working-directory: examples/qrmi/c/config
+      run: |
+        mkdir build ; cd build
+        cmake ..
+        make
+
+    - name: Build examples/qrmi/c/direct_access
+      working-directory: examples/qrmi/c/direct_access
+      run: |
+        mkdir build ; cd build
+        cmake ..
+        make
+
+    - name: Build examples/qrmi/c/pasqal_cloud
+      working-directory: examples/qrmi/c/pasqal_cloud
+      run: |
+        mkdir build ; cd build
+        cmake ..
+        make
+
+    - name: Build examples/qrmi/c/qiskit_runtime_service
+      working-directory: examples/qrmi/c/qiskit_runtime_service
+      run: |
+        mkdir build ; cd build
+        cmake ..
+        make

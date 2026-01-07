@@ -1,0 +1,46 @@
+---
+# This reusable workflow runs Rust unittests on the libqrmi, binaries and dependencies.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - None
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+name: Unittest QRMI Rust code
+on:
+  workflow_call:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  unittest:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Unittest libqrmi.so (includes examples)
+      run: cargo test --all-targets --release
+
+    - name: Unittest task_runner
+      run: cargo test --bin task_runner --release --features="build-binary"
+
+    - name: Unittest stubgen
+      run: cargo test --bin stubgen --release --features="pyo3"
+
+    - name: Unittest direct_access_client
+      working-directory: dependencies/direct_access_client
+      run: cargo test --release
+
+    - name: Unittest pasqal_cloud_client
+      working-directory: dependencies/pasqal_cloud_client
+      run: cargo test --release
+
+    - name: Unittest qiskit_runtime_client
+      working-directory: dependencies/qiskit_runtime_client
+      run: cargo test --release
