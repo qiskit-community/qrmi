@@ -23,6 +23,7 @@ import atexit
 from typing import List
 import logging
 from logging import getLogger, ERROR, INFO, DEBUG
+from pathlib import Path
 from dotenv import load_dotenv
 from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
@@ -160,7 +161,9 @@ class App:
         # file can be created, and inform to user if it cannot be written. This is
         # to prevent file writing errors after a long job execution.
         if self._output_filename:
-            if os.access(self._output_filename, os.W_OK) is False:
+            # verify that the destination directory is writable
+            dir_path = Path(self._output_filename).parent
+            if os.access(dir_path, os.W_OK) is False:
                 raise RuntimeError(f"{self._output_filename} cannot be created.")
 
         res_type = self._find_qpu_type(self._name)
