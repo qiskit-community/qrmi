@@ -61,15 +61,18 @@ pub struct GetBatchResponseData {
 #[derive(Debug, Clone, Deserialize)]
 pub struct CancelBatchResponseData {}
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct GetBatchResultLinksResponseData {
-    pub results_links: HashMap<String, String>,
-}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Job {
     pub runs: i32,
 }
+
+
+#[derive(Debug, Deserialize, Serialize)]
+struct JobResult {
+    counter: HashMap<String, u64>,
+}
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Batch {
@@ -129,37 +132,22 @@ impl Client {
     }
 
     pub async fn get_batch_results(&self, batch_id: &str) -> Result<String> {
-        match self.get_batch_result_links(batch_id).await {
-            Ok(resp) => {
-                let results_links = resp.data.results_links;
-                // by design only one job
-                let mut results: String = "".to_string();
-                for (i, (_job_id, result_link)) in results_links.iter().enumerate() {
-                    if i > 0 {
-                        bail!(format!(
-                            "Unexpected multiple jobs in one Pasqal cloud batch"
-                        ));
-                    };
-                    results = reqwest::get(result_link).await?.text().await?;
-                }
-                if results == *"" {
-                    bail!(format!("No results found"));
-                }
-                Ok(results)
-            }
-            Err(_err) => Err(_err),
-        }
-    }
+        let url = format!("{}/core-fast/api/v1/batches/{}/full_results", self.base_url, batch_id);
 
-    async fn get_batch_result_links(
-        &self,
-        batch_id: &str,
-    ) -> Result<Response<GetBatchResultLinksResponseData>> {
-        let url = format!(
-            "{}/core-fast/api/v1/batches/{}/results_link",
-            self.base_url, batch_id
-        );
-        self.get(&url).await
+        let resp: Response<HashMap<String, JobResult>> = self.get(&url).await?;
+
+        let data = resp.data;
+
+        // Ensure exactly one job
+        match data.len() {
+            0 => bail!("No results found"),
+            1 => {
+                let first_job_result = data.into_values().next().unwrap();
+                // Return JSON string of job results
+                Ok(serde_json::to_string(&first_job_result)?)
+            }
+            _ => bail!("Unexpected multiple jobs in one Pasqal cloud batch"),
+        }
     }
 
     pub async fn get_device_specs(
