@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2024
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,10 +9,15 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! QRMI implementations for Pasqal Cloud Services and Pasqal Local
+//! # pasqal_local_client
+//!
+//! This is a Rust client to interact with Pasqal on prem QPUs
+//!
 
-mod cloud;
-mod local;
+mod client;
+mod models;
+mod munge;
 
-pub use self::cloud::PasqalCloud;
-pub use self::local::PasqalLocal;
+pub use client::{Client, ClientBuilder};
+pub use models::BatchStatus;
+pub use models::DeviceType;
