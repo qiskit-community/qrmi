@@ -50,12 +50,7 @@ impl Client {
     /// - an internal server error occurs.
     pub async fn cancel_job(&self, job_id: &str, delete_job: bool) -> Result<()> {
         let url = format!("{}/v1/jobs/{}/cancel", self.base_url, &job_id);
-        let resp_ = self
-            .client
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .send()
-            .await;
+        let resp_ = self.client.post(&url).send().await;
 
         match resp_ {
             Ok(resp) => {
@@ -70,22 +65,34 @@ impl Client {
                         Ok(ExtendedErrorResponse::Json(error)) => {
                             let serialized = serde_json::to_value(&error).unwrap();
                             error!("{}", &serialized);
-                            bail!(serialized);
+                            bail!(format!(
+                                "An error occurred while sending the job cancellation request to the API. {}",
+                                serialized
+                            ));
                         }
                         Ok(ExtendedErrorResponse::Text(message)) => {
                             error!("{}", message);
-                            bail!(format!("{} ({})", status_code, message));
+                            bail!(format!(
+                                "An error occurred while sending the job cancellation request to the API. {} ({})",
+                                status_code, message
+                            ));
                         }
                         Err(_) => {
                             error!("{} {}", status_code, url);
-                            bail!(format!("{} {}", status_code, url));
+                            bail!(format!(
+                                "An error occurred while sending the job cancellation request to the API. {} {}",
+                                status_code, url
+                            ));
                         }
                     }
                 }
             }
             Err(e) => {
-                error!("{:#?}", e);
-                Err(e.into())
+                let err_msg = Client::explain_reqwest_middleware_error(&e);
+                bail!(format!(
+                    "An error occurred while sending the job cancellation request to the API. {}",
+                    err_msg
+                ));
             }
         }
     }

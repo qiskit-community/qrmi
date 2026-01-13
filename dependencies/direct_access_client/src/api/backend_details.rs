@@ -46,6 +46,6 @@ impl Client {
     /// - specified backend is not found.
     pub async fn get_backend<T: DeserializeOwned>(&self, backend_name: &str) -> Result<T> {
         let url = format!("{}/v1/backends/{}", self.base_url, backend_name);
-        self.get::<T>(&url).await
+        self.get::<T>(&url, &self.client).await
     }
 }
