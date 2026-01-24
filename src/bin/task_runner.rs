@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 
 use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
 use qrmi::pasqal::PasqalCloud;
+use qrmi::pasqal::PasqalLocal;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
 
 static IS_RUNNING: AtomicBool = AtomicBool::new(true);
@@ -105,6 +106,9 @@ pub enum ResourceType {
         /// Number of times the pulser sequence is repeated.
         job_runs: i32,
     },
+    /// Pasqal Local 
+    PasqalLocal {
+    }
 }
 impl ResourceType {
     fn new(qpu_type: &str, args: Args) -> Result<Self, Box<dyn std::error::Error>> {
@@ -160,6 +164,9 @@ impl ResourceType {
                 sequence,
                 job_runs: *job_runs,
             })
+        } else if qpu_type == "pasqal-local" {
+            Ok(Self::PasqalCloud {
+            })
         } else {
             Err(
                 eyre!(
@@ -175,6 +182,7 @@ impl ResourceType {
             ResourceType::IBMDirectAccess { .. } => "direct-access",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
             ResourceType::PasqalCloud { .. } => "pasqal-cloud",
+            ResourceType::PasqalLocal { .. } => "pasqal-local",
         }
     }
     fn to_payload(&self) -> Option<Payload> {
@@ -190,6 +198,7 @@ impl ResourceType {
                 sequence: sequence.to_string(),
                 job_runs: *job_runs,
             }),
+            ResourceType::PasqalLocal {} => Some(Payload::PasqalLocal {}),
         }
     }
     fn create_qrmi(&self, qpu_name: &str) -> Box<dyn QuantumResource> {
@@ -199,6 +208,7 @@ impl ResourceType {
                 Box::new(IBMQiskitRuntimeService::new(qpu_name))
             }
             ResourceType::PasqalCloud { .. } => Box::new(PasqalCloud::new(qpu_name)),
+            ResourceType::PasqalLocal { .. } => Box::new(PasqalLocal::new(qpu_name)),
         }
     }
 }
