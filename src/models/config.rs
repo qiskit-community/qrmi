@@ -29,6 +29,8 @@ use std::io::BufReader;
 pub enum ResourceType {
     /// IBM Direct Access
     IBMDirectAccess,
+    /// IonQ Cloud
+    IonQCloud,
     /// Qiskit Runtime Service
     QiskitRuntimeService,
     /// Pasqal Cloud
@@ -42,11 +44,17 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
             "direct-access" => Ok(ResourceType::IBMDirectAccess),
+            "ionq-cloud" => Ok(ResourceType::IonQCloud),
             "qiskit-runtime-service" => Ok(ResourceType::QiskitRuntimeService),
             "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
             _ => Err(serde::de::Error::unknown_variant(
                 &s,
-                &["direct-access", "qiskit-runtime-service", "pasqal-cloud"],
+                &[
+                    "direct-access",
+                    "ionq-cloud",
+                    "qiskit-runtime-service",
+                    "pasqal-cloud",
+                ],
             )),
         }
     }
@@ -55,6 +63,7 @@ impl ResourceType {
     pub fn as_str(&self) -> &str {
         match self {
             ResourceType::IBMDirectAccess => "direct-access",
+            ResourceType::IonQCloud => "ionq-cloud",
             ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
             ResourceType::PasqalCloud => "pasqal-cloud",
         }
