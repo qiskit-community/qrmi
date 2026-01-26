@@ -260,8 +260,9 @@ impl PrimitiveJob {
                 .await?;
         debug!("{}", presigned_url);
 
-        let client = reqwest::Client::new();
-        let resp = client
+        let resp = self
+            .client
+            .plain_client
             .get(presigned_url)
             .header("Content-Type", "application/json")
             .send()
@@ -339,8 +340,9 @@ impl PrimitiveJob {
                 .await?;
         debug!("{}", presigned_url);
 
-        let client = reqwest::Client::new();
-        let resp = client
+        let resp = self
+            .client
+            .plain_client
             .get(presigned_url)
             .header("Content-Type", "application/json")
             .send()

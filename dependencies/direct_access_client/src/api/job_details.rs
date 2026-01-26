@@ -46,7 +46,7 @@ impl Client {
     /// - specified job is not found.
     pub async fn get_job<T: DeserializeOwned>(&self, job_id: &str) -> Result<T> {
         let url = format!("{}/v1/jobs/{}", self.base_url, job_id);
-        self.get::<T>(&url).await
+        self.get::<T>(&url, &self.client).await
     }
 }
 

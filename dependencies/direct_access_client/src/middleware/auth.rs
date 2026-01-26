@@ -9,15 +9,17 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use http::Extensions;
 #[allow(unused_imports)]
 use log::{debug, error};
 use reqwest::{header::HeaderValue, Client, Request, Response};
 use reqwest_middleware::{Middleware, Next};
+use reqwest_retry::{policies::ExponentialBackoff, Jitter};
 #[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::sync::Arc;
 use std::time::{Duration, Instant, UNIX_EPOCH};
 use tokio::sync::Mutex;
@@ -27,24 +29,67 @@ use crate::models::{
 };
 use crate::AuthMethod;
 
+const DEFAULT_RETRIES: u32 = 5;
+const DEFAULT_INITIAL_RETRY_INTERVAL: f64 = 1.0;
+const DEFAULT_MAX_RETRY_INTERVAL: f64 = 10.0;
+const DEFAULT_EXPONENTIAL_BASE: u32 = 2;
+
 pub(crate) struct TokenManager {
     access_token: Option<String>,
     token_expiry: Option<Instant>,
-    client: Client,
+    client: reqwest_middleware::ClientWithMiddleware,
     token_url: String,
     auth_method: AuthMethod,
 }
 impl TokenManager {
-    pub(crate) fn new(token_url: impl Into<String>, auth_method: AuthMethod) -> Self {
-        Self {
+    pub(crate) fn new(
+        token_url: impl Into<String>,
+        auth_method: AuthMethod,
+        timeout: Option<Duration>,
+        connect_timeout: Option<Duration>,
+        read_timeout: Option<Duration>,
+        retry_policy: Option<reqwest_retry::policies::ExponentialBackoff>,
+    ) -> Result<Self> {
+        let mut reqwest_client_builder = reqwest::Client::builder();
+        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        if let Some(v) = timeout {
+            reqwest_client_builder = reqwest_client_builder.timeout(v)
+        }
+
+        if let Some(v) = read_timeout {
+            reqwest_client_builder = reqwest_client_builder.read_timeout(v)
+        }
+
+        if let Some(v) = connect_timeout {
+            reqwest_client_builder = reqwest_client_builder.connect_timeout(v)
+        }
+        let mut reqwest_builder =
+            reqwest_middleware::ClientBuilder::new(reqwest_client_builder.build()?);
+        if let Some(v) = retry_policy {
+            reqwest_builder =
+                reqwest_builder.with(reqwest_retry::RetryTransientMiddleware::new_with_policy(v))
+        } else {
+            let default_policy = ExponentialBackoff::builder()
+                .retry_bounds(
+                    Duration::from_secs_f64(DEFAULT_INITIAL_RETRY_INTERVAL),
+                    Duration::from_secs_f64(DEFAULT_MAX_RETRY_INTERVAL),
+                )
+                .jitter(Jitter::Bounded)
+                .base(DEFAULT_EXPONENTIAL_BASE)
+                .build_with_max_retries(DEFAULT_RETRIES);
+            reqwest_builder = reqwest_builder.with(
+                reqwest_retry::RetryTransientMiddleware::new_with_policy(default_policy),
+            )
+        }
+        Ok(Self {
             access_token: None,
             token_expiry: None,
-            client: Client::new(),
+            client: reqwest_builder.build(),
             token_url: token_url.into(),
             auth_method,
-        }
+        })
     }
-    async fn get_access_token(&mut self) -> Result<()> {
+    async fn get_access_token(&mut self) -> reqwest_middleware::Result<()> {
         #[cfg(feature = "ibmcloud_appid_auth")]
         if let AuthMethod::IbmCloudAppId { username, password } = self.auth_method.clone() {
             use base64::{engine::general_purpose::STANDARD, prelude::*};
@@ -68,7 +113,10 @@ impl TokenManager {
                     Some(Instant::now() + Duration::from_secs(token_response.expires_in));
             } else {
                 let reason = status.canonical_reason().unwrap_or_default().to_string();
-                bail!(format!("{} ({})", reason, status));
+                return Err(reqwest_middleware::Error::Middleware(anyhow!(format!(
+                    "{} ({})",
+                    reason, status
+                ))));
             }
         }
         if let AuthMethod::IbmCloudIam { apikey, .. } = self.auth_method.clone() {
@@ -87,7 +135,8 @@ impl TokenManager {
                 .form(&params)
                 .send()
                 .await?;
-            if response.status().is_success() {
+            let status = response.status();
+            if status.is_success() {
                 let token_response: GetAccessTokenResponse = response.json().await?;
                 self.access_token = Some(token_response.access_token);
                 self.token_expiry = Some(
@@ -95,21 +144,34 @@ impl TokenManager {
                         + Duration::from_secs((token_response.expires_in as f64 * 0.9) as u64),
                 );
             } else {
-                let error_response = response.json::<IAMErrorResponse>().await?;
-                if let Some(details) = error_response.details {
-                    bail!(format!("{} ({})", details, error_response.code));
-                } else {
-                    bail!(format!(
-                        "{} ({})",
-                        error_response.message, error_response.code
-                    ));
+                let _error_response = response.json::<IAMErrorResponse>().await;
+                match _error_response {
+                    Ok(error_response) => {
+                        let reason_text: String;
+                        if let Some(details) = error_response.details {
+                            reason_text = details.clone();
+                        } else {
+                            reason_text = error_response.message.clone();
+                        }
+                        return Err(reqwest_middleware::Error::Middleware(anyhow!(format!(
+                            "Failed to obtain access token. reason: {} ({})",
+                            reason_text, error_response.code
+                        ))));
+                    }
+                    Err(_) => {
+                        let reason = status.canonical_reason().unwrap_or_default().to_string();
+                        return Err(reqwest_middleware::Error::Middleware(anyhow!(format!(
+                            "Failed to obtain access token. reason: {} ({}), url: {}",
+                            reason, status, &self.token_url
+                        ))));
+                    }
                 }
             }
         }
 
         Ok(())
     }
-    async fn ensure_token_validity(&mut self) -> Result<()> {
+    async fn ensure_token_validity(&mut self) -> reqwest_middleware::Result<()> {
         if self.access_token.is_none()
             || self.token_expiry.unwrap_or_else(Instant::now) <= Instant::now()
         {
@@ -117,7 +179,7 @@ impl TokenManager {
         }
         Ok(())
     }
-    async fn get_token(&mut self) -> Result<String> {
+    async fn get_token(&mut self) -> reqwest_middleware::Result<String> {
         self.ensure_token_validity().await?;
         Ok(self.access_token.clone().unwrap())
     }

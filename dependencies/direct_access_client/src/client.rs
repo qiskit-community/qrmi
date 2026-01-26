@@ -30,6 +30,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use std::error::Error;
+
 #[cfg(feature = "skip_tls_cert_verify")]
 use std::env;
 
@@ -110,6 +112,8 @@ pub struct Client {
     pub(crate) base_url: String,
     /// HTTP client to interact with Direct Access API service
     pub(crate) client: reqwest_middleware::ClientWithMiddleware,
+    /// HTTP plain client to interact with services (no auth, no headers)
+    pub(crate) plain_client: reqwest_middleware::ClientWithMiddleware,
     /// The configuration to create [`S3Client`](aws_sdk_s3::Client)
     pub(crate) s3_config: Option<aws_sdk_s3::Config>,
     /// The name of S3 bucket
@@ -119,13 +123,12 @@ pub struct Client {
 }
 
 impl Client {
-    pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let resp_ = self
-            .client
-            .get(url)
-            .header("Content-Type", "application/json")
-            .send()
-            .await;
+    pub(crate) async fn get<T: DeserializeOwned>(
+        &self,
+        url: &str,
+        client: &reqwest_middleware::ClientWithMiddleware,
+    ) -> Result<T> {
+        let resp_ = client.get(url).send().await;
         match resp_ {
             Ok(resp) => {
                 let status = resp.status();
@@ -138,23 +141,63 @@ impl Client {
                         Ok(ExtendedErrorResponse::Json(error)) => {
                             let serialized = serde_json::to_value(&error).unwrap();
                             error!("{}", &serialized);
-                            bail!(serialized);
+                            bail!(format!(
+                                "An error occurred while fetching data from API. {}",
+                                &serialized
+                            ));
                         }
                         Ok(ExtendedErrorResponse::Text(message)) => {
                             error!("{}", message);
-                            bail!(format!("{} ({})", status, message));
+                            bail!(format!(
+                                "An error occurred while fetching data from API. {} ({})",
+                                status, message
+                            ));
                         }
                         Err(_) => {
                             error!("{} {}", status, url);
-                            bail!(format!("{} {}", status, url));
+                            bail!(format!(
+                                "An error occurred while fetching data from API. {} {}",
+                                status, url
+                            ));
                         }
                     }
                 }
             }
             Err(e) => {
-                error!("{:#?}", e);
-                Err(e.into())
+                let err_msg = Client::explain_reqwest_middleware_error(&e);
+                bail!(format!(
+                    "An error occurred while fetching data from API. {}",
+                    err_msg
+                ));
             }
+        }
+    }
+
+    pub fn explain_reqwest_middleware_error(e: &reqwest_middleware::Error) -> String {
+        let mut v = Vec::new();
+        let mut i = 0;
+        match e {
+            reqwest_middleware::Error::Middleware(middleware_err) => {
+                let mut src = middleware_err.source();
+                while let Some(err) = src {
+                    v.push(format!("reasons[{}]: {}", i, err));
+                    src = err.source();
+                    i += 1;
+                }
+            }
+            reqwest_middleware::Error::Reqwest(req_err) => {
+                let mut src = req_err.source();
+                while let Some(err) = src {
+                    v.push(format!("reasons[{}]: {}", i, err));
+                    src = err.source();
+                    i += 1;
+                }
+            }
+        }
+        if v.is_empty() {
+            e.to_string()
+        } else {
+            v.join(", ")
         }
     }
 }
@@ -417,6 +460,7 @@ impl ClientBuilder {
     /// ```
     pub fn build(&mut self) -> Result<Client> {
         let mut reqwest_client_builder = reqwest::Client::builder();
+        let mut reqwest_plain_client_builder = reqwest::Client::builder();
 
         #[cfg(feature = "skip_tls_cert_verify")]
         if let Ok(skip_cert_verify_envvar) = env::var("DANGER_TLS_SKIP_CERT_VERIFY") {
@@ -425,24 +469,35 @@ impl ClientBuilder {
                 reqwest_client_builder = reqwest_client_builder
                     .danger_accept_invalid_certs(true)
                     .danger_accept_invalid_hostnames(true);
+                reqwest_plain_client_builder = reqwest_plain_client_builder
+                    .danger_accept_invalid_certs(true)
+                    .danger_accept_invalid_hostnames(true);
             }
         }
 
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        reqwest_plain_client_builder = reqwest_plain_client_builder.connection_verbose(true);
         if let Some(v) = self.timeout {
-            reqwest_client_builder = reqwest_client_builder.timeout(v)
+            reqwest_client_builder = reqwest_client_builder.timeout(v);
+            reqwest_plain_client_builder = reqwest_plain_client_builder.timeout(v)
         }
 
         if let Some(v) = self.read_timeout {
-            reqwest_client_builder = reqwest_client_builder.read_timeout(v)
+            reqwest_client_builder = reqwest_client_builder.read_timeout(v);
+            reqwest_plain_client_builder = reqwest_plain_client_builder.read_timeout(v)
         }
 
         if let Some(v) = self.connect_timeout {
-            reqwest_client_builder = reqwest_client_builder.connect_timeout(v)
+            reqwest_client_builder = reqwest_client_builder.connect_timeout(v);
+            reqwest_plain_client_builder = reqwest_plain_client_builder.connect_timeout(v)
         }
 
         #[allow(unused_mut)]
         let mut headers = header::HeaderMap::new();
+        headers.insert(
+            header::ACCEPT,
+            header::HeaderValue::from_str("application/json")?,
+        );
         #[cfg(feature = "api_version")]
         if let Some(api_ver_value) = &self.api_version {
             let api_ver_value = header::HeaderValue::from_str(api_ver_value.as_str())?;
@@ -466,7 +521,10 @@ impl ClientBuilder {
         }
 
         reqwest_client_builder = reqwest_client_builder.default_headers(headers);
-        let mut reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        let mut middleware_client_builder =
+            ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        let mut middleware_plain_client_builder =
+            ReqwestClientBuilder::new(reqwest_plain_client_builder.build()?);
 
         if let Some(v) = self.retry_policy {
             #[cfg(feature = "iqp_retry_policy")]
@@ -477,7 +535,7 @@ impl ClientBuilder {
                     .base(2)
                     .build_with_max_retries(1);
                 retry_policy_429.max_n_retries = None;
-                reqwest_builder = reqwest_builder
+                middleware_client_builder = middleware_client_builder
                     .with(RetryTransientMiddleware::new_with_policy_and_strategy(
                         v,
                         RetryStrategyExcept429,
@@ -489,9 +547,12 @@ impl ClientBuilder {
             }
             #[cfg(not(feature = "iqp_retry_policy"))]
             {
-                reqwest_builder = reqwest_builder.with(RetryTransientMiddleware::new_with_policy(v))
+                middleware_client_builder =
+                    middleware_client_builder.with(RetryTransientMiddleware::new_with_policy(v));
             }
-        }
+            middleware_plain_client_builder = middleware_plain_client_builder
+                .with(RetryTransientMiddleware::new_with_policy(v));
+        };
 
         #[cfg(feature = "ibmcloud_appid_auth")]
         if let AuthMethod::IbmCloudAppId { .. } = self.auth_method.clone() {
@@ -499,10 +560,14 @@ impl ClientBuilder {
             let token_manager = Arc::new(Mutex::new(TokenManager::new(
                 token_url,
                 self.auth_method.clone(),
-            )));
+                self.timeout,
+                self.connect_timeout,
+                self.read_timeout,
+                self.retry_policy,
+            )?));
 
             let auth_middleware = AuthMiddleware::new(token_manager.clone());
-            reqwest_builder = reqwest_builder.with(auth_middleware);
+            middleware_client_builder = middleware_client_builder.with(auth_middleware);
         }
         if let AuthMethod::IbmCloudIam {
             iam_endpoint_url, ..
@@ -512,17 +577,23 @@ impl ClientBuilder {
             let token_manager = Arc::new(Mutex::new(TokenManager::new(
                 token_url,
                 self.auth_method.clone(),
-            )));
+                self.timeout,
+                self.connect_timeout,
+                self.read_timeout,
+                self.retry_policy,
+            )?));
 
             let auth_middleware = AuthMiddleware::new(token_manager.clone());
-            reqwest_builder = reqwest_builder.with(auth_middleware);
+            middleware_client_builder = middleware_client_builder.with(auth_middleware);
         }
 
-        let client = reqwest_builder.build();
+        let client = middleware_client_builder.build();
+        let plain_client = middleware_plain_client_builder.build();
 
         Ok(Client {
             base_url: self.base_url.clone(),
             client,
+            plain_client,
             s3_config: self.s3_config.clone(),
             s3_bucket: self.s3_bucket.clone(),
             s3_config_for_daapi: self.s3_config_for_daapi.clone(),

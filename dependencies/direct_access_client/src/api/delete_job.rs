@@ -48,12 +48,7 @@ impl Client {
     ///
     pub async fn delete_job(&self, job_id: &str) -> Result<()> {
         let url = format!("{}/v1/jobs/{}", self.base_url, &job_id);
-        let resp_ = self
-            .client
-            .delete(&url)
-            .header("Content-Type", "application/json")
-            .send()
-            .await;
+        let resp_ = self.client.delete(&url).send().await;
 
         match resp_ {
             Ok(resp) => {
@@ -65,22 +60,34 @@ impl Client {
                         Ok(ExtendedErrorResponse::Json(error)) => {
                             let serialized = serde_json::to_value(&error).unwrap();
                             error!("{}", &serialized);
-                            bail!(serialized);
+                            bail!(format!(
+                                "An error occurred while sending the request to delete the job to the API. {}",
+                                serialized
+                            ));
                         }
                         Ok(ExtendedErrorResponse::Text(message)) => {
                             error!("{}", message);
-                            bail!(format!("{} ({})", status_code, message));
+                            bail!(format!(
+                                "An error occurred while sending the request to delete the job to the API. {} ({})",
+                                status_code, message
+                            ));
                         }
                         Err(_) => {
                             error!("{} {}", status_code, url);
-                            bail!(format!("{} {}", status_code, url));
+                            bail!(format!(
+                                "An error occurred while sending the request to delete the job to the API. {} {}",
+                                status_code, url
+                            ));
                         }
                     }
                 }
             }
             Err(e) => {
-                error!("{:#?}", e);
-                Err(e.into())
+                let err_msg = Client::explain_reqwest_middleware_error(&e);
+                bail!(format!(
+                    "An error occurred while sending the request to delete the job to the API. {}",
+                    err_msg
+                ));
             }
         }
     }
