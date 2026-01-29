@@ -64,7 +64,13 @@ impl QuantumResource for PasqalCloud {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let valid_devices = [
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL",
+                ];
                 let err = format!(
                     "Device '{}' is invalid. Valid devices: {}",
                     self.backend_name,
@@ -100,7 +106,13 @@ impl QuantumResource for PasqalCloud {
             let device_type = match self.backend_name.parse::<DeviceType>() {
                 Ok(dt) => dt,
                 Err(_) => {
-                    let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                    let valid_devices = [
+                        "FRESNEL",
+                        "FRESNEL_CAN1",
+                        "EMU_MPS",
+                        "EMU_FREE",
+                        "EMU_FRESNEL",
+                    ];
                     let err = format!(
                         "Device '{}' is invalid. Valid devices: {}",
                         self.backend_name,
@@ -163,7 +175,13 @@ impl QuantumResource for PasqalCloud {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let valid_devices = [
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL",
+                ];
                 let err = format!(
                     "Device '{}' is invalid. Valid devices: {}",
                     self.backend_name,
