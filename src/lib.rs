@@ -35,7 +35,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///
@@ -56,7 +56,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     let token = qrmi.acquire().unwrap();
@@ -74,7 +74,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     qrmi.release("your_acquisition_token").await?;
@@ -91,7 +91,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use std::fs::File;
     ///     use std::io::prelude::*;
@@ -123,7 +123,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
     ///     qrmi.task_stop("your_task_id").unwrap();
@@ -140,7 +140,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
@@ -160,7 +160,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
@@ -180,7 +180,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
@@ -194,7 +194,7 @@ pub trait QuantumResource: Send + Sync {
 
     /// Returns a Target for the specified device. Vendor specific serialized data. This might contain the constraints(instructions, properteis and timing information etc.) of a particular device to allow compilers to compile an input circuit to something that works and is optimized for a device. In IBM implementation, it contains JSON representations of [BackendConfiguration](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_configuration_schema.json) and [BackendProperties](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_properties_schema.json) so that we are able to create a Target object by calling `qiskit_ibm_runtime.utils.backend_converter.convert_to_target` or uquivalent functions.
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
@@ -210,7 +210,7 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use qrmi::{QiskitRuntimeService};
     ///
