@@ -61,18 +61,15 @@ pub struct GetBatchResponseData {
 #[derive(Debug, Clone, Deserialize)]
 pub struct CancelBatchResponseData {}
 
-
 #[derive(Debug, Clone, Serialize)]
 pub struct Job {
     pub runs: i32,
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 struct JobResult {
     counter: HashMap<String, u64>,
 }
-
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Batch {
@@ -83,10 +80,7 @@ pub struct Batch {
 }
 
 impl Client {
-    pub async fn get_device(
-        &self,
-        device_type: DeviceType,
-    ) -> Result<GetDeviceResponseData> {
+    pub async fn get_device(&self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
@@ -132,7 +126,10 @@ impl Client {
     }
 
     pub async fn get_batch_results(&self, batch_id: &str) -> Result<String> {
-        let url = format!("{}/core-fast/api/v1/batches/{}/full_results", self.base_url, batch_id);
+        let url = format!(
+            "{}/core-fast/api/v1/batches/{}/full_results",
+            self.base_url, batch_id
+        );
 
         let resp: Response<HashMap<String, JobResult>> = self.get(&url).await?;
 

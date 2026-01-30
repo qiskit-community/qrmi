@@ -82,7 +82,7 @@ impl QuantumResource for PasqalCloud {
 
         // The device may be down temporarily but jobs can still
         // be submitted and queued through the cloud
-        // Thus we only check that the device is not retired 
+        // Thus we only check that the device is not retired
         match self.api_client.get_device(device_type).await {
             Ok(device) => Ok(device.availability == "ACTIVE"),
             Err(err) => bail!("Failed to get device: {}", err),
