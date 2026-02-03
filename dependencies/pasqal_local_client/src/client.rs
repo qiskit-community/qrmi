@@ -41,6 +41,16 @@ pub struct CreateJob {
     pub sequence: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct SessionResponse {
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CreateSessionPayload {
+    pub user_id: String,
+}
+
 impl Client {
     pub async fn get_jobs(
         &self,
@@ -63,6 +73,21 @@ impl Client {
         };
         self.post(&url, job).await
     }
+
+    pub async fn create_session(
+        &self,
+        user_id: i32,
+    )-> Result<SessionResponse> {
+        let url = format!(
+            "{}/sessions",
+            self.base_url,
+        );
+        let session = CreateSessionPayload {
+            user_id: user_id.to_string(),
+        };
+        self.post(&url, session).await
+    }
+
 
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
         let resp = self.client.get(url).send().await?;

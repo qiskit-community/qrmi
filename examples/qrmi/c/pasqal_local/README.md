@@ -36,10 +36,10 @@ $ make
 
 ## How to run this example
 ```shell-session
-$ ./build/pasqal-cloud
-pasqal-cloud <backend_name> <input file>
+$ ./build/pasqal_local
+pasqal_local <backend_name> <input file>
 ```
 For example,
 ```shell-session
-$ ./build/pasqal-cloud FRESNEL input.json
+$ ./build/pasqal_local FRESNEL input.json
 ```

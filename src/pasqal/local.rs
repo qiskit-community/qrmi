@@ -16,24 +16,32 @@ use anyhow::{bail, Result};
 use anyhow::anyhow;
 use pasqal_local_api::{Client, ClientBuilder};
 use std::collections::HashMap;
+use std::env;
 use uuid::Uuid;
+
 
 use async_trait::async_trait;
 
 /// QRMI implementation for Pasqal Cloud
 pub struct PasqalLocal {
     pub(crate) api_client: Client,
+    pub(crate) job_uid: i32
 }
 
 impl PasqalLocal {
     /// Constructs a QRMI to access Pasqal on prem QPU
     ///
     /// # Environment variables
-    ///
+    /// /// * `QRMI_JOB_UID`: uid of the slurm job
     ///
     pub fn new() -> Result<Self> {
+        let job_uid: i32 = env::var(format!("QRMI_JOB_UID"))
+            .ok()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap();
         Ok(Self {
             api_client: ClientBuilder::new().build().unwrap(),
+            job_uid: job_uid
         })
     }
 }
@@ -68,7 +76,10 @@ impl QuantumResource for PasqalLocal {
     async fn acquire(&mut self) -> Result<String> {
         // TBD on cloud side for POC
         // Pasqal Cloud does not support session concept, so simply returns dummy ID for now.
-        Ok(Uuid::new_v4().to_string())
+        match self.api_client.create_session(self.job_uid).await {
+            Ok(session) => Ok(session.id),
+            Err(err) => Err(err), 
+        }
     }
 
     async fn release(&mut self, _id: &str) -> Result<()> {
