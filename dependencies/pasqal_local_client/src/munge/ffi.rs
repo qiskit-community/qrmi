@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright Pasqal SAS 2025
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,10 +9,17 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! QRMI implementations for Pasqal Cloud Services and Pasqal Local
 
-mod cloud;
-mod local;
+use std::os::raw::{c_char, c_int, c_void};
 
-pub use self::cloud::PasqalCloud;
-pub use self::local::PasqalLocal;
+#[link(name = "munge")]
+extern "C" {
+    pub(crate) fn munge_encode(
+        cred: *mut *mut c_char,
+        ctx: *mut std::ffi::c_void,
+        data: *const c_void,
+        len: usize,
+    ) -> c_int;
+
+    pub(crate) fn munge_strerror(err: c_int) -> *const c_char;
+}

@@ -52,6 +52,8 @@ class QRMIService:
                 resource = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
             elif qpu_types[i] == "pasqal-cloud":
                 resource = QuantumResource(qpu, ResourceType.PasqalCloud)
+            elif qpu_types[i] == "pasqal-local":
+                resource = QuantumResource(qpu, ResourceType.PasqalLocal)
             else:
                 logger.warning(
                     "Unsupported resource type: %s specified for %s", qpu_types[i], qpu
