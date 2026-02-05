@@ -74,8 +74,6 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn acquire(&mut self) -> Result<String> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply returns dummy ID for now.
         match self.api_client.create_session(self.job_uid).await {
             Ok(session) => Ok(session.id),
             Err(err) => Err(err), 
@@ -83,16 +81,26 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn release(&mut self, _id: &str) -> Result<()> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply ignores
-        Ok(())
+        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN")
+            .map_err(|_| {
+                anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
+            })?;
+        match self.api_client.revoke_session(&session_id).await {
+            Ok(session) => Ok(()),
+            Err(err) => Err(err), 
+        }
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
+        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN")
+            .map_err(|_| {
+                anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
+            })?;
+        
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             match self
                 .api_client
-                .create_job(sequence)
+                .create_job(sequence, &session_id)
                 .await
             {
                 Ok(job) => Ok(job.id.to_string()),
