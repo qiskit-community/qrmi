@@ -11,6 +11,7 @@
 # that they have been altered from the originals.
 
 """Sampler V2 base class for Pasqal Cloud QRMI"""
+
 import time
 from dataclasses import dataclass, field
 from typing import Iterable

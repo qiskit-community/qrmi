@@ -11,6 +11,7 @@
 # that they have been altered from the originals.
 
 """EstimatorV2 Primitive implementation with IBM QRMI"""
+
 from typing import Union
 from qrmi import QuantumResource
 from qrmi.primitives import QRMIBaseEstimatorV2

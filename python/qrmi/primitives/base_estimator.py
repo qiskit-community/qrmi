@@ -13,6 +13,7 @@
 # that they have been altered from the originals.
 
 """Estimator V2 base class for IBM QRMI"""
+
 import json
 from typing import Union
 from dataclasses import dataclass, field
