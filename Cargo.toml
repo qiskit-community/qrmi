@@ -36,6 +36,7 @@ clap = { version = "4.5.29", features = ["derive"] }
 uuid = "1.16.0"
 log = "0.4.26"
 direct-access-api = { path = "dependencies/direct_access_client" }
+ionq-cloud-api = { path = "dependencies/ionq_cloud_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
@@ -54,6 +55,7 @@ cbindgen = "0.29"
 [workspace]
 members = [
     "dependencies/direct_access_client",
+    "dependencies/ionq_cloud_client",
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
 ]
@@ -67,6 +69,7 @@ rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.
 
 [workspace.dependencies]
 direct-access-api = { path = "dependencies/direct_access_client" }
+ionq-cloud-api = { path = "dependencies/ionq_cloud_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 
 [package.metadata.maturin]
