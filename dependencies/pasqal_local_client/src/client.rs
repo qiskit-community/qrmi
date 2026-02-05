@@ -66,12 +66,14 @@ impl Client {
     pub async fn create_job(
         &self,
         sequence: String,
+        session_id: &str
     ) -> Result<JobResponse> {
         let url = format!("{}/jobs", self.base_url);
         let job = CreateJob {
             sequence: sequence,
         };
-        self.post(&url, job).await
+        let resp = self.client.post(url).header("X-Warden-Session", session_id).json(&job).send().await?;
+        self.handle_request(resp).await
     }
 
     pub async fn create_session(
@@ -85,7 +87,21 @@ impl Client {
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
         };
-        self.post(&url, session).await
+        let resp = self.client.post(url).json(&session).send().await?;
+        self.handle_request(resp).await
+    }
+
+    pub async fn revoke_session(
+        &self,
+        session_id: &str,
+    )-> Result<SessionResponse> {
+        let url = format!(
+            "{}/sessions/{}",
+            self.base_url,
+            session_id,
+        );
+        let resp = self.client.delete(url).send().await?;
+        self.handle_request(resp).await
     }
 
 
@@ -94,14 +110,6 @@ impl Client {
         self.handle_request(resp).await
     }
 
-    pub(crate) async fn post<T: DeserializeOwned, U: Serialize>(
-        &self,
-        url: &str,
-        body: U,
-    ) -> Result<T> {
-        let resp = self.client.post(url).json(&body).send().await?;
-        self.handle_request(resp).await
-    }
 
     async fn handle_request<T: DeserializeOwned>(&self, resp: reqwest::Response) -> Result<T> {
         if resp.status().is_success() {
