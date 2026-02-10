@@ -191,12 +191,6 @@ impl PasqalCloud {
             ))
             .unwrap_or_else(|| "authenticate.pasqal.cloud/oauth/token".to_string());
 
-        if auth_token.is_empty() {
-            eprintln!(
-                "Warning: {var_name} is not set (or empty) and ~/.pasqal/config has no token; will attempt username/password auth if available."
-            );
-        }
-
         let api_client = ClientBuilder::new(auth_token.clone(), project_id.clone()).build()?;
 
         Ok(Self {
