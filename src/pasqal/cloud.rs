@@ -13,11 +13,14 @@
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use pasqal_cloud_api::{request_access_token, BatchStatus, Client, ClientBuilder, DeviceType};
+use pasqal_cloud_api::{
+    jwt_expiry_unix_seconds, request_access_token, BatchStatus, Client, ClientBuilder, DeviceType,
+};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use async_trait::async_trait;
@@ -38,6 +41,13 @@ fn strip_quotes(s: &str) -> &str {
     } else {
         s
     }
+}
+
+fn now_unix_seconds() -> Result<i64> {
+    Ok(SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| anyhow!("Failed to read system time: {e}"))?
+        .as_secs() as i64)
 }
 
 fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
@@ -126,6 +136,7 @@ pub struct PasqalCloud {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
     auth_token: String,
+    auth_token_expiry_unix_seconds: Option<i64>,
     project_id: String,
     auth_endpoint: String,
     username: Option<String>,
@@ -166,6 +177,7 @@ impl PasqalCloud {
                 "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
             ))
             .unwrap_or_else(|| String::new());
+        let auth_token_expiry_unix_seconds = jwt_expiry_unix_seconds(&auth_token)?;
 
         let auth_endpoint_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT");
         let env_auth_endpoint = env::var(&auth_endpoint_var)
@@ -191,6 +203,7 @@ impl PasqalCloud {
             api_client,
             backend_name: backend_name.to_string(),
             auth_token,
+            auth_token_expiry_unix_seconds,
             project_id,
             auth_endpoint,
             username: cfg.username,
@@ -200,7 +213,16 @@ impl PasqalCloud {
 
     async fn ensure_authenticated(&mut self) -> Result<()> {
         if !self.auth_token.trim().is_empty() {
-            return Ok(());
+            if let Some(exp) = self.auth_token_expiry_unix_seconds {
+                let now = now_unix_seconds()?;
+                if exp > now {
+                    return Ok(());
+                }
+                // Token is expired; refresh if possible.
+            } else {
+                // Token exists but is not a JWT (or has no exp); treat as usable.
+                return Ok(());
+            }
         }
         let (Some(username), Some(password)) = (self.username.as_deref(), self.password.as_deref())
         else {
@@ -209,6 +231,7 @@ impl PasqalCloud {
 
         let token = request_access_token(&self.auth_endpoint, username, password).await?;
         self.auth_token = token;
+        self.auth_token_expiry_unix_seconds = jwt_expiry_unix_seconds(&self.auth_token)?;
         self.api_client = ClientBuilder::new(self.auth_token.clone(), self.project_id.clone())
             .build()?;
         Ok(())

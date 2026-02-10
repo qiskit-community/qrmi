@@ -13,6 +13,8 @@
 
 use anyhow::{bail, Result};
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine as _;
 use crate::models::batch::BatchStatus;
 use crate::models::device::DeviceType;
 use log::debug;
@@ -20,6 +22,7 @@ use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 
 /// An asynchronous `Client` to make Requests with.
@@ -302,5 +305,39 @@ pub async fn request_access_token(
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
         bail!("Token request failed: {} {}", status, body);
+    }
+}
+
+pub fn jwt_expiry_unix_seconds(token: &str) -> Result<Option<i64>> {
+    let token = token.trim();
+    if token.is_empty() {
+        return Ok(None);
+    }
+
+    let mut parts = token.split('.');
+    let _header = match parts.next() {
+        Some(p) if !p.is_empty() => p,
+        _ => return Ok(None),
+    };
+    let payload = match parts.next() {
+        Some(p) if !p.is_empty() => p,
+        _ => return Ok(None),
+    };
+    if parts.next().is_none() {
+        return Ok(None);
+    }
+
+    let payload_bytes = URL_SAFE_NO_PAD.decode(payload)?;
+    let v: Value = serde_json::from_slice(&payload_bytes)?;
+    let Some(exp) = v.get("exp") else {
+        return Ok(None);
+    };
+
+    if let Some(n) = exp.as_i64() {
+        Ok(Some(n))
+    } else if let Some(s) = exp.as_str() {
+        Ok(Some(s.parse::<i64>()?))
+    } else {
+        Ok(None)
     }
 }

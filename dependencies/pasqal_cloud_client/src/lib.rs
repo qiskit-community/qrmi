@@ -19,5 +19,6 @@ mod models;
 
 pub use client::{Client, ClientBuilder};
 pub use client::request_access_token;
+pub use client::jwt_expiry_unix_seconds;
 pub use models::BatchStatus;
 pub use models::DeviceType;
