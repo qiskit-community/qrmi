@@ -256,3 +256,51 @@ impl ClientBuilder {
         })
     }
 }
+
+#[derive(Debug, Clone, Deserialize)]
+struct AuthTokenResponse {
+    access_token: String,
+}
+
+/// Request a Pasqal Cloud access token using username/password.
+///
+/// This uses the same Auth0 password-realm flow currently documented for Pasqal Cloud.
+pub async fn request_access_token(
+    auth_endpoint: &str,
+    username: &str,
+    password: &str,
+) -> Result<String> {
+    let auth_endpoint = if auth_endpoint.contains("://") {
+        auth_endpoint.to_string()
+    } else {
+        format!("https://{auth_endpoint}")
+    };
+
+    let params = [
+        ("grant_type", "http://auth0.com/oauth/grant-type/password-realm"),
+        ("realm", "pcs-users"),
+        ("client_id", "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB"),
+        ("audience", "https://apis.pasqal.cloud/account/api/v1"),
+        ("username", username),
+        ("password", password),
+    ];
+
+    let resp = reqwest::Client::new()
+        .post(auth_endpoint)
+        .header(
+            reqwest::header::CONTENT_TYPE,
+            "application/x-www-form-urlencoded",
+        )
+        .form(&params)
+        .send()
+        .await?;
+
+    if resp.status().is_success() {
+        let token: AuthTokenResponse = resp.json().await?;
+        Ok(token.access_token)
+    } else {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        bail!("Token request failed: {} {}", status, body);
+    }
+}

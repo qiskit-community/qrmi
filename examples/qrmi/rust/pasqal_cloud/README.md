@@ -7,12 +7,33 @@
 
 ## Set environment variables
 
-Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
+QRMI supports Pasqal Cloud configuration via environment variables. For Pasqal Cloud auth, QRMI also supports reading `~/.pasqal/config` (token or username/password).
+
+The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID |  Pasqal Cloud Project ID to access the QPU |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token |
+
+### ~/.pasqal/config (optional)
+
+Create `~/.pasqal/config`:
+```
+username=<your username>
+password=<your password>
+# or:
+# token=<your token>
+
+# optional override:
+# project_id=<your project id>
+```
+
+Backend-scoped keys are supported and override global keys:
+```
+EMU_FREE.token=<your token>
+EMU_FREE.project_id=<your project id>
+```
 
 ## Create Pulser Sequence file as input
 

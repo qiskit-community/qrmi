@@ -12,12 +12,14 @@
 
 import json
 
+import pulser
 from dotenv import load_dotenv
 from pulser import Pulse, Register, Sequence
 from pulser.backend.remote import JobParams
+from target import get_device
+
 from qrmi.pulser_backend.backend import PulserQRMIBackend, PulserQRMIConnection
 from qrmi.pulser_backend.service import QRMIService
-from target import get_device
 
 # Create QRMI
 load_dotenv()
@@ -33,7 +35,7 @@ qrmi = resources[0]
 qrmi_conn = PulserQRMIConnection(qrmi)
 
 # Generate Pulser device
-device = get_device(qrmi)
+device = pulser.AnalogDevice  # get_device(qrmi)
 
 reg = Register(
     {

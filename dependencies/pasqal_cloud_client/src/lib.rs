@@ -18,5 +18,6 @@ mod client;
 mod models;
 
 pub use client::{Client, ClientBuilder};
+pub use client::request_access_token;
 pub use models::BatchStatus;
 pub use models::DeviceType;
