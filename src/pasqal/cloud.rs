@@ -16,6 +16,7 @@ use anyhow::{anyhow, bail, Result};
 use pasqal_cloud_api::{
     jwt_expiry_unix_seconds, request_access_token, BatchStatus, Client, ClientBuilder, DeviceType,
 };
+use log::debug;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -153,6 +154,7 @@ impl PasqalCloud {
     ///
     /// Let's hardcode the rest for now
     pub fn new(backend_name: &str) -> Result<Self> {
+        debug!("Initializing PasqalCloud QRMI for backend '{}'", backend_name);
         let cfg = read_pasqal_config(backend_name)?;
 
         let project_id_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID");
@@ -191,6 +193,11 @@ impl PasqalCloud {
             ))
             .unwrap_or_else(|| "authenticate.pasqal.cloud/oauth/token".to_string());
 
+        let auth_token_state = if auth_token.is_empty() { "empty" } else { "set" };
+        debug!(
+            "Build client using project_id='{}', auth_token={}, auth_endpoint='{}'",
+            project_id, auth_token_state, auth_endpoint
+        );
         let api_client = ClientBuilder::new(auth_token.clone(), project_id.clone()).build()?;
 
         Ok(Self {
@@ -213,8 +220,13 @@ impl PasqalCloud {
                     return Ok(());
                 }
                 // Token is expired; refresh if possible.
+                debug!(
+                    "Auth token is expired (expired at {}, now is {}), will attempt to refresh",
+                    exp, now
+                );
             } else {
                 // Token exists but is not a JWT (or has no exp); treat as usable.
+                debug!("Auth token exists but has no expiry info, treating as valid");
                 return Ok(());
             }
         }
@@ -223,6 +235,10 @@ impl PasqalCloud {
             return Ok(());
         };
 
+        debug!(
+            "Requesting new auth token for PasqalCloud QRMI (backend '{}')",
+            self.backend_name
+        );
         let token = request_access_token(&self.auth_endpoint, username, password).await?;
         self.auth_token = token;
         self.auth_token_expiry_unix_seconds = jwt_expiry_unix_seconds(&self.auth_token)?;
@@ -271,6 +287,7 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
+        debug!("Starting task on PasqalCloud QRMI (backend '{}')", self.backend_name);
         self.ensure_authenticated().await?;
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             let device_type = match self.backend_name.parse::<DeviceType>() {
@@ -300,6 +317,10 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
+        debug!(
+            "Stopping task '{}' on PasqalCloud QRMI (backend '{}')",
+            task_id, self.backend_name
+        );
         self.ensure_authenticated().await?;
         match self.api_client.cancel_batch(task_id).await {
             Ok(_) => Ok(()),
@@ -339,6 +360,10 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn target(&mut self) -> Result<Target> {
+        debug!(
+            "Getting target information for PasqalCloud QRMI (backend '{}')",
+            self.backend_name
+        );
         self.ensure_authenticated().await?;
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
