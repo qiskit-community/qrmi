@@ -388,15 +388,6 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn metadata(&mut self) -> HashMap<String, String> {
-        // `metadata()` returns a plain HashMap (not Result), so auth errors cannot be propagated
-        // with `?` here. Long-term fix: change the trait/API to return
-        // `Result<HashMap<String, String>>` and bubble this error to callers.
-        if let Err(err) = self.ensure_authenticated().await {
-            debug!(
-                "Failed to ensure authentication while fetching metadata for '{}': {}",
-                self.backend_name, err
-            );
-        }
         let mut metadata: HashMap<String, String> = HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
