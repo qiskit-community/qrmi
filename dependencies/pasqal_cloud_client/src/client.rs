@@ -215,7 +215,7 @@ impl Client {
             format!("https://{}", auth_endpoint.trim())
         };
 
-        let params = [
+        let client_params = [
             ("grant_type", AUTH_GRANT_TYPE),
             ("realm", AUTH_REALM),
             ("client_id", AUTH_CLIENT_ID),
@@ -230,7 +230,7 @@ impl Client {
                 reqwest::header::CONTENT_TYPE,
                 "application/x-www-form-urlencoded",
             )
-            .form(&params)
+            .form(&client_params)
             .send()
             .await?;
 
