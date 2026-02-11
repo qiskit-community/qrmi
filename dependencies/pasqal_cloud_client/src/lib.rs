@@ -17,7 +17,7 @@
 mod client;
 mod models;
 
-pub use client::{Client, ClientBuilder};
 pub use client::DEFAULT_AUTH_ENDPOINT;
+pub use client::{Client, ClientBuilder};
 pub use models::BatchStatus;
 pub use models::DeviceType;

@@ -11,7 +11,7 @@ async fn is_accessible_attempts_authentication() {
     // We set up a mock server that simulates the authentication endpoint and the devices endpoint.
     // The server will respond with a fixed token for the authentication request and will check that this token is used in the subsequent request to the devices endpoint.
     // We also verify that `is_accessible()` returns true, indicating that the backend is accessible with the obtained token.
-    
+
     // Ask for any free port.
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind should succeed");
     let addr = listener.local_addr().expect("local_addr should succeed");
@@ -19,7 +19,6 @@ async fn is_accessible_attempts_authentication() {
     let mock_server = thread::spawn(move || {
         for _ in 0..2 {
             if let Ok((mut stream, _)) = listener.accept() {
-
                 // Read the request
                 let mut buf = [0_u8; 4096];
                 let n = stream.read(&mut buf).unwrap_or(0);
@@ -62,7 +61,10 @@ async fn is_accessible_attempts_authentication() {
         password: Some("pass".to_string()),
     };
 
-    let accessible = qrmi.is_accessible().await.expect("is_accessible should succeed");
+    let accessible = qrmi
+        .is_accessible()
+        .await
+        .expect("is_accessible should succeed");
     mock_server.join().expect("server thread should join");
 
     // Verify that `is_accessible()` returns true and that the obtained token is used.

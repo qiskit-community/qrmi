@@ -13,10 +13,8 @@
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use pasqal_cloud_api::{
-    BatchStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT,
-};
 use log::debug;
+use pasqal_cloud_api::{BatchStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -154,7 +152,10 @@ impl PasqalCloud {
     ///
     /// Let's hardcode the rest for now
     pub fn new(backend_name: &str) -> Result<Self> {
-        debug!("Initializing PasqalCloud QRMI for backend '{}'", backend_name);
+        debug!(
+            "Initializing PasqalCloud QRMI for backend '{}'",
+            backend_name
+        );
         let cfg = read_pasqal_config(backend_name)?;
 
         let project_id_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID");
@@ -193,7 +194,11 @@ impl PasqalCloud {
             ))
             .unwrap_or_else(|| DEFAULT_AUTH_ENDPOINT.to_string());
 
-        let auth_token_state = if auth_token.is_empty() { "empty" } else { "set" };
+        let auth_token_state = if auth_token.is_empty() {
+            "empty"
+        } else {
+            "set"
+        };
         debug!(
             "Build client using project_id='{}', auth_token={}, auth_endpoint='{}'",
             project_id, auth_token_state, auth_endpoint
@@ -234,10 +239,9 @@ impl PasqalCloud {
         );
         let token = Client::request_access_token(&self.auth_endpoint, username, password).await?;
         self.auth_token = token;
-        self.auth_token_expiry_unix_seconds =
-            Client::jwt_expiry_unix_seconds(&self.auth_token)?;
-        self.api_client = ClientBuilder::new(self.auth_token.clone(), self.project_id.clone())
-            .build()?;
+        self.auth_token_expiry_unix_seconds = Client::jwt_expiry_unix_seconds(&self.auth_token)?;
+        self.api_client =
+            ClientBuilder::new(self.auth_token.clone(), self.project_id.clone()).build()?;
         Ok(())
     }
 }
@@ -249,7 +253,13 @@ impl QuantumResource for PasqalCloud {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let valid_devices = vec![
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL",
+                ];
                 let err = format!(
                     "Device '{}' is invalid. Valid devices: {}",
                     self.backend_name,
@@ -261,7 +271,7 @@ impl QuantumResource for PasqalCloud {
 
         // The device may be down temporarily but jobs can still
         // be submitted and queued through the cloud
-        // Thus we only check that the device is not retired 
+        // Thus we only check that the device is not retired
         match self.api_client.get_device(device_type).await {
             Ok(device) => Ok(device.availability == "ACTIVE"),
             Err(err) => bail!("Failed to get device: {}", err),
@@ -281,13 +291,22 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        debug!("Starting task on PasqalCloud QRMI (backend '{}')", self.backend_name);
+        debug!(
+            "Starting task on PasqalCloud QRMI (backend '{}')",
+            self.backend_name
+        );
         self.ensure_authenticated().await?;
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             let device_type = match self.backend_name.parse::<DeviceType>() {
                 Ok(dt) => dt,
                 Err(_) => {
-                    let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                    let valid_devices = vec![
+                        "FRESNEL",
+                        "FRESNEL_CAN1",
+                        "EMU_MPS",
+                        "EMU_FREE",
+                        "EMU_FRESNEL",
+                    ];
                     let err = format!(
                         "Device '{}' is invalid. Valid devices: {}",
                         self.backend_name,
@@ -362,7 +381,13 @@ impl QuantumResource for PasqalCloud {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let valid_devices = vec![
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL",
+                ];
                 let err = format!(
                     "Device '{}' is invalid. Valid devices: {}",
                     self.backend_name,

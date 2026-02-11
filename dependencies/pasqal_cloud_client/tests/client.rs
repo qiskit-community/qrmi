@@ -23,20 +23,14 @@ fn jwt_expiry_valid_token_with_exp() {
     // This token has a valid "exp" claim, so the function should return it.
     let exp = now_unix_seconds() + 3600;
     let token = make_jwt(json!({"sub":"test","exp":exp}));
-    assert_eq!(
-        Client::jwt_expiry_unix_seconds(&token).unwrap(),
-        Some(exp)
-    );
+    assert_eq!(Client::jwt_expiry_unix_seconds(&token).unwrap(), Some(exp));
 }
 
 #[test]
 fn jwt_expiry_token_without_exp() {
     // This token does not have an "exp" claim, so the function should return None.
     let token = make_jwt(json!({"sub":"test"}));
-    assert_eq!(
-        Client::jwt_expiry_unix_seconds(&token).unwrap(),
-        None
-    );
+    assert_eq!(Client::jwt_expiry_unix_seconds(&token).unwrap(), None);
 }
 
 #[test]
