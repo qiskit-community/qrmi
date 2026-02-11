@@ -42,6 +42,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", dotenv().unwrap().display());
 
     let mut qrmi = PasqalCloud::new(&args.backend)?;
+    println!(
+        "Selected resource: id={} type={}",
+        qrmi.resource_id().await?,
+        qrmi.resource_type().await?.as_str()
+    );
 
     let accessible = qrmi.is_accessible().await?;
     if !accessible {

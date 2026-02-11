@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -20,13 +20,19 @@ pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
 
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 
 /// Defines interfaces to quantum resources.
 #[async_trait]
 pub trait QuantumResource: Send + Sync {
+    /// Returns resource identifier of this quantum resource.
+    async fn resource_id(&mut self) -> Result<String>;
+
+    /// Returns resource type of this quantum resource.
+    async fn resource_type(&mut self) -> Result<ResourceType>;
+
     /// Returns true if device is accessible, otherwise false.
     ///
     /// # Arguments

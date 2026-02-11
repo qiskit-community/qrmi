@@ -1,5 +1,7 @@
 use super::PasqalCloud;
+use crate::models::ResourceType;
 use crate::QuantumResource;
+use pasqal_cloud_api::ClientBuilder;
 use pasqal_cloud_api::ClientBuilder;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -70,4 +72,28 @@ async fn is_accessible_attempts_authentication() {
     // Verify that `is_accessible()` returns true and that the obtained token is used.
     assert!(accessible);
     assert_eq!(qrmi.auth_token, "opaque_token".to_string());
+}
+
+#[tokio::test]
+async fn resource_id_and_type_match_backend() {
+    let mut builder = ClientBuilder::for_project("project-id".to_string());
+    builder.with_token("opaque_token".to_string());
+    let api_client = builder.build().expect("client build should succeed");
+
+    let mut qrmi = PasqalCloud {
+        api_client,
+        backend_name: "EMU_FREE".to_string(),
+    };
+
+    let resource_id = qrmi
+        .resource_id()
+        .await
+        .expect("resource_id should succeed");
+    let resource_type = qrmi
+        .resource_type()
+        .await
+        .expect("resource_type should succeed");
+
+    assert_eq!(resource_id, "EMU_FREE");
+    assert_eq!(resource_type, ResourceType::PasqalCloud);
 }

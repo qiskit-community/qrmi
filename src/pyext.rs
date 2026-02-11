@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -74,6 +74,30 @@ impl PyQuantumResource {
         let result = self.rt.block_on(async { self.qrmi.is_accessible().await });
         match result {
             Ok(v) => Ok(v),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
+    fn resource_id(&mut self) -> PyResult<String> {
+        crate::common::initialize();
+        let result = self.rt.block_on(async { self.qrmi.resource_id().await });
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
+    fn resource_type(&mut self) -> PyResult<ResourceType> {
+        crate::common::initialize();
+        let result = self.rt.block_on(async { self.qrmi.resource_type().await });
+        match result {
+            Ok(v) => Ok(match v {
+                crate::models::ResourceType::IBMDirectAccess => ResourceType::IBMDirectAccess,
+                crate::models::ResourceType::QiskitRuntimeService => {
+                    ResourceType::IBMQiskitRuntimeService
+                }
+                crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
+            }),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }

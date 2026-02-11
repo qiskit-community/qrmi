@@ -29,7 +29,13 @@ resources = service.resources()
 if len(resources) == 0:
     print("No quantum resource is available.")
 
-# Randomly select QR
+# Select QR
+for res in resources:
+    print(
+        f"Available resource: id={res.resource_id()} type={str(res.resource_type())}"
+    )
+
+# For this example, we select the first resource
 qrmi = resources[0]
 
 qrmi_conn = PulserQRMIConnection(qrmi)

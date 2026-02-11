@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use direct_access_api::utils::s3::S3Client;
@@ -130,6 +130,14 @@ impl IBMDirectAccess {
 
 #[async_trait]
 impl QuantumResource for IBMDirectAccess {
+    async fn resource_id(&mut self) -> Result<String> {
+        Ok(self.backend_name.clone())
+    }
+
+    async fn resource_type(&mut self) -> Result<ResourceType> {
+        Ok(ResourceType::IBMDirectAccess)
+    }
+
     async fn is_accessible(&mut self) -> Result<bool> {
         match self
             .api_client
@@ -361,3 +369,7 @@ impl QuantumResource for IBMDirectAccess {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/direct_access.rs"]
+mod tests;

@@ -38,8 +38,21 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  QrmiReturnCode rc = QRMI_RETURN_CODE_SUCCESS;
+  char *resource_id = NULL;
+  rc = qrmi_resource_id(qrmi, &resource_id);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    QrmiResourceType resource_type;
+    rc = qrmi_resource_type(qrmi, &resource_type);
+    if (rc == QRMI_RETURN_CODE_SUCCESS) {
+      const char *resource_type_str = qrmi_config_resource_type_to_str(resource_type);
+      fprintf(stdout, "Selected resource: id=%s type=%s\n", resource_id, resource_type_str);
+    }
+    qrmi_string_free(resource_id);
+  }
+
   bool is_accessible = false;
-  QrmiReturnCode rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
+  rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
     if (is_accessible == false) {
       fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
