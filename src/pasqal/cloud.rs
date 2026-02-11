@@ -49,7 +49,7 @@ fn now_unix_seconds() -> Result<i64> {
         .as_secs() as i64)
 }
 
-fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
+fn read_pasqal_config(_backend_name: &str) -> Result<PasqalConfig> {
     let home = match env::var("HOME") {
         Ok(v) if !v.trim().is_empty() => v,
         _ => return Ok(PasqalConfig::default()),
@@ -64,8 +64,7 @@ fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         Err(_) => return Ok(PasqalConfig::default()),
     };
 
-    let mut global = PasqalConfig::default();
-    let mut scoped = PasqalConfig::default();
+    let mut config = PasqalConfig::default();
 
     for line in content.lines() {
         let line = line.trim();
@@ -80,34 +79,17 @@ fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
             continue;
         }
 
-        let (scope, key) = match k.split_once('.') {
-            Some((scope, key)) => (Some(scope.trim()), key.trim()),
-            None => (None, k.trim()),
-        };
-
-        let target = match scope {
-            Some(s) if s.eq_ignore_ascii_case(backend_name) => &mut scoped,
-            Some(_) => continue,
-            None => &mut global,
-        };
-
-        match key.to_ascii_lowercase().as_str() {
-            "username" => target.username = Some(v.to_string()),
-            "password" => target.password = Some(v.to_string()),
-            "token" => target.token = Some(v.to_string()),
-            "project_id" => target.project_id = Some(v.to_string()),
-            "auth_endpoint" => target.auth_endpoint = Some(v.to_string()),
+        match k.to_ascii_lowercase().as_str() {
+            "username" => config.username = Some(v.to_string()),
+            "password" => config.password = Some(v.to_string()),
+            "token" => config.token = Some(v.to_string()),
+            "project_id" => config.project_id = Some(v.to_string()),
+            "auth_endpoint" => config.auth_endpoint = Some(v.to_string()),
             _ => {}
         }
     }
 
-    Ok(PasqalConfig {
-        username: scoped.username.or(global.username),
-        password: scoped.password.or(global.password),
-        token: scoped.token.or(global.token),
-        project_id: scoped.project_id.or(global.project_id),
-        auth_endpoint: scoped.auth_endpoint.or(global.auth_endpoint),
-    })
+    Ok(config)
 }
 
 fn read_qrmi_config_env_value(backend_name: &str, key: &str) -> Option<String> {

@@ -31,12 +31,6 @@ password=<your password>
 # auth_endpoint=<auth endpoint URL/path>
 ```
 
-Backend-scoped keys are supported and override global keys:
-```
-EMU_FREE.token=<your token>
-EMU_FREE.project_id=<your project id>
-```
-
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:
