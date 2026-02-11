@@ -172,6 +172,7 @@ task_runner ibm_marrakesh /shared/input/estimator_input.json
 | SLURM_JOB_QPU_TYPES | Should be `pasqal-cloud` |
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID |  Pasqal Cloud Project ID to access the QPU |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token |
+| <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
 
 Pasqal Cloud auth can also be provided via `~/.pasqal/config` (token or username/password), for example:
 ```
@@ -182,6 +183,7 @@ password=<your password>
 #
 # optional override:
 # project_id=<your project id>
+# auth_endpoint=<auth endpoint URL/path>
 ```
 
 Example:

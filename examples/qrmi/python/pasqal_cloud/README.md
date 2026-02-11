@@ -24,6 +24,7 @@ The required environment variables are listed below. This example assumes that a
 
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID` |  Pasqal Cloud Project ID to access the QPU
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token
+| <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
 
 ### ~/.pasqal/config (optional)
 
@@ -36,6 +37,7 @@ password=<your password>
 
 # optional override:
 # project_id=<your project id>
+# auth_endpoint=<auth endpoint URL/path>
 ```
 
 Backend-scoped keys are supported and override global keys:

@@ -25,6 +25,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+pub const DEFAULT_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
+const AUTH_GRANT_TYPE: &str = "http://auth0.com/oauth/grant-type/password-realm";
+const AUTH_REALM: &str = "pcs-users";
+const AUTH_CLIENT_ID: &str = "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB";
+const AUTH_AUDIENCE: &str = "https://apis.pasqal.cloud/account/api/v1";
+
 /// An asynchronous `Client` to make Requests with.
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -195,6 +201,104 @@ impl Client {
             bail!("Status: {}, Fail {}", status, json_text);
         }
     }
+
+    /// Request a Pasqal Cloud access token using username/password.
+    ///
+    /// This uses the same Auth0 password-realm flow currently documented for Pasqal Cloud.
+    pub async fn request_access_token(
+        auth_endpoint: &str,
+        username: &str,
+        password: &str,
+    ) -> Result<String> {
+        let auth_endpoint = if auth_endpoint.trim().is_empty() {
+            format!("https://{DEFAULT_AUTH_ENDPOINT}")
+        } else if auth_endpoint.contains("://") {
+            auth_endpoint.trim().to_string()
+        } else {
+            format!("https://{}", auth_endpoint.trim())
+        };
+
+        let params = [
+            ("grant_type", AUTH_GRANT_TYPE),
+            ("realm", AUTH_REALM),
+            ("client_id", AUTH_CLIENT_ID),
+            ("audience", AUTH_AUDIENCE),
+            ("username", username),
+            ("password", password),
+        ];
+
+        let resp = reqwest::Client::new()
+            .post(auth_endpoint)
+            .header(
+                reqwest::header::CONTENT_TYPE,
+                "application/x-www-form-urlencoded",
+            )
+            .form(&params)
+            .send()
+            .await?;
+
+        if resp.status().is_success() {
+            let token: AuthTokenResponse = resp.json().await?;
+            Ok(token.access_token)
+        } else {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            bail!("Token request failed: {} {}", status, body);
+        }
+    }
+
+    /// Read `exp` from a JWT payload without validating the JWT signature.
+    ///
+    /// This helper is only used for local token-expiry checks to decide whether to refresh.
+    /// Token authenticity is still enforced by the Pasqal Cloud API when requests are sent.
+    pub fn jwt_expiry_unix_seconds(token: &str) -> Result<Option<i64>> {
+        let token = token.trim();
+        if token.is_empty() {
+            return Ok(None);
+        }
+
+        let mut parts = token.split('.');
+        let _header = match parts.next() {
+            Some(p) if !p.is_empty() => p,
+            _ => return Ok(None),
+        };
+        let payload = match parts.next() {
+            Some(p) if !p.is_empty() => p,
+            _ => return Ok(None),
+        };
+        if parts.next().is_none() {
+            return Ok(None);
+        }
+
+        let payload_bytes = URL_SAFE_NO_PAD.decode(payload)?;
+        let v: Value = serde_json::from_slice(&payload_bytes)?;
+        let Some(exp) = v.get("exp") else {
+            return Ok(None);
+        };
+
+        if let Some(n) = exp.as_i64() {
+            Ok(Some(n))
+        } else if let Some(s) = exp.as_str() {
+            Ok(Some(s.parse::<i64>()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Check whether a cached auth token is usable at `now_unix_seconds`.
+    ///
+    /// Non-empty tokens without JWT expiry are treated as usable.
+    pub fn is_auth_token_usable(token: &str, now_unix_seconds: i64) -> bool {
+        if token.trim().is_empty() {
+            return false;
+        }
+
+        match Self::jwt_expiry_unix_seconds(token) {
+            Ok(Some(exp)) => exp > now_unix_seconds,
+            Ok(None) => true,
+            Err(_) => false,
+        }
+    }
 }
 
 /// A [`ClientBuilder`] can be used to create a [`Client`] with custom configuration.
@@ -215,7 +319,7 @@ impl ClientBuilder {
     /// ```rust
     /// use pasqal_cloud_api::ClientBuilder;
     ///
-    /// let _builder = ClientBuilder::new(token);
+    /// let _builder = ClientBuilder::new("your_token".to_string(), "your_project_id".to_string());
     /// ```
     pub fn new(token: String, project_id: String) -> Self {
         Self {
@@ -230,11 +334,10 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use pasqal_cloud_api::{ClientBuilder, AuthMethod};
+    /// use pasqal_cloud_api::ClientBuilder;
     ///
-    /// let _builder = ClientBuilder::new()
-    ///     .with_token("your_token".to_string())
-    ///     .build()
+    /// let mut builder = ClientBuilder::new("your_token".to_string(), "your_project_id".to_string());
+    /// let _client = builder.build();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
         let mut reqwest_client_builder = reqwest::Client::builder();
@@ -263,81 +366,4 @@ impl ClientBuilder {
 #[derive(Debug, Clone, Deserialize)]
 struct AuthTokenResponse {
     access_token: String,
-}
-
-/// Request a Pasqal Cloud access token using username/password.
-///
-/// This uses the same Auth0 password-realm flow currently documented for Pasqal Cloud.
-pub async fn request_access_token(
-    auth_endpoint: &str,
-    username: &str,
-    password: &str,
-) -> Result<String> {
-    let auth_endpoint = if auth_endpoint.contains("://") {
-        auth_endpoint.to_string()
-    } else {
-        format!("https://{auth_endpoint}")
-    };
-
-    let params = [
-        ("grant_type", "http://auth0.com/oauth/grant-type/password-realm"),
-        ("realm", "pcs-users"),
-        ("client_id", "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB"),
-        ("audience", "https://apis.pasqal.cloud/account/api/v1"),
-        ("username", username),
-        ("password", password),
-    ];
-
-    let resp = reqwest::Client::new()
-        .post(auth_endpoint)
-        .header(
-            reqwest::header::CONTENT_TYPE,
-            "application/x-www-form-urlencoded",
-        )
-        .form(&params)
-        .send()
-        .await?;
-
-    if resp.status().is_success() {
-        let token: AuthTokenResponse = resp.json().await?;
-        Ok(token.access_token)
-    } else {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        bail!("Token request failed: {} {}", status, body);
-    }
-}
-
-pub fn jwt_expiry_unix_seconds(token: &str) -> Result<Option<i64>> {
-    let token = token.trim();
-    if token.is_empty() {
-        return Ok(None);
-    }
-
-    let mut parts = token.split('.');
-    let _header = match parts.next() {
-        Some(p) if !p.is_empty() => p,
-        _ => return Ok(None),
-    };
-    let payload = match parts.next() {
-        Some(p) if !p.is_empty() => p,
-        _ => return Ok(None),
-    };
-    if parts.next().is_none() {
-        return Ok(None);
-    }
-
-    let payload_bytes = URL_SAFE_NO_PAD.decode(payload)?;
-    let v: Value = serde_json::from_slice(&payload_bytes)?;
-    let Some(exp) = v.get("exp") else {
-        return Ok(None);
-    };
-
-    if let Some(n) = exp.as_i64() {
-        Ok(Some(n))
-    } else if let Some(s) = exp.as_str() {
-        Ok(Some(s.parse::<i64>()?))
-    } else {
-        Ok(None)
-    }
 }

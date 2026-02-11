@@ -14,7 +14,7 @@ use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use pasqal_cloud_api::{
-    jwt_expiry_unix_seconds, request_access_token, BatchStatus, Client, ClientBuilder, DeviceType,
+    BatchStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT,
 };
 use log::debug;
 use std::collections::HashMap;
@@ -179,7 +179,7 @@ impl PasqalCloud {
                 "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
             ))
             .unwrap_or_else(|| String::new());
-        let auth_token_expiry_unix_seconds = jwt_expiry_unix_seconds(&auth_token)?;
+        let auth_token_expiry_unix_seconds = Client::jwt_expiry_unix_seconds(&auth_token)?;
 
         let auth_endpoint_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT");
         let env_auth_endpoint = env::var(&auth_endpoint_var)
@@ -191,7 +191,7 @@ impl PasqalCloud {
                 backend_name,
                 "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT",
             ))
-            .unwrap_or_else(|| "authenticate.pasqal.cloud/oauth/token".to_string());
+            .unwrap_or_else(|| DEFAULT_AUTH_ENDPOINT.to_string());
 
         let auth_token_state = if auth_token.is_empty() { "empty" } else { "set" };
         debug!(
@@ -213,22 +213,15 @@ impl PasqalCloud {
     }
 
     async fn ensure_authenticated(&mut self) -> Result<()> {
-        if !self.auth_token.trim().is_empty() {
-            if let Some(exp) = self.auth_token_expiry_unix_seconds {
-                let now = now_unix_seconds()?;
-                if exp > now {
-                    return Ok(());
-                }
-                // Token is expired; refresh if possible.
-                debug!(
-                    "Auth token is expired (expired at {}, now is {}), will attempt to refresh",
-                    exp, now
-                );
-            } else {
-                // Token exists but is not a JWT (or has no exp); treat as usable.
-                debug!("Auth token exists but has no expiry info, treating as valid");
-                return Ok(());
-            }
+        let now = now_unix_seconds()?;
+        if Client::is_auth_token_usable(&self.auth_token, now) {
+            return Ok(());
+        }
+        if let Some(exp) = self.auth_token_expiry_unix_seconds {
+            debug!(
+                "Auth token is expired (expired at {}, now is {}), will attempt to refresh",
+                exp, now
+            );
         }
         let (Some(username), Some(password)) = (self.username.as_deref(), self.password.as_deref())
         else {
@@ -239,9 +232,10 @@ impl PasqalCloud {
             "Requesting new auth token for PasqalCloud QRMI (backend '{}')",
             self.backend_name
         );
-        let token = request_access_token(&self.auth_endpoint, username, password).await?;
+        let token = Client::request_access_token(&self.auth_endpoint, username, password).await?;
         self.auth_token = token;
-        self.auth_token_expiry_unix_seconds = jwt_expiry_unix_seconds(&self.auth_token)?;
+        self.auth_token_expiry_unix_seconds =
+            Client::jwt_expiry_unix_seconds(&self.auth_token)?;
         self.api_client = ClientBuilder::new(self.auth_token.clone(), self.project_id.clone())
             .build()?;
         Ok(())
@@ -387,6 +381,15 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn metadata(&mut self) -> HashMap<String, String> {
+        // `metadata()` returns a plain HashMap (not Result), so auth errors cannot be propagated
+        // with `?` here. Long-term fix: change the trait/API to return
+        // `Result<HashMap<String, String>>` and bubble this error to callers.
+        if let Err(err) = self.ensure_authenticated().await {
+            debug!(
+                "Failed to ensure authentication while fetching metadata for '{}': {}",
+                self.backend_name, err
+            );
+        }
         let mut metadata: HashMap<String, String> = HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
