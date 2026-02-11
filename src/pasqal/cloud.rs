@@ -206,7 +206,7 @@ impl PasqalCloud {
         }
         if let Some(exp) = self.auth_token_expiry_unix_seconds {
             debug!(
-                "Auth token is expired (expired at {}, now is {}), will attempt to refresh",
+                "Auth token is expired or near expiry (exp {}, now {}), will attempt to refresh",
                 exp, now
             );
         }

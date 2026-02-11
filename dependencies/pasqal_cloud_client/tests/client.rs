@@ -84,10 +84,17 @@ fn auth_token_usable_without_expiry() {
 #[test]
 fn auth_token_usable_with_expiry() {
     let now = now_unix_seconds();
-    let past_token = make_jwt(json!({"exp": now - 60}));
-    let future_token = make_jwt(json!({"exp": now + 60}));
-    assert!(Client::is_auth_token_usable(&future_token, now));
+    let past_token = make_jwt(json!({"exp": now - 600}));
+    let future_token = make_jwt(json!({"exp": now + 600}));
+    // Token that expires in 5 seconds should not be considered usable,
+    // while token that expires in 15 seconds should be considered usable,
+    // given the default buffer of 10 seconds.
+    let near_expiry_token = make_jwt(json!({"exp": now + 5}));
+    let over_buffer_token = make_jwt(json!({"exp": now + 15}));
     assert!(!Client::is_auth_token_usable(&past_token, now));
+    assert!(!Client::is_auth_token_usable(&near_expiry_token, now));
+    assert!(Client::is_auth_token_usable(&over_buffer_token, now));
+    assert!(Client::is_auth_token_usable(&future_token, now));
 }
 
 #[test]

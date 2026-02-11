@@ -26,6 +26,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 pub const DEFAULT_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
+const AUTH_TOKEN_EXPIRY_GRACE_SECONDS: i64 = 10;
 const AUTH_GRANT_TYPE: &str = "http://auth0.com/oauth/grant-type/password-realm";
 const AUTH_REALM: &str = "pcs-users";
 const AUTH_CLIENT_ID: &str = "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB";
@@ -285,15 +286,27 @@ impl Client {
     /// Check whether a cached auth token is usable at `now_unix_seconds`.
     ///
     /// Non-empty tokens without JWT expiry are treated as usable.
+    /// JWT tokens are treated as expired if they are within the grace period of their expiry.
     pub fn is_auth_token_usable(token: &str, now_unix_seconds: i64) -> bool {
         if token.trim().is_empty() {
             return false;
         }
 
         match Self::jwt_expiry_unix_seconds(token) {
-            Ok(Some(exp)) => exp > now_unix_seconds,
-            Ok(None) => true,
-            Err(_) => false,
+            Ok(Some(exp)) => exp > now_unix_seconds + AUTH_TOKEN_EXPIRY_GRACE_SECONDS,
+            Ok(None) => {
+                debug!(
+                    "Auth token has no parseable JWT expiry; treating token as usable until rejected by API"
+                );
+                true
+            }
+            Err(err) => {
+                debug!(
+                    "Failed to parse auth token expiry from JWT payload; treating token as unusable: {}",
+                    err
+                );
+                false
+            }
         }
     }
 }
