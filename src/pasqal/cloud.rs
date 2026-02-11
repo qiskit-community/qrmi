@@ -395,3 +395,7 @@ impl QuantumResource for PasqalCloud {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/cloud.rs"]
+mod tests;
