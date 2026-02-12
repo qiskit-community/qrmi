@@ -326,18 +326,24 @@ impl QuantumResource for PasqalCloud {
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         self.ensure_authenticated().await?;
         match self.api_client.get_batch(task_id).await {
-            Ok(batch) => {
-                let status = match batch.data.status {
-                    BatchStatus::Pending => TaskStatus::Queued,
-                    BatchStatus::Running => TaskStatus::Running,
-                    BatchStatus::Done => TaskStatus::Completed,
-                    BatchStatus::Canceled => TaskStatus::Cancelled,
-                    BatchStatus::TimedOut => TaskStatus::Failed,
-                    BatchStatus::Error => TaskStatus::Failed,
-                    BatchStatus::Paused => TaskStatus::Queued,
-                };
-                return Ok(status);
-            }
+            // Assuming a single job per batch for now,
+            // Will need to be updated if multiple jobs per batch are supported in the future
+            Ok(batch) => match self.api_client.get_job(&batch.data.job_ids[0]).await {
+                Ok(job) => {
+                    let status = match &job.data.status {
+                        BatchStatus::Pending => TaskStatus::Queued,
+                        BatchStatus::Running => TaskStatus::Running,
+                        BatchStatus::Canceling => TaskStatus::Cancelled,
+                        BatchStatus::Done => TaskStatus::Completed,
+                        BatchStatus::Canceled => TaskStatus::Cancelled,
+                        BatchStatus::TimedOut => TaskStatus::Failed,
+                        BatchStatus::Error => TaskStatus::Failed,
+                        BatchStatus::Paused => TaskStatus::Queued,
+                    };
+                    Ok(status)
+                }
+                Err(err) => Err(err),
+            },
             Err(err) => Err(err),
         }
     }
