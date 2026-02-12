@@ -16,9 +16,6 @@ use anyhow::{anyhow, bail, Result};
 use pasqal_cloud_api::{JobStatus, Client, ClientBuilder, DeviceType};
 use std::collections::HashMap;
 use std::env;
-use std::fs;
-use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use async_trait::async_trait;
