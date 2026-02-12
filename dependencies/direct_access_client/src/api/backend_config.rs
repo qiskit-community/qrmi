@@ -53,6 +53,6 @@ impl Client {
             "{}/v1/backends/{}/configuration",
             self.base_url, backend_name
         );
-        self.get::<T>(&url).await
+        self.get::<T>(&url, &self.client).await
     }
 }
