@@ -13,7 +13,7 @@
 
 use anyhow::{bail, Result};
 
-use crate::models::batch::BatchStatus;
+use crate::models::batch::JobStatus;
 use crate::models::device::DeviceType;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
@@ -65,13 +65,13 @@ pub struct CreateBatchResponseData {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetBatchResponseData {
-    pub status: BatchStatus,
+    pub status: JobStatus,
     pub job_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetJobResponseData {
-    pub status: BatchStatus,
+    pub status: JobStatus,
 }
 
 #[derive(Debug, Clone, Deserialize)]
