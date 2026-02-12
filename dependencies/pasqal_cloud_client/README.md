@@ -56,20 +56,45 @@ RUST_LOG=trace <your command>
 
 ### Building API client instance
 
-A ClientBuilder can be used to create a Client.
-Currently assumed that the user will authenticate in a different way and provide the API token directly.
-
+A `ClientBuilder` can be used to create a `Client`.
 
 ```rust
-let client = ClientBuilder::new("https://apis.pasqal.cloud", <API token>, <project id>)
+use pasqal_cloud_api::ClientBuilder;
+
+let mut builder = ClientBuilder::new("<API token>".to_string(), "<project id>".to_string());
+let client = builder.build()?;
 ```
 
-### Invoking C++ API
+### Requesting an access token
+
+If username/password auth is used, `request_access_token` can be used to obtain a token.
+
+```rust
+use pasqal_cloud_api::{Client, DEFAULT_AUTH_ENDPOINT};
+
+let token = Client::request_access_token(
+    DEFAULT_AUTH_ENDPOINT,
+    "<username>",
+    "<password>",
+).await?;
+```
+
+### Checking JWT expiry
+
+`jwt_expiry_unix_seconds` returns the JWT `exp` claim (if present), so callers can refresh expired tokens.
+
+```rust
+use pasqal_cloud_api::Client;
+
+let exp = Client::jwt_expiry_unix_seconds("<jwt token>")?;
+```
+
+### Invoking Rust API
 
 You are ready to invoke Rust API by using created Client instance.
 
-```cpp
-  let job_id = client.run_job(&job).await?;
+```rust
+let batch = client.create_batch(sequence, job_runs, device_type).await?;
 ```
 
 All API client related errors are delivered as Error in Result struct like other Rust functions.
