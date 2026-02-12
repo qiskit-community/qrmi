@@ -13,7 +13,7 @@
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use pasqal_cloud_api::{BatchStatus, Client, ClientBuilder, DeviceType};
+use pasqal_cloud_api::{JobStatus, Client, ClientBuilder, DeviceType};
 use std::collections::HashMap;
 use std::env;
 use uuid::Uuid;
@@ -132,18 +132,24 @@ impl QuantumResource for PasqalCloud {
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         match self.api_client.get_batch(task_id).await {
-            Ok(batch) => {
-                let status = match batch.data.status {
-                    BatchStatus::Pending => TaskStatus::Queued,
-                    BatchStatus::Running => TaskStatus::Running,
-                    BatchStatus::Done => TaskStatus::Completed,
-                    BatchStatus::Canceled => TaskStatus::Cancelled,
-                    BatchStatus::TimedOut => TaskStatus::Failed,
-                    BatchStatus::Error => TaskStatus::Failed,
-                    BatchStatus::Paused => TaskStatus::Queued,
-                };
-                return Ok(status);
-            }
+            // Assuming a single job per batch for now,
+            // Will need to be updated if multiple jobs per batch are supported in the future
+            Ok(batch) => match self.api_client.get_job(&batch.data.job_ids[0]).await {
+                Ok(job) => {
+                    let status = match &job.data.status {
+                        JobStatus::Pending => TaskStatus::Queued,
+                        JobStatus::Running => TaskStatus::Running,
+                        JobStatus::Canceling => TaskStatus::Cancelled,
+                        JobStatus::Done => TaskStatus::Completed,
+                        JobStatus::Canceled => TaskStatus::Cancelled,
+                        JobStatus::TimedOut => TaskStatus::Failed,
+                        JobStatus::Error => TaskStatus::Failed,
+                        JobStatus::Paused => TaskStatus::Queued,
+                    };
+                    Ok(status)
+                }
+                Err(err) => Err(err),
+            },
             Err(err) => Err(err),
         }
     }
