@@ -14,7 +14,7 @@ use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::debug;
-use pasqal_cloud_api::{BatchStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT};
+use pasqal_cloud_api::{JobStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -331,14 +331,14 @@ impl QuantumResource for PasqalCloud {
             Ok(batch) => match self.api_client.get_job(&batch.data.job_ids[0]).await {
                 Ok(job) => {
                     let status = match &job.data.status {
-                        BatchStatus::Pending => TaskStatus::Queued,
-                        BatchStatus::Running => TaskStatus::Running,
-                        BatchStatus::Canceling => TaskStatus::Cancelled,
-                        BatchStatus::Done => TaskStatus::Completed,
-                        BatchStatus::Canceled => TaskStatus::Cancelled,
-                        BatchStatus::TimedOut => TaskStatus::Failed,
-                        BatchStatus::Error => TaskStatus::Failed,
-                        BatchStatus::Paused => TaskStatus::Queued,
+                        JobStatus::Pending => TaskStatus::Queued,
+                        JobStatus::Running => TaskStatus::Running,
+                        JobStatus::Canceling => TaskStatus::Cancelled,
+                        JobStatus::Done => TaskStatus::Completed,
+                        JobStatus::Canceled => TaskStatus::Cancelled,
+                        JobStatus::TimedOut => TaskStatus::Failed,
+                        JobStatus::Error => TaskStatus::Failed,
+                        JobStatus::Paused => TaskStatus::Queued,
                     };
                     Ok(status)
                 }
