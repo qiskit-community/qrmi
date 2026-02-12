@@ -12,11 +12,14 @@
 #[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
 
+// SCREAMING_SNAKE_CASE converts capitalization and separates words with underscores
+// e.g. "TimedOut" matches "TIMED_OUT" as in our API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "UPPERCASE", deserialize = "UPPERCASE"))]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum BatchStatus {
     Pending,
     Running,
+    Canceling,
     Done,
     Canceled,
     TimedOut,

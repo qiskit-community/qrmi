@@ -56,6 +56,12 @@ pub struct CreateBatchResponseData {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetBatchResponseData {
     pub status: BatchStatus,
+    pub job_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetJobResponseData {
+    pub status: BatchStatus,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -128,6 +134,11 @@ impl Client {
 
     pub async fn get_batch(&self, batch_id: &str) -> Result<Response<GetBatchResponseData>> {
         let url = format!("{}/core-fast/api/v2/batches/{}", self.base_url, batch_id);
+        self.get(&url).await
+    }
+
+    pub async fn get_job(&self, job_id: &str) -> Result<Response<GetJobResponseData>> {
+        let url = format!("{}/core-fast/api/v2/jobs/{}", self.base_url, job_id);
         self.get(&url).await
     }
 
