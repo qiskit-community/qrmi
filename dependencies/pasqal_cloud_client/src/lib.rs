@@ -18,5 +18,5 @@ mod client;
 mod models;
 
 pub use client::{Client, ClientBuilder};
-pub use models::BatchStatus;
+pub use models::JobStatus;
 pub use models::DeviceType;

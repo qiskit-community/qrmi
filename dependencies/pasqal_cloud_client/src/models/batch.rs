@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 // e.g. "TimedOut" matches "TIMED_OUT" as in our API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum BatchStatus {
+pub enum JobStatus {
     Pending,
     Running,
     Canceling,
