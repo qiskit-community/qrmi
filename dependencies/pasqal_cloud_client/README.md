@@ -56,20 +56,51 @@ RUST_LOG=trace <your command>
 
 ### Building API client instance
 
-A ClientBuilder can be used to create a Client.
-Currently assumed that the user will authenticate in a different way and provide the API token directly.
+`ClientBuilder` creates an auth-aware `Client`.
 
+You should provide either:
+- username + password, or
+- API token
+
+Default flow (username + password):
 
 ```rust
-let client = ClientBuilder::new("https://apis.pasqal.cloud", <API token>, <project id>)
+use pasqal_cloud_api::ClientBuilder;
+
+let mut builder = ClientBuilder::for_project("<project id>".to_string());
+builder.with_credentials("<username>".to_string(), "<password>".to_string());
+let mut client = builder.build()?;
 ```
 
-### Invoking C++ API
+Token flow:
+
+```rust
+use pasqal_cloud_api::ClientBuilder;
+
+let mut builder = ClientBuilder::for_project("<project id>".to_string());
+builder.with_token("<api token>".to_string());
+let mut client = builder.build()?;
+```
+
+### Invoking Rust API
 
 You are ready to invoke Rust API by using created Client instance.
 
-```cpp
-  let job_id = client.run_job(&job).await?;
+```rust
+let batch = client.create_batch(sequence, job_runs, device_type).await?;
+```
+
+### Optional: custom auth endpoint
+
+Most users do not need to set this. Use only when a non-default auth endpoint is required.
+
+```rust
+use pasqal_cloud_api::ClientBuilder;
+
+let mut builder = ClientBuilder::for_project("<project id>".to_string());
+builder.with_credentials("<username>".to_string(), "<password>".to_string());
+builder.with_auth_endpoint("<auth endpoint>".to_string());
+let mut client = builder.build()?;
 ```
 
 All API client related errors are delivered as Error in Result struct like other Rust functions.
