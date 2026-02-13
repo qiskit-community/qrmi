@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -17,6 +17,7 @@
 mod client;
 mod models;
 
+pub use client::DEFAULT_AUTH_ENDPOINT;
 pub use client::{Client, ClientBuilder};
-pub use models::BatchStatus;
 pub use models::DeviceType;
+pub use models::JobStatus;
