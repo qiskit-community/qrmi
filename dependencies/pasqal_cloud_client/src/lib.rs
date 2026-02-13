@@ -19,5 +19,5 @@ mod models;
 
 pub use client::DEFAULT_AUTH_ENDPOINT;
 pub use client::{Client, ClientBuilder};
-pub use models::JobStatus;
 pub use models::DeviceType;
+pub use models::JobStatus;

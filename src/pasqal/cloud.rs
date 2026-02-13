@@ -13,8 +13,8 @@
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use log::debug;
-use pasqal_cloud_api::{JobStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT};
+use log::{debug, warn};
+use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -50,18 +50,42 @@ fn now_unix_seconds() -> Result<i64> {
 }
 
 fn read_pasqal_config(_backend_name: &str) -> Result<PasqalConfig> {
-    let home = match env::var("HOME") {
-        Ok(v) if !v.trim().is_empty() => v,
-        _ => return Ok(PasqalConfig::default()),
-    };
+    let mut config_path_candidates: Vec<PathBuf> = Vec::new();
+    let mut pasqal_config_root_path: Option<PathBuf> = None;
 
-    let mut path = PathBuf::from(home);
-    path.push(".pasqal");
-    path.push("config");
+    if let Ok(config_root) = env::var("PASQAL_CONFIG_ROOT") {
+        if !config_root.trim().is_empty() {
+            let mut path = PathBuf::from(config_root);
+            path.push(".pasqal");
+            path.push("config");
+            pasqal_config_root_path = Some(path.clone());
+            config_path_candidates.push(path);
+        }
+    }
 
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return Ok(PasqalConfig::default()),
+    if let Ok(home) = env::var("HOME") {
+        if !home.trim().is_empty() {
+            let mut path = PathBuf::from(home);
+            path.push(".pasqal");
+            path.push("config");
+            config_path_candidates.push(path);
+        }
+    }
+
+    let content = match config_path_candidates
+        .iter()
+        .find_map(|path| fs::read_to_string(path).ok())
+    {
+        Some(content) => content,
+        None => {
+            if let Some(path) = pasqal_config_root_path {
+                warn!(
+                    "PASQAL_CONFIG_ROOT is set but config file was not found: {}",
+                    path.display()
+                );
+            }
+            return Ok(PasqalConfig::default());
+        }
     };
 
     let mut config = PasqalConfig::default();
@@ -94,6 +118,14 @@ fn read_pasqal_config(_backend_name: &str) -> Result<PasqalConfig> {
 
 fn read_qrmi_config_env_value(backend_name: &str, key: &str) -> Option<String> {
     let content = fs::read_to_string("/etc/slurm/qrmi_config.json").ok()?;
+    read_qrmi_config_env_value_from_content(&content, backend_name, key)
+}
+
+fn read_qrmi_config_env_value_from_content(
+    content: &str,
+    backend_name: &str,
+    key: &str,
+) -> Option<String> {
     let root: serde_json::Value = serde_json::from_str(&content).ok()?;
     let resources = root.get("resources")?.as_array()?;
 
