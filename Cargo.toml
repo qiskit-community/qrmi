@@ -74,6 +74,10 @@ python-source = "python"
 module-name   = "qrmi._core"
 
 [[example]]
+name = "qrmi-example-config"
+path = "examples/qrmi/rust/qrmi_config/src/main.rs"
+
+[[example]]
 name = "qrmi-example-qiskit-runtime-service"
 path = "examples/qrmi/rust/qiskit_runtime_service/src/main.rs"
 

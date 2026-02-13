@@ -64,7 +64,13 @@ impl QuantumResource for PasqalCloud {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let valid_devices = [
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL",
+                ];
                 let err = format!(
                     "Device '{}' is invalid. Valid devices: {}",
                     self.backend_name,
@@ -76,7 +82,7 @@ impl QuantumResource for PasqalCloud {
 
         // The device may be down temporarily but jobs can still
         // be submitted and queued through the cloud
-        // Thus we only check that the device is not retired 
+        // Thus we only check that the device is not retired
         match self.api_client.get_device(device_type).await {
             Ok(device) => Ok(device.availability == "ACTIVE"),
             Err(err) => bail!("Failed to get device: {}", err),
@@ -100,7 +106,13 @@ impl QuantumResource for PasqalCloud {
             let device_type = match self.backend_name.parse::<DeviceType>() {
                 Ok(dt) => dt,
                 Err(_) => {
-                    let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                    let valid_devices = [
+                        "FRESNEL",
+                        "FRESNEL_CAN1",
+                        "EMU_MPS",
+                        "EMU_FREE",
+                        "EMU_FRESNEL",
+                    ];
                     let err = format!(
                         "Device '{}' is invalid. Valid devices: {}",
                         self.backend_name,
@@ -163,7 +175,13 @@ impl QuantumResource for PasqalCloud {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
+                let valid_devices = [
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL",
+                ];
                 let err = format!(
                     "Device '{}' is invalid. Valid devices: {}",
                     self.backend_name,

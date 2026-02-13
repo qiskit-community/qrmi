@@ -13,6 +13,7 @@
 # that they have been altered from the originals.
 
 """qrmi_task_runner - Command to run a QRMI task"""
+
 import os
 import sys
 import time
@@ -55,7 +56,9 @@ def _get_loglevel() -> int:
 
 
 logging.basicConfig(
-    stream=sys.stdout, level=_get_loglevel(), format="%(asctime)s %(levelname)s %(message)s"
+    stream=sys.stdout,
+    level=_get_loglevel(),
+    format="%(asctime)s %(levelname)s %(message)s",
 )
 logger = getLogger(__name__)
 
