@@ -18,6 +18,6 @@ mod client;
 mod models;
 
 pub use client::DEFAULT_AUTH_ENDPOINT;
-pub use client::{Client, ClientBuilder};
+pub use client::{AuthError, Client, ClientBuilder};
 pub use models::DeviceType;
 pub use models::JobStatus;

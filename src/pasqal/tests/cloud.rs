@@ -23,11 +23,13 @@ async fn is_accessible_attempts_authentication() {
                 let mut buf = [0_u8; 4096];
                 let n = stream.read(&mut buf).unwrap_or(0);
                 let req = String::from_utf8_lossy(&buf[..n]);
+                let req_lower = req.to_ascii_lowercase();
 
                 // hardcode responses based on the request path
                 let body = if req.contains("/oauth/token") {
                     r#"{"access_token":"opaque_token"}"#
                 } else if req.contains("/core-fast/api/v1/devices") {
+                    assert!(req_lower.contains("authorization: bearer opaque_token"));
                     r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#
                 } else {
                     r#"{}"#
@@ -45,20 +47,16 @@ async fn is_accessible_attempts_authentication() {
         }
     });
 
-    let api_client = ClientBuilder::new(String::new(), "project-id".to_string())
-        .build()
-        .expect("client build should succeed");
+    let mut builder = ClientBuilder::for_project("project-id".to_string());
+    builder.base_url(format!("http://{}", addr));
+    builder.with_auth_endpoint(format!("http://{}/oauth/token", addr));
+    builder.with_credentials("usr".to_string(), "pass".to_string());
+    let api_client = builder.build().expect("client build should succeed");
 
     // Create a PasqalCloud instance pointing to the mock server
     let mut qrmi = PasqalCloud {
         api_client,
         backend_name: "EMU_FREE".to_string(),
-        auth_token: String::new(),
-        auth_token_expiry_unix_seconds: None,
-        project_id: "project-id".to_string(),
-        auth_endpoint: format!("http://{}", addr),
-        username: Some("usr".to_string()),
-        password: Some("pass".to_string()),
     };
 
     let accessible = qrmi
@@ -69,7 +67,6 @@ async fn is_accessible_attempts_authentication() {
 
     // Verify that `is_accessible()` returns true and that the obtained token is used.
     assert!(accessible);
-    assert_eq!(qrmi.auth_token, "opaque_token".to_string());
 }
 
 #[test]

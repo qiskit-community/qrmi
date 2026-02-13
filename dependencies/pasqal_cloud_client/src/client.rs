@@ -24,13 +24,26 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
+use thiserror::Error;
 
 pub const DEFAULT_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
+pub const DEFAULT_BASE_URL: &str = "https://apis.pasqal.cloud";
 const AUTH_TOKEN_EXPIRY_GRACE_SECONDS: i64 = 10;
 const AUTH_GRANT_TYPE: &str = "http://auth0.com/oauth/grant-type/password-realm";
 const AUTH_REALM: &str = "pcs-users";
 const AUTH_CLIENT_ID: &str = "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB";
 const AUTH_AUDIENCE: &str = "https://apis.pasqal.cloud/account/api/v1";
+
+fn now_unix_seconds() -> Result<i64> {
+    Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64)
+}
+
+#[derive(Debug, Error)]
+pub enum AuthError {
+    #[error("auth token is missing or expired and username/password are not configured")]
+    MissingCredentialsForRefresh,
+}
 
 /// An asynchronous `Client` to make Requests with.
 #[derive(Debug, Clone)]
@@ -40,6 +53,11 @@ pub struct Client {
     /// HTTP client to interact with Pasqal Cloud service
     pub(crate) client: reqwest_middleware::ClientWithMiddleware,
     pub(crate) project_id: String,
+    pub(crate) auth_token: String,
+    pub(crate) auth_token_expiry_unix_seconds: Option<i64>,
+    pub(crate) auth_endpoint: String,
+    pub(crate) username: Option<String>,
+    pub(crate) password: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -96,7 +114,56 @@ pub struct Batch {
 }
 
 impl Client {
-    pub async fn get_device(&self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
+    fn build_http_client(token: &str) -> Result<reqwest_middleware::ClientWithMiddleware> {
+        let mut reqwest_client_builder = reqwest::Client::builder();
+        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+
+        let mut headers = header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
+        headers.insert(
+            reqwest::header::AUTHORIZATION,
+            reqwest::header::HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        );
+        reqwest_client_builder = reqwest_client_builder.default_headers(headers);
+        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        Ok(reqwest_builder.build())
+    }
+
+    async fn ensure_authenticated(&mut self) -> Result<()> {
+        // Ensure the client has a usable auth token, refreshing it in-place if necessary.
+        // If the client is missing credentials to refresh the token, this will return an error instead.
+
+        let now = now_unix_seconds()?;
+        if Self::is_auth_token_usable(&self.auth_token, now) {
+            return Ok(());
+        }
+
+        if let Some(exp) = self.auth_token_expiry_unix_seconds {
+            debug!(
+                "Auth token is expired or near expiry (exp {}, now {}), will attempt to refresh",
+                exp, now
+            );
+        }
+
+        let (Some(username), Some(password)) = (self.username.as_deref(), self.password.as_deref())
+        else {
+            return Err(AuthError::MissingCredentialsForRefresh.into());
+        };
+
+        debug!("Requesting new auth token from Pasqal Cloud");
+
+        // Request a new token and update the client
+        let token = Self::request_access_token(&self.auth_endpoint, username, password).await?;
+        self.auth_token = token;
+        self.auth_token_expiry_unix_seconds = Self::jwt_expiry_unix_seconds(&self.auth_token)?;
+        self.client = Self::build_http_client(&self.auth_token)?;
+        Ok(())
+    }
+
+    pub async fn get_device(&mut self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
@@ -113,7 +180,7 @@ impl Client {
     /// individual jobs, see:
     /// https://docs.pasqal.com/cloud/batches/
     pub async fn create_batch(
-        &self,
+        &mut self,
         sequence: String,
         job_runs: i32,
         device_type: DeviceType,
@@ -128,7 +195,10 @@ impl Client {
         self.post(&url, batch).await
     }
 
-    pub async fn cancel_batch(&self, batch_id: &str) -> Result<Response<CancelBatchResponseData>> {
+    pub async fn cancel_batch(
+        &mut self,
+        batch_id: &str,
+    ) -> Result<Response<CancelBatchResponseData>> {
         let url = format!(
             "{}/core-fast/api/v2/batches/{}/cancel",
             self.base_url, batch_id
@@ -136,17 +206,17 @@ impl Client {
         self.patch(&url).await
     }
 
-    pub async fn get_batch(&self, batch_id: &str) -> Result<Response<GetBatchResponseData>> {
+    pub async fn get_batch(&mut self, batch_id: &str) -> Result<Response<GetBatchResponseData>> {
         let url = format!("{}/core-fast/api/v2/batches/{}", self.base_url, batch_id);
         self.get(&url).await
     }
 
-    pub async fn get_job(&self, job_id: &str) -> Result<Response<GetJobResponseData>> {
+    pub async fn get_job(&mut self, job_id: &str) -> Result<Response<GetJobResponseData>> {
         let url = format!("{}/core-fast/api/v2/jobs/{}", self.base_url, job_id);
         self.get(&url).await
     }
 
-    pub async fn get_batch_results(&self, batch_id: &str) -> Result<String> {
+    pub async fn get_batch_results(&mut self, batch_id: &str) -> Result<String> {
         let url = format!(
             "{}/core-fast/api/v1/batches/{}/full_results",
             self.base_url, batch_id
@@ -169,9 +239,10 @@ impl Client {
     }
 
     pub async fn get_device_specs(
-        &self,
+        &mut self,
         device_type: DeviceType,
     ) -> Result<Response<GetDeviceSpecsResponseData>> {
+        // Not authenticated
         let url = format!(
             "{}/core-fast/api/v1/devices/specs/{}",
             self.base_url, device_type
@@ -179,21 +250,24 @@ impl Client {
         self.get(&url).await
     }
 
-    pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
+    pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
+        self.ensure_authenticated().await?;
         let resp = self.client.get(url).send().await?;
         self.handle_request(resp).await
     }
 
-    pub(crate) async fn patch<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
+    pub(crate) async fn patch<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
+        self.ensure_authenticated().await?;
         let resp = self.client.patch(url).send().await?;
         self.handle_request(resp).await
     }
 
     pub(crate) async fn post<T: DeserializeOwned, U: Serialize>(
-        &self,
+        &mut self,
         url: &str,
         body: U,
     ) -> Result<T> {
+        self.ensure_authenticated().await?;
         let resp = self.client.post(url).json(&body).send().await?;
         self.handle_request(resp).await
     }
@@ -330,6 +404,9 @@ pub struct ClientBuilder {
     base_url: String,
     token: String,
     project_id: String,
+    auth_endpoint: String,
+    username: Option<String>,
+    password: Option<String>,
 }
 
 impl ClientBuilder {
@@ -344,10 +421,40 @@ impl ClientBuilder {
     /// ```
     pub fn new(token: String, project_id: String) -> Self {
         Self {
-            base_url: "https://apis.pasqal.cloud".to_string(),
+            base_url: DEFAULT_BASE_URL.to_string(),
             token,
             project_id,
+            auth_endpoint: DEFAULT_AUTH_ENDPOINT.to_string(),
+            username: None,
+            password: None,
         }
+    }
+
+    /// Construct a new [`ClientBuilder`] with project id.
+    pub fn for_project(project_id: String) -> Self {
+        Self::new(String::new(), project_id)
+    }
+
+    /// Set custom API base URL.
+    pub fn base_url(&mut self, base_url: String) -> &mut Self {
+        self.base_url = base_url;
+        self
+    }
+
+    pub fn with_auth_endpoint(&mut self, auth_endpoint: String) -> &mut Self {
+        self.auth_endpoint = auth_endpoint;
+        self
+    }
+
+    pub fn with_token(&mut self, token: String) -> &mut Self {
+        self.token = token;
+        self
+    }
+
+    pub fn with_credentials(&mut self, username: String, password: String) -> &mut Self {
+        self.username = Some(username);
+        self.password = Some(password);
+        self
     }
 
     /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
@@ -361,25 +468,24 @@ impl ClientBuilder {
     /// let _client = builder.build();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
-        let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-
-        let mut headers = header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            reqwest::header::HeaderValue::from_static("application/json"),
+        debug!(
+            "Initialize Client (project_id set: {}, auth_token set: {}, username/password set: {}/{})",
+            !self.project_id.trim().is_empty(),
+            !self.token.trim().is_empty(),
+            self.username.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
+            self.password.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
         );
-        headers.insert(
-            reqwest::header::AUTHORIZATION,
-            reqwest::header::HeaderValue::from_str(&format!("Bearer {}", self.token)).unwrap(),
-        );
-        reqwest_client_builder = reqwest_client_builder.default_headers(headers);
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        let auth_token_expiry_unix_seconds = Client::jwt_expiry_unix_seconds(&self.token)?;
 
         Ok(Client {
             base_url: self.base_url.clone(),
-            client: reqwest_builder.build(),
+            client: Client::build_http_client(&self.token)?,
             project_id: self.project_id.clone(),
+            auth_token: self.token.clone(),
+            auth_token_expiry_unix_seconds,
+            auth_endpoint: self.auth_endpoint.clone(),
+            username: self.username.clone(),
+            password: self.password.clone(),
         })
     }
 }

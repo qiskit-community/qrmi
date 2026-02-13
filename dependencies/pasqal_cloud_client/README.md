@@ -56,37 +56,30 @@ RUST_LOG=trace <your command>
 
 ### Building API client instance
 
-A `ClientBuilder` can be used to create a `Client`.
+`ClientBuilder` creates an auth-aware `Client`.
+
+You should provide either:
+- username + password, or
+- API token
+
+Default flow (username + password):
 
 ```rust
 use pasqal_cloud_api::ClientBuilder;
 
-let mut builder = ClientBuilder::new("<API token>".to_string(), "<project id>".to_string());
-let client = builder.build()?;
+let mut builder = ClientBuilder::for_project("<project id>".to_string());
+builder.with_credentials("<username>".to_string(), "<password>".to_string());
+let mut client = builder.build()?;
 ```
 
-### Requesting an access token
-
-If username/password auth is used, `request_access_token` can be used to obtain a token.
+Token flow:
 
 ```rust
-use pasqal_cloud_api::{Client, DEFAULT_AUTH_ENDPOINT};
+use pasqal_cloud_api::ClientBuilder;
 
-let token = Client::request_access_token(
-    DEFAULT_AUTH_ENDPOINT,
-    "<username>",
-    "<password>",
-).await?;
-```
-
-### Checking JWT expiry
-
-`jwt_expiry_unix_seconds` returns the JWT `exp` claim (if present), so callers can refresh expired tokens.
-
-```rust
-use pasqal_cloud_api::Client;
-
-let exp = Client::jwt_expiry_unix_seconds("<jwt token>")?;
+let mut builder = ClientBuilder::for_project("<project id>".to_string());
+builder.with_token("<api token>".to_string());
+let mut client = builder.build()?;
 ```
 
 ### Invoking Rust API
@@ -95,6 +88,19 @@ You are ready to invoke Rust API by using created Client instance.
 
 ```rust
 let batch = client.create_batch(sequence, job_runs, device_type).await?;
+```
+
+### Optional: custom auth endpoint
+
+Most users do not need to set this. Use only when a non-default auth endpoint is required.
+
+```rust
+use pasqal_cloud_api::ClientBuilder;
+
+let mut builder = ClientBuilder::for_project("<project id>".to_string());
+builder.with_credentials("<username>".to_string(), "<password>".to_string());
+builder.with_auth_endpoint("<auth endpoint>".to_string());
+let mut client = builder.build()?;
 ```
 
 All API client related errors are delivered as Error in Result struct like other Rust functions.
