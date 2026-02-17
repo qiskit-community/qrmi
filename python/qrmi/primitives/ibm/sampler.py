@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright 2025 IBM. All Rights Reserved.
+# (C) Copyright 2025, 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -11,7 +11,7 @@
 # that they have been altered from the originals.
 
 """SamplerV2 Primitive implementation with IBM QRMI"""
-from typing import Union
+
 from qrmi import QuantumResource
 from qrmi.primitives import QRMIBaseSamplerV2
 
