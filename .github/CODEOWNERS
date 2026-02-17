@@ -1,0 +1,50 @@
+# This file defines the set of people responsible for different sections of the
+# QRMI code.
+#
+# Being listed as a code owner on a section here means that user is empowered
+# to approve and merge pull requests for that section of code. It also comes
+# with an expected responsibility to review and maintain those subsections of
+# the repository.
+#
+# A PR can be merged when approved by at least one codeowner. For PRs that touch
+# more than one section with non-overlapping codeowners more than one codeowner
+# may be required to approve a PR.
+#
+# However, every contributor to QRMI can (and should!) review open PRs. This
+# file is just about outlining responsibility for maintainership and final
+# review/merging of PRs in different subsections of the repository.
+
+# Global rule
+* @ohtanim @awennersteen @OkuyanBoga
+
+# QRMI folders (also their corresponding tests)
+src/pasqal/                                     @awennersteen
+python/qrmi/pulser_backend/                     @awennersteen
+python/qrmi/primitives/pasqal/                  @awennersteen
+dependencies/pasqal_cloud/client/               @awennersteen
+examples/pulser_backend/                        @awennersteen
+examples/qiskit_primitives/pasqal/              @awennersteen
+examples/qrmi/rust/pasqal_cloud                 @awennersteen
+examples/qrmi/python/pasqal_cloud               @awennersteen
+examples/qrmi/c/pasqal_cloud                    @awennersteen
+examples/task_runner/pulser                     @awennersteen
+examples/task_runner/qpp                        @awennersteen
+
+src/ibm/                                        @ohtanim @OkuyanBoga
+python/qrmi/primitives/ibm/                     @ohtanim @OkuyanBoga
+python/qrmi/tools/                              @ohtanim
+dependencies/direct_access_client/              @ohtanim
+dependencies/qiskit_runtime_client/             @OkuyanBoga
+examples/qiskit_primitives/ibm/                 @ohtanim @OkuyanBoga
+examples/qrmi/rust/qiskit_runtime_service       @OkuyanBoga
+examples/qrmi/python/qiskit_runtime_service     @OkuyanBoga
+examples/qrmi/c/qiskit_runtime_service          @OkuyanBoga
+examples/qrmi/rust/direct_access                @ohtanim
+examples/qrmi/python/direct_access              @ohtanim
+examples/qrmi/c/direct_access                   @ohtanim
+examples/qrmi/rust/qrmi_config                  @ohtanim
+examples/qrmi/c/config                          @ohtanim
+examples/task_runner/qiskit                     @ohtanim
+
+# Override the release notes directories to have _no_ code owners, so any review
+# from somebody with write access is acceptable.
