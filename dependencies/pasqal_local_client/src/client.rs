@@ -20,6 +20,8 @@ use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use crate::models::job::JobStatus;
+
 
 /// An asynchronous `Client` to make Requests with.
 #[derive(Debug, Clone)]
@@ -33,12 +35,15 @@ pub struct Client {
 #[derive(Debug, Clone, Deserialize)]
 pub struct JobResponse {
     pub id: i32,
-    pub user_id: String
+    pub user_id: String,
+    pub status: JobStatus,
+    pub results: Option<String>
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateJob {
     pub sequence: String,
+    pub shots: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -49,6 +54,7 @@ pub struct SessionResponse {
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateSessionPayload {
     pub user_id: String,
+    pub slurm_job_id: String,
 }
 
 impl Client {
@@ -63,14 +69,29 @@ impl Client {
         Ok(resp)
     }
 
+    pub async fn get_job(
+        &self,
+        job_id: &str
+    ) -> Result<JobResponse> {
+        let url = format!(
+            "{}/jobs/{}",
+            self.base_url,
+            job_id
+        );
+        let resp: JobResponse = self.get(&url).await?;
+        Ok(resp)
+    }
+
     pub async fn create_job(
         &self,
         sequence: String,
+        shots: i32,
         session_id: &str
     ) -> Result<JobResponse> {
         let url = format!("{}/jobs", self.base_url);
         let job = CreateJob {
             sequence: sequence,
+            shots: shots,
         };
         let resp = self.client.post(url).header("X-Warden-Session", session_id).json(&job).send().await?;
         self.handle_request(resp).await
@@ -79,6 +100,7 @@ impl Client {
     pub async fn create_session(
         &self,
         user_id: i32,
+        slurm_job_id: &str
     )-> Result<SessionResponse> {
         let url = format!(
             "{}/sessions",
@@ -86,6 +108,7 @@ impl Client {
         );
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
+            slurm_job_id: slurm_job_id.to_string(),
         };
         let resp = self.client.post(url).json(&session).send().await?;
         self.handle_request(resp).await

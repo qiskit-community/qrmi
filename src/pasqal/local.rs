@@ -14,7 +14,7 @@ use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{bail, Result};
 use anyhow::anyhow;
-use pasqal_local_api::{Client, ClientBuilder};
+use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::env;
 use uuid::Uuid;
@@ -25,7 +25,8 @@ use async_trait::async_trait;
 /// QRMI implementation for Pasqal Cloud
 pub struct PasqalLocal {
     pub(crate) api_client: Client,
-    pub(crate) job_uid: i32
+    pub(crate) job_uid: i32,
+    pub(crate) job_id: String
 }
 
 impl PasqalLocal {
@@ -39,9 +40,13 @@ impl PasqalLocal {
             .ok()
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap();
+        let job_id: String = env::var(format!("QRMI_JOB_ID"))
+            .ok()
+            .unwrap();
         Ok(Self {
             api_client: ClientBuilder::new().build().unwrap(),
-            job_uid: job_uid
+            job_uid: job_uid,
+            job_id: job_id
         })
     }
 }
@@ -74,7 +79,7 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn acquire(&mut self) -> Result<String> {
-        match self.api_client.create_session(self.job_uid).await {
+        match self.api_client.create_session(self.job_uid, &self.job_id).await {
             Ok(session) => Ok(session.id),
             Err(err) => Err(err), 
         }
@@ -100,7 +105,7 @@ impl QuantumResource for PasqalLocal {
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             match self
                 .api_client
-                .create_job(sequence, &session_id)
+                .create_job(sequence, job_runs, &session_id)
                 .await
             {
                 Ok(job) => Ok(job.id.to_string()),
@@ -116,30 +121,31 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        // match self.api_client.get_batch(task_id).await {
-        //     Ok(batch) => {
-        //         let status = match batch.data.status {
-        //             BatchStatus::Pending => TaskStatus::Queued,
-        //             BatchStatus::Running => TaskStatus::Running,
-        //             BatchStatus::Done => TaskStatus::Completed,
-        //             BatchStatus::Canceled => TaskStatus::Cancelled,
-        //             BatchStatus::TimedOut => TaskStatus::Failed,
-        //             BatchStatus::Error => TaskStatus::Failed,
-        //             BatchStatus::Paused => TaskStatus::Queued,
-        //         };
-        //         return Ok(status);
-        //     }
-        //     Err(err) => Err(err),
-        // }
-        Ok(TaskStatus::Completed)
+        match self.api_client.get_job(task_id).await {
+            Ok(job) => {
+                let status = match job.status {
+                    JobStatus::Pending => TaskStatus::Queued,
+                    JobStatus::Running => TaskStatus::Running,
+                    JobStatus::Done => TaskStatus::Completed,
+                    JobStatus::Canceled => TaskStatus::Cancelled,
+                    JobStatus::Error => TaskStatus::Failed,
+                };
+                return Ok(status);
+            }
+            Err(err) => Err(err),
+        }
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        // match self.api_client.get_batch_results(task_id).await {
-        //     Ok(resp) => Ok(TaskResult { value: resp }),
-        //     Err(_err) => Err(_err),
-        // }
-        Err(anyhow!("task_result not implemented yet"))
+        match self.api_client.get_job(task_id).await {
+            Ok(job) => {
+                let Some(results) = job.results else {
+                    bail!("Results not available. Current status: {:?}.", job.status);
+                };
+                Ok(TaskResult { value: results })
+            }
+            Err(err) => Err(err),
+        }
     }
 
     async fn task_logs(&mut self, _task_id: &str) -> Result<String> {

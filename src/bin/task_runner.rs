@@ -198,7 +198,10 @@ impl ResourceType {
                 sequence: sequence.to_string(),
                 job_runs: *job_runs,
             }),
-            ResourceType::PasqalLocal {} => Some(Payload::PasqalLocal {}),
+            ResourceType::PasqalLocal {  sequence, job_runs } => Some(Payload::PasqalCloud {
+                sequence: sequence.to_string(),
+                job_runs: *shots,
+            }),
         }
     }
     fn create_qrmi(

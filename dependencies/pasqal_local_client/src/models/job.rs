@@ -14,12 +14,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "UPPERCASE", deserialize = "UPPERCASE"))]
-pub enum BatchStatus {
+pub enum JobStatus {
     Pending,
     Running,
     Done,
     Canceled,
-    TimedOut,
     Error,
-    Paused,
 }
