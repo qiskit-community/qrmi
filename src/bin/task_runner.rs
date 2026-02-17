@@ -20,7 +20,8 @@ use std::io::BufReader;
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use std::{thread, time};
+
+use tokio::time::sleep;
 
 use futures::stream::StreamExt;
 use signal_hook::consts::signal::*;
@@ -31,6 +32,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
 use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use qrmi::ionq::IonQCloud;
 use qrmi::pasqal::PasqalCloud;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
 
@@ -64,6 +66,10 @@ pub struct QrmiInput {
     /// type.
     job_runs: Option<i32>,
 
+    /// Number of shots. Required for ionq-cloud QPU resource type.
+    /// type.
+    shots: Option<i32>,
+
     /// Parameters to inject into the primitive. Required for direct-access and
     /// qiskit-runtime-service QPU resources. Estimator schema:
     /// https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json,
@@ -78,6 +84,10 @@ pub struct QrmiInput {
     /// Pulser sequence for pasqal-cloud QPU resource. Required for pasqal-cloud QPU resource
     /// type.
     sequence: Option<String>,
+
+    /// Device target. Required for ionq-cloud QPU resource
+    /// type.
+    target: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Subcommand)]
@@ -97,6 +107,15 @@ pub enum ResourceType {
         input: String,
         /// Qiskit primitive type
         program_id: PrimitiveType,
+    },
+    /// IonQ Cloud
+    IonQCloud {
+        /// IonQ primitive input
+        input: String,
+        /// Target device
+        target: String,
+        /// Number of shots
+        shots: i32,
     },
     /// Pasqal Cloud
     PasqalCloud {
@@ -143,6 +162,30 @@ impl ResourceType {
                 }
             };
             Ok(Self::QiskitRuntimeService { input, program_id })
+        } else if qpu_type == "ionq-cloud" {
+            let input = match &deserialized.parameters {
+                Some(v) => v.to_string(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "parameters").into());
+                }
+            };
+            let target = match &deserialized.target {
+                Some(v) => v.as_str().to_string(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "target").into());
+                }
+            };
+            let shots = match &deserialized.shots {
+                Some(v) => *v,
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "shots").into());
+                }
+            };
+            Ok(Self::IonQCloud {
+                input: input,
+                target: target,
+                shots: shots,
+            })
         } else if qpu_type == "pasqal-cloud" {
             let job_runs = match &deserialized.job_runs {
                 Some(v) => v,
@@ -163,7 +206,7 @@ impl ResourceType {
         } else {
             Err(
                 eyre!(
-                    "Resource type {} is not supported. [supported types: direct-access, qiskit-runtime-service, pasqal-cloud]",
+                    "Resource type {} is not supported. [supported types: direct-access, qiskit-runtime-service, ionq-cloud, pasqal-cloud]",
                     qpu_type,
                 ).into()
             )
@@ -174,6 +217,7 @@ impl ResourceType {
         match self {
             ResourceType::IBMDirectAccess { .. } => "direct-access",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
+            ResourceType::IonQCloud { .. } => "ionq-cloud",
             ResourceType::PasqalCloud { .. } => "pasqal-cloud",
         }
     }
@@ -186,6 +230,13 @@ impl ResourceType {
                     program_id: program_id.as_str().to_string(),
                 })
             }
+            ResourceType::IonQCloud {
+                shots,
+                input,
+            } => Some(Payload::IonQCloud {
+                shots: *shots,
+                input: input.to_string(),
+            }),
             ResourceType::PasqalCloud { sequence, job_runs } => Some(Payload::PasqalCloud {
                 sequence: sequence.to_string(),
                 job_runs: *job_runs,
@@ -198,6 +249,7 @@ impl ResourceType {
             ResourceType::QiskitRuntimeService { .. } => {
                 Box::new(IBMQiskitRuntimeService::new(qpu_name))
             }
+            ResourceType::IonQCloud { .. } => Box::new(IonQCloud::new(qpu_name)),
             ResourceType::PasqalCloud { .. } => Box::new(PasqalCloud::new(qpu_name)),
         }
     }
@@ -367,7 +419,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Poll the task status until it progresses to a final state such as TaskStatus::Completed.
     let mut succeeded = false;
-    let one_sec = time::Duration::from_millis(POLLING_INTERVAL);
+    let one_sec = Duration::from_millis(POLLING_INTERVAL);
     while IS_RUNNING.load(Ordering::SeqCst) {
         match qrmi.task_status(&job_id).await {
             Ok(status) => {
@@ -386,7 +438,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
         }
-        thread::sleep(one_sec);
+        // use tokio::time::sleep inside tokio runtime
+        sleep(one_sec).await;
     }
 
     // write output if task was succeeded

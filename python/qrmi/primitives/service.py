@@ -56,6 +56,8 @@ class QRMIService:
                 qrmi = QuantumResource(qpu, ResourceType.IBMDirectAccess)
             elif qpu_types[i] == "qiskit-runtime-service":
                 qrmi = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
+            elif qpu_types[i] == "ionq-cloud":
+                qrmi = QuantumResource(qpu, ResourceType.IonQCloud)
             elif qpu_types[i] == "pasqal-cloud":
                 qrmi = QuantumResource(qpu, ResourceType.PasqalCloud)
             else:
