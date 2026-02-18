@@ -18,33 +18,25 @@
 * @ohtanim @awennersteen @OkuyanBoga
 
 # QRMI folders (also their corresponding tests)
-src/pasqal/                                     @awennersteen
-python/qrmi/pulser_backend/                     @awennersteen
-python/qrmi/primitives/pasqal/                  @awennersteen
-dependencies/pasqal_cloud/client/               @awennersteen
-examples/pulser_backend/                        @awennersteen
-examples/qiskit_primitives/pasqal/              @awennersteen
-examples/qrmi/rust/pasqal_cloud                 @awennersteen
-examples/qrmi/python/pasqal_cloud               @awennersteen
-examples/qrmi/c/pasqal_cloud                    @awennersteen
-examples/task_runner/pulser                     @awennersteen
-examples/task_runner/qpp                        @awennersteen
+/src/pasqal/                                    @awennersteen @MatthieuMoreau0
+/python/qrmi/pulser_backend/                    @awennersteen @MatthieuMoreau0
+/python/qrmi/primitives/pasqal/                 @awennersteen @MatthieuMoreau0
+/dependencies/pasqal_cloud_client/              @awennersteen @MatthieuMoreau0
+/examples/pulser_backend/                       @awennersteen @MatthieuMoreau0
+/examples/qiskit_primitives/pasqal/             @awennersteen @MatthieuMoreau0
+/examples/**/pasqal_cloud/                      @awennersteen @MatthieuMoreau0
+/examples/task_runner/pulser/                   @awennersteen @MatthieuMoreau0
+/examples/task_runner/qpp/                      @awennersteen @MatthieuMoreau0
 
-src/ibm/                                        @ohtanim @OkuyanBoga
-python/qrmi/primitives/ibm/                     @ohtanim @OkuyanBoga
-python/qrmi/tools/                              @ohtanim
-dependencies/direct_access_client/              @ohtanim
-dependencies/qiskit_runtime_client/             @OkuyanBoga
-examples/qiskit_primitives/ibm/                 @ohtanim @OkuyanBoga
-examples/qrmi/rust/qiskit_runtime_service       @OkuyanBoga
-examples/qrmi/python/qiskit_runtime_service     @OkuyanBoga
-examples/qrmi/c/qiskit_runtime_service          @OkuyanBoga
-examples/qrmi/rust/direct_access                @ohtanim
-examples/qrmi/python/direct_access              @ohtanim
-examples/qrmi/c/direct_access                   @ohtanim
-examples/qrmi/rust/qrmi_config                  @ohtanim
-examples/qrmi/c/config                          @ohtanim
-examples/task_runner/qiskit                     @ohtanim
+/src/ibm/                                       @ohtanim @OkuyanBoga
+/python/qrmi/primitives/ibm/                    @ohtanim @OkuyanBoga
+/dependencies/direct_access_client/             @ohtanim @yoonho
+/dependencies/qiskit_runtime_client/            @OkuyanBoga @ohtanim
+/examples/qiskit_primitives/ibm/                @ohtanim @OkuyanBoga
+/examples/**/qiskit_runtime_service/            @OkuyanBoga @ohtanim
+/examples/**/direct_access/                     @ohtanim @yoonho
+/examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga
 
 # Override the release notes directories to have _no_ code owners, so any review
 # from somebody with write access is acceptable.
+/releasenotes/notes
