@@ -11,7 +11,6 @@
 # that they have been altered from the originals.
 import json
 import os
-import urllib.request
 from dotenv import load_dotenv
 from pulser import Pulse, Register, Sequence
 from pulser.devices import AnalogDevice
@@ -44,13 +43,6 @@ if len(resources) == 0:
 # Randomly select QR
 qrmi = resources[0]
 
-# Regenerate QRMI instance with the token
-# this is a workaround until the middleware is properly put in place
-service = QRMIService()
-resources = service.resources()
-if len(resources) == 0:
-    print("No quantum resource is available.")
-qrmi = resources[0]
 qrmi_conn = PulserQRMIConnection(qrmi)
 # Generate Pulser device
 device = AnalogDevice
