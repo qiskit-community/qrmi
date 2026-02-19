@@ -1,8 +1,6 @@
-# Pasqal Cloud API Client for Rust
+# Pasqal Local API Client for Rust
 
-Like [this](https://github.com/pasqal-io/pasqal-cloud), in Rust.
-
-We refer to Pasqal's cloud API [documetation](https://docs.pasqal.com/cloud/api/core/#overview).
+Client to interact with Pasqal on prem QPUs.
 
 ## Supported OS
 
@@ -40,7 +38,7 @@ Users can generate API document from source.
 . ~/.cargo/env
 cargo doc --no-deps --open
 ```
-API document will be created under `../target/doc/pasqal_cloud_api` directory. 
+API document will be created under `../target/doc/pasqal_local_api` directory. 
 
 
 ## Logging
@@ -61,7 +59,7 @@ Currently assumed that the user will authenticate in a different way and provide
 
 
 ```rust
-let client = ClientBuilder::new("https://apis.pasqal.cloud", <API token>, <project id>)
+let client = ClientBuilder::new()
 ```
 
 ### Invoking C++ API
@@ -69,14 +67,14 @@ let client = ClientBuilder::new("https://apis.pasqal.cloud", <API token>, <proje
 You are ready to invoke Rust API by using created Client instance.
 
 ```cpp
-  let job_id = client.run_job(&job).await?;
+  let job_id = client.create_job(&job).await?;
 ```
 
 All API client related errors are delivered as Error in Result struct like other Rust functions.
 
 ## Contributing
 
-Regardless if you are part of the core team or an external contributor, welcome and thank you for contributing to Pasqal Cloud API Client for Rust!
+Regardless if you are part of the core team or an external contributor, welcome and thank you for contributing to Pasqal Local API Client for Rust!
 
 ### Solving linting/format issues
 
@@ -104,4 +102,4 @@ Contributor can generate API document from source.
 $ . ~/.cargo/env
 $ cargo doc --no-deps
 ```
-API document will be created under `../target/doc/pasqal_cloud_api` directory.
+API document will be created under `../target/doc/pasqal_local_api` directory.

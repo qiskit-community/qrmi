@@ -179,7 +179,7 @@ pub struct ClientBuilder {
         /// ```rust
         /// use pasqal_local_api::{ClientBuilder};
         ///
-        /// let _builder = ClientBuilder::new().build()
+        /// let _builder = ClientBuilder::new().build();
         /// ```
         pub fn build(&mut self) -> Result<Client> {
             let mut reqwest_client_builder = reqwest::Client::builder();
