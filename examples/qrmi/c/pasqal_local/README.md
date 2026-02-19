@@ -1,4 +1,4 @@
-# Pasqal Cloud QRMI - Examples in C
+# Pasqal Local QRMI - Examples in C
 
 ## Prerequisites
 

@@ -34,8 +34,13 @@ impl PasqalLocal {
     ///
     /// # Environment variables
     /// /// * `QRMI_JOB_UID`: uid of the slurm job
+    /// /// * `PASQAL_LOCAL_QRMI_URL`: URL of the pasqd middleware (warden)
     ///
     pub fn new() -> Result<Self> {
+        let url =
+            env::var(format!("PASQAL_LOCAL_QRMI_URL")).map_err(|_| {
+                anyhow!("PASQAL_LOCAL_QRMI_URL environment variable is not set")
+            })?;
         let job_uid: i32 = env::var(format!("QRMI_JOB_UID"))
             .ok()
             .and_then(|s| s.parse::<i32>().ok())
@@ -44,7 +49,7 @@ impl PasqalLocal {
             .ok()
             .unwrap();
         Ok(Self {
-            api_client: ClientBuilder::new().build().unwrap(),
+            api_client: ClientBuilder::new(url).build().unwrap(),
             job_uid: job_uid,
             job_id: job_id
         })

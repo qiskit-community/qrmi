@@ -35,10 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    // dotenv().ok();
-    // println!("{}", dotenv().unwrap().display());
-
-    let client = ClientBuilder::new().build().unwrap();
+    let client = ClientBuilder::new("http://localhost:4207").build().unwrap();
 
     
 

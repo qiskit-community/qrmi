@@ -59,7 +59,7 @@ Currently assumed that the user will authenticate in a different way and provide
 
 
 ```rust
-let client = ClientBuilder::new()
+let client = ClientBuilder::new("http://localhost:4207")
 ```
 
 ### Invoking C++ API

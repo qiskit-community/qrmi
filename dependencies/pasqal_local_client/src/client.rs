@@ -164,11 +164,12 @@ pub struct ClientBuilder {
         /// ```rust
         /// use pasqal_local_api::ClientBuilder;
         ///
-        /// let _builder = ClientBuilder::new();
+        /// let _builder = ClientBuilder::new("http://localhost:4207");
         /// ```
-        pub fn new() -> Self {
+        pub fn new(base_url: impl Into<String>) -> Self {
+            let base_url: String = base_url.into(); 
             Self {
-                base_url: "http://localhost:4207".to_string(),
+                base_url:base_url,
             }
         }
 
@@ -179,7 +180,7 @@ pub struct ClientBuilder {
         /// ```rust
         /// use pasqal_local_api::{ClientBuilder};
         ///
-        /// let _builder = ClientBuilder::new().build();
+        /// let _builder = ClientBuilder::new("http://localhost:4207").build();
         /// ```
         pub fn build(&mut self) -> Result<Client> {
             let mut reqwest_client_builder = reqwest::Client::builder();
