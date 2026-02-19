@@ -19,5 +19,4 @@ mod models;
 mod munge;
 
 pub use client::{Client, ClientBuilder};
-pub use models::DeviceType;
 pub use models::JobStatus;
