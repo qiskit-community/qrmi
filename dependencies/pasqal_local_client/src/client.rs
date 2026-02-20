@@ -58,28 +58,32 @@ pub struct CreateSessionPayload {
 }
 
 impl Client {
-    pub async fn get_jobs(
-        &self,
-    ) -> Result<Vec<JobResponse>> {
-        let url = format!(
-            "{}/jobs",
-            self.base_url,
+    /// Return authentication headers for request with a fresh munge token
+    async fn create_headers(&self) -> Result<header::HeaderMap> {
+        let mut headers = header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
         );
-        let resp: Vec<JobResponse> = self.get(&url).await?;
-        Ok(resp)
+        
+        // Generate fresh munge token for each request
+        let token = munge::encode(b"")?;
+        headers.insert(
+            reqwest::header::HeaderName::from_static("x-munge-cred"),
+            reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
+        );
+        
+        Ok(headers)
     }
 
-    pub async fn get_job(
-        &self,
-        job_id: &str
-    ) -> Result<JobResponse> {
-        let url = format!(
-            "{}/jobs/{}",
-            self.base_url,
-            job_id
-        );
-        let resp: JobResponse = self.get(&url).await?;
-        Ok(resp)
+    pub async fn get_jobs(&self) -> Result<Vec<JobResponse>> {
+        let url = format!("{}/jobs", self.base_url);
+        self.get(&url).await
+    }
+
+    pub async fn get_job(&self, job_id: &str) -> Result<JobResponse> {
+        let url = format!("{}/jobs/{}", self.base_url, job_id);
+        self.get(&url).await
     }
 
     pub async fn create_job(
@@ -90,10 +94,19 @@ impl Client {
     ) -> Result<JobResponse> {
         let url = format!("{}/jobs", self.base_url);
         let job = CreateJob {
-            sequence: sequence,
-            shots: shots,
+            sequence,
+            shots,
         };
-        let resp = self.client.post(url).header("X-Warden-Session", session_id).json(&job).send().await?;
+        
+        let headers = self.create_headers().await?;
+        let resp = self.client
+            .post(url)
+            .headers(headers)
+            .header("X-Warden-Session", session_id)
+            .json(&job)
+            .send()
+            .await?;
+        
         self.handle_request(resp).await
     }
 
@@ -101,35 +114,46 @@ impl Client {
         &self,
         user_id: i32,
         slurm_job_id: &str
-    )-> Result<SessionResponse> {
-        let url = format!(
-            "{}/sessions",
-            self.base_url,
-        );
+    ) -> Result<SessionResponse> {
+        let url = format!("{}/sessions", self.base_url);
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
             slurm_job_id: slurm_job_id.to_string(),
         };
-        let resp = self.client.post(url).json(&session).send().await?;
+        
+        let headers = self.create_headers().await?;
+        let resp = self.client
+            .post(url)
+            .headers(headers)
+            .json(&session)
+            .send()
+            .await?;
+        
         self.handle_request(resp).await
     }
 
-    pub async fn revoke_session(
-        &self,
-        session_id: &str,
-    )-> Result<SessionResponse> {
-        let url = format!(
-            "{}/sessions/{}",
-            self.base_url,
-            session_id,
-        );
-        let resp = self.client.delete(url).send().await?;
+    pub async fn revoke_session(&self, session_id: &str) -> Result<SessionResponse> {
+        let url = format!("{}/sessions/{}", self.base_url, session_id);
+        
+        let headers = self.create_headers().await?;
+        let resp = self.client
+            .delete(url)
+            .headers(headers)
+            .send()
+            .await?;
+        
         self.handle_request(resp).await
     }
 
 
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let resp = self.client.get(url).send().await?;
+        let headers = self.create_headers().await?;
+        let resp = self.client
+            .get(url)
+            .headers(headers)
+            .send()
+            .await?;
+        
         self.handle_request(resp).await
     }
 
@@ -186,25 +210,11 @@ pub struct ClientBuilder {
             let mut reqwest_client_builder = reqwest::Client::builder();
             reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
 
-            let mut headers = header::HeaderMap::new();
-            headers.insert(
-                reqwest::header::CONTENT_TYPE,
-                reqwest::header::HeaderValue::from_static("application/json"),
-            );
-            // TODO: Cache token?
-            let token = munge::encode(b"")?;
+        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
 
-            headers.insert(
-                reqwest::header::HeaderName::from_static("x-munge-cred"),
-                reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
-            );
-
-            reqwest_client_builder = reqwest_client_builder.default_headers(headers);
-            let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
-
-            Ok(Client {
-                base_url: self.base_url.clone(),
-                client: reqwest_builder.build(),
-            })
-        }
+        Ok(Client {
+            base_url: self.base_url.clone(),
+            client: reqwest_builder.build(),
+        })
     }
+}

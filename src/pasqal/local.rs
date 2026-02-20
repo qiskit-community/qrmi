@@ -17,7 +17,6 @@ use anyhow::anyhow;
 use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::env;
-use uuid::Uuid;
 
 
 use async_trait::async_trait;
@@ -96,7 +95,7 @@ impl QuantumResource for PasqalLocal {
                 anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
             })?;
         match self.api_client.revoke_session(&session_id).await {
-            Ok(session) => Ok(()),
+            Ok(_) => Ok(()),
             Err(err) => Err(err), 
         }
     }
@@ -121,7 +120,7 @@ impl QuantumResource for PasqalLocal {
         }
     }
 
-    async fn task_stop(&mut self, task_id: &str) -> Result<()> {
+    async fn task_stop(&mut self, _task_id: &str) -> Result<()> {
         Ok(())
     }
 
@@ -183,7 +182,7 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn metadata(&mut self) -> HashMap<String, String> {
-        let mut metadata: HashMap<String, String> = HashMap::new();
+        let metadata: HashMap<String, String> = HashMap::new();
         metadata
     }
 }
