@@ -1,7 +1,7 @@
 /*
  * This code is part of Qiskit.
  *
- * (C) Copyright IBM, Pasqal 2025.
+ * (C) Copyright IBM, Pasqal 2026.
  *
  * This code is licensed under the Apache License, Version 2.0. You may
  * obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -20,132 +20,123 @@
 extern void load_dotenv();
 extern const char *read_file(const char *);
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
-  if (argc != 3)
-  {
-    fprintf(stderr, "pasqal_local <backend_name> <input file>\n");
-    return EXIT_SUCCESS;
-  }
-
-  load_dotenv();
-
-  QrmiQuantumResource *qrmi =
-      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_PASQAL_LOCAL);
-  if (!qrmi)
-  {
-    const char *last_error = qrmi_get_last_error();
-    fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);
-    qrmi_string_free((char *)last_error);
-    return EXIT_FAILURE;
-  }
-
-  bool is_accessible = false;
-  QrmiReturnCode rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
-  if (rc == QRMI_RETURN_CODE_SUCCESS)
-  {
-    if (is_accessible == false)
-    {
-      fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
-      // return -1; // Fresnel currently inaccessible
+    if (argc != 3) {
+        fprintf(stderr, "pasqal_local <backend_name> <input file>\n");
+        return EXIT_SUCCESS;
     }
-  }
-  else
-  {
-    const char *last_error = qrmi_get_last_error();
-    fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
-    qrmi_string_free((char *)last_error);
-    goto error;
-  }
 
-  // char *acquisition_token = NULL;
-  // rc = qrmi_resource_acquire(qrmi, &acquisition_token);
-  // if (rc != QRMI_RETURN_CODE_SUCCESS) {
-  //   const char* last_error = qrmi_get_last_error();
-  //   fprintf(stdout, "qrmi_resource_acquire() failed. %s\n", last_error);
-  //   qrmi_string_free((char *)last_error);
-  //   goto error;
-  // }
-  // fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
+    load_dotenv();
 
-  // char *target = NULL;
-  // rc = qrmi_resource_target(qrmi, &target);
-  // if (rc == QRMI_RETURN_CODE_SUCCESS) {
-  //   fprintf(stdout, "target = %s\n", target);
-  //   qrmi_string_free((char *)target);
-  // } else {
-  //   fprintf(stderr, "qrmi_resource_target() failed.\n");
-  //   goto error;
-  // }
+    QrmiQuantumResource *qrmi = qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_PASQAL_LOCAL);
+    if (!qrmi) {
+        const char *last_error = qrmi_get_last_error();
+        fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);
+        qrmi_string_free((char *)last_error);
+        return EXIT_FAILURE;
+    }
 
-  // const char *input = read_file(argv[2]);
-  // const int shots = 100;
+    bool is_accessible = false;
+    QrmiReturnCode rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
+    if (rc == QRMI_RETURN_CODE_SUCCESS) {
+        if (is_accessible == false) {
+            fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
+            // return -1; // Fresnel currently inaccessible
+        }
+    } else {
+        const char *last_error = qrmi_get_last_error();
+        fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
+        qrmi_string_free((char *)last_error);
+        goto error;
+    }
 
-  // fprintf(stdout, "input = %s\n", input);
+    // char *acquisition_token = NULL;
+    // rc = qrmi_resource_acquire(qrmi, &acquisition_token);
+    // if (rc != QRMI_RETURN_CODE_SUCCESS) {
+    //   const char* last_error = qrmi_get_last_error();
+    //   fprintf(stdout, "qrmi_resource_acquire() failed. %s\n", last_error);
+    //   qrmi_string_free((char *)last_error);
+    //   goto error;
+    // }
+    // fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
 
-  QrmiPayload payload;
-  payload.tag = QRMI_PAYLOAD_PASQAL_CLOUD;
-  payload.PASQAL_CLOUD.sequence = (char *)"placeholder";
-  payload.PASQAL_CLOUD.job_runs = 10;
+    // char *target = NULL;
+    // rc = qrmi_resource_target(qrmi, &target);
+    // if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    //   fprintf(stdout, "target = %s\n", target);
+    //   qrmi_string_free((char *)target);
+    // } else {
+    //   fprintf(stderr, "qrmi_resource_target() failed.\n");
+    //   goto error;
+    // }
 
-  char *job_id = NULL;
-  rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
-  if (rc != QRMI_RETURN_CODE_SUCCESS)
-  {
-    fprintf(stderr, "failed to start a task.\n");
+    // const char *input = read_file(argv[2]);
+    // const int shots = 100;
+
+    // fprintf(stdout, "input = %s\n", input);
+
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_PASQAL_CLOUD;
+    payload.PASQAL_CLOUD.sequence = (char *)"placeholder";
+    payload.PASQAL_CLOUD.job_runs = 10;
+
+    char *job_id = NULL;
+    rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) {
+        fprintf(stderr, "failed to start a task.\n");
+        // free((void *)input);
+        goto error;
+    }
+    fprintf(stdout, "Job ID: %s\n", job_id);
     // free((void *)input);
-    goto error;
-  }
-  fprintf(stdout, "Job ID: %s\n", job_id);
-  // free((void *)input);
 
-  // QrmiTaskStatus status;
-  // while (1)
-  // {
-  //   rc = qrmi_resource_task_status(qrmi, job_id, &status);
-  //   fprintf(stdout, "rc = %d, status = %d\n", rc, status);
-  //   if (rc != QRMI_RETURN_CODE_SUCCESS || (status != QRMI_TASK_STATUS_RUNNING &&
-  //                                          status != QRMI_TASK_STATUS_QUEUED))
-  //   {
-  //     break;
-  //   }
-  //   sleep(1);
-  // }
+    // QrmiTaskStatus status;
+    // while (1)
+    // {
+    //   rc = qrmi_resource_task_status(qrmi, job_id, &status);
+    //   fprintf(stdout, "rc = %d, status = %d\n", rc, status);
+    //   if (rc != QRMI_RETURN_CODE_SUCCESS || (status != QRMI_TASK_STATUS_RUNNING &&
+    //                                          status != QRMI_TASK_STATUS_QUEUED))
+    //   {
+    //     break;
+    //   }
+    //   sleep(1);
+    // }
 
-  // rc = qrmi_resource_task_status(qrmi, job_id, &status);
-  // if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED)
-  // {
-  //   char *result = NULL;
-  //   rc = qrmi_resource_task_result(qrmi, job_id, &result);
-  //   if (rc == QRMI_RETURN_CODE_SUCCESS)
-  //   {
-  //     fprintf(stdout, "%s\n", result);
-  //     qrmi_string_free((char *)result);
-  //   }
-  // }
-  // else if (status == QRMI_TASK_STATUS_FAILED)
-  // {
-  //   fprintf(stderr, "Failed.\n");
-  // }
-  // else if (status == QRMI_TASK_STATUS_CANCELLED)
-  // {
-  //   fprintf(stderr, "Cancelled.\n");
-  // }
+    // rc = qrmi_resource_task_status(qrmi, job_id, &status);
+    // if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED)
+    // {
+    //   char *result = NULL;
+    //   rc = qrmi_resource_task_result(qrmi, job_id, &result);
+    //   if (rc == QRMI_RETURN_CODE_SUCCESS)
+    //   {
+    //     fprintf(stdout, "%s\n", result);
+    //     qrmi_string_free((char *)result);
+    //   }
+    // }
+    // else if (status == QRMI_TASK_STATUS_FAILED)
+    // {
+    //   fprintf(stderr, "Failed.\n");
+    // }
+    // else if (status == QRMI_TASK_STATUS_CANCELLED)
+    // {
+    //   fprintf(stderr, "Cancelled.\n");
+    // }
 
-  // // qrmi_resource_task_stop(qrmi, job_id); // what should be behaviour here?
+    // // qrmi_resource_task_stop(qrmi, job_id); // what should be behaviour here?
 
-  // qrmi_string_free((char *)job_id);
+    // qrmi_string_free((char *)job_id);
 
-  // rc = qrmi_resource_release(qrmi, acquisition_token);
-  // fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
-  // qrmi_string_free((char *)acquisition_token);
+    // rc = qrmi_resource_release(qrmi, acquisition_token);
+    // fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
+    // qrmi_string_free((char *)acquisition_token);
 
-  qrmi_resource_free(qrmi);
+    qrmi_resource_free(qrmi);
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 
 error:
-  qrmi_resource_free(qrmi);
-  return EXIT_FAILURE;
+    qrmi_resource_free(qrmi);
+    return EXIT_FAILURE;
 }

@@ -1,5 +1,5 @@
 //
-// (C) Copyright Pasqal SAS 2025
+// (C) Copyright Pasqal SAS 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -9,15 +9,13 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-
+mod error;
 mod ffi;
-mod error; 
 
 use crate::munge::error::MungeError;
 
 use std::ffi::CStr;
 use std::ptr;
-
 
 pub fn encode(payload: &[u8]) -> Result<String, MungeError> {
     let mut cred_ptr = ptr::null_mut();
@@ -44,11 +42,7 @@ pub fn encode(payload: &[u8]) -> Result<String, MungeError> {
         return Err(MungeError::EncodeFailed("null credential".into()));
     }
 
-    let token = unsafe {
-        CStr::from_ptr(cred_ptr)
-            .to_string_lossy()
-            .into_owned()
-    };
+    let token = unsafe { CStr::from_ptr(cred_ptr).to_string_lossy().into_owned() };
 
     Ok(token)
 }

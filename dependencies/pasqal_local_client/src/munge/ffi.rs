@@ -1,5 +1,5 @@
 //
-// (C) Copyright Pasqal SAS 2025
+// (C) Copyright Pasqal SAS 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -8,7 +8,6 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-
 
 use std::os::raw::{c_char, c_int, c_void};
 
