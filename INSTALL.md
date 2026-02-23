@@ -128,6 +128,23 @@ cargo build --bin task_runner --release --features=build-binary
 `task_runner` for Python version is already included in QRMI Python package. User can use task_runner command after installing qrmi. 
 For detailed instructions on how to use it, please refer to this [README](./python/qrmi/tools/task_runner/README.md).
 
+### How to build with Munge support for Pasqal Local
+
+By default, QRMI is built without Munge support. If you need to use the Pasqal Local client which relies on Munge for authentication, you must enable the `munge` feature during the build process.
+
+Build the rust library:
+
+```shell-session
+. ~/.cargo/env
+cargo build --release --features munge
+```
+
+Build the python wheels:
+
+```shell-session
+source ~/py312_qrmi_venv/bin/activate
+CARGO_TARGET_DIR=./target/release/maturin maturin build --release --features pyo3/extension-module,munge
+```
 
 ## Other
 

@@ -26,6 +26,9 @@ fn main() {
             eprintln!("{}", e);
         }
     }
+    if std::env::var("CARGO_FEATURE_MUNGE").is_ok() {
+        println!("cargo:rustc-link-lib=munge");
+    }
 
     println!("cargo:rerun-if-changed=/src/*");
     println!("cargo:rerun-if-changed=/build.rs");

@@ -8,6 +8,9 @@ rust-version.workspace = true
 version = "0.0.1"
 edition.workspace = true
 
+[features]
+munge = []
+
 [dependencies]
 anyhow = { version = "1.0.90", features = ["backtrace"] }
 reqwest = { version = "0.12.14", features = ["json"] }

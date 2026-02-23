@@ -11,6 +11,7 @@
 
 use std::os::raw::{c_char, c_int, c_void};
 
+#[cfg(feature = "munge")]
 #[link(name = "munge")]
 extern "C" {
     pub(crate) fn munge_encode(
