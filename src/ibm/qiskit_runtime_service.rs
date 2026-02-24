@@ -224,13 +224,13 @@ impl QuantumResource for IBMQiskitRuntimeService {
 
         // Determine if this session should be canceled or just closed
         let mut do_cancel = false;
-        // Obtain a list of jobs associated with this session(acqisition)
+        // Obtain a list of jobs associated with this session(acquisition)
         let jobs_resp = jobs_api::list_jobs(
             &self.config,
             None,
             None,
             None,
-            Some(true),
+            Some(true), // pending jobs only
             None,
             None,
             None,
