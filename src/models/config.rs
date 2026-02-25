@@ -71,7 +71,6 @@ pub struct ResourceDef {
     pub r#type: ResourceType,
 
     /// environment variables
-    #[serde(default)]
     pub environment: HashMap<String, String>,
 }
 

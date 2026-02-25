@@ -13,8 +13,8 @@
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use log::debug;
-use pasqal_cloud_api::{BatchStatus, Client, ClientBuilder, DeviceType, DEFAULT_AUTH_ENDPOINT};
+use log::{debug, warn};
+use pasqal_cloud_api::{Client, ClientBuilder, DevicceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -176,6 +176,7 @@ impl PasqalCloud {
         let env_project_id = env::var(&project_id_var)
             .ok()
             .filter(|v| !v.trim().is_empty());
+        // Preference order: explicit env var > user ~/.pasqal/config > cluster wide qrmi_config.json provides default.
         let project_id = env_project_id
             .or(cfg.project_id.clone().filter(|v| !v.trim().is_empty()))
             .or(read_qrmi_config_env_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID"))
