@@ -21,7 +21,5 @@ pub enum JobStatus {
     Canceling,
     Done,
     Canceled,
-    TimedOut,
     Error,
-    Paused,
 }
