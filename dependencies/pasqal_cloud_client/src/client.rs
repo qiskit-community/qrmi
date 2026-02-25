@@ -27,7 +27,6 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
-pub const DEFAULT_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
 pub const DEFAULT_BASE_URL: &str = "https://apis.pasqal.cloud";
 const AUTH_TOKEN_EXPIRY_GRACE_SECONDS: i64 = 10;
 const AUTH_GRANT_TYPE: &str = "http://auth0.com/oauth/grant-type/password-realm";
@@ -294,7 +293,7 @@ impl Client {
         password: &str,
     ) -> Result<String> {
         let auth_endpoint = if auth_endpoint.trim().is_empty() {
-            format!("https://{DEFAULT_AUTH_ENDPOINT}")
+            bail!("auth endpoint must be configured when using username/password authentication");
         } else if auth_endpoint.contains("://") {
             auth_endpoint.trim().to_string()
         } else {
@@ -424,7 +423,7 @@ impl ClientBuilder {
             base_url: DEFAULT_BASE_URL.to_string(),
             token,
             project_id,
-            auth_endpoint: DEFAULT_AUTH_ENDPOINT.to_string(),
+            auth_endpoint: String::new(),
             username: None,
             password: None,
         }

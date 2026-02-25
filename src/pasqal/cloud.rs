@@ -14,7 +14,7 @@ use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::{debug, error, warn};
-use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
+use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -31,6 +31,8 @@ struct PasqalConfig {
     project_id: Option<String>,
     auth_endpoint: Option<String>,
 }
+
+const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
 
 fn strip_quotes(s: &str) -> &str {
     let s = s.trim();
@@ -137,6 +139,18 @@ fn read_qrmi_config_env_value_from_content(
     None
 }
 
+fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<String>) {
+    let username = env::var("PASQAL_USERNAME")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or(cfg.username.clone().filter(|v| !v.trim().is_empty()));
+    let password = env::var("PASQAL_PASSWORD")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or(cfg.password.clone().filter(|v| !v.trim().is_empty()));
+    (username, password)
+}
+
 /// QRMI implementation for Pasqal Cloud
 pub struct PasqalCloud {
     pub(crate) api_client: Client,
@@ -150,8 +164,10 @@ impl PasqalCloud {
     ///
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID`: Pasqal Cloud Project ID to access the QPU
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN`: Pasqal Cloud Auth Token
-    ///
-    /// Let's hardcode the rest for now
+    /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
+    /// * `PASQAL_USERNAME`: Pasqal Cloud username
+    /// * `PASQAL_PASSWORD`: Pasqal Cloud password
+    /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `token`, `project_id`, `auth_endpoint`
     pub fn new(backend_name: &str) -> Result<Self> {
         debug!(
             "Initializing PasqalCloud QRMI for backend '{}'",
@@ -192,18 +208,19 @@ impl PasqalCloud {
                 backend_name,
                 "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT",
             ))
-            .unwrap_or_else(|| DEFAULT_AUTH_ENDPOINT.to_string());
+            .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
 
         debug!("Build PasqalCloud client for backend '{}'", backend_name);
         let mut builder = ClientBuilder::for_project(project_id.clone());
         builder.with_auth_endpoint(auth_endpoint.clone());
-        if let (Some(username), Some(password)) = (cfg.username.clone(), cfg.password.clone()) {
+        let (username, password) = resolve_pasqal_credentials(&cfg);
+        if let (Some(username), Some(password)) = (username, password) {
             builder.with_credentials(username, password);
         } else if let Some(token) = auth_token {
             builder.with_token(token);
         } else {
             error!(
-                "No Pasqal Cloud auth details configured for backend '{}': expected username/password or token",
+                "No Pasqal Cloud auth details configured for backend '{}': expected PASQAL_USERNAME/PASQAL_PASSWORD, ~/.pasqal/config credentials, or token",
                 backend_name
             );
         }

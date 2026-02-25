@@ -1,4 +1,7 @@
-use super::{read_pasqal_config, read_qrmi_config_env_value_from_content, PasqalCloud};
+use super::{
+    read_pasqal_config, read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
+    PasqalCloud, PasqalConfig,
+};
 use crate::models::ResourceType;
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
@@ -68,6 +71,27 @@ async fn is_accessible_attempts_authentication() {
 
     // Verify that `is_accessible()` returns true and that the obtained token is used.
     assert!(accessible);
+}
+
+#[test]
+fn resolve_pasqal_credentials_prefers_environment_variables() {
+    std::env::set_var("PASQAL_USERNAME", "env-user");
+    std::env::set_var("PASQAL_PASSWORD", "env-pass");
+
+    let cfg = PasqalConfig {
+        username: Some("config-user".to_string()),
+        password: Some("config-pass".to_string()),
+        token: None,
+        project_id: None,
+        auth_endpoint: None,
+    };
+    let (username, password) = resolve_pasqal_credentials(&cfg);
+
+    assert_eq!(username.as_deref(), Some("env-user"));
+    assert_eq!(password.as_deref(), Some("env-pass"));
+
+    std::env::remove_var("PASQAL_USERNAME");
+    std::env::remove_var("PASQAL_PASSWORD");
 }
 
 #[test]
