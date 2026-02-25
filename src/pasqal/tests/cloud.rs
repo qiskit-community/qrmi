@@ -1,6 +1,7 @@
 use super::PasqalCloud;
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
@@ -55,6 +56,7 @@ async fn is_accessible_attempts_authentication() {
     let mut qrmi = PasqalCloud {
         api_client,
         backend_name: "INVALID_BACKEND".to_string(),
+        job_to_batch: HashMap::new(),
         auth_token: String::new(),
         auth_token_expiry_unix_seconds: None,
         project_id: "project-id".to_string(),

@@ -116,6 +116,7 @@ fn read_qrmi_config_env_value(backend_name: &str, key: &str) -> Option<String> {
 pub struct PasqalCloud {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
+    job_to_batch: HashMap<String, String>,
     auth_token: String,
     auth_token_expiry_unix_seconds: Option<i64>,
     project_id: String,
@@ -190,6 +191,7 @@ impl PasqalCloud {
         Ok(Self {
             api_client,
             backend_name: backend_name.to_string(),
+            job_to_batch: HashMap::new(),
             auth_token,
             auth_token_expiry_unix_seconds,
             project_id,
@@ -303,7 +305,18 @@ impl QuantumResource for PasqalCloud {
                 .create_batch(sequence, job_runs, device_type)
                 .await
             {
-                Ok(batch) => Ok(batch.data.id),
+                Ok(batch) => {
+                    let batch_id = batch.data.id;
+                    let batch_details = self.api_client.get_batch(&batch_id).await?;
+                    let job_id = batch_details
+                        .data
+                        .job_ids
+                        .first()
+                        .ok_or_else(|| anyhow!("No Pasqal Cloud job id found in batch"))?
+                        .clone();
+                    self.job_to_batch.insert(job_id.clone(), batch_id);
+                    Ok(job_id)
+                }
                 Err(err) => Err(err),
             }
         } else {
@@ -317,7 +330,11 @@ impl QuantumResource for PasqalCloud {
             task_id, self.backend_name
         );
         self.ensure_authenticated().await?;
-        match self.api_client.cancel_batch(task_id).await {
+        let batch_id = self
+            .job_to_batch
+            .get(task_id)
+            .ok_or_else(|| anyhow!("No batch mapping found for Pasqal job id '{}'", task_id))?;
+        match self.api_client.cancel_batch(batch_id).await {
             Ok(_) => Ok(()),
             Err(err) => Err(err),
         }
@@ -325,30 +342,29 @@ impl QuantumResource for PasqalCloud {
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         self.ensure_authenticated().await?;
-        match self.api_client.get_batch(task_id).await {
-            // Assuming a single job per batch for now,
-            // Will need to be updated if multiple jobs per batch are supported in the future
-            Ok(batch) => match self.api_client.get_job(&batch.data.job_ids[0]).await {
-                Ok(job) => {
-                    let status = match &job.data.status {
-                        JobStatus::Pending => TaskStatus::Queued,
-                        JobStatus::Running => TaskStatus::Running,
-                        JobStatus::Canceling => TaskStatus::Cancelled,
-                        JobStatus::Done => TaskStatus::Completed,
-                        JobStatus::Canceled => TaskStatus::Cancelled,
-                        JobStatus::Error => TaskStatus::Failed,
-                    };
-                    Ok(status)
-                }
-                Err(err) => Err(err),
-            },
+        match self.api_client.get_job(task_id).await {
+            Ok(job) => {
+                let status = match &job.data.status {
+                    JobStatus::Pending => TaskStatus::Queued,
+                    JobStatus::Running => TaskStatus::Running,
+                    JobStatus::Canceling => TaskStatus::Cancelled,
+                    JobStatus::Done => TaskStatus::Completed,
+                    JobStatus::Canceled => TaskStatus::Cancelled,
+                    JobStatus::Error => TaskStatus::Failed,
+                };
+                Ok(status)
+            }
             Err(err) => Err(err),
         }
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         self.ensure_authenticated().await?;
-        match self.api_client.get_batch_results(task_id).await {
+        let batch_id = self
+            .job_to_batch
+            .get(task_id)
+            .ok_or_else(|| anyhow!("No Batch mapping found for Pasqal job id '{}'", task_id))?;
+        match self.api_client.get_batch_results(batch_id).await {
             Ok(resp) => Ok(TaskResult { value: resp }),
             Err(_err) => Err(_err),
         }
