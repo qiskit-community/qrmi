@@ -14,11 +14,12 @@ use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::debug;
-use pasqal_cloud_api::{
-    BatchStatus, Client, ClientBuilder, DeviceType, JobStatus, DEFAULT_AUTH_ENDPOINT,
-};
+use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
 use std::collections::HashMap;
 use std::env;
+use std::fs;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use async_trait::async_trait;

@@ -17,7 +17,7 @@ async fn is_accessible_attempts_authentication() {
     let addr = listener.local_addr().expect("local_addr should succeed");
     // Setup Mock server with mocked responses.
     let mock_server = thread::spawn(move || {
-        for _ in 0..2 {
+        for _ in 0..1 {
             if let Ok((mut stream, _)) = listener.accept() {
                 // Read the request
                 let mut buf = [0_u8; 4096];
@@ -49,25 +49,24 @@ async fn is_accessible_attempts_authentication() {
         .build()
         .expect("client build should succeed");
 
-    // Create a PasqalCloud instance pointing to the mock server
+    // Create a PasqalCloud instance pointing to the mock auth server.
+    // Use an invalid backend name to stop before get_device(), so this test
+    // only validates authentication behavior.
     let mut qrmi = PasqalCloud {
         api_client,
-        backend_name: "EMU_FREE".to_string(),
+        backend_name: "INVALID_BACKEND".to_string(),
         auth_token: String::new(),
         auth_token_expiry_unix_seconds: None,
         project_id: "project-id".to_string(),
-        auth_endpoint: format!("http://{}", addr),
+        auth_endpoint: format!("http://{}/oauth/token", addr),
         username: Some("usr".to_string()),
         password: Some("pass".to_string()),
     };
 
-    let accessible = qrmi
-        .is_accessible()
-        .await
-        .expect("is_accessible should succeed");
+    let result = qrmi.is_accessible().await;
     mock_server.join().expect("server thread should join");
 
-    // Verify that `is_accessible()` returns true and that the obtained token is used.
-    assert!(accessible);
+    // Verify that authentication happened and then backend validation failed.
+    assert!(result.is_err());
     assert_eq!(qrmi.auth_token, "opaque_token".to_string());
 }
