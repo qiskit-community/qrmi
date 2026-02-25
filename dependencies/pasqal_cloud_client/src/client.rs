@@ -435,7 +435,7 @@ impl ClientBuilder {
     }
 
     /// Set custom API base URL.
-    pub fn base_url(&mut self, base_url: String) -> &mut Self {
+    pub fn with_base_url(&mut self, base_url: String) -> &mut Self {
         self.base_url = base_url;
         self
     }
