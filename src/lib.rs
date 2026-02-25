@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -20,39 +20,43 @@ pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
 
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 
 /// Defines interfaces to quantum resources.
 #[async_trait]
 pub trait QuantumResource: Send + Sync {
-    /// Returns true if device is accessible, otherwise false.
-    ///
-    /// # Arguments
-    ///
-    /// * `id`: Identifier of quantum device.
+    async fn resource_id(&mut self) -> Result<String>;
+    /// Returns resource identifier of this quantum resource.
     ///
     /// # Example
     ///
     /// ```no_run
     /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let resource_id = qrmi.resource_id().await?;
+    ///     println!("{resource_id}"); // prints "ibm_torino"
+    ///     Ok(())
+    /// }
+    /// ```
+    async fn resource_type(&mut self) -> Result<ResourceType>;
     ///
-    ///     let accessible = qrmi.is_accessible()?;
-    ///     if accessible == false {
-    ///         panic!("ibm_torino is not accessible.");
-    ///     }
+    /// Returns resource type of this quantum resource.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let resource_type = qrmi.resource_type().await?;
+    ///     println!("{}", resource_type.as_str()); // prints "qiskit_runtime_service"
     ///     Ok(())
     /// }
     /// ```
     async fn is_accessible(&mut self) -> Result<bool>;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
-    ///
-    /// # Arguments
-    ///
-    /// * `id`: Identifier of quantum device.
     ///
     /// # Example
     ///
@@ -67,10 +71,6 @@ pub trait QuantumResource: Send + Sync {
     async fn acquire(&mut self) -> Result<String>;
 
     /// Releases quantum resource
-    ///
-    /// # Arguments
-    ///
-    /// * `id`: acquisition token obtained by previous [`acquire()`](crate::QuantumResource::acquire) call.
     ///
     /// # Example
     ///

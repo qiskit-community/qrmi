@@ -1,5 +1,7 @@
 use super::{read_pasqal_config, read_qrmi_config_env_value_from_content, PasqalCloud};
+use crate::models::ResourceType;
 use crate::QuantumResource;
+use pasqal_cloud_api::ClientBuilder;
 use pasqal_cloud_api::ClientBuilder;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -106,4 +108,28 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
 
     std::env::remove_var("PASQAL_CONFIG_ROOT");
     std::env::remove_var("HOME");
+}
+
+#[tokio::test]
+async fn resource_id_and_type_match_backend() {
+    let mut builder = ClientBuilder::for_project("project-id".to_string());
+    builder.with_token("opaque_token".to_string());
+    let api_client = builder.build().expect("client build should succeed");
+
+    let mut qrmi = PasqalCloud {
+        api_client,
+        backend_name: "EMU_FREE".to_string(),
+    };
+
+    let resource_id = qrmi
+        .resource_id()
+        .await
+        .expect("resource_id should succeed");
+    let resource_type = qrmi
+        .resource_type()
+        .await
+        .expect("resource_type should succeed");
+
+    assert_eq!(resource_id, "EMU_FREE");
+    assert_eq!(resource_type, ResourceType::PasqalCloud);
 }

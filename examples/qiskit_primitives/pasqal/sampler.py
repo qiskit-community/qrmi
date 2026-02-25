@@ -28,6 +28,9 @@ resources = service.resources()
 if len(resources) == 0:
     raise ValueError("No quantum resource is available.")
 
+for res in resources:
+    print(f"Available resource: id={res.resource_id()} type={str(res.resource_type())}")
+
 # Randomly select QR
 qrmi = resources[random.randrange(len(resources))]
 
@@ -63,4 +66,4 @@ qc.append(gate, qc.qubits)
 
 sampler = QPPSamplerV2(qrmi=qrmi)
 res = sampler.run([qc])
-print(json.loads(res[0])['counter'])
+print(json.loads(res[0])["counter"])
