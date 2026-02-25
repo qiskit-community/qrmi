@@ -12,5 +12,5 @@
 pub mod batch;
 pub mod device;
 
-pub use self::batch::BatchStatus;
+pub use self::batch::JobStatus;
 pub use self::device::DeviceType;
