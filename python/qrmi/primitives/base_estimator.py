@@ -2,7 +2,7 @@
 
 # This code is part of Qiskit.
 #
-# (C) Copyright 2025 IBM. All Rights Reserved.
+# (C) Copyright 2025, 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -13,8 +13,8 @@
 # that they have been altered from the originals.
 
 """Estimator V2 base class for IBM QRMI"""
+
 import json
-from typing import Union
 from dataclasses import dataclass, field
 from collections.abc import Iterable
 from qiskit import qasm3

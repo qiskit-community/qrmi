@@ -13,7 +13,6 @@ use crate::models::errors::ExtendedErrorResponse;
 use crate::Client;
 use anyhow::{bail, Result};
 use http::StatusCode;
-
 use log::error;
 
 impl Client {
@@ -94,22 +93,34 @@ impl Client {
                         Ok(ExtendedErrorResponse::Json(error)) => {
                             let serialized = serde_json::to_value(&error).unwrap();
                             error!("{}", &serialized);
-                            bail!(serialized);
+                            bail!(format!(
+                                "An error occurred while sending the request to run the job to the API. {}",
+                                serialized
+                            ));
                         }
                         Ok(ExtendedErrorResponse::Text(message)) => {
                             error!("{}", message);
-                            bail!(format!("{} ({})", status_code, message));
+                            bail!(format!(
+                                "An error occurred while sending the request to run the job to the API. {} ({})",
+                                status_code, message
+                            ));
                         }
                         Err(_) => {
                             error!("{} {}", status_code, url);
-                            bail!(format!("{} {}", status_code, url));
+                            bail!(format!(
+                                "An error occurred while sending the request to run the job to the API. {} {}",
+                                status_code, url
+                            ));
                         }
                     }
                 }
             }
             Err(e) => {
-                error!("{:#?}", e);
-                Err(e.into())
+                let err_msg = Client::explain_reqwest_middleware_error(&e);
+                bail!(format!(
+                    "An error occurred while sending the request to run the job to the API. {}",
+                    err_msg
+                ));
             }
         }
     }

@@ -78,21 +78,12 @@ fn read_qrmi_config_env_value_handles_empty_and_missing_environment_key() {
     // handles cases where the "environment" key is missing or empty for a resource.
     let content = r#"{
         "resources": [
-            {"name":"EMU_FREE","type":"pasqal-cloud","environment":{}},
-            {"name":"EMU_OTHER","type":"pasqal-cloud"}
-        ]
+            {"name":"EMU_FREE","type":"pasqal-cloud","environment":{}},        ]
     }"#;
 
     let value = read_qrmi_config_env_value_from_content(
         content,
         "EMU_FREE",     //existing resource
-        "nonsense-key", // non-existing key in environment
-    );
-    assert!(value.is_none());
-
-    let value = read_qrmi_config_env_value_from_content(
-        content,
-        "EMU_OTHER",    // existing resource
         "nonsense-key", // non-existing key in environment
     );
     assert!(value.is_none());

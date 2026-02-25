@@ -1,0 +1,42 @@
+# This file defines the set of people responsible for different sections of the
+# QRMI code.
+#
+# Being listed as a code owner on a section here means that user is empowered
+# to approve and merge pull requests for that section of code. It also comes
+# with an expected responsibility to review and maintain those subsections of
+# the repository.
+#
+# A PR can be merged when approved by at least one codeowner. For PRs that touch
+# more than one section with non-overlapping codeowners more than one codeowner
+# may be required to approve a PR.
+#
+# However, every contributor to QRMI can (and should!) review open PRs. This
+# file is just about outlining responsibility for maintainership and final
+# review/merging of PRs in different subsections of the repository.
+
+# Global rule
+* @ohtanim @awennersteen @OkuyanBoga
+
+# QRMI folders (also their corresponding tests)
+/src/pasqal/                                    @awennersteen @MatthieuMoreau0
+/python/qrmi/pulser_backend/                    @awennersteen @MatthieuMoreau0
+/python/qrmi/primitives/pasqal/                 @awennersteen @MatthieuMoreau0
+/dependencies/pasqal_cloud_client/              @awennersteen @MatthieuMoreau0
+/examples/pulser_backend/                       @awennersteen @MatthieuMoreau0
+/examples/qiskit_primitives/pasqal/             @awennersteen @MatthieuMoreau0
+/examples/**/pasqal_cloud/                      @awennersteen @MatthieuMoreau0
+/examples/task_runner/pulser/                   @awennersteen @MatthieuMoreau0
+/examples/task_runner/qpp/                      @awennersteen @MatthieuMoreau0
+
+/src/ibm/                                       @ohtanim @OkuyanBoga
+/python/qrmi/primitives/ibm/                    @ohtanim @OkuyanBoga
+/dependencies/direct_access_client/             @ohtanim @yoonho
+/dependencies/qiskit_runtime_client/            @OkuyanBoga @ohtanim
+/examples/qiskit_primitives/ibm/                @ohtanim @OkuyanBoga
+/examples/**/qiskit_runtime_service/            @OkuyanBoga @ohtanim
+/examples/**/direct_access/                     @ohtanim @yoonho
+/examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga
+
+# Override the release notes directories to have _no_ code owners, so any review
+# from somebody with write access is acceptable.
+/releasenotes/notes

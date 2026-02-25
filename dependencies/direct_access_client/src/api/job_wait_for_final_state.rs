@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024, 2025
+// (C) Copyright IBM 2024-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -109,7 +109,8 @@ impl PrimitiveJob {
     ///             "my_aws_secret_access_key",
     ///             "http://localhost:9000",
     ///             "my_bucket",
-    ///             "us-east-1"
+    ///             "us-east-1",
+    ///             None::<String>,
     ///         )
     ///         .build()
     ///         .unwrap();

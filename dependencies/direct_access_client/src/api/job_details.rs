@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024, 2025
+// (C) Copyright IBM 2024-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -46,7 +46,7 @@ impl Client {
     /// - specified job is not found.
     pub async fn get_job<T: DeserializeOwned>(&self, job_id: &str) -> Result<T> {
         let url = format!("{}/v1/jobs/{}", self.base_url, job_id);
-        self.get::<T>(&url).await
+        self.get::<T>(&url, &self.client).await
     }
 }
 
@@ -82,7 +82,8 @@ impl PrimitiveJob {
     ///             "my_aws_secret_access_key",
     ///             "http://localhost:9000",
     ///             "my_bucket",
-    ///             "us-east-1"
+    ///             "us-east-1",
+    ///             None::<String>,
     ///         )
     ///         .build()
     ///         .unwrap();
