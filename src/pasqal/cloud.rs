@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM, Pasqal 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::{debug, error, warn};
@@ -163,6 +163,7 @@ impl PasqalCloud {
         let env_project_id = env::var(&project_id_var)
             .ok()
             .filter(|v| !v.trim().is_empty());
+        // Preference order: explicit env var > user ~/.pasqal/config > cluster wide qrmi_config.json provides default.
         let project_id = env_project_id
             .or(cfg.project_id.clone().filter(|v| !v.trim().is_empty()))
             .or(read_qrmi_config_env_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID"))
@@ -217,6 +218,14 @@ impl PasqalCloud {
 
 #[async_trait]
 impl QuantumResource for PasqalCloud {
+    async fn resource_id(&mut self) -> Result<String> {
+        Ok(self.backend_name.clone())
+    }
+
+    async fn resource_type(&mut self) -> Result<ResourceType> {
+        Ok(ResourceType::PasqalCloud)
+    }
+
     async fn is_accessible(&mut self) -> Result<bool> {
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
@@ -319,9 +328,7 @@ impl QuantumResource for PasqalCloud {
                         JobStatus::Canceling => TaskStatus::Cancelled,
                         JobStatus::Done => TaskStatus::Completed,
                         JobStatus::Canceled => TaskStatus::Cancelled,
-                        JobStatus::TimedOut => TaskStatus::Failed,
                         JobStatus::Error => TaskStatus::Failed,
-                        JobStatus::Paused => TaskStatus::Queued,
                     };
                     Ok(status)
                 }

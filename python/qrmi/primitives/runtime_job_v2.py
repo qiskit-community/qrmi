@@ -2,7 +2,7 @@
 
 # This code is part of Qiskit.
 #
-# (C) Copyright 2025 IBM. All Rights Reserved.
+# (C) Copyright 2025, 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -15,7 +15,6 @@
 """Runtime job"""
 
 import time
-from typing import Union
 from qiskit_ibm_runtime.utils.result_decoder import ResultDecoder
 from qiskit.primitives import BasePrimitiveJob, PrimitiveResult
 from qiskit.providers import JobStatus
@@ -106,4 +105,4 @@ class RuntimeJobV2(BasePrimitiveJob[PrimitiveResult, TaskStatus]):
 
     def logs(self) -> str:
         """Return job logs."""
-        return qrmi.task_logs(self._job_id)
+        return self._qrmi.task_logs(self._job_id)

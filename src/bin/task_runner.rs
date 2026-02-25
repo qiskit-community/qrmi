@@ -192,13 +192,20 @@ impl ResourceType {
             }),
         }
     }
-    fn create_qrmi(&self, qpu_name: &str) -> Box<dyn QuantumResource> {
+    fn create_qrmi(
+        &self,
+        qpu_name: &str,
+    ) -> Result<Box<dyn QuantumResource>, Box<dyn std::error::Error>> {
         match self {
-            ResourceType::IBMDirectAccess { .. } => Box::new(IBMDirectAccess::new(qpu_name)),
-            ResourceType::QiskitRuntimeService { .. } => {
-                Box::new(IBMQiskitRuntimeService::new(qpu_name))
+            ResourceType::IBMDirectAccess { .. } => {
+                Ok(Box::new(IBMDirectAccess::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
-            ResourceType::PasqalCloud { .. } => Box::new(PasqalCloud::new(qpu_name)),
+            ResourceType::QiskitRuntimeService { .. } => {
+                Ok(Box::new(IBMQiskitRuntimeService::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
+            ResourceType::PasqalCloud { .. } => {
+                Ok(Box::new(PasqalCloud::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
         }
     }
 }
@@ -354,7 +361,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let payload = res_type.to_payload().unwrap();
-    let mut qrmi = res_type.create_qrmi(&qpu_name);
+    let mut qrmi = res_type.create_qrmi(&qpu_name)?;
 
     // setup signal handler for slurm, and start it
     let signals = Signals::new([SIGTERM, SIGCONT])?;

@@ -40,8 +40,21 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  QrmiReturnCode rc = QRMI_RETURN_CODE_SUCCESS;
+  char *resource_id = NULL;
+  rc = qrmi_resource_id(qrmi, &resource_id);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    QrmiResourceType resource_type;
+    rc = qrmi_resource_type(qrmi, &resource_type);
+    if (rc == QRMI_RETURN_CODE_SUCCESS) {
+      const char *resource_type_str = qrmi_config_resource_type_to_str(resource_type);
+      fprintf(stdout, "Selected resource: id=%s type=%s\n", resource_id, resource_type_str);
+    }
+    qrmi_string_free(resource_id);
+  }
+
   QrmiResourceMetadata *metadata = NULL;
-  QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
+  rc = qrmi_resource_metadata(qrmi, &metadata);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
     size_t num_keys = 0;
     char **metadata_keys = NULL;

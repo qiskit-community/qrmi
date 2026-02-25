@@ -1,4 +1,4 @@
-maturin[patchelf]
-pylint
-black
-pytest
+maturin[patchelf]==1.12.2
+pylint==3.2.3
+black[jupyter]~=25.1
+pytest==9.0.2

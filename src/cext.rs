@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -609,6 +609,77 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
     let result = (*qrmi)
         .runtime
         .block_on(async { (*qrmi).inner.is_accessible().await });
+    match result {
+        Ok(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            ReturnCode::Error
+        }
+    }
+}
+
+/// @ingroup QrmiQuantumResource
+/// Returns resource identifier.
+///
+/// # Safety
+///
+/// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
+///
+/// * `outp` must be non nul.
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_id(
+    qrmi: *mut QuantumResource,
+    outp: *mut *mut c_char,
+) -> ReturnCode {
+    crate::common::initialize();
+    if qrmi.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.resource_id().await });
+    match result {
+        Ok(v) => {
+            if let Ok(id_cstr) = CString::new(v) {
+                *outp = id_cstr.into_raw();
+                ReturnCode::Success
+            } else {
+                ReturnCode::Error
+            }
+        }
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            ReturnCode::Error
+        }
+    }
+}
+
+/// @ingroup QrmiQuantumResource
+/// Returns resource type.
+///
+/// # Safety
+///
+/// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
+///
+/// * `outp` must be non nul.
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_type(
+    qrmi: *mut QuantumResource,
+    outp: *mut ResourceType,
+) -> ReturnCode {
+    crate::common::initialize();
+    if qrmi.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
+
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.resource_type().await });
     match result {
         Ok(v) => {
             *outp = v;

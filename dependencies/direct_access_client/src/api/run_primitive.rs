@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024, 2025
+// (C) Copyright IBM 2024-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -58,6 +58,7 @@ impl Client {
     ///             "http://localhost:9000",
     ///             "my_bucket",
     ///             "us-east-1",
+    ///             None::<String>,
     ///         )
     ///         .build()
     ///         .unwrap();
@@ -225,6 +226,7 @@ impl PrimitiveJob {
     ///             "http://localhost:9000",
     ///             "my_bucket",
     ///             "us-east-1",
+    ///             None::<String>,
     ///         )
     ///         .build()
     ///         .unwrap();
@@ -260,8 +262,9 @@ impl PrimitiveJob {
                 .await?;
         debug!("{}", presigned_url);
 
-        let client = reqwest::Client::new();
-        let resp = client
+        let resp = self
+            .client
+            .plain_client
             .get(presigned_url)
             .header("Content-Type", "application/json")
             .send()
@@ -307,6 +310,7 @@ impl PrimitiveJob {
     ///             "http://localhost:9000",
     ///             "my_bucket",
     ///             "us-east-1",
+    ///             None::<String>,
     ///         )
     ///         .build()
     ///         .unwrap();
@@ -339,8 +343,9 @@ impl PrimitiveJob {
                 .await?;
         debug!("{}", presigned_url);
 
-        let client = reqwest::Client::new();
-        let resp = client
+        let resp = self
+            .client
+            .plain_client
             .get(presigned_url)
             .header("Content-Type", "application/json")
             .send()

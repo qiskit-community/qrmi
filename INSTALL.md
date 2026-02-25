@@ -56,7 +56,7 @@ This section shows how to build QRMI for C and Python.
 ```shell-session
 . ~/.cargo/env
 cargo clean
-cargo build --release
+cargo build --locked --release
 ```
 
 ### How to build & install QRMI Python package

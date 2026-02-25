@@ -73,6 +73,8 @@ disable=
     docstring-first-line-empty, # relax docstring style
     import-outside-toplevel,
     unnecessary-lambda-assignment,
+    no-name-in-module,
+    useless-parent-delegation,
     assigning-non-slot  # https://github.com/Qiskit/qiskit-terra/pull/7347#issuecomment-985007311
 
 

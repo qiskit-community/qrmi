@@ -128,6 +128,7 @@ input_json = {
     },
 }
 
+
 def dump(json_data: dict, filename: str) -> None:
     """Write json data to the specified file
 
@@ -138,6 +139,7 @@ def dump(json_data: dict, filename: str) -> None:
     print(json.dumps(json_data, cls=RuntimeEncoder, indent=2))
     with open(filename, "w", encoding="utf-8") as primitive_input_file:
         json.dump(json_data, primitive_input_file, cls=RuntimeEncoder, indent=2)
+
 
 dump(
     {"parameters": input_json, "program_id": "estimator"},

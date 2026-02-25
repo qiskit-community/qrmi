@@ -2,7 +2,7 @@
 
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2025
+# (C) Copyright IBM 2025, 2026
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -13,6 +13,7 @@
 # that they have been altered from the originals.
 
 """qrmi_task_runner - Command to run a QRMI task"""
+
 import os
 import sys
 import time
@@ -55,7 +56,9 @@ def _get_loglevel() -> int:
 
 
 logging.basicConfig(
-    stream=sys.stdout, level=_get_loglevel(), format="%(asctime)s %(levelname)s %(message)s"
+    stream=sys.stdout,
+    level=_get_loglevel(),
+    format="%(asctime)s %(levelname)s %(message)s",
 )
 logger = getLogger(__name__)
 
@@ -169,8 +172,8 @@ class App:
         res_type = self._find_qpu_type(self._name)
         self._qrmi = QuantumResource(self._name, res_type)
 
-        with open(self._input_filename, encoding="utf-8") as f:
-            task_input = json.load(f)
+        with open(self._input_filename, encoding="utf-8") as input_file:
+            task_input = json.load(input_file)
             if res_type in [
                 ResourceType.IBMDirectAccess,
                 ResourceType.IBMQiskitRuntimeService,

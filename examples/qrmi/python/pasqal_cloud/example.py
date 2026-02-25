@@ -31,6 +31,7 @@ with open(args.input, encoding="utf-8") as f:
 
 # instantiate a QRMI
 qrmi = QuantumResource(args.backend, ResourceType.PasqalCloud)
+print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
 # Check if QR it's accessible
 is_avail = qrmi.is_accessible()

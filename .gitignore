@@ -30,8 +30,8 @@
 *.exe
 *.out
 *.app
+
 # Rust
-Cargo.lock
 *.rlib
 
 # CMake

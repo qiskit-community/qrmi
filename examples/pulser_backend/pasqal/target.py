@@ -38,6 +38,7 @@ def get_device(qrmi: QuantumResource) -> Device:
     target = qrmi.target()
     return pulser.abstract_repr.deserialize_device(target.value)
 
+
 if __name__ == "__main__":
     import random
 
@@ -51,6 +52,11 @@ if __name__ == "__main__":
     resources = service.resources()
     if len(resources) == 0:
         raise ValueError("No quantum resource is available.")
+
+    for res in resources:
+        print(
+            f"Available resource: id={res.resource_id()} type={str(res.resource_type())}"
+        )
 
     # Randomly select QR
     qrmi_connection = resources[random.randrange(len(resources))]

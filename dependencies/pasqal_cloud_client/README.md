@@ -80,6 +80,32 @@ use pasqal_cloud_api::ClientBuilder;
 let mut builder = ClientBuilder::for_project("<project id>".to_string());
 builder.with_token("<api token>".to_string());
 let mut client = builder.build()?;
+let mut builder = ClientBuilder::new("<API token>".to_string(), "<project id>".to_string());
+let client = builder.build()?;
+```
+
+### Requesting an access token
+
+If username/password auth is used, `request_access_token` can be used to obtain a token.
+
+```rust
+use pasqal_cloud_api::{Client, DEFAULT_AUTH_ENDPOINT};
+
+let token = Client::request_access_token(
+    DEFAULT_AUTH_ENDPOINT,
+    "<username>",
+    "<password>",
+).await?;
+```
+
+### Checking JWT expiry
+
+`jwt_expiry_unix_seconds` returns the JWT `exp` claim (if present), so callers can refresh expired tokens.
+
+```rust
+use pasqal_cloud_api::Client;
+
+let exp = Client::jwt_expiry_unix_seconds("<jwt token>")?;
 ```
 
 ### Invoking Rust API

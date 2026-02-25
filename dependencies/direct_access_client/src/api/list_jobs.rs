@@ -45,6 +45,6 @@ impl Client {
     /// - authentication failed.
     pub async fn list_jobs<T: DeserializeOwned>(&self) -> Result<T> {
         let url = format!("{}/v1/jobs", self.base_url);
-        self.get::<T>(&url).await
+        self.get::<T>(&url, &self.client).await
     }
 }
