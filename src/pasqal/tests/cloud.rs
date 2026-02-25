@@ -1,4 +1,4 @@
-use super::PasqalCloud;
+use super::{read_pasqal_config, read_qrmi_config_env_value_from_content, PasqalCloud};
 use crate::models::ResourceType;
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
@@ -71,6 +71,43 @@ async fn is_accessible_attempts_authentication() {
     // Verify that authentication happened and then backend validation failed.
     assert!(result.is_err());
     assert_eq!(qrmi.auth_token, "opaque_token".to_string());
+}
+
+#[test]
+fn read_qrmi_config_env_value_handles_empty_environment_key() {
+    // This test verifies that `read_qrmi_config_env_value_from_content()` correctly
+    // handles cases where the "environment" key is empty for a resource.
+    let content = r#"{
+        "resources": [
+            {"name":"EMU_FREE","type":"pasqal-cloud","environment":{}},        ]
+    }"#;
+
+    let value = read_qrmi_config_env_value_from_content(
+        content,
+        "EMU_FREE",     //existing resource
+        "nonsense-key", // non-existing key in environment
+    );
+    assert!(value.is_none());
+}
+
+#[test]
+fn read_pasqal_config_returns_default_when_config_root_file_missing() {
+    let tmp_dir = std::env::temp_dir();
+    let missing_root = tmp_dir.join(format!("qrmi_missing_pasqal_cfg"));
+    let missing_home = tmp_dir.join(format!("qrmi_home_without_cfg"));
+    std::env::set_var("PASQAL_CONFIG_ROOT", &missing_root);
+    std::env::set_var("HOME", &missing_home);
+
+    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+    // All config should be None since the config file is missing: the default
+    assert!(cfg.username.is_none());
+    assert!(cfg.password.is_none());
+    assert!(cfg.project_id.is_none());
+    assert!(cfg.token.is_none());
+    assert!(cfg.auth_endpoint.is_none());
+
+    std::env::remove_var("PASQAL_CONFIG_ROOT");
+    std::env::remove_var("HOME");
 }
 
 #[tokio::test]

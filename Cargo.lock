@@ -2163,7 +2163,7 @@ dependencies = [
 
 [[package]]
 name = "pasqal-cloud-api"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "assert-json-diff",
@@ -2394,7 +2394,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.10.1"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "async-trait",
