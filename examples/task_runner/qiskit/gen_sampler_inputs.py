@@ -132,6 +132,7 @@ def dump(json_data: dict, filename: str) -> None:
     with open(filename, "w", encoding="utf-8") as primitive_input_file:
         json.dump(json_data, primitive_input_file, cls=RuntimeEncoder, indent=2)
 
+
 dump(
     {"parameters": input_json, "program_id": "sampler"},
     f"sampler_input_{args.backend}.json",

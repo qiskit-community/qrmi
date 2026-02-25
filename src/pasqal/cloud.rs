@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM, Pasqal 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::debug;
@@ -230,6 +230,14 @@ impl PasqalCloud {
 
 #[async_trait]
 impl QuantumResource for PasqalCloud {
+    async fn resource_id(&mut self) -> Result<String> {
+        Ok(self.backend_name.clone())
+    }
+
+    async fn resource_type(&mut self) -> Result<ResourceType> {
+        Ok(ResourceType::PasqalCloud)
+    }
+
     async fn is_accessible(&mut self) -> Result<bool> {
         self.ensure_authenticated().await?;
         let device_type = match self.backend_name.parse::<DeviceType>() {

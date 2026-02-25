@@ -25,7 +25,7 @@
 use crate::ibm::qiskit_runtime_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::error;
@@ -122,6 +122,14 @@ impl IBMQiskitRuntimeService {
 // Implement the QuantumResource trait using the asynchronous wrappers.
 #[async_trait]
 impl QuantumResource for IBMQiskitRuntimeService {
+    async fn resource_id(&mut self) -> Result<String> {
+        Ok(self.backend_name.clone())
+    }
+
+    async fn resource_type(&mut self) -> Result<ResourceType> {
+        Ok(ResourceType::QiskitRuntimeService)
+    }
+
     /// Asynchronously checks if a backend is accessible.
     async fn is_accessible(&mut self) -> Result<bool> {
         // Ensure the bearer token is valid
@@ -429,3 +437,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/qiskit_runtime_service.rs"]
+mod tests;
