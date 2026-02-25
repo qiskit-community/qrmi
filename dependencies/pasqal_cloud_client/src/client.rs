@@ -53,7 +53,7 @@ pub struct Client {
     pub(crate) client: reqwest_middleware::ClientWithMiddleware,
     pub(crate) project_id: String,
     pub(crate) auth_token: String,
-    pub(crate) auth_token_expiry_unix_seconds: Option<i64>,
+    auth_header: Option<header::HeaderValue>,
     pub(crate) auth_endpoint: String,
     pub(crate) username: Option<String>,
     pub(crate) password: Option<String>,
@@ -113,22 +113,39 @@ pub struct Batch {
 }
 
 impl Client {
-    fn build_http_client(token: &str) -> Result<reqwest_middleware::ClientWithMiddleware> {
+    fn build_http_client() -> Result<reqwest_middleware::ClientWithMiddleware> {
         let mut reqwest_client_builder = reqwest::Client::builder();
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-
-        let mut headers = header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            reqwest::header::HeaderValue::from_static("application/json"),
-        );
-        headers.insert(
-            reqwest::header::AUTHORIZATION,
-            reqwest::header::HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
-        );
-        reqwest_client_builder = reqwest_client_builder.default_headers(headers);
         let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
         Ok(reqwest_builder.build())
+    }
+
+    fn make_auth_header(token: &str) -> Result<Option<header::HeaderValue>> {
+        if token.trim().is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(header::HeaderValue::from_str(&format!(
+            "Bearer {token}"
+        ))?))
+    }
+
+    fn attach_headers(
+        &self,
+        req: reqwest_middleware::RequestBuilder,
+    ) -> Result<reqwest_middleware::RequestBuilder> {
+        let req = req.header(reqwest::header::CONTENT_TYPE, "application/json");
+        match &self.auth_header {
+            Some(auth) => Ok(req.header(reqwest::header::AUTHORIZATION, auth.clone())),
+            None => bail!("authorization header is not available"),
+        }
+    }
+
+    async fn authenticated(
+        &mut self,
+        req: reqwest_middleware::RequestBuilder,
+    ) -> Result<reqwest_middleware::RequestBuilder> {
+        self.ensure_authenticated().await?;
+        self.attach_headers(req)
     }
 
     async fn ensure_authenticated(&mut self) -> Result<()> {
@@ -140,7 +157,7 @@ impl Client {
             return Ok(());
         }
 
-        if let Some(exp) = self.auth_token_expiry_unix_seconds {
+        if let Some(exp) = Self::jwt_expiry_unix_seconds(&self.auth_token)? {
             debug!(
                 "Auth token is expired or near expiry (exp {}, now {}), will attempt to refresh",
                 exp, now
@@ -154,11 +171,10 @@ impl Client {
 
         debug!("Requesting new auth token from Pasqal Cloud");
 
-        // Request a new token and update the client
+        // Request a new token and update auth state.
         let token = Self::request_access_token(&self.auth_endpoint, username, password).await?;
         self.auth_token = token;
-        self.auth_token_expiry_unix_seconds = Self::jwt_expiry_unix_seconds(&self.auth_token)?;
-        self.client = Self::build_http_client(&self.auth_token)?;
+        self.auth_header = Self::make_auth_header(&self.auth_token)?;
         Ok(())
     }
 
@@ -246,18 +262,17 @@ impl Client {
             "{}/core-fast/api/v1/devices/specs/{}",
             self.base_url, device_type
         );
-        self.get(&url).await
+        let resp = self.client.get(&url).send().await?;
+        self.handle_request(resp).await
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
-        self.ensure_authenticated().await?;
-        let resp = self.client.get(url).send().await?;
+        let resp = self.authenticated(self.client.get(url)).await?.send().await?;
         self.handle_request(resp).await
     }
 
     pub(crate) async fn patch<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
-        self.ensure_authenticated().await?;
-        let resp = self.client.patch(url).send().await?;
+        let resp = self.authenticated(self.client.patch(url)).await?.send().await?;
         self.handle_request(resp).await
     }
 
@@ -266,8 +281,12 @@ impl Client {
         url: &str,
         body: U,
     ) -> Result<T> {
-        self.ensure_authenticated().await?;
-        let resp = self.client.post(url).json(&body).send().await?;
+        let resp = self
+            .authenticated(self.client.post(url))
+            .await?
+            .json(&body)
+            .send()
+            .await?;
         self.handle_request(resp).await
     }
 
@@ -416,22 +435,17 @@ impl ClientBuilder {
     /// ```rust
     /// use pasqal_cloud_api::ClientBuilder;
     ///
-    /// let _builder = ClientBuilder::new("your_token".to_string(), "your_project_id".to_string());
+    /// let _builder = ClientBuilder::new("your_project_id".to_string());
     /// ```
-    pub fn new(token: String, project_id: String) -> Self {
+    pub fn new(project_id: String) -> Self {
         Self {
             base_url: DEFAULT_BASE_URL.to_string(),
-            token,
+            token: String::new(),
             project_id,
             auth_endpoint: String::new(),
             username: None,
             password: None,
         }
-    }
-
-    /// Construct a new [`ClientBuilder`] with project id.
-    pub fn for_project(project_id: String) -> Self {
-        Self::new(String::new(), project_id)
     }
 
     /// Set custom API base URL.
@@ -463,7 +477,8 @@ impl ClientBuilder {
     /// ```rust
     /// use pasqal_cloud_api::ClientBuilder;
     ///
-    /// let mut builder = ClientBuilder::new("your_token".to_string(), "your_project_id".to_string());
+    /// let mut builder = ClientBuilder::new("your_project_id".to_string());
+    /// builder.with_token("your_token".to_string());
     /// let _client = builder.build();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
@@ -474,14 +489,12 @@ impl ClientBuilder {
             self.username.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
             self.password.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
         );
-        let auth_token_expiry_unix_seconds = Client::jwt_expiry_unix_seconds(&self.token)?;
-
         Ok(Client {
             base_url: self.base_url.clone(),
-            client: Client::build_http_client(&self.token)?,
+            client: Client::build_http_client()?,
             project_id: self.project_id.clone(),
             auth_token: self.token.clone(),
-            auth_token_expiry_unix_seconds,
+            auth_header: Client::make_auth_header(&self.token)?,
             auth_endpoint: self.auth_endpoint.clone(),
             username: self.username.clone(),
             password: self.password.clone(),

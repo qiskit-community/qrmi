@@ -67,7 +67,7 @@ Default flow (username + password):
 ```rust
 use pasqal_cloud_api::ClientBuilder;
 
-let mut builder = ClientBuilder::for_project("<project id>".to_string());
+let mut builder = ClientBuilder::new("<project id>".to_string());
 builder.with_credentials("<username>".to_string(), "<password>".to_string());
 let mut client = builder.build()?;
 ```
@@ -77,11 +77,9 @@ Token flow:
 ```rust
 use pasqal_cloud_api::ClientBuilder;
 
-let mut builder = ClientBuilder::for_project("<project id>".to_string());
+let mut builder = ClientBuilder::new("<project id>".to_string());
 builder.with_token("<api token>".to_string());
 let mut client = builder.build()?;
-let mut builder = ClientBuilder::new("<API token>".to_string(), "<project id>".to_string());
-let client = builder.build()?;
 ```
 
 ### Requesting an access token
@@ -100,7 +98,7 @@ let token = Client::request_access_token(
 
 ### Checking JWT expiry
 
-`jwt_expiry_unix_seconds` returns the JWT `exp` claim (if present), so callers can refresh expired tokens.
+`jwt_expiry_unix_seconds` returns the JWT `exp` claim (if present).
 
 ```rust
 use pasqal_cloud_api::Client;
@@ -123,9 +121,10 @@ Most users do not need to set this. Use only when a non-default auth endpoint is
 ```rust
 use pasqal_cloud_api::ClientBuilder;
 
-let mut builder = ClientBuilder::for_project("<project id>".to_string());
+let mut builder = ClientBuilder::new("<project id>".to_string());
 builder.with_credentials("<username>".to_string(), "<password>".to_string());
 builder.with_auth_endpoint("<auth endpoint>".to_string());
+builder.with_base_url("<api base url>".to_string());
 let mut client = builder.build()?;
 ```
 

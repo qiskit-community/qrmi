@@ -167,6 +167,9 @@ impl PasqalCloud {
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
     /// * `PASQAL_USERNAME`: Pasqal Cloud username
     /// * `PASQAL_PASSWORD`: Pasqal Cloud password
+    ///
+    /// # Config file fallback
+    ///
     /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `token`, `project_id`, `auth_endpoint`
     pub fn new(backend_name: &str) -> Result<Self> {
         debug!(
@@ -211,7 +214,7 @@ impl PasqalCloud {
             .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
 
         debug!("Build PasqalCloud client for backend '{}'", backend_name);
-        let mut builder = ClientBuilder::for_project(project_id.clone());
+        let mut builder = ClientBuilder::new(project_id.clone());
         builder.with_auth_endpoint(auth_endpoint.clone());
         let (username, password) = resolve_pasqal_credentials(&cfg);
         if let (Some(username), Some(password)) = (username, password) {

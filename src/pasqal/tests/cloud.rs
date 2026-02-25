@@ -51,8 +51,8 @@ async fn is_accessible_attempts_authentication() {
         }
     });
 
-    let mut builder = ClientBuilder::for_project("project-id".to_string());
-    builder.base_url(format!("http://{}", addr));
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_base_url(format!("http://{}", addr));
     builder.with_auth_endpoint(format!("http://{}/oauth/token", addr));
     builder.with_credentials("usr".to_string(), "pass".to_string());
     let api_client = builder.build().expect("client build should succeed");
@@ -95,31 +95,6 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
 }
 
 #[test]
-fn read_qrmi_config_env_value_handles_empty_and_missing_environment_key() {
-    // This test verifies that `read_qrmi_config_env_value_from_content()` correctly
-    // handles cases where the "environment" key is missing or empty for a resource.
-    let content = r#"{
-        "resources": [
-            {"name":"EMU_FREE","type":"pasqal-cloud","environment":{}},
-            {"name":"EMU_OTHER","type":"pasqal-cloud"}
-        ]
-}"#;
-    let value = read_qrmi_config_env_value_from_content(
-        content,
-        "EMU_FREE",     // existing resource
-        "nonsense-key", // non-existing key in environment
-    );
-    assert!(value.is_none());
-
-    let value = read_qrmi_config_env_value_from_content(
-        content,
-        "EMU_OTHER",    // existing resource
-        "nonsense-key", // non-existing key in environment
-    );
-    assert!(value.is_none());
-}
-
-#[test]
 fn read_qrmi_config_env_value_handles_empty_environment_key() {
     // This test verifies that `read_qrmi_config_env_value_from_content()` correctly
     // handles cases where the "environment" key is empty for a resource.
@@ -135,12 +110,6 @@ fn read_qrmi_config_env_value_handles_empty_environment_key() {
     );
     assert!(value.is_none());
 
-    let value = read_qrmi_config_env_value_from_content(
-        content,
-        "EMU_OTHER",    // existing resource
-        "nonsense-key", // non-existing key in environment
-    );
-    assert!(value.is_none());
 }
 
 #[test]
@@ -165,7 +134,7 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
-    let mut builder = ClientBuilder::for_project("project-id".to_string());
+    let mut builder = ClientBuilder::new("project-id".to_string());
     builder.with_token("opaque_token".to_string());
     let api_client = builder.build().expect("client build should succeed");
 
