@@ -27,7 +27,7 @@ service = QRMIService()
 
 resources = service.resources()
 if len(resources) == 0:
-    print("No quantum resource is available.")
+    raise RuntimeError("No quantum resource is available.")
 
 # Select QR
 for res in resources:
