@@ -267,12 +267,20 @@ impl Client {
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
-        let resp = self.authenticated(self.client.get(url)).await?.send().await?;
+        let resp = self
+            .authenticated(self.client.get(url))
+            .await?
+            .send()
+            .await?;
         self.handle_request(resp).await
     }
 
     pub(crate) async fn patch<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
-        let resp = self.authenticated(self.client.patch(url)).await?.send().await?;
+        let resp = self
+            .authenticated(self.client.patch(url))
+            .await?
+            .send()
+            .await?;
         self.handle_request(resp).await
     }
 

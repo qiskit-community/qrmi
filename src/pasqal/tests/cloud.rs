@@ -109,7 +109,6 @@ fn read_qrmi_config_env_value_handles_empty_environment_key() {
         "nonsense-key", // non-existing key in environment
     );
     assert!(value.is_none());
-
 }
 
 #[test]
