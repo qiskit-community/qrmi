@@ -14,7 +14,7 @@ use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use log::{debug, warn};
-use pasqal_cloud_api::{Client, ClientBuilder, DevicceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
+use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -369,9 +369,7 @@ impl QuantumResource for PasqalCloud {
                         JobStatus::Canceling => TaskStatus::Cancelled,
                         JobStatus::Done => TaskStatus::Completed,
                         JobStatus::Canceled => TaskStatus::Cancelled,
-                        JobStatus::TimedOut => TaskStatus::Failed,
                         JobStatus::Error => TaskStatus::Failed,
-                        JobStatus::Paused => TaskStatus::Queued,
                     };
                     Ok(status)
                 }
