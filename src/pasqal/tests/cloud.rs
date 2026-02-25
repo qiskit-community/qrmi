@@ -76,7 +76,7 @@ async fn is_accessible_attempts_authentication() {
 #[test]
 fn read_qrmi_config_env_value_handles_empty_environment_key() {
     // This test verifies that `read_qrmi_config_env_value_from_content()` correctly
-    // handles cases where the "environment" key is missing or empty for a resource.
+    // handles cases where the "environment" key is empty for a resource.
     let content = r#"{
         "resources": [
             {"name":"EMU_FREE","type":"pasqal-cloud","environment":{}},        ]
