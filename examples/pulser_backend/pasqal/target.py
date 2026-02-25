@@ -38,6 +38,7 @@ def get_device(qrmi: QuantumResource) -> Device:
     target = qrmi.target()
     return pulser.abstract_repr.deserialize_device(target.value)
 
+
 if __name__ == "__main__":
     import random
 

@@ -31,9 +31,7 @@ if len(resources) == 0:
 
 # Select QR
 for res in resources:
-    print(
-        f"Available resource: id={res.resource_id()} type={str(res.resource_type())}"
-    )
+    print(f"Available resource: id={res.resource_id()} type={str(res.resource_type())}")
 
 # For this example, we select the first resource
 qrmi = resources[0]
