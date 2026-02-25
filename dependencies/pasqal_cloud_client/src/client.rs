@@ -81,9 +81,21 @@ pub struct CreateBatchResponseData {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct CreateCudaqJobResponseData {
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct GetBatchResponseData {
     pub status: JobStatus,
     pub job_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetCudaqJobResponseData {
+    pub status: String,
+    #[serde(default)]
+    pub result: Value,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -210,6 +222,22 @@ impl Client {
         self.post(&url, batch).await
     }
 
+    pub async fn create_cudaq_job(
+        &mut self,
+        sequence: Value,
+        shots: i32,
+        device_type: DeviceType,
+    ) -> Result<Response<CreateCudaqJobResponseData>> {
+        let url = format!("{}/core-fast/api/v1/cudaq/job", self.base_url);
+        let payload = serde_json::json!({
+            "machine": device_type.to_string(),
+            "shots": shots,
+            "project_id": self.project_id,
+            "sequence": sequence,
+        });
+        self.post(&url, payload).await
+    }
+
     pub async fn cancel_batch(
         &mut self,
         batch_id: &str,
@@ -223,6 +251,19 @@ impl Client {
 
     pub async fn get_batch(&mut self, batch_id: &str) -> Result<Response<GetBatchResponseData>> {
         let url = format!("{}/core-fast/api/v2/batches/{}", self.base_url, batch_id);
+        self.get(&url).await
+    }
+
+    // Why are we doing this with a separate endpoint from get_batch?
+    // The get_batch endpoint returns a list of job ids but not the actual results,
+    // and the get_cudaq_job endpoint returns the results directly.
+    // Originally to make things easier for the CUDA-Q integration.
+    // For QRMI  we could consider just using the normal endpoint.
+    pub async fn get_cudaq_job(
+        &mut self,
+        job_id: &str,
+    ) -> Result<Response<GetCudaqJobResponseData>> {
+        let url = format!("{}/core-fast/api/v1/cudaq/job/{}", self.base_url, job_id);
         self.get(&url).await
     }
 

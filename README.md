@@ -112,6 +112,19 @@ Python QRMI can be used to implement Qiskit primitives (Sampler and Estimator). 
 
 See [example](./examples/pulser_backend/pasqal/pulser_backend.py) of QRMI working with Pasqal Pulser.
 
+### Pasqal Cloud Examples
+
+QRMI Pasqal Cloud supports both Qiskit, Pulser and CUDA-Q analog programs.
+
+See the Pasqal Cloud examples in this repository:
+- Python: [examples/qrmi/python/pasqal_cloud](./examples/qrmi/python/pasqal_cloud)
+- Rust: [examples/qrmi/rust/pasqal_cloud](./examples/qrmi/rust/pasqal_cloud)
+- C: [examples/qrmi/c/pasqal_cloud](./examples/qrmi/c/pasqal_cloud)
+
+For a Slurm job example that runs CUDA-Q ``pasqal`` through the SPANK
+plugin, see:
+- ``/shared/spank-plugins/demo/qrmi/jobs/run_cudaq_pasqal.sh``
+
 
 ### Rust
 

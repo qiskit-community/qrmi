@@ -2,7 +2,7 @@ use super::{
     read_pasqal_config, read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
     PasqalCloud, PasqalConfig,
 };
-use crate::models::ResourceType;
+use crate::models::{ResourceType, TaskStatus};
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
 use std::io::{Read, Write};
@@ -61,6 +61,7 @@ async fn is_accessible_attempts_authentication() {
     let mut qrmi = PasqalCloud {
         api_client,
         backend_name: "EMU_FREE".to_string(),
+        task_kinds: std::collections::HashMap::new(),
     };
 
     let accessible = qrmi
@@ -140,6 +141,7 @@ async fn resource_id_and_type_match_backend() {
     let mut qrmi = PasqalCloud {
         api_client,
         backend_name: "EMU_FREE".to_string(),
+        task_kinds: std::collections::HashMap::new(),
     };
 
     let resource_id = qrmi
@@ -153,4 +155,14 @@ async fn resource_id_and_type_match_backend() {
 
     assert_eq!(resource_id, "EMU_FREE");
     assert_eq!(resource_type, ResourceType::PasqalCloud);
+}
+
+#[test]
+fn detect_cudaq_payload_shape() {
+    assert!(PasqalCloud::is_cudaq_sequence(
+        r#"{"setup":{},"hamiltonian":{}}"#
+    ));
+    assert!(!PasqalCloud::is_cudaq_sequence(
+        r#"{"name":"pulser-sequence"}"#
+    ));
 }
