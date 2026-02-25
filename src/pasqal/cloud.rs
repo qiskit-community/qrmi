@@ -297,6 +297,11 @@ impl PasqalCloud {
         Ok(Self::map_batch_status(&parsed))
     }
 
+    fn normalize_cudaq_result(result: &serde_json::Value) -> String {
+        let counter = result.get("counter").unwrap_or(result);
+        serde_json::json!({ "counter": counter }).to_string()
+    }
+
     fn task_kind(&self, task_id: &str) -> Result<PasqalTaskKind> {
         match self.task_kinds.get(task_id) {
             Some(task_kind) => Ok(*task_kind),
@@ -419,9 +424,17 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        match self.api_client.get_batch_results(task_id).await {
-            Ok(resp) => Ok(TaskResult { value: resp }),
-            Err(_err) => Err(_err),
+        match self.task_kind(task_id)? {
+            PasqalTaskKind::Batch => match self.api_client.get_batch_results(task_id).await {
+                Ok(resp) => Ok(TaskResult { value: resp }),
+                Err(err) => Err(err),
+            },
+            PasqalTaskKind::Cudaq => match self.api_client.get_cudaq_job(task_id).await {
+                Ok(job) => Ok(TaskResult {
+                    value: Self::normalize_cudaq_result(&job.data.result),
+                }),
+                Err(err) => Err(err),
+            },
         }
     }
 

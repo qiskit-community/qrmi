@@ -53,28 +53,55 @@ cudaq.set_target("pasqal", machine="EMU_FREE")
 ```
 
 ### For development builds
-When installing pre-built binaries in supported ways, the below steps should not be needed.
 
-However, building CUDA-Q and QRMI concurrently means that one has to set up the environment more carefully.
-For development, assuming the instructions in demo(insertPath)/INSTALL.md are followed, we then 
-clone the CUDA-Q repository into slurm-docker-cluster/shared.
+Use CUDA-Q scripts directly for local rebuilds:
 
-We then have to apply the patch `cuda-q-dev.patch` in this directory.
 ```bash
-patch -p1 ./cuda-q-dev.patch
+# 1) Rebuild QRMI
+cd /shared/qrmi
+cargo build --release --lib
+
+# 2) Rebuild CUDA-Q with QRMI integration
+cd /shared/cuda-quantum
+export PATH=/opt/llvm/bin:$PATH
+export LLVM_INSTALL_PREFIX=/root/.llvm-project/build
+bash scripts/build_cudaq.sh -i -j nproc -- \
+  -DQRMI_ROOT=/shared/qrmi \
+  -DLLVM_DIR=/root/.llvm-project/build/lib/cmake/llvm \
+  -DMLIR_DIR=/root/.llvm-project/build/lib/cmake/mlir \
+  -DClang_DIR=/root/.llvm-project/build/lib/cmake/clang \
+  -DZLIB_ROOT=/usr/local/zlib \
+  -DZLIB_LIBRARY=/usr/lib64/libz.so \
+  -DZLIB_INCLUDE_DIR=/usr/include \
+  -DOPENSSL_ROOT_DIR=/usr \
+  -DOPENSSL_CRYPTO_LIBRARY=/usr/lib64/libcrypto.so \
+  -DOPENSSL_SSL_LIBRARY=/usr/lib64/libssl.so \
+  -DOPENSSL_INCLUDE_DIR=/usr/include \
+  -DCUDAQ_BUILD_TESTS=OFF \
+  -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF \
+  -DCUDAQ_ENABLE_QCI_BACKEND=OFF \
+  -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
+
+We can keep on disabling more backends too to speed up the compilation.
+
+# 3) Reinstall CUDA-Q Python package (non-editable!)
+source /shared/pyenv/bin/activate
+pip uninstall -y cuda-quantum-cu13 || true
+pip install --no-build-isolation /shared/cuda-quantum
 ```
 
-At runtime, CUDA-Q's Pasqal QRMI plugin library and `libqrmi.so` must be
-discoverable, which we can achieve by setting the following environment variables:
+Do not use editable install for CUDA-Q in this workspace (`pip install -e .`).
+It requires manually specifying paths to get a working environment.
+
+Runtime setup (single supported configuration):
 
 ```bash
 CUDAQ_SITE_PACKAGES="$(python - <<'PY'
-import pathlib
-import cudaq
+import pathlib, cudaq
 print(pathlib.Path(cudaq.__file__).resolve().parent.parent)
 PY
 )"
-export LD_LIBRARY_PATH="${CUDAQ_SITE_PACKAGES}/lib:/path/to/qrmi/target/release:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="${CUDAQ_SITE_PACKAGES}/lib:/shared/qrmi/target/release:${LD_LIBRARY_PATH:-}"
 export CUDAQ_DYNLIBS="${CUDAQ_SITE_PACKAGES}/lib/libcudaq-pasqal-qpu.so"
 ```
 

@@ -125,6 +125,8 @@ For a Slurm job example that runs CUDA-Q ``pasqal`` through the SPANK
 plugin, see:
 - ``/shared/spank-plugins/demo/qrmi/jobs/run_cudaq_pasqal.sh``
 
+For CUDA-Q development/build guidance in this repo, see:
+- [examples/qrmi/python/cudaq/README.md](./examples/qrmi/python/cudaq/README.md)
 
 ### Rust
 

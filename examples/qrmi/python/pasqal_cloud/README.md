@@ -52,6 +52,9 @@ import cudaq
 cudaq.set_target("pasqal", machine="EMU_FREE")
 ```
 
+For CUDA-Q build/runtime details in this workspace, see:
+- [`../cudaq/README.md`](../cudaq/README.md)
+
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:
