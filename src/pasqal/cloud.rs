@@ -336,9 +336,7 @@ impl QuantumResource for PasqalCloud {
                         JobStatus::Canceling => TaskStatus::Cancelled,
                         JobStatus::Done => TaskStatus::Completed,
                         JobStatus::Canceled => TaskStatus::Cancelled,
-                        JobStatus::TimedOut => TaskStatus::Failed,
                         JobStatus::Error => TaskStatus::Failed,
-                        JobStatus::Paused => TaskStatus::Queued,
                     };
                     Ok(status)
                 }
