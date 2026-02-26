@@ -140,7 +140,6 @@ fn read_qrmi_config_env_value_from_content(
 }
 
 fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<String>) {
-    // Get credentials from environment variables or config, with preference to environment variables.
     let username = env::var("PASQAL_USERNAME")
         .ok()
         .filter(|v| !v.trim().is_empty())
@@ -177,10 +176,8 @@ impl PasqalCloud {
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
-
         let cfg = read_pasqal_config(backend_name)?;
 
-        // Project ID
         let project_id_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID");
         let env_project_id = env::var(&project_id_var)
             .ok()
@@ -195,7 +192,6 @@ impl PasqalCloud {
                 )
             })?;
 
-        // Auth token
         let var_name = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN");
         let env_token = env::var(&var_name).ok().filter(|v| !v.trim().is_empty());
         let auth_token = env_token // Token or None
@@ -205,7 +201,6 @@ impl PasqalCloud {
                 "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
             ));
 
-        // Auth endpoint
         let auth_endpoint_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT");
         let env_auth_endpoint = env::var(&auth_endpoint_var)
             .ok()
@@ -218,12 +213,9 @@ impl PasqalCloud {
             ))
             .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
 
-        // Build Pasqal Cloud API client
         debug!("Build PasqalCloud client for backend '{}'", backend_name);
         let mut builder = ClientBuilder::new(project_id.clone());
         builder.with_auth_endpoint(auth_endpoint.clone());
-
-        // Preference order for credentials: explicit username/password in env > config > direct token.
         let (username, password) = resolve_pasqal_credentials(&cfg);
         if let (Some(username), Some(password)) = (username, password) {
             builder.with_credentials(username, password);
