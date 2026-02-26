@@ -15,13 +15,10 @@
 """Pulser Device creation"""
 
 # pylint: disable=invalid-name
-import random
 
 import pulser
 import pulser.abstract_repr
-from dotenv import load_dotenv
 from pulser.devices import Device
-from pulser_qrmi_backend.service import QRMIService
 from qiskit.transpiler.target import Target
 
 from qrmi import QuantumResource
@@ -43,23 +40,3 @@ def get_device(qrmi: QuantumResource) -> Device:
 def get_target(qrmi: QuantumResource) -> Target:
     """Returns Qiskit Target of Pasqal Device for use with Qiskit Pasqal Provider"""
     raise NotImplementedError
-
-
-if __name__ == "__main__":
-    import random
-
-    from dotenv import load_dotenv
-    from qrmi_primitives import QRMIService
-
-    # Create QRMI
-    load_dotenv()
-    service = QRMIService()
-
-    resources = service.resources()
-    if len(resources) == 0:
-        raise ValueError("No quantum resource is available.")
-
-    # Randomly select QR
-    qrmi_connection = resources[random.randrange(len(resources))]
-    print(qrmi_connection.metadata())
-    print(get_device(qrmi_connection))
