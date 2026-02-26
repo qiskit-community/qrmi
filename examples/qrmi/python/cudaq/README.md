@@ -12,6 +12,7 @@
 ```shell-session
 $ source ~/py311_qrmi_venv/bin/activate
 $ pip install -r ../requirements.txt
+$ pip install cudaq
 ```
 
 ## Set environment variables
@@ -19,7 +20,7 @@ $ pip install -r ../requirements.txt
 QRMI supports Pasqal Cloud configuration via environment variables.
 For Pasqal Cloud auth, QRMI also supports reading `~/.pasqal/config` (token or username/password).
 
-The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
+The required environment variables are listed below. They are populated automatically by the spank plugin.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
@@ -43,52 +44,43 @@ password=<your password>
 
 ## Using this backend from CUDA-Q (`pasqal`)
 
-When CUDA-Q is configured with target `pasqal`, QRMI is used as the
-Pasqal cloud bridge. `machine` in `cudaq.set_target(..., machine=...)` should
-match `<backend_name>` above (for example `EMU_FREE`).
+When CUDA-Q is configured with target `pasqal` and  `machine` in `cudaq.set_target(..., machine=...)` should be
+match `qrmi`.
 
 ```python
 import cudaq
-cudaq.set_target("pasqal", machine="EMU_FREE")
+cudaq.set_target("pasqal", machine="qrmi")
 ```
+
+See the CUDA-Q docs too see how to send a C++ job. To use QRMI, simply set the target and machine as above.
 
 ### For development builds
 
-Use CUDA-Q scripts directly for local rebuilds:
+For development builds, follow CUDA-Q's official build docs and scripts.
+For full toolchain details, use CUDA-Q docs/scripts as source of truth.
 
 ```bash
 # 1) Rebuild QRMI
 cd /shared/qrmi
 cargo build --release --lib
 
-# 2) Rebuild CUDA-Q with QRMI integration
+# 2) Build CUDA-Q + prerequisites via CUDA-Q scripts
 cd /shared/cuda-quantum
-export PATH=/opt/llvm/bin:$PATH
-export LLVM_INSTALL_PREFIX=/root/.llvm-project/build
-bash scripts/build_cudaq.sh -i -j nproc -- \
-  -DQRMI_ROOT=/shared/qrmi \
-  -DLLVM_DIR=/root/.llvm-project/build/lib/cmake/llvm \
-  -DMLIR_DIR=/root/.llvm-project/build/lib/cmake/mlir \
-  -DClang_DIR=/root/.llvm-project/build/lib/cmake/clang \
-  -DZLIB_ROOT=/usr/local/zlib \
-  -DZLIB_LIBRARY=/usr/lib64/libz.so \
-  -DZLIB_INCLUDE_DIR=/usr/include \
-  -DOPENSSL_ROOT_DIR=/usr \
-  -DOPENSSL_CRYPTO_LIBRARY=/usr/lib64/libcrypto.so \
-  -DOPENSSL_SSL_LIBRARY=/usr/lib64/libssl.so \
-  -DOPENSSL_INCLUDE_DIR=/usr/include \
+bash scripts/build_cudaq.sh -p -i -j nproc -- \
+  -DQRMI_ROOT=/shared/qrmi \ # Required!
   -DCUDAQ_BUILD_TESTS=OFF \
   -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF \
   -DCUDAQ_ENABLE_QCI_BACKEND=OFF \
   -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
 
-We can keep on disabling more backends too to speed up the compilation.
+# We can keep on disabling more backends too to speed up the compilation.
 
 # 3) Reinstall CUDA-Q Python package (non-editable!)
 source /shared/pyenv/bin/activate
 pip uninstall -y cuda-quantum-cu13 || true
 pip install --no-build-isolation /shared/cuda-quantum
 ```
+
 
 Do not use editable install for CUDA-Q in this workspace (`pip install -e .`).
 It requires manually specifying paths to get a working environment.
@@ -105,33 +97,13 @@ export LD_LIBRARY_PATH="${CUDAQ_SITE_PACKAGES}/lib:/shared/qrmi/target/release:$
 export CUDAQ_DYNLIBS="${CUDAQ_SITE_PACKAGES}/lib/libcudaq-pasqal-qpu.so"
 ```
 
-## Create Pulser Sequence file as input
-
-Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:
-
-```python
-serialized_sequence = sequence.to_abstract_repr()
-
-with open("pulser_seq.json", "w") as f:
-    f.write(serialized_sequence)
-```
-
 ## How to run
 
+All information is baked into the Python script.
+
 ```shell-session
-$ python example.py -h
-usage: example.py [-h] input backend
 
-An example of Pasqal Cloud Python QRMI
-
-positional arguments:
-  backend  'FRESNEL'
-  input       sequence input file
-
-options:
-  -h, --help  show this help message and exit
-```
 For example,
 ```shell-session
-$ python example.py FRESNEL input.json
+$ python pasqal.py
 ```
