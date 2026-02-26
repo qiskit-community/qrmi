@@ -48,7 +48,9 @@ jobs:
 
     - name: Upload QRMI wheels
       uses: actions/upload-artifact@v6
+      if: ${{ success() }}
       with:
         name: qrmi-wheels
         path: target/wheels/qrmi-*.whl
         if-no-files-found: error
+        retention-days: 5
