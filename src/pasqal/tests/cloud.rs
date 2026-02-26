@@ -114,8 +114,8 @@ fn read_qrmi_config_env_value_handles_empty_environment_key() {
 #[test]
 fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     let tmp_dir = std::env::temp_dir();
-    let missing_root = tmp_dir.join(format!("qrmi_missing_pasqal_cfg"));
-    let missing_home = tmp_dir.join(format!("qrmi_home_without_cfg"));
+    let missing_root = tmp_dir.join("qrmi_missing_pasqal_cfg");
+    let missing_home = tmp_dir.join("qrmi_home_without_cfg");
     std::env::set_var("PASQAL_CONFIG_ROOT", &missing_root);
     std::env::set_var("HOME", &missing_home);
 
