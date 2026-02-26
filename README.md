@@ -108,7 +108,8 @@ qrmi.release(lock)
 
 Full example is available [here](./examples/qrmi/python/direct_access/example.py).
 
-Python QRMI can be used to implement Qiskit primitives (Sampler and Estimator). See example of Qiskit primitives here [for IBM backends](./examples/qiskit_primitives/ibm/sampler.py) or [for Pasqal machines](./examples/qiskit_primitives/pasqal/sampler.py).
+Python QRMI can be used to implement Qiskit primitives (Sampler and Estimator).
+See example of Qiskit primitives here [for IBM backends](./examples/qiskit_primitives/ibm/sampler.py) or [for Pasqal machines](./examples/qiskit_primitives/pasqal/sampler.py).
 
 See [example](./examples/pulser_backend/pasqal/pulser_backend.py) of QRMI working with Pasqal Pulser.
 
@@ -120,13 +121,7 @@ See the Pasqal Cloud examples in this repository:
 - Python: [examples/qrmi/python/pasqal_cloud](./examples/qrmi/python/pasqal_cloud)
 - Rust: [examples/qrmi/rust/pasqal_cloud](./examples/qrmi/rust/pasqal_cloud)
 - C: [examples/qrmi/c/pasqal_cloud](./examples/qrmi/c/pasqal_cloud)
-
-For a Slurm job example that runs CUDA-Q ``pasqal`` through the SPANK
-plugin, see:
-- ``/shared/spank-plugins/demo/qrmi/jobs/run_cudaq_pasqal.sh``
-
-For CUDA-Q development/build guidance in this repo, see:
-- [examples/qrmi/python/cudaq/README.md](./examples/qrmi/python/cudaq/README.md)
+- CUDA-Q [examples/qrmi/python/cudaq](./examples/qrmi/python/cudaq)
 
 ### Rust
 
