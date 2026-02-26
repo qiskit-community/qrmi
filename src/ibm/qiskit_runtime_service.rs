@@ -229,7 +229,50 @@ impl QuantumResource for IBMQiskitRuntimeService {
         {
             error!("Token renewal failed: {:?}", e);
         }
-        sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
+
+        // Determine if this session should be canceled or just closed
+        let mut do_cancel = false;
+        // Obtain a list of jobs associated with this session(acquisition)
+        let jobs_resp = jobs_api::list_jobs(
+            &self.config,
+            None,
+            None,
+            None,
+            Some(true), // pending jobs only
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(acquisition_token),
+            None,
+        )
+        .await?;
+
+        if let Some(pending_jobs) = jobs_resp.jobs {
+            if !pending_jobs.is_empty() {
+                do_cancel = true;
+            }
+        }
+
+        if do_cancel {
+            // Cancel this session if any pending jobs exist.
+            // Note) According to the REST API documentation, this API is labeled as “Close job session,”
+            // but its actual behavior matches Qiskit’s cancel operation. Calling this API results
+            // in the session appearing as “Cancelled” on the IQP web interface
+            sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
+        } else {
+            // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtim.
+            // Displays “Completed” on the IQP web.
+            sessions_api::update_session(
+                &self.config,
+                acquisition_token,
+                None,
+                Some(models::UpdateSessionRequest::new(false)),
+            )
+            .await?;
+        }
         self.session_id = None;
         Ok(())
     }
