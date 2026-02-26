@@ -1,0 +1,41 @@
+---
+# This reusable workflow runs Rust format check and lint on librqmi, dependencies, examples and binaries.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - None
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+name: Lint and format check Rust code
+on:
+  workflow_call:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        components: rustfmt, clippy
+
+    - name: Format check libqrmi.so (includes dependencies, examples and binaries)
+      run: cargo fmt --all --check --verbose
+
+    # --all-targets does not include the binaries
+    - name: Lint libqrmi.so (includes dependencies and examples)
+      run: cargo clippy --all-targets -- -D warnings
+
+    - name: Lint task_runner
+      run: cargo clippy --bin task_runner --features="build-binary" -- -D warnings
+
+    - name: Lint stubgen
+      run:  cargo clippy --bin stubgen --features="pyo3" -- -D warnings
+
