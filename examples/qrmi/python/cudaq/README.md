@@ -81,11 +81,10 @@ pip uninstall -y cuda-quantum-cu13 || true
 pip install --no-build-isolation /shared/cuda-quantum
 ```
 
-
 Do not use editable install for CUDA-Q in this workspace (`pip install -e .`).
-It requires manually specifying paths to get a working environment.
+It requires further manually specifying paths to get a working environment.
 
-Runtime setup (single supported configuration):
+You may also need to add `libqrmi.so` do `LD_LIBRARY_PATH`, and update the `CUDAQ_DYNLIBS` to enable library discovery:
 
 ```bash
 CUDAQ_SITE_PACKAGES="$(python - <<'PY'
