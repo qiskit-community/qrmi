@@ -166,3 +166,53 @@ fn detect_cudaq_payload_shape() {
         r#"{"name":"pulser-sequence"}"#
     ));
 }
+
+#[test]
+fn normalize_cudaq_result_normalizes_all_supported_counter_shapes() {
+    let expected = serde_json::json!({
+        "counter": {
+            "000": 47,
+            "001": 16
+        }
+    });
+
+    let cases = vec![
+        serde_json::json!({
+            "counter": {
+                "000": 47,
+                "001": 16
+            }
+        }),
+        serde_json::json!({
+            "counter": {
+                "job-123": {
+                    "000": 47,
+                    "001": 16
+                }
+            }
+        }),
+        serde_json::json!({
+            "job-123": {
+                "counter": {
+                    "000": 47,
+                    "001": 16
+                }
+            }
+        }),
+        serde_json::json!({
+            "000": 47,
+            "001": 16
+        }),
+    ];
+
+    for case in cases {
+        let normalized = PasqalCloud::normalize_cudaq_result(&case);
+        let parsed: serde_json::Value =
+            serde_json::from_str(&normalized).expect("normalized result must be valid json");
+        assert_eq!(parsed, expected);
+        let count_000 = parsed["counter"]["000"]
+            .as_i64()
+            .expect("counter['000'] should be an integer");
+        assert_eq!(count_000, 47);
+    }
+}

@@ -299,7 +299,22 @@ impl PasqalCloud {
 
     fn normalize_cudaq_result(result: &serde_json::Value) -> String {
         let counter = result.get("counter").unwrap_or(result);
-        serde_json::json!({ "counter": counter }).to_string()
+        let normalized_counter = match counter.as_object() {
+            Some(counter_obj) if counter_obj.values().all(|value| value.is_number()) => {
+                counter.clone()
+            }
+            Some(counter_obj) if counter_obj.len() == 1 => {
+                let nested = counter_obj.values().next().unwrap_or(counter);
+                nested
+                    .get("counter")
+                    .filter(|value| value.is_object())
+                    .cloned()
+                    .or_else(|| nested.as_object().map(|_| nested.clone()))
+                    .unwrap_or_else(|| counter.clone())
+            }
+            _ => counter.clone(),
+        };
+        serde_json::json!({ "counter": normalized_counter }).to_string()
     }
 
     fn task_kind(&self, task_id: &str) -> Result<PasqalTaskKind> {
