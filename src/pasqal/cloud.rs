@@ -13,13 +13,12 @@
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use log::{debug, warn};
-use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus, DEFAULT_AUTH_ENDPOINT};
+use log::{debug, error, warn};
+use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use async_trait::async_trait;
@@ -33,6 +32,8 @@ struct PasqalConfig {
     auth_endpoint: Option<String>,
 }
 
+const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
+
 fn strip_quotes(s: &str) -> &str {
     let s = s.trim();
     if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
@@ -40,13 +41,6 @@ fn strip_quotes(s: &str) -> &str {
     } else {
         s
     }
-}
-
-fn now_unix_seconds() -> Result<i64> {
-    Ok(SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|e| anyhow!("Failed to read system time: {e}"))?
-        .as_secs() as i64)
 }
 
 fn read_pasqal_config(_backend_name: &str) -> Result<PasqalConfig> {
@@ -126,10 +120,11 @@ fn read_qrmi_config_env_value_from_content(
     backend_name: &str,
     key: &str,
 ) -> Option<String> {
-    let root: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let root: serde_json::Value = serde_json::from_str(content).ok()?;
     let resources = root.get("resources")?.as_array()?;
 
     for r in resources {
+        // TODO: we can make this let Some(name) = ... to be more robust I think?
         let name = r.get("name")?.as_str()?;
         if name != backend_name {
             continue;
@@ -144,16 +139,23 @@ fn read_qrmi_config_env_value_from_content(
     None
 }
 
+fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<String>) {
+    // Get credentials from environment variables or config, with preference to environment variables.
+    let username = env::var("PASQAL_USERNAME")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or(cfg.username.clone().filter(|v| !v.trim().is_empty()));
+    let password = env::var("PASQAL_PASSWORD")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or(cfg.password.clone().filter(|v| !v.trim().is_empty()));
+    (username, password)
+}
+
 /// QRMI implementation for Pasqal Cloud
 pub struct PasqalCloud {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
-    auth_token: String,
-    auth_token_expiry_unix_seconds: Option<i64>,
-    project_id: String,
-    auth_endpoint: String,
-    username: Option<String>,
-    password: Option<String>,
 }
 
 impl PasqalCloud {
@@ -163,15 +165,22 @@ impl PasqalCloud {
     ///
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID`: Pasqal Cloud Project ID to access the QPU
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN`: Pasqal Cloud Auth Token
+    /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
+    /// * `PASQAL_USERNAME`: Pasqal Cloud username
+    /// * `PASQAL_PASSWORD`: Pasqal Cloud password
     ///
-    /// Let's hardcode the rest for now
+    /// # Config file fallback
+    ///
+    /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `token`, `project_id`, `auth_endpoint`
     pub fn new(backend_name: &str) -> Result<Self> {
         debug!(
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
+
         let cfg = read_pasqal_config(backend_name)?;
 
+        // Project ID
         let project_id_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID");
         let env_project_id = env::var(&project_id_var)
             .ok()
@@ -186,17 +195,17 @@ impl PasqalCloud {
                 )
             })?;
 
+        // Auth token
         let var_name = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN");
         let env_token = env::var(&var_name).ok().filter(|v| !v.trim().is_empty());
-        let auth_token = env_token
+        let auth_token = env_token // Token or None
             .or(cfg.token.clone().filter(|v| !v.trim().is_empty()))
             .or(read_qrmi_config_env_value(
                 backend_name,
                 "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
-            ))
-            .unwrap_or_else(|| String::new());
-        let auth_token_expiry_unix_seconds = Client::jwt_expiry_unix_seconds(&auth_token)?;
+            ));
 
+        // Auth endpoint
         let auth_endpoint_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT");
         let env_auth_endpoint = env::var(&auth_endpoint_var)
             .ok()
@@ -207,57 +216,31 @@ impl PasqalCloud {
                 backend_name,
                 "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT",
             ))
-            .unwrap_or_else(|| DEFAULT_AUTH_ENDPOINT.to_string());
+            .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
 
-        let auth_token_state = if auth_token.is_empty() {
-            "empty"
+        // Build Pasqal Cloud API client
+        debug!("Build PasqalCloud client for backend '{}'", backend_name);
+        let mut builder = ClientBuilder::new(project_id.clone());
+        builder.with_auth_endpoint(auth_endpoint.clone());
+
+        // Preference order for credentials: explicit username/password in env > config > direct token.
+        let (username, password) = resolve_pasqal_credentials(&cfg);
+        if let (Some(username), Some(password)) = (username, password) {
+            builder.with_credentials(username, password);
+        } else if let Some(token) = auth_token {
+            builder.with_token(token);
         } else {
-            "set"
-        };
-        debug!(
-            "Build client using project_id='{}', auth_token={}, auth_endpoint='{}'",
-            project_id, auth_token_state, auth_endpoint
-        );
-        let api_client = ClientBuilder::new(auth_token.clone(), project_id.clone()).build()?;
+            error!(
+                "No Pasqal Cloud auth details configured for backend '{}': expected PASQAL_USERNAME/PASQAL_PASSWORD, ~/.pasqal/config credentials, or token",
+                backend_name
+            );
+        }
+        let api_client = builder.build()?;
 
         Ok(Self {
             api_client,
             backend_name: backend_name.to_string(),
-            auth_token,
-            auth_token_expiry_unix_seconds,
-            project_id,
-            auth_endpoint,
-            username: cfg.username,
-            password: cfg.password,
         })
-    }
-
-    async fn ensure_authenticated(&mut self) -> Result<()> {
-        let now = now_unix_seconds()?;
-        if Client::is_auth_token_usable(&self.auth_token, now) {
-            return Ok(());
-        }
-        if let Some(exp) = self.auth_token_expiry_unix_seconds {
-            debug!(
-                "Auth token is expired or near expiry (exp {}, now {}), will attempt to refresh",
-                exp, now
-            );
-        }
-        let (Some(username), Some(password)) = (self.username.as_deref(), self.password.as_deref())
-        else {
-            return Ok(());
-        };
-
-        debug!(
-            "Requesting new auth token for PasqalCloud QRMI (backend '{}')",
-            self.backend_name
-        );
-        let token = Client::request_access_token(&self.auth_endpoint, username, password).await?;
-        self.auth_token = token;
-        self.auth_token_expiry_unix_seconds = Client::jwt_expiry_unix_seconds(&self.auth_token)?;
-        self.api_client =
-            ClientBuilder::new(self.auth_token.clone(), self.project_id.clone()).build()?;
-        Ok(())
     }
 }
 
@@ -272,11 +255,10 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn is_accessible(&mut self) -> Result<bool> {
-        self.ensure_authenticated().await?;
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec![
+                let valid_devices = [
                     "FRESNEL",
                     "FRESNEL_CAN1",
                     "EMU_MPS",
@@ -318,12 +300,11 @@ impl QuantumResource for PasqalCloud {
             "Starting task on PasqalCloud QRMI (backend '{}')",
             self.backend_name
         );
-        self.ensure_authenticated().await?;
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             let device_type = match self.backend_name.parse::<DeviceType>() {
                 Ok(dt) => dt,
                 Err(_) => {
-                    let valid_devices = vec![
+                    let valid_devices = [
                         "FRESNEL",
                         "FRESNEL_CAN1",
                         "EMU_MPS",
@@ -357,7 +338,6 @@ impl QuantumResource for PasqalCloud {
             "Stopping task '{}' on PasqalCloud QRMI (backend '{}')",
             task_id, self.backend_name
         );
-        self.ensure_authenticated().await?;
         match self.api_client.cancel_batch(task_id).await {
             Ok(_) => Ok(()),
             Err(err) => Err(err),
@@ -365,7 +345,6 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        self.ensure_authenticated().await?;
         match self.api_client.get_batch(task_id).await {
             // Assuming a single job per batch for now,
             // Will need to be updated if multiple jobs per batch are supported in the future
@@ -388,7 +367,6 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        self.ensure_authenticated().await?;
         match self.api_client.get_batch_results(task_id).await {
             Ok(resp) => Ok(TaskResult { value: resp }),
             Err(_err) => Err(_err),
@@ -404,11 +382,10 @@ impl QuantumResource for PasqalCloud {
             "Getting target information for PasqalCloud QRMI (backend '{}')",
             self.backend_name
         );
-        self.ensure_authenticated().await?;
         let device_type = match self.backend_name.parse::<DeviceType>() {
             Ok(dt) => dt,
             Err(_) => {
-                let valid_devices = vec![
+                let valid_devices = [
                     "FRESNEL",
                     "FRESNEL_CAN1",
                     "EMU_MPS",

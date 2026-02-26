@@ -1,7 +1,9 @@
-use super::{read_pasqal_config, read_qrmi_config_env_value_from_content, PasqalCloud};
+use super::{
+    read_pasqal_config, read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
+    PasqalCloud, PasqalConfig,
+};
 use crate::models::ResourceType;
 use crate::QuantumResource;
-use pasqal_cloud_api::ClientBuilder;
 use pasqal_cloud_api::ClientBuilder;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -19,17 +21,19 @@ async fn is_accessible_attempts_authentication() {
     let addr = listener.local_addr().expect("local_addr should succeed");
     // Setup Mock server with mocked responses.
     let mock_server = thread::spawn(move || {
-        for _ in 0..1 {
+        for _ in 0..2 {
             if let Ok((mut stream, _)) = listener.accept() {
                 // Read the request
                 let mut buf = [0_u8; 4096];
                 let n = stream.read(&mut buf).unwrap_or(0);
                 let req = String::from_utf8_lossy(&buf[..n]);
+                let req_lower = req.to_ascii_lowercase();
 
                 // hardcode responses based on the request path
                 let body = if req.contains("/oauth/token") {
                     r#"{"access_token":"opaque_token"}"#
                 } else if req.contains("/core-fast/api/v1/devices") {
+                    assert!(req_lower.contains("authorization: bearer opaque_token"));
                     r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#
                 } else {
                     r#"{}"#
@@ -47,30 +51,47 @@ async fn is_accessible_attempts_authentication() {
         }
     });
 
-    let api_client = ClientBuilder::new(String::new(), "project-id".to_string())
-        .build()
-        .expect("client build should succeed");
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_base_url(format!("http://{}", addr));
+    builder.with_auth_endpoint(format!("http://{}/oauth/token", addr));
+    builder.with_credentials("usr".to_string(), "pass".to_string());
+    let api_client = builder.build().expect("client build should succeed");
 
-    // Create a PasqalCloud instance pointing to the mock auth server.
-    // Use an invalid backend name to stop before get_device(), so this test
-    // only validates authentication behavior.
+    // Create a PasqalCloud instance pointing to the mock server
     let mut qrmi = PasqalCloud {
         api_client,
-        backend_name: "INVALID_BACKEND".to_string(),
-        auth_token: String::new(),
-        auth_token_expiry_unix_seconds: None,
-        project_id: "project-id".to_string(),
-        auth_endpoint: format!("http://{}/oauth/token", addr),
-        username: Some("usr".to_string()),
-        password: Some("pass".to_string()),
+        backend_name: "EMU_FREE".to_string(),
     };
 
-    let result = qrmi.is_accessible().await;
+    let accessible = qrmi
+        .is_accessible()
+        .await
+        .expect("is_accessible should succeed");
     mock_server.join().expect("server thread should join");
 
-    // Verify that authentication happened and then backend validation failed.
-    assert!(result.is_err());
-    assert_eq!(qrmi.auth_token, "opaque_token".to_string());
+    // Verify that `is_accessible()` returns true and that the obtained token is used.
+    assert!(accessible);
+}
+
+#[test]
+fn resolve_pasqal_credentials_prefers_environment_variables() {
+    std::env::set_var("PASQAL_USERNAME", "env-user");
+    std::env::set_var("PASQAL_PASSWORD", "env-pass");
+
+    let cfg = PasqalConfig {
+        username: Some("config-user".to_string()),
+        password: Some("config-pass".to_string()),
+        token: None,
+        project_id: None,
+        auth_endpoint: None,
+    };
+    let (username, password) = resolve_pasqal_credentials(&cfg);
+
+    assert_eq!(username.as_deref(), Some("env-user"));
+    assert_eq!(password.as_deref(), Some("env-pass"));
+
+    std::env::remove_var("PASQAL_USERNAME");
+    std::env::remove_var("PASQAL_PASSWORD");
 }
 
 #[test]
@@ -93,8 +114,8 @@ fn read_qrmi_config_env_value_handles_empty_environment_key() {
 #[test]
 fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     let tmp_dir = std::env::temp_dir();
-    let missing_root = tmp_dir.join(format!("qrmi_missing_pasqal_cfg"));
-    let missing_home = tmp_dir.join(format!("qrmi_home_without_cfg"));
+    let missing_root = tmp_dir.join("qrmi_missing_pasqal_cfg");
+    let missing_home = tmp_dir.join("qrmi_home_without_cfg");
     std::env::set_var("PASQAL_CONFIG_ROOT", &missing_root);
     std::env::set_var("HOME", &missing_home);
 
@@ -112,7 +133,7 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
-    let mut builder = ClientBuilder::for_project("project-id".to_string());
+    let mut builder = ClientBuilder::new("project-id".to_string());
     builder.with_token("opaque_token".to_string());
     let api_client = builder.build().expect("client build should succeed");
 

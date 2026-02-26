@@ -52,11 +52,12 @@ class QPPSamplerV2(PasqalSamplerV2):
         *,
         options: dict | None = None,
     ) -> None:
+        super().__init__(backend=None)  # type: ignore[arg-type]
         self._qrmi = qrmi
         self._options = Options(**options) if options else Options()
 
     def run(
-        self, pubs: Iterable[QuantumCircuit], shots: int | None = None
+        self, pubs: Iterable[QuantumCircuit], *, shots: int | None = None
     ) -> PasqalJob:
         # get the register from the analog gate inside QuantumCircuit
         qc = pubs[0]
@@ -80,10 +81,9 @@ class QPPSamplerV2(PasqalSamplerV2):
                 # Get the results
                 results.append(self._qrmi.task_result(new_task_id).value)
                 break
-            elif status == TaskStatus.Failed:
+            if status == TaskStatus.Failed:
                 break
-            else:
-                print("Task status %s, waiting 1s" % status, flush=True)
-                time.sleep(1)
+            print(f"Task status {status}, waiting 1s", flush=True)
+            time.sleep(1)
 
         return results

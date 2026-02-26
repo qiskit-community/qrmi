@@ -14,10 +14,11 @@ The required environment variables are listed below. This example assumes that a
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-
-| <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID` |  Pasqal Cloud Project ID to access the QPU
-| <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token
+| <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID | Pasqal Cloud Project ID to access the QPU |
+| <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token (optional when username/password are configured) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
+| PASQAL_USERNAME | Pasqal Cloud username (optional, user-provided) |
+| PASQAL_PASSWORD | Pasqal Cloud password (optional, user-provided) |
 
 ### ~/.pasqal/config (optional)
 

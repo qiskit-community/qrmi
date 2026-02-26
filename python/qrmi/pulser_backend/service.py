@@ -25,6 +25,12 @@ class QRMIService:
     """Class for interacting with the QRMI resources"""
 
     def __init__(self):
+        # If resource acquisition failed in QRMI plugin,
+        # the plugin may expose the error reason via environment variable.
+        plugin_error = os.environ.get("QRMI_PLUGIN_ERROR")
+        if plugin_error is not None:
+            raise RuntimeError(plugin_error)
+
         qpus = os.environ["SLURM_JOB_QPU_RESOURCES"]
         logger.debug("qpus: %s", qpus)
         if len(qpus) == 0:
@@ -56,11 +62,15 @@ class QRMIService:
                 logger.warning(
                     "Unsupported resource type: %s specified for %s", qpu_types[i], qpu
                 )
+                continue
 
-            if resource.is_accessible():
-                self._qrmi_resources[qpu] = resource
-            else:
-                logger.debug("%s is not accessible now. ignored.", qpu)
+            try:
+                if resource.is_accessible():
+                    self._qrmi_resources[qpu] = resource
+                else:
+                    logger.debug("%s is not accessible now. ignored.", qpu)
+            except RuntimeError as err:
+                raise RuntimeError(f"{qpu} is not accessible. {err}") from err
 
     def resources(self) -> List[QuantumResource]:
         """Return all accessible QRMI resources.

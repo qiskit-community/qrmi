@@ -9,6 +9,7 @@
 # Any modifications or derivative works of this code must retain this
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
+"""Pulser backend integration backed by QRMI calls."""
 
 from __future__ import annotations
 
@@ -66,7 +67,7 @@ class PulserQRMIConnection(RemoteConnection):
         self,
         sequence: pulser.Sequence,
         wait: bool = True,
-        open: bool = False,
+        open: bool = False,  # pylint: disable=redefined-builtin
         batch_id: str | None = None,
         **kwargs: typing.Any,
     ) -> list[dict[str, dict[str, str]]]:  # type: ignore
@@ -119,8 +120,8 @@ class PulserQRMIConnection(RemoteConnection):
         for params in job_params:
             seq_to_submit = sequence
             if sequence.is_parametrized() or sequence.is_register_mappable():
-                vars = params.get("variables", {})
-                seq_to_submit = sequence.build(**vars)
+                variables = params.get("variables", {})
+                seq_to_submit = sequence.build(**variables)
             assert not (
                 seq_to_submit.is_parametrized() or seq_to_submit.is_register_mappable()
             )
@@ -136,24 +137,39 @@ class PulserQRMIConnection(RemoteConnection):
                     # Get the results
                     results.append(self._qrmi.task_result(new_task_id).value)
                     break
-                elif status == TaskStatus.Failed:
+                if status == TaskStatus.Failed:
                     break
-                else:
-                    print("Task status %s, waiting 1s" % status, flush=True)
-                    time.sleep(1)
+                print(f"Task status {status}, waiting 1s", flush=True)
+                time.sleep(1)
         return results
 
 
 class PulserQRMIBackend(RemoteBackend):
+    """Pulser backend wrapper that sends jobs through :class:`PulserQRMIConnection`."""
+
     def __init__(
         self,
         sequence: pulser.Sequence,
         connection: PulserQRMIConnection,
         mimic_qpu: bool = False,
     ) -> None:
+        super().__init__(
+            sequence=sequence,
+            connection=connection,
+            mimic_qpu=mimic_qpu,
+        )
         self._sequence = sequence
         self._connection = connection
         self._mimic_qpu = mimic_qpu
 
-    def run(self, job_params: list[JobParams] | None = None, wait: bool = False) -> list[dict[str, dict[str, str]]]:  # type: ignore
-        return self._connection.submit(self._sequence, wait=wait, job_params=job_params, mimic_qpu=self._mimic_qpu)  # type: ignore
+    def run(
+        self,
+        job_params: list[JobParams] | None = None,
+        wait: bool = False,
+    ) -> list[dict[str, dict[str, str]]]:  # type: ignore
+        return self._connection.submit(
+            self._sequence,
+            wait=wait,
+            job_params=job_params,
+            mimic_qpu=self._mimic_qpu,
+        )  # type: ignore
