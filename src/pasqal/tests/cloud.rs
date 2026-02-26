@@ -2,7 +2,7 @@ use super::{
     read_pasqal_config, read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
     PasqalCloud, PasqalConfig,
 };
-use crate::models::{ResourceType, TaskStatus};
+use crate::models::ResourceType;
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
 use std::io::{Read, Write};
