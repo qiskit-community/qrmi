@@ -5,7 +5,7 @@ description = "Direct Access API client library for Rust"
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
-version = "0.13.0"
+version = "0.14.0"
 edition.workspace = true
 
 [features]
@@ -19,7 +19,7 @@ iqp_retry_policy = []
 
 [dependencies]
 anyhow = { version = "1.0.90", features = ["backtrace"] }
-reqwest = { version = "0.12.14", features = ["json", "native-tls-alpn"] }
+reqwest = { version = "0.12.14", default-features=false, features = ["json", "rustls-tls"] }
 thiserror = "2.0.16"
 chrono = "0.4.38"
 async-trait = "0.1.83"
