@@ -8,7 +8,6 @@
   * Rust compiler 1.91 or above [Link](https://www.rust-lang.org/tools/install)
   * A C compiler: for example, GCC(gcc) on Linux and Clang(clang-tools-extra) for Rust unknown targets/cross compilations. QRMI is compatible with a compiler conforming to the C11 standard.
   * make/cmake (make/cmake RPM for RHEL compatible OS)
-  * zlib (zlib-devel RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
     * Libraries and header files needed for Python development(python3.1x-devel RPM for RHEL compatible OS)
       * /usr/include/python3.1x
@@ -16,7 +15,6 @@
 
 * Runtime requires the following tools:
   * gcc (libgcc RPM for RHEL compatible OS)
-  * zlib (zlib RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
     * Libraries and header files needed for Python development(python3.1x-devel RPM for RHEL compatible OS)
 
