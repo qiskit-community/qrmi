@@ -1,0 +1,98 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+# This reusable workflow builds Debian packages for a given Linux distribution and version.
+# It is intended to be called on release/tag events, not on pull requests.
+#
+# It produces:
+#   - libqrmi        .deb  (libqrmi.so)
+#   - libqrmi-dev    .deb  (libqrmi.a + qrmi.h)
+#
+# The QRMI version is read from Cargo.toml (single source of truth) and used
+# to update packaging/debian/changelog before building.
+#
+# Workflow inputs:
+# - [required] distro:          short distro name used in artifact names  (e.g. debian, ubuntu)
+# - [required] distro-version:  OS version name or number                 (e.g. bookworm, 24.04)
+# - [required] container-image: full container image reference            (e.g. debian:bookworm, ubuntu:24.04)
+#
+# Workflow artifacts produced:
+# - [uploaded] qrmi-debs-{distro}{distro-version}  (*.deb)
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+#
+# Example caller (release workflow):
+#
+#   package-debian-bookworm:
+#     uses: ./.github/workflows/package-deb.yml
+#     with:
+#       distro: debian
+#       distro-version: bookworm
+#       container-image: debian:bookworm
+#
+#   package-ubuntu-2404:
+#     uses: ./.github/workflows/package-deb.yml
+#     with:
+#       distro: ubuntu
+#       distro-version: "24.04"
+#       container-image: ubuntu:24.04
+name: Package .deb for Debian and Ubuntu
+on:
+  workflow_call:
+    inputs:
+      distro:
+        description: >-
+          Short distro name used in artifact names (e.g. debian, ubuntu)
+        type: string
+        required: true
+      distro-version:
+        description: >-
+          OS version name or number (e.g. bookworm, 24.04)
+        type: string
+        required: true
+      container-image:
+        description: >-
+          Full container image reference (e.g. debian:bookworm, ubuntu:24.04)
+        type: string
+        required: true
+env:
+  CARGO_TERM_COLOR: always
+  DEBIAN_FRONTEND: noninteractive
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
+    steps:
+    - name: Install minimal bootstrap dependencies
+      run: |
+        apt-get update -y
+        apt-get install -y \
+          curl \
+          git \
+          devscripts \
+          equivs
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Use debian/control as the single source of truth for build dependencies.
+    # This ensures the CI environment always matches what dpkg-buildpackage requires.
+    - name: Install build dependencies from debian/control
+      run: mk-build-deps --install --remove --tool "apt-get -y" packaging/debian/control
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Build Debian packages
+      run: make deb
+
+    - name: Upload .deb packages
+      uses: actions/upload-artifact@v4
+      if: ${{ success() }}
+      with:
+        name: qrmi-debs-${{ inputs.distro }}${{ inputs.distro-version }}
+        path: ../*.deb
+        if-no-files-found: error
+        retention-days: 30
