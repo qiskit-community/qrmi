@@ -1,0 +1,54 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+
+# This reusable workflow creates the libqrmi tarball for RHEL compatible distributions.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - [uploaded] libqrmi tarball for RHEL compatible distributions.
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+
+name: Build libqrmi tarball for a RHEL compatible distribution
+on:
+  workflow_call:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  libqrmi-tarball:
+    runs-on: ubuntu-24.04
+    container:
+      image: registry.access.redhat.com/ubi8/ubi:8.10
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Install RHEL build dependencies
+      run: |
+        dnf install -y gcc make
+
+    - name: Create libqrmi tarball for RHEL compatible distributions
+      run: |
+        make dist-rhel-lib
+
+    - name: Get QRMI version
+      id: qrmi-version
+      run: |
+        VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+        echo "value=$VERSION" >> $GITHUB_OUTPUT
+        echo "QRMI version: $VERSION"
+
+    - name: Upload libqrmi tarball
+      uses: actions/upload-artifact@v4
+      if: ${{ success() }}
+      with:
+        name: libqrmi-${{ steps.qrmi-version.outputs.value }}-rhel8-x86_64-tarball
+        path: libqrmi-${{ steps.qrmi-version.outputs.value }}-rhel8-x86_64.tar.gz
+        if-no-files-found: error
