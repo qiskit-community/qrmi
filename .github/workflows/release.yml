@@ -1,0 +1,103 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+# This workflow builds and publishes RPM and Debian packages on release/tag events.
+#
+# Workflow inputs:
+# - None (triggered by tag push matching v*.*.*)
+#
+# Workflow artifacts produced:
+# - qrmi-dist                   source and vendor tarballs
+# - qrmi-rpms-* artifacts for each RPM-based distro/version combination
+# - qrmi-debs-* artifacts for each Debian-based distro/version combination
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+jobs:
+  dist:
+    name: Create source and vendor tarballs
+    uses: ./.github/workflows/dist.yml
+
+  package-almalinux8:
+    name: Package RPMs for AlmaLinux 8
+    needs: dist
+    uses: ./.github/workflows/package-rpm.yml
+    with:
+      distro: almalinux
+      distro-version: "8"
+      container-image: almalinux:8
+
+  package-almalinux9:
+    name: Package RPMs for AlmaLinux 9
+    needs: dist
+    uses: ./.github/workflows/package-rpm.yml
+    with:
+      distro: almalinux
+      distro-version: "9"
+      container-image: almalinux:9
+
+  package-rockylinux8:
+    name: Package RPMs for Rocky Linux 8
+    needs: dist
+    uses: ./.github/workflows/package-rpm.yml
+    with:
+      distro: rockylinux
+      distro-version: "8"
+      container-image: rockylinux:8
+
+  package-rockylinux9:
+    name: Package RPMs for Rocky Linux 9
+    needs: dist
+    uses: ./.github/workflows/package-rpm.yml
+    with:
+      distro: rockylinux
+      distro-version: "9"
+      container-image: rockylinux:9
+
+  package-centos8:
+    name: Package RPMs for CentOS Stream 8
+    needs: dist
+    uses: ./.github/workflows/package-rpm.yml
+    with:
+      distro: centos
+      distro-version: "8"
+      container-image: quay.io/centos/centos:stream8
+
+  package-centos9:
+    name: Package RPMs for CentOS Stream 9
+    needs: dist
+    uses: ./.github/workflows/package-rpm.yml
+    with:
+      distro: centos
+      distro-version: "9"
+      container-image: quay.io/centos/centos:stream9
+
+  package-debian-bookworm:
+    name: Package .deb for Debian Bookworm
+    needs: dist
+    uses: ./.github/workflows/package-deb.yml
+    with:
+      distro: debian
+      distro-version: bookworm
+      container-image: debian:bookworm
+
+  package-ubuntu-2204:
+    name: Package .deb for Ubuntu 22.04
+    needs: dist
+    uses: ./.github/workflows/package-deb.yml
+    with:
+      distro: ubuntu
+      distro-version: "22.04"
+      container-image: ubuntu:22.04
+
+  package-ubuntu-2404:
+    name: Package .deb for Ubuntu 24.04
+    needs: dist
+    uses: ./.github/workflows/package-deb.yml
+    with:
+      distro: ubuntu
+      distro-version: "24.04"
+      container-image: ubuntu:24.04
+
