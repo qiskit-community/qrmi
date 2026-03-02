@@ -8,8 +8,6 @@
   * Rust compiler 1.91 or above [Link](https://www.rust-lang.org/tools/install)
   * A C compiler: for example, GCC(gcc) on Linux and Clang(clang-tools-extra) for Rust unknown targets/cross compilations. QRMI is compatible with a compiler conforming to the C11 standard.
   * make/cmake (make/cmake RPM for RHEL compatible OS)
-  * openssl (openssl-devel RPM for RHEL compatible OS)
-  * zlib (zlib-devel RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
     * Libraries and header files needed for Python development(python3.1x-devel RPM for RHEL compatible OS)
       * /usr/include/python3.1x
@@ -17,8 +15,6 @@
 
 * Runtime requires the following tools:
   * gcc (libgcc RPM for RHEL compatible OS)
-  * openssl (openssl-libs RPM for RHEL compatible OS)
-  * zlib (zlib RPM for RHEL compatible OS)
   * Python 3.11, 3.12 or 3.13 (For Python API)
     * Libraries and header files needed for Python development(python3.1x-devel RPM for RHEL compatible OS)
 
@@ -97,9 +93,6 @@ CARGO_TARGET_DIR=./target/release/maturin maturin build --release
    ...
    Compiling qrmi v0.7.1 (/shared/qrmi)
     Finished `release` profile [optimized] target(s) in 1m 10s
-🖨  Copied external shared libraries to package qrmi.libs directory:
-    /usr/lib64/libcrypto.so.3.2.2
-    /usr/lib64/libssl.so.3.2.2
 📦 Including files matching "python/qrmi/py.typed"
 📦 Including files matching "python/qrmi/*.pyi"
 📦 Built wheel for abi3 Python ≥ 3.12 to /shared/qrmi/target/release/maturin/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
