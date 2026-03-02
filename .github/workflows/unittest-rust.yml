@@ -25,22 +25,10 @@ jobs:
       uses: actions-rust-lang/setup-rust-toolchain@v1
 
     - name: Unittest libqrmi.so (includes examples)
-      run: cargo test --all-targets --release
+      run: make test-libqrmi
 
-    - name: Unittest task_runner
-      run: cargo test --bin task_runner --release --features="build-binary"
+    - name: Unittest binaries
+      run: make test-bins
 
-    - name: Unittest stubgen
-      run: cargo test --bin stubgen --release --features="pyo3"
-
-    - name: Unittest direct_access_client
-      working-directory: dependencies/direct_access_client
-      run: cargo test --release
-
-    - name: Unittest pasqal_cloud_client
-      working-directory: dependencies/pasqal_cloud_client
-      run: cargo test --release
-
-    - name: Unittest qiskit_runtime_client
-      working-directory: dependencies/qiskit_runtime_client
-      run: cargo test --release
+    - name: Unittest dependencies
+      run: make test-dependencies

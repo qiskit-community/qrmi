@@ -1,4 +1,6 @@
 ---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
 # This reusable workflow builds the QRMI binaries.
 #
 # Workflow inputs:
@@ -25,9 +27,6 @@ jobs:
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
 
-    - name: Build task_runner
-      run: cargo build --bin task_runner --release --features="build-binary"
-
-    - name: Build stubgen
-      run: cargo build --bin stubgen --release --features="pyo3"
+    - name: Build task_runner and stubgen
+      run: make build-bins
 
