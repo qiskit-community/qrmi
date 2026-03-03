@@ -241,7 +241,6 @@ impl PasqalCloud {
         let mut builder = ClientBuilder::new(project_id.clone());
         builder.with_auth_endpoint(auth_endpoint.clone());
         if let Some(base_url) = base_url {
-            // to enable end to end mock tests
             builder.with_base_url(base_url);
         }
 
