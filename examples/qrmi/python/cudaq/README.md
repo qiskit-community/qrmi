@@ -45,7 +45,8 @@ password=<your password>
 ## Using this backend from CUDA-Q (`pasqal`)
 
 When CUDA-Q is configured with target `pasqal` and  `machine` in `cudaq.set_target(..., machine=...)` should be
-match `qrmi`.
+match `qrmi`. This way it picks up the machine target from QRMI, as populated by e.g. the Spank plugin's
+`--qpu` argument, or manually set by `SLURM_JOB_QPU_RESOURCES`.
 
 ```python
 import cudaq
