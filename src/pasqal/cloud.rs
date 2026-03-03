@@ -154,7 +154,7 @@ fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<Str
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PasqalTaskKind {
-    Batch,
+    Pulser,
     Cudaq,
 }
 
@@ -349,10 +349,10 @@ impl PasqalCloud {
             Some(kind) => kind,
             None => {
                 warn!(
-                    "Missing task kind for task ID '{}'; defaulting to batch/pulser endpoint",
+                    "Missing task kind for task ID '{}'; defaulting to pulser endpoint",
                     task_id
                 );
-                PasqalTaskKind::Batch
+                PasqalTaskKind::Pulser
             }
         }
     }
@@ -427,7 +427,7 @@ impl QuantumResource for PasqalCloud {
                 {
                     Ok(batch) => {
                         self.task_kinds
-                            .insert(batch.data.id.clone(), PasqalTaskKind::Batch);
+                            .insert(batch.data.id.clone(), PasqalTaskKind::Pulser);
                         Ok(batch.data.id)
                     }
                     Err(err) => Err(err),
@@ -451,7 +451,7 @@ impl QuantumResource for PasqalCloud {
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
         match self.task_kind(task_id) {
-            PasqalTaskKind::Batch => match self.task_status_from_job_id(task_id).await {
+            PasqalTaskKind::Pulser => match self.task_status_from_job_id(task_id).await {
                 Ok(status) => Ok(status),
                 // TODO: This happens, but should not happen. Investigate.
                 Err(_) => match self.task_status_from_batch_id(task_id).await {
@@ -469,7 +469,7 @@ impl QuantumResource for PasqalCloud {
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         match self.task_kind(task_id) {
-            PasqalTaskKind::Batch => match self.api_client.get_batch_results(task_id).await {
+            PasqalTaskKind::Pulser => match self.api_client.get_batch_results(task_id).await {
                 Ok(resp) => Ok(TaskResult { value: resp }),
                 Err(err) => Err(err),
             },
