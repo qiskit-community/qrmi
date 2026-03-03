@@ -173,6 +173,7 @@ impl PasqalCloud {
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID`: Pasqal Cloud Project ID to access the QPU
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN`: Pasqal Cloud Auth Token
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
+    /// * `<backend_name>_QRMI_PASQAL_CLOUD_BASE_URL`: Optional Pasqal Cloud API base URL. Default: `https://apis.pasqal.cloud`
     /// * `PASQAL_USERNAME`: Pasqal Cloud username
     /// * `PASQAL_PASSWORD`: Pasqal Cloud password
     ///
@@ -225,10 +226,24 @@ impl PasqalCloud {
             ))
             .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
 
+        // Base URL
+        let base_url_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_BASE_URL");
+        let base_url = env::var(&base_url_var)
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or(read_qrmi_config_env_value(
+                backend_name,
+                "QRMI_PASQAL_CLOUD_BASE_URL",
+            ));
+
         // Build Pasqal Cloud API client
         debug!("Build PasqalCloud client for backend '{}'", backend_name);
         let mut builder = ClientBuilder::new(project_id.clone());
         builder.with_auth_endpoint(auth_endpoint.clone());
+        if let Some(base_url) = base_url {
+            // to enable end to end mock tests
+            builder.with_base_url(base_url);
+        }
 
         // Preference order for credentials: explicit username/password in env > config > direct token.
         let (username, password) = resolve_pasqal_credentials(&cfg);
@@ -287,16 +302,6 @@ impl PasqalCloud {
         }
     }
 
-    // todo, to be removed. this is because for cuda-q we use the
-    // cuda-q specific get job instead of having the same flow as for
-    // normal jobs. This should be fixed partially server side, and here
-    // fixing it in cuda-q will be slightly annoying.
-    fn map_status(status: &str) -> Result<TaskStatus> {
-        let parsed: JobStatus = serde_json::from_str(&format!("\"{status}\""))
-            .map_err(|err| anyhow!("Unexpected job status '{status}': {err}"))?;
-        Ok(Self::map_batch_status(&parsed))
-    }
-
     fn normalize_cudaq_result(result: &serde_json::Value) -> String {
         let counter = result.get("counter").unwrap_or(result);
         let normalized_counter = match counter.as_object() {
@@ -317,10 +322,38 @@ impl PasqalCloud {
         serde_json::json!({ "counter": normalized_counter }).to_string()
     }
 
-    fn task_kind(&self, task_id: &str) -> Result<PasqalTaskKind> {
-        match self.task_kinds.get(task_id) {
-            Some(task_kind) => Ok(*task_kind),
-            None => Err(anyhow!("Missing task kind for task ID: {}", task_id)),
+    async fn task_status_from_job_id(&mut self, job_id: &str) -> Result<TaskStatus> {
+        let job = self.api_client.get_job(job_id).await?;
+        Ok(Self::map_batch_status(&job.data.status))
+    }
+
+    async fn task_status_from_batch_id(&mut self, batch_id: &str) -> Result<TaskStatus> {
+        let batch = self.api_client.get_batch(batch_id).await?;
+        let job_id = batch
+            .data
+            .job_ids
+            .first()
+            .ok_or_else(|| anyhow!("No jobs found for batch '{}'", batch_id))?;
+        self.task_status_from_job_id(job_id).await
+    }
+
+    async fn task_result_from_cudaq(&mut self, task_id: &str) -> Result<TaskResult> {
+        let job = self.api_client.get_cudaq_job(task_id).await?;
+        Ok(TaskResult {
+            value: Self::normalize_cudaq_result(&job.data.result),
+        })
+    }
+
+    fn task_kind(&self, task_id: &str) -> PasqalTaskKind {
+        match self.task_kinds.get(task_id).copied() {
+            Some(kind) => kind,
+            None => {
+                warn!(
+                    "Missing task kind for task ID '{}'; defaulting to batch/pulser endpoint",
+                    task_id
+                );
+                PasqalTaskKind::Batch
+            }
         }
     }
 }
@@ -416,38 +449,32 @@ impl QuantumResource for PasqalCloud {
         }
     }
 
-    // TODO: We should not have special cudaq path here. not needed?
-    // right now I'm a bit confused about what task_id is though. Is it batch_id or job_id?
-    // Maybe we could also switch QRMI in general onto job_id instead of batch_id to avoid this? TBD.
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        match self.task_kind(task_id)? {
-            PasqalTaskKind::Batch => match self.api_client.get_batch(task_id).await {
-                Ok(batch) => match self.api_client.get_job(&batch.data.job_ids[0]).await {
-                    Ok(job) => Ok(Self::map_batch_status(&job.data.status)),
-                    Err(err) => Err(err),
-                },
-                Err(err) => Err(err),
-            },
-            PasqalTaskKind::Cudaq => match self.api_client.get_cudaq_job(task_id).await {
-                Ok(job) => match Self::map_status(&job.data.status) {
+        match self.task_kind(task_id) {
+            PasqalTaskKind::Batch => match self.task_status_from_job_id(task_id).await {
+                Ok(status) => Ok(status),
+                // TODO: This happens, but should not happen. Investigate.
+                Err(_) => match self.task_status_from_batch_id(task_id).await {
                     Ok(status) => Ok(status),
                     Err(err) => Err(err),
                 },
+            },
+            // CUDA-Q IDs map to Pasqal batch IDs; resolve underlying job ID first.
+            PasqalTaskKind::Cudaq => match self.task_status_from_batch_id(task_id).await {
+                Ok(status) => Ok(status),
                 Err(err) => Err(err),
             },
         }
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        match self.task_kind(task_id)? {
+        match self.task_kind(task_id) {
             PasqalTaskKind::Batch => match self.api_client.get_batch_results(task_id).await {
                 Ok(resp) => Ok(TaskResult { value: resp }),
                 Err(err) => Err(err),
             },
-            PasqalTaskKind::Cudaq => match self.api_client.get_cudaq_job(task_id).await {
-                Ok(job) => Ok(TaskResult {
-                    value: Self::normalize_cudaq_result(&job.data.result),
-                }),
+            PasqalTaskKind::Cudaq => match self.task_result_from_cudaq(task_id).await {
+                Ok(result) => Ok(result),
                 Err(err) => Err(err),
             },
         }
@@ -472,8 +499,9 @@ impl QuantumResource for PasqalCloud {
         }
     }
 
-    async fn metadata(&mut self) -> HashMap<String, String> {
-        let mut metadata: HashMap<String, String> = HashMap::new();
+    async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
+        let mut metadata: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
     }
