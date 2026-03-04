@@ -1,0 +1,38 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+# This reusable workflow creates the source code tarball and the vendor tarball.
+# It is intended to be called before packaging jobs (RPM, .deb) so that tarballs
+# are built once and shared across all packaging jobs via the qrmi-dist artifact.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts produced:
+# - [uploaded] qrmi-dist  (qrmi-{version}.tar.gz, qrmi-{version}-vendor.tar.gz)
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+name: Create source and vendor tarballs
+on:
+  workflow_call:
+jobs:
+  dist:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Create source and vendor tarballs
+      run: make dist
+
+    - name: Upload tarballs
+      uses: actions/upload-artifact@v4
+      with:
+        name: qrmi-dist
+        path: /tmp/qrmi-*.tar.gz
+        if-no-files-found: error
+        retention-days: 1

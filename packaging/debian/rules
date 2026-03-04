@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+
+export DH_VERBOSE = 1
+export CARGO_HOME = $(CURDIR)/.cargo-home
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	[ -f "$$HOME/.cargo/env" ] && . "$$HOME/.cargo/env"; \
+	cargo build --locked --release
+
+override_dh_auto_install:
+	install -d debian/libqrmi/usr/lib
+	install -d debian/libqrmi-dev/usr/lib
+	install -d debian/libqrmi-dev/usr/include
+
+	# Shared library
+	install -m 0755 target/release/libqrmi.so \
+	    debian/libqrmi/usr/lib/libqrmi.so.$(VERSION)
+	ln -sf libqrmi.so.$(VERSION) \
+	    debian/libqrmi/usr/lib/libqrmi.so.0
+	ln -sf libqrmi.so.0 \
+	    debian/libqrmi/usr/lib/libqrmi.so
+
+	# Static library (dev package)
+	install -m 0644 target/release/libqrmi.a \
+	    debian/libqrmi-dev/usr/lib/libqrmi.a
+
+	# C header (dev package)
+	install -m 0644 qrmi.h \
+	    debian/libqrmi-dev/usr/include/qrmi.h
+
+override_dh_auto_test:
+	# Tests are run separately; skip here.
+
+override_dh_auto_clean:
+	cargo clean

@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+
+.PHONY: check-root check-rpm-distro check-deb-distro check-venv check-rustfmt check-clippy
+
+check-root:
+	@if [ "$$(id -u)" -ne 0 ]; then \
+	  echo "Error: this target must be run as root (e.g. sudo make $(MAKECMDGOALS))"; \
+	  exit 1; \
+	fi
+
+check-rpm-distro:
+	@command -v rpm >/dev/null 2>&1 || \
+	  { echo "Error: this target requires an RPM-based distribution (e.g. RHEL, AlmaLinux, Rocky Linux)"; exit 1; }
+
+check-deb-distro:
+	@command -v dpkg >/dev/null 2>&1 || \
+	  { echo "Error: this target requires a Debian-based distribution (e.g. Debian, Ubuntu)"; exit 1; }
+
+check-venv:
+	@[ -d .venv ] || { echo "Error: .venv not found. Run: make venv"; exit 1; }
+
+check-rustfmt:
+	@rustup component list --installed 2>/dev/null | grep -q '^rustfmt' || \
+	  { echo "Error: rustfmt is not installed. Run: rustup component add rustfmt"; exit 1; }
+
+check-clippy:
+	@rustup component list --installed 2>/dev/null | grep -q '^clippy' || \
+	  { echo "Error: clippy is not installed. Run: rustup component add clippy"; exit 1; }

@@ -1,0 +1,5 @@
+qrmi (0.11.0-1) unstable; urgency=medium
+
+  * Initial Debian packaging.
+
+ -- Claudio Carvalho <cclaudio@ibm.com>  Fri, 28 Feb 2026 00:00:00 +0000

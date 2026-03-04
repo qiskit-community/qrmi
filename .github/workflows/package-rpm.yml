@@ -1,0 +1,125 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+# This reusable workflow builds RPM packages for a given Linux distribution and version.
+# It is intended to be called on release/tag events, not on pull requests.
+# For building the project on pull requests, use build-rpm.yml instead.
+#
+# It produces:
+#   - qrmi        RPM  (libqrmi.so)
+#   - qrmi-devel  RPM  (libqrmi.a + qrmi.h)
+#
+# The QRMI version is read from Cargo.toml (single source of truth) and passed
+# to rpmbuild via --define so the generated RPM metadata matches exactly.
+#
+# Workflow inputs:
+# - [required] distro:           short distro name used in artifact names  (e.g. almalinux, rockylinux, centos)
+# - [required] distro-version:   OS major version                          (e.g. 8, 9)
+# - [required] container-image:  full container image reference            (e.g. almalinux:8, quay.io/centos/centos:stream9)
+#
+# Workflow artifacts produced:
+# - [uploaded] qrmi-rpms-{distro}{distro-version}  (*.rpm)
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+#
+# Example caller (release workflow):
+#
+#   package-almalinux8:
+#     uses: ./.github/workflows/package-rpm.yml
+#     with:
+#       distro: almalinux
+#       distro-version: "8"
+#       container-image: almalinux:8
+#
+#   package-centos9:
+#     uses: ./.github/workflows/package-rpm.yml
+#     with:
+#       distro: centos
+#       distro-version: "9"
+#       container-image: quay.io/centos/centos:stream9
+name: Package RPMs for AlmaLinux, Rocky Linux and CentOS
+on:
+  workflow_call:
+    inputs:
+      distro:
+        description: >-
+          Short distro name used in artifact names (e.g. almalinux, rockylinux, centos)
+        type: string
+        required: true
+      distro-version:
+        description: >-
+          Major OS version to build for (e.g. 8, 9)
+        type: string
+        required: true
+      container-image:
+        description: >-
+          Full container image reference (e.g. almalinux:8, quay.io/centos/centos:stream9)
+        type: string
+        required: true
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
+    steps:
+    - name: Install minimal bootstrap dependencies
+      run: |
+        dnf install -y \
+          curl \
+          git \
+          rpm-build
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Use the spec file as the single source of truth for build dependencies.
+    # This ensures the CI environment always matches what rpmbuild requires.
+    - name: Install RPM build dependencies from qrmi.spec
+      run: dnf builddep -y packaging/rpm/qrmi.spec
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    # Extract the version from Cargo.toml so that Cargo.toml is the single
+    # source of truth for the QRMI version used in the RPM metadata.
+    - name: Extract QRMI version from Cargo.toml
+      id: qrmi-version
+      run: |
+        VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+        echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+    - name: Download source and vendor tarballs
+      uses: actions/download-artifact@v4
+      with:
+        name: qrmi-dist
+        path: /tmp
+
+    - name: Set up rpmbuild tree
+      env:
+        QRMI_VERSION: ${{ steps.qrmi-version.outputs.value }}
+      run: |
+        set -e
+        mkdir -p ~/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+        cp /tmp/qrmi-${QRMI_VERSION}.tar.gz        ~/rpmbuild/SOURCES/
+        cp /tmp/qrmi-${QRMI_VERSION}-vendor.tar.gz ~/rpmbuild/SOURCES/
+        cp packaging/rpm/qrmi.spec                  ~/rpmbuild/SPECS/
+
+    - name: Build RPMs
+      run: |
+        . "$HOME/.cargo/env"
+        rpmbuild -ba \
+          --define "version ${{ steps.qrmi-version.outputs.value }}" \
+          --define "dist .el${{ inputs.distro-version }}" \
+          ~/rpmbuild/SPECS/qrmi.spec
+
+    - name: Upload RPMs
+      uses: actions/upload-artifact@v4
+      if: ${{ success() }}
+      with:
+        name: qrmi-rpms-${{ inputs.distro }}${{ inputs.distro-version }}
+        path: ~/rpmbuild/RPMS/**/*.rpm
+        if-no-files-found: error
+        retention-days: 30

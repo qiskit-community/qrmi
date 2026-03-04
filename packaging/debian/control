@@ -1,0 +1,36 @@
+Source: qrmi
+Section: libs
+Priority: optional
+Maintainer: IBM, Pasqal SAS and UKRI-STFC (Hartree Centre) <qiskit@us.ibm.com>
+Build-Depends: debhelper-compat (= 13),
+               gcc,
+               g++,
+               make,
+               cmake,
+               libssl-dev,
+               zlib1g-dev,
+               pkg-config
+Standards-Version: 4.6.2
+Homepage: https://github.com/qiskit-community/spank-plugins
+Rules-Requires-Root: no
+
+# Rust toolchain is installed via rustup and is not a Debian build dependency.
+# Ensure `cargo` and `rustc` >= 1.91 are available in PATH before building.
+
+Package: libqrmi
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Quantum Resource Management Interface (QRMI)
+ QRMI is a set of libraries that provide a unified interface to control
+ the state of quantum resources. It exposes a C API (libqrmi.so / qrmi.h)
+ and a Python API built on top of the same Rust core.
+
+Package: libqrmi-dev
+Architecture: any
+Multi-Arch: same
+Section: libdevel
+Depends: libqrmi (= ${binary:Version}), ${misc:Depends}
+Description: Development files for libqrmi
+ Header file (qrmi.h) and static library (libqrmi.a) for building
+ applications against the QRMI C API.
