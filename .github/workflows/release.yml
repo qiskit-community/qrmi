@@ -18,7 +18,7 @@ on:
   
 jobs:
   get-version:
-    if: github.repository_owner == 'cclaudio'
+    if: github.repository_owner == 'qiskit-community'
     name: Get QRMI version
     runs-on: ubuntu-24.04
     outputs:
@@ -35,18 +35,18 @@ jobs:
           echo "QRMI version: $VERSION"
 
   create-source-tarballs:
-    if: github.repository_owner == 'cclaudio'
+    if: github.repository_owner == 'qiskit-community'
     name: Create source and vendor tarballs
     needs: [get-version]
     uses: ./.github/workflows/source-tarballs.yml
 
   create-libqrmi-tarball-rhel:
-    if: github.repository_owner == 'cclaudio'
+    if: github.repository_owner == 'qiskit-community'
     name: Create libqrmi tarball for RHEL compatible distributions
     uses: ./.github/workflows/libqrmi-tarball-rhel.yml
       
   create-draft-release:
-    if: github.repository_owner == 'cclaudio'
+    if: github.repository_owner == 'qiskit-community'
     name: Create draft release and populate it with assets
     needs: [get-version, create-source-tarballs, create-libqrmi-tarball-rhel]
     permissions:
@@ -85,7 +85,7 @@ jobs:
           gh release upload ${{ needs.get-version.outputs.version }} libqrmi-${{ needs.get-version.outputs.version }}-el8-x86_64.tar.gz --clobber
     
   publish-release:
-    if: github.repository_owner == 'cclaudio'
+    if: github.repository_owner == 'qiskit-community'
     name: Publish release
     needs: [get-version,create-draft-release]
     permissions:
