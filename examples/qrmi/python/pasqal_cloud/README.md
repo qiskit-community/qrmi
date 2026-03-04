@@ -41,6 +41,20 @@ password=<your password>
 # auth_endpoint=<auth endpoint URL/path>
 ```
 
+## Using this backend from CUDA-Q (`pasqal`)
+
+When CUDA-Q is configured with target `pasqal`, QRMI is used as the
+Pasqal cloud bridge. `machine` in `cudaq.set_target(..., machine=...)` should
+match `<backend_name>` above (for example `EMU_FREE`).
+
+```python
+import cudaq
+cudaq.set_target("pasqal", machine="EMU_FREE")
+```
+
+For CUDA-Q build/runtime details in this workspace, see:
+- [`../cudaq/README.md`](../cudaq/README.md)
+
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:

@@ -152,10 +152,17 @@ fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<Str
     (username, password)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PasqalTaskKind {
+    Pulser,
+    Cudaq,
+}
+
 /// QRMI implementation for Pasqal Cloud
 pub struct PasqalCloud {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
+    task_kinds: HashMap<String, PasqalTaskKind>,
 }
 
 impl PasqalCloud {
@@ -166,6 +173,7 @@ impl PasqalCloud {
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID`: Pasqal Cloud Project ID to access the QPU
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN`: Pasqal Cloud Auth Token
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
+    /// * `<backend_name>_QRMI_PASQAL_CLOUD_BASE_URL`: Optional Pasqal Cloud API base URL. Default: `https://apis.pasqal.cloud`
     /// * `PASQAL_USERNAME`: Pasqal Cloud username
     /// * `PASQAL_PASSWORD`: Pasqal Cloud password
     ///
@@ -218,10 +226,23 @@ impl PasqalCloud {
             ))
             .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
 
+        // Base URL
+        let base_url_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_BASE_URL");
+        let base_url = env::var(&base_url_var)
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or(read_qrmi_config_env_value(
+                backend_name,
+                "QRMI_PASQAL_CLOUD_BASE_URL",
+            ));
+
         // Build Pasqal Cloud API client
         debug!("Build PasqalCloud client for backend '{}'", backend_name);
         let mut builder = ClientBuilder::new(project_id.clone());
         builder.with_auth_endpoint(auth_endpoint.clone());
+        if let Some(base_url) = base_url {
+            builder.with_base_url(base_url);
+        }
 
         // Preference order for credentials: explicit username/password in env > config > direct token.
         let (username, password) = resolve_pasqal_credentials(&cfg);
@@ -240,7 +261,99 @@ impl PasqalCloud {
         Ok(Self {
             api_client,
             backend_name: backend_name.to_string(),
+            task_kinds: HashMap::new(),
         })
+    }
+
+    fn parse_device_type(&self) -> Result<DeviceType> {
+        self.backend_name.parse::<DeviceType>().map_err(|_| {
+            anyhow!(
+                "Device '{}' is invalid. Valid devices: {}",
+                self.backend_name,
+                [
+                    "FRESNEL",
+                    "FRESNEL_CAN1",
+                    "EMU_MPS",
+                    "EMU_FREE",
+                    "EMU_FRESNEL"
+                ]
+                .join(", ")
+            )
+        })
+    }
+
+    fn is_cudaq_sequence(sequence: &str) -> bool {
+        // Checks sequence kind by looking for "setup" and "hamiltonian" fields in the sequence JSON, which are present in CUDA-Q sequences.
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(sequence) else {
+            return false;
+        };
+        value.get("setup").is_some() && value.get("hamiltonian").is_some()
+    }
+
+    fn map_job_status(status: &JobStatus) -> TaskStatus {
+        match status {
+            JobStatus::Pending => TaskStatus::Queued,
+            JobStatus::Running => TaskStatus::Running,
+            JobStatus::Canceling => TaskStatus::Cancelled,
+            JobStatus::Done => TaskStatus::Completed,
+            JobStatus::Canceled => TaskStatus::Cancelled,
+            JobStatus::Error => TaskStatus::Failed,
+        }
+    }
+
+    fn normalize_cudaq_result(result: &serde_json::Value) -> String {
+        let counter = result.get("counter").unwrap_or(result);
+        let normalized_counter = match counter.as_object() {
+            Some(counter_obj) if counter_obj.values().all(|value| value.is_number()) => {
+                counter.clone()
+            }
+            Some(counter_obj) if counter_obj.len() == 1 => {
+                let nested = counter_obj.values().next().unwrap_or(counter);
+                nested
+                    .get("counter")
+                    .filter(|value| value.is_object())
+                    .cloned()
+                    .or_else(|| nested.as_object().map(|_| nested.clone()))
+                    .unwrap_or_else(|| counter.clone())
+            }
+            _ => counter.clone(),
+        };
+        serde_json::json!({ "counter": normalized_counter }).to_string()
+    }
+
+    async fn task_status_from_job_id(&mut self, job_id: &str) -> Result<TaskStatus> {
+        let job = self.api_client.get_job(job_id).await?;
+        Ok(Self::map_job_status(&job.data.status))
+    }
+
+    async fn task_status_from_batch_id(&mut self, batch_id: &str) -> Result<TaskStatus> {
+        let batch = self.api_client.get_batch(batch_id).await?;
+        let job_id = batch
+            .data
+            .job_ids
+            .first()
+            .ok_or_else(|| anyhow!("No jobs found for batch '{}'", batch_id))?;
+        self.task_status_from_job_id(job_id).await
+    }
+
+    async fn task_result_from_cudaq(&mut self, task_id: &str) -> Result<TaskResult> {
+        let job = self.api_client.get_cudaq_job(task_id).await?;
+        Ok(TaskResult {
+            value: Self::normalize_cudaq_result(&job.data.result),
+        })
+    }
+
+    fn task_kind(&self, task_id: &str) -> PasqalTaskKind {
+        match self.task_kinds.get(task_id).copied() {
+            Some(kind) => kind,
+            None => {
+                warn!(
+                    "Missing task kind for task ID '{}'; defaulting to pulser endpoint",
+                    task_id
+                );
+                PasqalTaskKind::Pulser
+            }
+        }
     }
 }
 
@@ -255,24 +368,7 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn is_accessible(&mut self) -> Result<bool> {
-        let device_type = match self.backend_name.parse::<DeviceType>() {
-            Ok(dt) => dt,
-            Err(_) => {
-                let valid_devices = [
-                    "FRESNEL",
-                    "FRESNEL_CAN1",
-                    "EMU_MPS",
-                    "EMU_FREE",
-                    "EMU_FRESNEL",
-                ];
-                let err = format!(
-                    "Device '{}' is invalid. Valid devices: {}",
-                    self.backend_name,
-                    valid_devices.join(", ")
-                );
-                bail!(err);
-            }
-        };
+        let device_type = self.parse_device_type()?;
 
         // The device may be down temporarily but jobs can still
         // be submitted and queued through the cloud
@@ -301,32 +397,40 @@ impl QuantumResource for PasqalCloud {
             self.backend_name
         );
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
-            let device_type = match self.backend_name.parse::<DeviceType>() {
-                Ok(dt) => dt,
-                Err(_) => {
-                    let valid_devices = [
-                        "FRESNEL",
-                        "FRESNEL_CAN1",
-                        "EMU_MPS",
-                        "EMU_FREE",
-                        "EMU_FRESNEL",
-                    ];
-                    let err = format!(
-                        "Device '{}' is invalid. Valid devices: {}",
-                        self.backend_name,
-                        valid_devices.join(", ")
-                    );
-                    bail!(err);
-                }
-            };
+            let device_type = self.parse_device_type()?;
 
-            match self
-                .api_client
-                .create_batch(sequence, job_runs, device_type)
-                .await
-            {
-                Ok(batch) => Ok(batch.data.id),
-                Err(err) => Err(err),
+            if Self::is_cudaq_sequence(&sequence) {
+                let sequence_value: serde_json::Value = match serde_json::from_str(&sequence) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        return Err(anyhow!("Failed to parse CUDA-Q sequence payload: {err}"));
+                    }
+                };
+                match self
+                    .api_client
+                    .create_cudaq_job(sequence_value, job_runs, device_type)
+                    .await
+                {
+                    Ok(job) => {
+                        self.task_kinds
+                            .insert(job.data.id.clone(), PasqalTaskKind::Cudaq);
+                        Ok(job.data.id)
+                    }
+                    Err(err) => Err(err),
+                }
+            } else {
+                match self
+                    .api_client
+                    .create_batch(sequence, job_runs, device_type)
+                    .await
+                {
+                    Ok(batch) => {
+                        self.task_kinds
+                            .insert(batch.data.id.clone(), PasqalTaskKind::Pulser);
+                        Ok(batch.data.id)
+                    }
+                    Err(err) => Err(err),
+                }
             }
         } else {
             bail!(format!("Payload type is not supported. {:?}", payload))
@@ -345,31 +449,19 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        match self.api_client.get_batch(task_id).await {
-            // Assuming a single job per batch for now,
-            // Will need to be updated if multiple jobs per batch are supported in the future
-            Ok(batch) => match self.api_client.get_job(&batch.data.job_ids[0]).await {
-                Ok(job) => {
-                    let status = match &job.data.status {
-                        JobStatus::Pending => TaskStatus::Queued,
-                        JobStatus::Running => TaskStatus::Running,
-                        JobStatus::Canceling => TaskStatus::Cancelled,
-                        JobStatus::Done => TaskStatus::Completed,
-                        JobStatus::Canceled => TaskStatus::Cancelled,
-                        JobStatus::Error => TaskStatus::Failed,
-                    };
-                    Ok(status)
-                }
-                Err(err) => Err(err),
-            },
-            Err(err) => Err(err),
-        }
+        self.task_status_from_batch_id(task_id).await
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        match self.api_client.get_batch_results(task_id).await {
-            Ok(resp) => Ok(TaskResult { value: resp }),
-            Err(_err) => Err(_err),
+        match self.task_kind(task_id) {
+            PasqalTaskKind::Pulser => match self.api_client.get_batch_results(task_id).await {
+                Ok(resp) => Ok(TaskResult { value: resp }),
+                Err(err) => Err(err),
+            },
+            PasqalTaskKind::Cudaq => match self.task_result_from_cudaq(task_id).await {
+                Ok(result) => Ok(result),
+                Err(err) => Err(err),
+            },
         }
     }
 
@@ -382,24 +474,7 @@ impl QuantumResource for PasqalCloud {
             "Getting target information for PasqalCloud QRMI (backend '{}')",
             self.backend_name
         );
-        let device_type = match self.backend_name.parse::<DeviceType>() {
-            Ok(dt) => dt,
-            Err(_) => {
-                let valid_devices = [
-                    "FRESNEL",
-                    "FRESNEL_CAN1",
-                    "EMU_MPS",
-                    "EMU_FREE",
-                    "EMU_FRESNEL",
-                ];
-                let err = format!(
-                    "Device '{}' is invalid. Valid devices: {}",
-                    self.backend_name,
-                    valid_devices.join(", ")
-                );
-                panic!("{}", err);
-            }
-        };
+        let device_type = self.parse_device_type()?;
 
         match self.api_client.get_device_specs(device_type).await {
             Ok(resp) => Ok(Target {
@@ -409,8 +484,9 @@ impl QuantumResource for PasqalCloud {
         }
     }
 
-    async fn metadata(&mut self) -> HashMap<String, String> {
-        let mut metadata: HashMap<String, String> = HashMap::new();
+    async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
+        let mut metadata: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
     }
