@@ -68,7 +68,8 @@ cargo build --release --lib
 # 2) Build CUDA-Q + prerequisites via CUDA-Q scripts
 cd /shared/cuda-quantum
 bash scripts/build_cudaq.sh -p -i -j nproc -- \
-  -DQRMI_ROOT=/shared/qrmi \ # Required!
+  -DQRMI_ROOT=/shared/qrmi \ # For development QRMI!
+  -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON \ # Should be on by default on Linux!
   -DCUDAQ_BUILD_TESTS=OFF \
   -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF \
   -DCUDAQ_ENABLE_QCI_BACKEND=OFF \
@@ -83,6 +84,16 @@ pip install --no-build-isolation /shared/cuda-quantum
 ```
 
 Do not use editable install for CUDA-Q in this workspace (`pip install -e .`) as it requires further manually specifying paths to get a working environment.
+
+Concretely development was done in the Slurm containers as setup by the [spank-plugins INSTALL.md](https://github.com/qiskit-community/spank-plugins/blob/main/demo/qrmi/slurm-docker-cluster/INSTALL.md), and running
+```bash
+dnf install epel-release
+dnf makecache
+dnf install ccache
+source /shared/pyenv/bin/activate && cd /shared/cuda-quantum
+PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python ./scripts/install_prerequisites.sh -e "aws;qrmi"
+PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python CUDAQ_BUILD_TESTS=FALSE CUDAQ_WERROR=OFF ./scripts/build_cudaq.sh -j nproc -- -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON -DQRMI_ROOT=/shared/qrmi -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF -DCUDAQ_ENABLE_QCI_BACKEND=OFF -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
+```
 
 ## How to run
 
