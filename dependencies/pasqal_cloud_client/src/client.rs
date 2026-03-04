@@ -298,13 +298,12 @@ impl Client {
         &mut self,
         device_type: DeviceType,
     ) -> Result<Response<GetDeviceSpecsResponseData>> {
-        // Not authenticated
         let url = format!(
             "{}/core-fast/api/v1/devices/specs/{}",
             self.base_url, device_type
         );
-        let resp = self.client.get(&url).send().await?;
-        self.handle_request(resp).await
+        let resp: Response<GetDeviceSpecsResponseData> = self.get(&url).await?;
+        Ok(resp)
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
