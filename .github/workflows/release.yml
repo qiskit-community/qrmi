@@ -1,0 +1,103 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+
+# This workflow creates a new QRMI release.
+#
+# Requires:
+# - GITHUB_TOKEN secret
+#
+# Release assets:
+# - QRMI source tarball (qrmi-{version}.tar.gz)
+# - QRMI vendor tarball (qrmi-{version}-vendor.tar.gz)
+# - libqrmi tarball for RHEL compatible distributions (libqrmi-{version}-el8-x86_64.tar.gz)
+
+name: Release
+on:
+  workflow_dispatch:
+  
+jobs:
+  get-version:
+    if: github.repository_owner == 'cclaudio'
+    name: Get QRMI version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Get QRMI version from Cargo.toml
+        id: get-version
+        run: |
+          VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "QRMI version: $VERSION"
+
+  create-source-tarballs:
+    if: github.repository_owner == 'cclaudio'
+    name: Create source and vendor tarballs
+    needs: [get-version]
+    uses: ./.github/workflows/source-tarballs.yml
+
+  create-libqrmi-tarball-rhel:
+    if: github.repository_owner == 'cclaudio'
+    name: Create libqrmi tarball for RHEL compatible distributions
+    uses: ./.github/workflows/libqrmi-tarball-rhel.yml
+      
+  create-draft-release:
+    if: github.repository_owner == 'cclaudio'
+    name: Create draft release and populate it with assets
+    needs: [get-version, create-source-tarballs, create-libqrmi-tarball-rhel]
+    permissions:
+      contents: write # required to create a draft release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create --draft --generate-notes --title "QRMI v${{ needs.get-version.outputs.version }}" "${{ needs.get-version.outputs.version }}"
+  
+      - name: Download source and vendor tarballs
+        uses: actions/download-artifact@v4
+        with:
+          name: qrmi-source-tarballs
+
+      - name: Upload source and vendor tarballs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.get-version.outputs.version }} qrmi-${{ needs.get-version.outputs.version }}.tar.gz qrmi-${{ needs.get-version.outputs.version }}-vendor.tar.gz --clobber
+
+      - name: Download libqrmi tarball for RHEL compatible distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: libqrmi-${{ needs.get-version.outputs.version }}-el8-x86_64-tarball
+
+      - name: Upload libqrmi tarball for RHEL compatible distributions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.get-version.outputs.version }} libqrmi-${{ needs.get-version.outputs.version }}-el8-x86_64.tar.gz --clobber
+    
+  publish-release:
+    if: github.repository_owner == 'cclaudio'
+    name: Publish release
+    needs: [get-version,create-draft-release]
+    permissions:
+      contents: write # This is required to publish the draft release
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Publish release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Make the release live on github
+        gh release edit ${{ needs.get-version.outputs.version }} --verify-tag --draft=false
