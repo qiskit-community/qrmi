@@ -67,8 +67,7 @@ cargo build --release --lib
 
 # 2) Build CUDA-Q + prerequisites via CUDA-Q scripts
 cd /shared/cuda-quantum
-bash scripts/build_cudaq.sh -p -i -j nproc -- \
-  -DQRMI_ROOT=/shared/qrmi \ # For development QRMI!
+QRMI_INSTALL_PREFIX=/shared/qrmi bash scripts/build_cudaq.sh -p -i -j nproc -- \
   -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON \ # Should be on by default on Linux!
   -DCUDAQ_BUILD_TESTS=OFF \
   -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF \
@@ -92,7 +91,7 @@ dnf makecache
 dnf install ccache
 source /shared/pyenv/bin/activate && cd /shared/cuda-quantum
 PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python ./scripts/install_prerequisites.sh -e "aws;qrmi"
-PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python CUDAQ_BUILD_TESTS=FALSE CUDAQ_WERROR=OFF ./scripts/build_cudaq.sh -j nproc -- -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON -DQRMI_ROOT=/shared/qrmi -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF -DCUDAQ_ENABLE_QCI_BACKEND=OFF -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
+PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python QRMI_INSTALL_PREFIX=/shared/qrmi CUDAQ_BUILD_TESTS=FALSE CUDAQ_WERROR=OFF ./scripts/build_cudaq.sh -j nproc -- -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF -DCUDAQ_ENABLE_QCI_BACKEND=OFF -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
 ```
 
 ## How to run
