@@ -60,7 +60,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create --draft --generate-notes --title "QRMI v${{ needs.get-version.outputs.version }}" "${{ needs.get-version.outputs.version }}"
+          gh release create --draft --generate-notes --title "QRMI v0.12.0-draft1" "0.12.0-draft1"
   
       - name: Download source and vendor tarballs
         uses: actions/download-artifact@v4
@@ -71,7 +71,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.get-version.outputs.version }} qrmi-${{ needs.get-version.outputs.version }}.tar.gz qrmi-${{ needs.get-version.outputs.version }}-vendor.tar.gz --clobber
+          gh release upload 0.12.0-draft1 qrmi-${{ needs.get-version.outputs.version }}.tar.gz qrmi-${{ needs.get-version.outputs.version }}-vendor.tar.gz --clobber
 
       - name: Download libqrmi tarball for RHEL compatible distributions
         uses: actions/download-artifact@v4
@@ -82,22 +82,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.get-version.outputs.version }} libqrmi-${{ needs.get-version.outputs.version }}-rhel8-x86_64.tar.gz --clobber
-    
-  publish-release:
-    if: github.repository_owner == 'qiskit-community'
-    name: Publish release
-    needs: [get-version,create-draft-release]
-    permissions:
-      contents: write # This is required to publish the draft release
-    runs-on: ubuntu-24.04
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Publish release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Make the release live on github
-        gh release edit ${{ needs.get-version.outputs.version }} --verify-tag --draft=false
+          gh release upload 0.12.0-draft1 libqrmi-${{ needs.get-version.outputs.version }}-rhel8-x86_64.tar.gz --clobber
