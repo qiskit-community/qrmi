@@ -55,28 +55,22 @@ cudaq.set_target("pasqal", machine="qrmi")
 
 See the CUDA-Q docs too see how to send a C++ job. To use QRMI, simply set the target and machine as above.
 
-### For development builds
+### For custom builds
 
-For development builds, follow CUDA-Q's official build docs and scripts.
-For full toolchain details, use CUDA-Q docs/scripts as source of truth.
+For up-to-date  information, follow CUDA-Q's official build docs and scripts.
+
+We assume Slurm containers as setup by the [spank-plugins development INSTALL.md](https://github.com/qiskit-community/spank-plugins/blob/main/demo/qrmi/slurm-docker-cluster/INSTALL.md).
 
 ```bash
 # 1) Rebuild QRMI
 cd /shared/qrmi
 cargo build --release --lib
 
-# 2) Build CUDA-Q + prerequisites via CUDA-Q scripts
+# 2) Build CUDA-Q with local QRMI
 cd /shared/cuda-quantum
-QRMI_INSTALL_PREFIX=/shared/qrmi bash scripts/build_cudaq.sh -p -i -j nproc -- \
-  -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON \ # Should be on by default on Linux!
-  -DCUDAQ_BUILD_TESTS=OFF \
-  -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF \
-  -DCUDAQ_ENABLE_QCI_BACKEND=OFF \
-  -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
+QRMI_INSTALL_PREFIX=/shared/qrmi bash scripts/build_cudaq.sh -p -i -j nproc
 
-# We can keep on disabling more backends too to speed up the compilation.
-
-# 3) Reinstall CUDA-Q Python package (non-editable!)
+# 3) Install CUDA-Q Python package (non-editable!)
 source /shared/pyenv/bin/activate
 pip uninstall -y cuda-quantum-cu13 || true
 pip install --no-build-isolation /shared/cuda-quantum
@@ -84,7 +78,7 @@ pip install --no-build-isolation /shared/cuda-quantum
 
 Do not use editable install for CUDA-Q in this workspace (`pip install -e .`) as it requires further manually specifying paths to get a working environment.
 
-Concretely development was done in the Slurm containers as setup by the [spank-plugins INSTALL.md](https://github.com/qiskit-community/spank-plugins/blob/main/demo/qrmi/slurm-docker-cluster/INSTALL.md), and running
+The CUDA-Q build config used during development were these:
 ```bash
 dnf install epel-release
 dnf makecache
