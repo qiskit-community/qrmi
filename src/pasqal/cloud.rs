@@ -290,7 +290,7 @@ impl PasqalCloud {
         value.get("setup").is_some() && value.get("hamiltonian").is_some()
     }
 
-    fn map_batch_status(status: &JobStatus) -> TaskStatus {
+    fn map_job_status(status: &JobStatus) -> TaskStatus {
         match status {
             JobStatus::Pending => TaskStatus::Queued,
             JobStatus::Running => TaskStatus::Running,
@@ -323,7 +323,7 @@ impl PasqalCloud {
 
     async fn task_status_from_job_id(&mut self, job_id: &str) -> Result<TaskStatus> {
         let job = self.api_client.get_job(job_id).await?;
-        Ok(Self::map_batch_status(&job.data.status))
+        Ok(Self::map_job_status(&job.data.status))
     }
 
     async fn task_status_from_batch_id(&mut self, batch_id: &str) -> Result<TaskStatus> {
@@ -449,21 +449,7 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        match self.task_kind(task_id) {
-            PasqalTaskKind::Pulser => match self.task_status_from_job_id(task_id).await {
-                Ok(status) => Ok(status),
-                // TODO: This happens, but should not happen. Investigate.
-                Err(_) => match self.task_status_from_batch_id(task_id).await {
-                    Ok(status) => Ok(status),
-                    Err(err) => Err(err),
-                },
-            },
-            // CUDA-Q IDs map to Pasqal batch IDs; resolve underlying job ID first.
-            PasqalTaskKind::Cudaq => match self.task_status_from_batch_id(task_id).await {
-                Ok(status) => Ok(status),
-                Err(err) => Err(err),
-            },
-        }
+        self.task_status_from_batch_id(task_id).await
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
