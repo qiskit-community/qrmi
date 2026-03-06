@@ -105,6 +105,7 @@ impl PyQuantumResource {
                     ResourceType::IBMQiskitRuntimeService
                 }
                 crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
+                crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
             }),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }

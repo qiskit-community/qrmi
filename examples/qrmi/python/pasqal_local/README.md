@@ -5,6 +5,7 @@
 * Rust 1.85.1 or above
 * Python 3.11 or 3.12
 * [QRMI python package installation](../../../../README.md)
+* [Munge](https://dun.github.io/munge/)
 
 ## Install dependencies
 
@@ -19,6 +20,10 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
+| {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
+| QRMI_JOB_UID | ID of the user executing the job |
+| QRMI_JOB_ID | ID of the job |
+| {resource_name}_QRMI_JOB_ACQUISITION_TOKEN | (Optional) Session ID, can be obtained by acquire function. If exists, used to submit tasks to the QPU |
 
 
 ## Create Pulser Sequence file as input
@@ -38,7 +43,7 @@ with open("pulser_seq.json", "w") as f:
 $ python example.py -h
 usage: example.py [-h] input backend
 
-An example of Pasqal Cloud Python QRMI
+An example of Pasqal Local Python QRMI
 
 positional arguments:
   backend  'FRESNEL'

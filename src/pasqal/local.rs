@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{bail, Result};
 use anyhow::anyhow;
@@ -57,29 +57,16 @@ impl PasqalLocal {
 
 #[async_trait]
 impl QuantumResource for PasqalLocal {
+    async fn resource_id(&mut self) -> Result<String> {
+        Ok("PASQAL_LOCAL".to_string())
+    }
+
+    async fn resource_type(&mut self) -> Result<ResourceType> {
+        Ok(ResourceType::PasqalLocal)
+    }
+
     async fn is_accessible(&mut self) -> Result<bool> {
         Ok(true)
-
-        // let device_type = match self.backend_name.parse::<DeviceType>() {
-        //     Ok(dt) => dt,
-        //     Err(_) => {
-        //         let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
-        //         let err = format!(
-        //             "Device '{}' is invalid. Valid devices: {}",
-        //             self.backend_name,
-        //             valid_devices.join(", ")
-        //         );
-        //         bail!(err);
-        //     }
-        // };
-
-        // // The device may be down temporarily but jobs can still
-        // // be submitted and queued through the cloud
-        // // Thus we only check that the device is not retired 
-        // match self.api_client.get_device(device_type).await {
-        //     Ok(device) => Ok(device.availability == "ACTIVE"),
-        //     Err(err) => bail!("Failed to get device: {}", err),
-        // }
     }
 
     async fn acquire(&mut self) -> Result<String> {
@@ -160,25 +147,6 @@ impl QuantumResource for PasqalLocal {
         Ok(Target {
             value: "placeholder".to_string()
         })
-        // let device_type = match self.backend_name.parse::<DeviceType>() {
-        //     Ok(dt) => dt,
-        //     Err(_) => {
-        //         let valid_devices = vec!["FRESNEL", "FRESNEL_CAN1", "EMU_MPS", "EMU_FREE", "EMU_FRESNEL"];
-        //         let err = format!(
-        //             "Device '{}' is invalid. Valid devices: {}",
-        //             self.backend_name,
-        //             valid_devices.join(", ")
-        //         );
-        //         panic!("{}", err);
-        //     }
-        // };
-
-        // match self.api_client.get_device_specs(device_type).await {
-        //     Ok(resp) => Ok(Target {
-        //         value: resp.data.specs,
-        //     }),
-        //     Err(err) => Err(err),
-        // }
     }
 
     async fn metadata(&mut self) -> HashMap<String, String> {
