@@ -106,9 +106,8 @@ pub enum ResourceType {
         /// Number of times the pulser sequence is repeated.
         job_runs: i32,
     },
-    /// Pasqal Local 
-    PasqalLocal {
-    }
+    /// Pasqal Local
+    PasqalLocal {},
 }
 impl ResourceType {
     fn new(qpu_type: &str, args: Args) -> Result<Self, Box<dyn std::error::Error>> {
@@ -165,8 +164,7 @@ impl ResourceType {
                 job_runs: *job_runs,
             })
         } else if qpu_type == "pasqal-local" {
-            Ok(Self::PasqalCloud {
-            })
+            Ok(Self::PasqalCloud {})
         } else {
             Err(
                 eyre!(
@@ -198,7 +196,7 @@ impl ResourceType {
                 sequence: sequence.to_string(),
                 job_runs: *job_runs,
             }),
-            ResourceType::PasqalLocal {  sequence, job_runs } => Some(Payload::PasqalCloud {
+            ResourceType::PasqalLocal { sequence, job_runs } => Some(Payload::PasqalCloud {
                 sequence: sequence.to_string(),
                 job_runs: *shots,
             }),

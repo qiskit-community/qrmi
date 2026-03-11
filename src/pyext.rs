@@ -26,7 +26,7 @@ pub enum ResourceType {
     IBMDirectAccess,
     IBMQiskitRuntimeService,
     PasqalCloud,
-    PasqalLocal
+    PasqalLocal,
 }
 
 #[gen_stub_pyclass]

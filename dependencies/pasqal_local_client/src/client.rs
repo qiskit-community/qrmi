@@ -11,18 +11,16 @@
 
 //! Pasqal Cloud API Client
 
-use anyhow::{bail, Result};
 #[cfg(feature = "munge")]
 use crate::munge;
+use anyhow::{bail, Result};
 
-
+use crate::models::job::JobStatus;
 use log::debug;
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use crate::models::job::JobStatus;
-
 
 /// An asynchronous `Client` to make Requests with.
 #[derive(Debug, Clone)]
@@ -38,7 +36,7 @@ pub struct JobResponse {
     pub id: i32,
     pub user_id: String,
     pub status: JobStatus,
-    pub results: Option<String>
+    pub results: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -71,18 +69,18 @@ impl Client {
             reqwest::header::CONTENT_TYPE,
             reqwest::header::HeaderValue::from_static("application/json"),
         );
-        
+
         // Generate fresh munge token for each request
         #[cfg(feature = "munge")]
         {
             let token = munge::encode(b"")?;
             headers.insert(
-            reqwest::header::HeaderName::from_static("x-munge-cred"),
-            reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
+                reqwest::header::HeaderName::from_static("x-munge-cred"),
+                reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
             );
             Ok(headers)
         }
-        
+
         #[cfg(not(feature = "munge"))]
         {
             bail!("Munge support is disabled. Compile with --features munge to use the Pasqal Local client.")
@@ -103,81 +101,68 @@ impl Client {
         &self,
         sequence: String,
         shots: i32,
-        session_id: &str
+        session_id: &str,
     ) -> Result<JobResponse> {
         let url = format!("{}/jobs", self.base_url);
-        let job = CreateJob {
-            sequence,
-            shots,
-        };
-        
+        let job = CreateJob { sequence, shots };
+
         let headers = self.create_headers().await?;
-        let resp = self.client
+        let resp = self
+            .client
             .post(url)
             .headers(headers)
             .header("X-Warden-Session", session_id)
             .json(&job)
             .send()
             .await?;
-        
+
         self.handle_request(resp).await
     }
 
     pub async fn create_session(
         &self,
         user_id: i32,
-        slurm_job_id: &str
+        slurm_job_id: &str,
     ) -> Result<SessionResponse> {
         let url = format!("{}/sessions", self.base_url);
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
             slurm_job_id: slurm_job_id.to_string(),
         };
-        
+
         let headers = self.create_headers().await?;
-        let resp = self.client
+        let resp = self
+            .client
             .post(url)
             .headers(headers)
             .json(&session)
             .send()
             .await?;
-        
+
         self.handle_request(resp).await
     }
 
     pub async fn revoke_session(&self, session_id: &str) -> Result<SessionResponse> {
         let url = format!("{}/sessions/{}", self.base_url, session_id);
-        
+
         let headers = self.create_headers().await?;
-        let resp = self.client
-            .delete(url)
-            .headers(headers)
-            .send()
-            .await?;
-        
+        let resp = self.client.delete(url).headers(headers).send().await?;
+
         self.handle_request(resp).await
     }
 
-    pub async fn get_device_specs(
-        &mut self,
-    ) -> Result<GetDeviceSpecsResponse> {
+    pub async fn get_device_specs(&mut self) -> Result<GetDeviceSpecsResponse> {
         let url = format!("{}/qpu/specs", self.base_url);
         let resp: GetDeviceSpecsResponse = self.get(&url).await?;
         Ok(resp)
     }
 
-
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
         let headers = self.create_headers().await?;
-        let resp = self.client
-            .get(url)
-            .headers(headers)
-            .send()
-            .await?;
-        
+        let resp = self.client.get(url).headers(headers).send().await?;
+
         self.handle_request(resp).await
     }
-
 
     async fn handle_request<T: DeserializeOwned>(&self, resp: reqwest::Response) -> Result<T> {
         if resp.status().is_success() {
@@ -201,35 +186,33 @@ pub struct ClientBuilder {
     base_url: String,
 }
 
-    impl ClientBuilder {
-        /// Construct a new [`ClientBuilder`]
-        ///
-        /// # Example
-        ///
-        /// ```rust
-        /// use pasqal_local_api::ClientBuilder;
-        ///
-        /// let _builder = ClientBuilder::new("http://localhost:4207");
-        /// ```
-        pub fn new(base_url: impl Into<String>) -> Self {
-            let base_url: String = base_url.into(); 
-            Self {
-                base_url:base_url,
-            }
-        }
+impl ClientBuilder {
+    /// Construct a new [`ClientBuilder`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use pasqal_local_api::ClientBuilder;
+    ///
+    /// let _builder = ClientBuilder::new("http://localhost:4207");
+    /// ```
+    pub fn new(base_url: impl Into<String>) -> Self {
+        let base_url: String = base_url.into();
+        Self { base_url: base_url }
+    }
 
-        /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
-        ///
-        /// # Example
-        ///
-        /// ```rust
-        /// use pasqal_local_api::{ClientBuilder};
-        ///
-        /// let _builder = ClientBuilder::new("http://localhost:4207").build();
-        /// ```
-        pub fn build(&mut self) -> Result<Client> {
-            let mut reqwest_client_builder = reqwest::Client::builder();
-            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+    /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use pasqal_local_api::{ClientBuilder};
+    ///
+    /// let _builder = ClientBuilder::new("http://localhost:4207").build();
+    /// ```
+    pub fn build(&mut self) -> Result<Client> {
+        let mut reqwest_client_builder = reqwest::Client::builder();
+        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
 
         let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
 

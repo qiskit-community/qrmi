@@ -12,12 +12,11 @@
 
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
-use anyhow::{bail, Result};
 use anyhow::anyhow;
+use anyhow::{bail, Result};
 use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::env;
-
 
 use async_trait::async_trait;
 
@@ -25,7 +24,7 @@ use async_trait::async_trait;
 pub struct PasqalLocal {
     pub(crate) api_client: Client,
     pub(crate) job_uid: i32,
-    pub(crate) job_id: String
+    pub(crate) job_id: String,
 }
 
 impl PasqalLocal {
@@ -36,21 +35,17 @@ impl PasqalLocal {
     /// /// * `PASQAL_LOCAL_QRMI_URL`: URL of the pasqd middleware (warden)
     ///
     pub fn new() -> Result<Self> {
-        let url =
-            env::var(format!("PASQAL_LOCAL_QRMI_URL")).map_err(|_| {
-                anyhow!("PASQAL_LOCAL_QRMI_URL environment variable is not set")
-            })?;
+        let url = env::var(format!("PASQAL_LOCAL_QRMI_URL"))
+            .map_err(|_| anyhow!("PASQAL_LOCAL_QRMI_URL environment variable is not set"))?;
         let job_uid: i32 = env::var(format!("QRMI_JOB_UID"))
             .ok()
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap();
-        let job_id: String = env::var(format!("QRMI_JOB_ID"))
-            .ok()
-            .unwrap();
+        let job_id: String = env::var(format!("QRMI_JOB_ID")).ok().unwrap();
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
             job_uid: job_uid,
-            job_id: job_id
+            job_id: job_id,
         })
     }
 }
@@ -66,34 +61,36 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn is_accessible(&mut self) -> Result<bool> {
-        //TODO: Define when this should return false 
+        //TODO: Define when this should return false
         Ok(true)
     }
 
     async fn acquire(&mut self) -> Result<String> {
-        match self.api_client.create_session(self.job_uid, &self.job_id).await {
+        match self
+            .api_client
+            .create_session(self.job_uid, &self.job_id)
+            .await
+        {
             Ok(session) => Ok(session.id),
-            Err(err) => Err(err), 
+            Err(err) => Err(err),
         }
     }
 
     async fn release(&mut self, _id: &str) -> Result<()> {
-        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN")
-            .map_err(|_| {
-                anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
-            })?;
+        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN").map_err(|_| {
+            anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
+        })?;
         match self.api_client.revoke_session(&session_id).await {
             Ok(_) => Ok(()),
-            Err(err) => Err(err), 
+            Err(err) => Err(err),
         }
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN")
-            .map_err(|_| {
-                anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
-            })?;
-        
+        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN").map_err(|_| {
+            anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
+        })?;
+
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             match self
                 .api_client
@@ -144,13 +141,9 @@ impl QuantumResource for PasqalLocal {
         Ok("There are no logs for this job.".to_string())
     }
 
-
-
     async fn target(&mut self) -> Result<Target> {
         match self.api_client.get_device_specs().await {
-            Ok(resp) => Ok(Target {
-                value: resp.specs,
-            }),
+            Ok(resp) => Ok(Target { value: resp.specs }),
             Err(err) => Err(err),
         }
     }
