@@ -38,7 +38,7 @@ jobs:
     if: github.repository_owner == 'qiskit-community'
     name: Create source and vendor tarballs
     needs: [get-version]
-    uses: ./.github/workflows/source-tarballs.yml
+    uses: ./.github/workflows/tarball-vendor.yml
 
   create-libqrmi-tarball-rhel:
     if: github.repository_owner == 'qiskit-community'
