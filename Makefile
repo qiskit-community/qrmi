@@ -4,7 +4,7 @@
 VERSION := $(shell grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
 DIST_DIR ?= .
 
-include Makefile.helpers
+include Makefile_helpers.mk
 
 .PHONY: all build dist dist-rhel-lib clean help
 
