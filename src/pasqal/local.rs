@@ -66,6 +66,7 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn is_accessible(&mut self) -> Result<bool> {
+        //TODO: Define when this should return false 
         Ok(true)
     }
 
@@ -143,10 +144,15 @@ impl QuantumResource for PasqalLocal {
         Ok("There are no logs for this job.".to_string())
     }
 
+
+
     async fn target(&mut self) -> Result<Target> {
-        Ok(Target {
-            value: "placeholder".to_string()
-        })
+        match self.api_client.get_device_specs().await {
+            Ok(resp) => Ok(Target {
+                value: resp.specs,
+            }),
+            Err(err) => Err(err),
+        }
     }
 
     async fn metadata(&mut self) -> HashMap<String, String> {

@@ -52,6 +52,11 @@ pub struct SessionResponse {
     pub id: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetDeviceSpecsResponse {
+    pub specs: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateSessionPayload {
     pub user_id: String,
@@ -151,6 +156,14 @@ impl Client {
             .await?;
         
         self.handle_request(resp).await
+    }
+
+    pub async fn get_device_specs(
+        &mut self,
+    ) -> Result<GetDeviceSpecsResponse> {
+        let url = format!("{}/qpu/specs", self.base_url);
+        let resp: GetDeviceSpecsResponse = self.get(&url).await?;
+        Ok(resp)
     }
 
 
