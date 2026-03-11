@@ -198,7 +198,7 @@ impl ClientBuilder {
     /// ```
     pub fn new(base_url: impl Into<String>) -> Self {
         let base_url: String = base_url.into();
-        Self { base_url: base_url }
+        Self { base_url }
     }
 
     /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
