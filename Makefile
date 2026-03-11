@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # (C) Copyright IBM Corporation 2026
 
-VERSION := $(shell grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+VERSION := $$($(MAKE) get-qrmi-version)
 DIST_DIR ?= .
 
 include Makefile_helpers.mk
