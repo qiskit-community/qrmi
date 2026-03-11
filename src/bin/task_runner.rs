@@ -107,7 +107,12 @@ pub enum ResourceType {
         job_runs: i32,
     },
     /// Pasqal Local
-    PasqalLocal {},
+    PasqalLocal {
+        /// Pulser sequence
+        sequence: String,
+        /// Number of times the pulser sequence is repeated.
+        job_runs: i32,
+    },
 }
 impl ResourceType {
     fn new(qpu_type: &str, args: Args) -> Result<Self, Box<dyn std::error::Error>> {
@@ -164,7 +169,22 @@ impl ResourceType {
                 job_runs: *job_runs,
             })
         } else if qpu_type == "pasqal-local" {
-            Ok(Self::PasqalCloud {})
+            let job_runs = match &deserialized.job_runs {
+                Some(v) => v,
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "job_runs").into());
+                }
+            };
+            let sequence = match &deserialized.sequence {
+                Some(v) => v.to_string(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "sequence").into());
+                }
+            };
+            Ok(Self::PasqalLocal {
+                sequence,
+                job_runs: *job_runs,
+            })
         } else {
             Err(
                 eyre!(
@@ -198,7 +218,7 @@ impl ResourceType {
             }),
             ResourceType::PasqalLocal { sequence, job_runs } => Some(Payload::PasqalCloud {
                 sequence: sequence.to_string(),
-                job_runs: *shots,
+                job_runs: *job_runs,
             }),
         }
     }
@@ -216,7 +236,9 @@ impl ResourceType {
             ResourceType::PasqalCloud { .. } => {
                 Ok(Box::new(PasqalCloud::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
-            ResourceType::PasqalLocal { .. } => Box::new(PasqalLocal::new(qpu_name)),
+            ResourceType::PasqalLocal { .. } => {
+                Ok(Box::new(PasqalLocal::new()?) as Box<dyn QuantumResource>)
+            }
         }
     }
 }
