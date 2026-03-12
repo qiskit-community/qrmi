@@ -17,27 +17,32 @@ on:
   workflow_dispatch:
   
 jobs:
-  get-version:
+  valid-qrmi-version:
     if: github.repository_owner == 'qiskit-community'
-    name: Get QRMI version
+    name: Check new QRMI version is valid
     runs-on: ubuntu-24.04
     outputs:
-      version: ${{ steps.get-version.outputs.version }}
+      version: ${{ steps.qrmi-info.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Get QRMI version from Cargo.toml
-        id: get-version
+
+      # Ubuntu runner already comes with the package make installed
+
+      - name: Check the new QRMI version is valid
+        run: make check-new-qrmi-version-valid
+
+      - name: Get QRMI information
+        id: qrmi-info
         run: |
-          VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "QRMI version: $VERSION"
+          QRMI_VERSION=$(make get-qrmi-version)
+          echo "version=$QRMI_VERSION" >> $GITHUB_OUTPUT
+          echo "QRMI version: $QRMI_VERSION"
 
   create-source-tarballs:
     if: github.repository_owner == 'qiskit-community'
     name: Create source and vendor tarballs
-    needs: [get-version]
+    needs: [valid-qrmi-version]
     uses: ./.github/workflows/tarball-vendor.yml
 
   create-libqrmi-tarball-rhel:
@@ -48,7 +53,7 @@ jobs:
   create-draft-release:
     if: github.repository_owner == 'qiskit-community'
     name: Create draft release and populate it with assets
-    needs: [get-version, create-source-tarballs, create-libqrmi-tarball-rhel]
+    needs: [valid-qrmi-version, create-source-tarballs, create-libqrmi-tarball-rhel]
     permissions:
       contents: write # required to create a draft release
     runs-on: ubuntu-24.04
@@ -60,7 +65,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create --draft --generate-notes --title "QRMI v${{ needs.get-version.outputs.version }}" "${{ needs.get-version.outputs.version }}"
+          gh release create --draft --generate-notes --title "QRMI v${{ needs.valid-qrmi-version.outputs.version }}" "${{ needs.valid-qrmi-version.outputs.version }}"
   
       - name: Download source and vendor tarballs
         uses: actions/download-artifact@v4
@@ -71,23 +76,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.get-version.outputs.version }} qrmi-${{ needs.get-version.outputs.version }}.tar.gz qrmi-${{ needs.get-version.outputs.version }}-vendor.tar.gz --clobber
+          gh release upload "${{ needs.valid-qrmi-version.outputs.version }}" qrmi-${{ needs.valid-qrmi-version.outputs.version }}.tar.gz qrmi-${{ needs.valid-qrmi-version.outputs.version }}-vendor.tar.gz --clobber
 
       - name: Download libqrmi tarball for RHEL compatible distributions
         uses: actions/download-artifact@v4
         with:
-          name: libqrmi-${{ needs.get-version.outputs.version }}-el8-x86_64-tarball
+          name: libqrmi-${{ needs.valid-qrmi-version.outputs.version }}-el8-x86_64-tarball
 
       - name: Upload libqrmi tarball for RHEL compatible distributions
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.get-version.outputs.version }} libqrmi-${{ needs.get-version.outputs.version }}-el8-x86_64.tar.gz --clobber
+          gh release upload "${{ needs.valid-qrmi-version.outputs.version }}" libqrmi-${{ needs.valid-qrmi-version.outputs.version }}-el8-x86_64.tar.gz --clobber
     
   publish-release:
     if: github.repository_owner == 'qiskit-community'
     name: Publish release
-    needs: [get-version,create-draft-release]
+    needs: [valid-qrmi-version, create-draft-release]
     permissions:
       contents: write # This is required to publish the draft release
     runs-on: ubuntu-24.04
@@ -100,4 +105,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # Make the release live on github
-        gh release edit ${{ needs.get-version.outputs.version }} --verify-tag --draft=false
+        gh release edit "${{ needs.valid-qrmi-version.outputs.version }}" --verify-tag --draft=false
