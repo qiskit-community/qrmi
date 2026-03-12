@@ -2,22 +2,23 @@
 # SPDX-License-Identifier: Apache-2.0
 # (C) Copyright IBM Corporation 2026
 
-# This reusable workflow creates the source code tarball and the vendor tarball for distribution.
+# This reusable workflow creates and upload the vendor tarball
+# in preparation for a new QRMI release.
 #
 # Workflow inputs:
 # - None
 #
-# Workflow artifacts produced:
-# - [uploaded] qrmi-source-tarballs  (qrmi-{version}.tar.gz, qrmi-{version}-vendor.tar.gz)
+# Workflow artifacts uploaded:
+# - qrmi-vendor-tarball
 #
 # Workflow dependencies:
 # - None. It does not depend on any other workflow.
 
-name: Create source and vendor tarballs
+name: Create and upload the vendor tarball
 on:
   workflow_call:
 jobs:
-  source-tarball:
+  vendor-tarball:
     runs-on: ubuntu-24.04
     steps:
     - name: Checkout
@@ -30,22 +31,19 @@ jobs:
       run: |
         sudo apt install -y make gcc
 
-    - name: Create source and vendor tarballs
+    - name: Get QRMI information
+      id: qrmi-info
       run: |
-        make dist
+        QRMI_VERSION=$(make get-qrmi-version)
+        echo "version=$QRMI_VERSION" >> $GITHUB_OUTPUT
+        echo "QRMI version: $QRMI_VERSION"
 
-    - name: Get QRMI version
-      id: qrmi-version
-      run: |
-        VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
-        echo "value=$VERSION" >> $GITHUB_OUTPUT
-        echo "QRMI version: $VERSION"
+    - name: Create vendor tarball
+      run: make tarball-vendor
 
-    - name: Upload tarballs
+    - name: Upload vendor tarball
       uses: actions/upload-artifact@v4
       with:
-        name: qrmi-source-tarballs
-        path: |
-          qrmi-${{ steps.qrmi-version.outputs.value }}.tar.gz
-          qrmi-${{ steps.qrmi-version.outputs.value }}-vendor.tar.gz
+        name: qrmi-vendor-tarball
+        path: qrmi-${{ steps.qrmi-info.outputs.version }}-vendor.tar.gz
         if-no-files-found: error

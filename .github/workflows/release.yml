@@ -8,9 +8,8 @@
 # - GITHUB_TOKEN secret
 #
 # Release assets:
-# - QRMI source tarball (qrmi-{version}.tar.gz)
-# - QRMI vendor tarball (qrmi-{version}-vendor.tar.gz)
-# - libqrmi tarball for RHEL compatible distributions (libqrmi-{version}-el8-x86_64.tar.gz)
+# - qrmi-{version}-vendor.tar.gz
+# - libqrmi-{version}-el8-x86_64.tar.gz
 
 name: Release
 on:
@@ -39,9 +38,9 @@ jobs:
           echo "version=$QRMI_VERSION" >> $GITHUB_OUTPUT
           echo "QRMI version: $QRMI_VERSION"
 
-  create-source-tarballs:
+  create-vendor-tarball:
     if: github.repository_owner == 'qiskit-community'
-    name: Create source and vendor tarballs
+    name: Create vendor tarball
     needs: [valid-qrmi-version]
     uses: ./.github/workflows/tarball-vendor.yml
 
@@ -53,7 +52,7 @@ jobs:
   create-draft-release:
     if: github.repository_owner == 'qiskit-community'
     name: Create draft release and populate it with assets
-    needs: [valid-qrmi-version, create-source-tarballs, create-libqrmi-tarball-rhel]
+    needs: [valid-qrmi-version, create-vendor-tarball, create-libqrmi-tarball-rhel]
     permissions:
       contents: write # required to create a draft release
     runs-on: ubuntu-24.04
@@ -67,16 +66,16 @@ jobs:
         run: |
           gh release create --draft --generate-notes --title "QRMI v${{ needs.valid-qrmi-version.outputs.version }}" "v${{ needs.valid-qrmi-version.outputs.version }}"
   
-      - name: Download source and vendor tarballs
+      - name: Download vendor tarball
         uses: actions/download-artifact@v4
         with:
-          name: qrmi-source-tarballs
+          name: qrmi-vendor-tarball
 
-      - name: Upload source and vendor tarballs
+      - name: Upload vendor tarball
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "v${{ needs.valid-qrmi-version.outputs.version }}" qrmi-${{ needs.valid-qrmi-version.outputs.version }}.tar.gz qrmi-${{ needs.valid-qrmi-version.outputs.version }}-vendor.tar.gz --clobber
+          gh release upload "v${{ needs.valid-qrmi-version.outputs.version }}" qrmi-${{ needs.valid-qrmi-version.outputs.version }}-vendor.tar.gz --clobber
 
       - name: Download libqrmi tarball for RHEL compatible distributions
         uses: actions/download-artifact@v4
