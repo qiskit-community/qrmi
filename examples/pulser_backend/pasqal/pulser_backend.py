@@ -54,7 +54,7 @@ reg = Register(
         "q2": (-2.5, 2.5),
         "q3": (2.5, 2.5),
     }
-)
+).with_automatic_layout(device)
 
 seq = Sequence(reg, device)
 seq.declare_channel("rydberg", "rydberg_global")
