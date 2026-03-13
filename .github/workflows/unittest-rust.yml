@@ -3,12 +3,14 @@
 #
 # Workflow inputs:
 # - [required] python-version
+# - [required] container-image
 #
 # Workflow artifacts produced:
 # - None
 #
 # Workflow dependencies:
 # - None. It does not depend on any other workflow.
+
 name: Unittest QRMI Rust code
 on:
   workflow_call:
@@ -18,11 +20,18 @@ on:
           Python version to unittest the stubgen
         type: string
         required: true
+      container-image:
+        description: >-
+          Container image that will be used to run the workflow
+        type: string
+        required: true
 env:
   CARGO_TERM_COLOR: always
 jobs:
   unittest:
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6

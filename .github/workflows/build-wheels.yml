@@ -3,12 +3,14 @@
 #
 # Workflow inputs:
 # - [required] python-version
+# - [required] container-image
 #
 # Workflow artifacts produced:
 # - [uploaded] qrmi-wheels for the specified Python version. File: qrmi-*.whl
 #
 # Workflow dependencies:
 # - None. It does not depend on any other workflow.
+
 name: Build wheels
 on:
   workflow_call:
@@ -18,9 +20,16 @@ on:
           Python version to build the wheels
         type: string
         required: true
+      container-image:
+        description: >-
+          Container image that will be used to run the workflow
+        type: string
+        required: true
 jobs:
   build:
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6
