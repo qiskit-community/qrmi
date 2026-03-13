@@ -22,6 +22,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
+    - name: Install package dependencies from distro
+      run: xargs dnf install -y < requirements-distro.txt
+
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
 
@@ -30,4 +33,3 @@ jobs:
 
     - name: Build stubgen
       run: cargo build --bin stubgen --release --features="pyo3"
-
