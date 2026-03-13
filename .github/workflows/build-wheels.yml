@@ -2,7 +2,7 @@
 # This reusable workflow builds the python wheels for the QRMI package.
 #
 # Workflow inputs:
-# - [required] python-version: the Python version to build the wheels for
+# - [required] python-version
 #
 # Workflow artifacts produced:
 # - [uploaded] qrmi-wheels for the specified Python version. File: qrmi-*.whl

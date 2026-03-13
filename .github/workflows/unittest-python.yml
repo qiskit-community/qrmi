@@ -2,7 +2,7 @@
 # This reusable workflow runs Python unittests on the QRMI wheels package.
 #
 # Workflow inputs:
-# - [required] python-version: the Python version to lint the code
+# - [required] python-version
 #
 # Workflow artifacts produced:
 # - None
