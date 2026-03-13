@@ -17,7 +17,6 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
 | QRMI_JOB_UID | ID of the user executing the job |
 | QRMI_JOB_ID | ID of the job |
-| {resource_name}_QRMI_JOB_ACQUISITION_TOKEN | (Optional) Session ID, can be obtained by acquire function. If exists, used to submit tasks to the QPU |
 
 
 
@@ -44,9 +43,9 @@ $ make
 ## How to run this example
 ```shell-session
 $ ./build/pasqal_local
-pasqal_local <backend_name> <input file>
+pasqal_local <input file>
 ```
 For example,
 ```shell-session
-$ ./build/pasqal_local FRESNEL input.json
+$ ./build/pasqal_local input.json
 ```

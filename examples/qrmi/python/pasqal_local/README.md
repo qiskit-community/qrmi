@@ -16,14 +16,13 @@ $ pip install -r ../requirements.txt
 
 ## Set environment variables
 
-Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
+Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
 | {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
 | QRMI_JOB_UID | ID of the user executing the job |
 | QRMI_JOB_ID | ID of the job |
-| {resource_name}_QRMI_JOB_ACQUISITION_TOKEN | (Optional) Session ID, can be obtained by acquire function. If exists, used to submit tasks to the QPU |
 
 
 ## Create Pulser Sequence file as input
@@ -41,12 +40,11 @@ with open("pulser_seq.json", "w") as f:
 
 ```shell-session
 $ python example.py -h
-usage: example.py [-h] input backend
+usage: example.py [-h] input
 
 An example of Pasqal Local Python QRMI
 
 positional arguments:
-  backend  'FRESNEL'
   input       sequence input file
 
 options:
@@ -54,5 +52,5 @@ options:
 ```
 For example,
 ```shell-session
-$ python example.py FRESNEL input.json
+$ python example.py input.json
 ```

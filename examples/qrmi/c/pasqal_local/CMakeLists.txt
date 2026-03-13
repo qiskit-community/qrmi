@@ -33,6 +33,10 @@ function(add_example TARGET_NAME C_FILE)
 
   add_executable(${TARGET_NAME} ${SRC_FILE})
 
+  find_library(MUNGE_LIB NAMES munge REQUIRED)
+  set(MUNGE_LINK_LIB ${MUNGE_LIB})
+  target_link_libraries(${TARGET_NAME} PRIVATE ${MUNGE_LINK_LIB})
+
   # add libraries
   target_link_libraries(${TARGET_NAME}
           PUBLIC
@@ -44,8 +48,6 @@ function(add_example TARGET_NAME C_FILE)
     target_link_libraries(${TARGET_NAME} PUBLIC "-framework CoreFoundation")
     target_link_libraries(${TARGET_NAME} PUBLIC "-framework SystemConfiguration")
   elseif(UNIX)
-    target_link_libraries(${TARGET_NAME} PUBLIC "-lssl")
-    target_link_libraries(${TARGET_NAME} PUBLIC "-lcrypto")
     target_link_libraries(${TARGET_NAME} PUBLIC "-ldl")
     target_link_libraries(${TARGET_NAME} PUBLIC "-lpthread")
     target_link_libraries(${TARGET_NAME} PUBLIC "-lm")

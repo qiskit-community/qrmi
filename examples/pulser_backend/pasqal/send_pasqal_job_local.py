@@ -13,14 +13,12 @@ import json
 import os
 from dotenv import load_dotenv
 from pulser import Pulse, Register, Sequence
-from pulser.devices import AnalogDevice
 from pulser.backend.remote import JobParams, RemoteBackend
 from pulser.json.abstract_repr.deserializer import (
     deserialize_device,
 )
-from qrmi.pulser_backend.backend import PulserQRMIBackend, PulserQRMIConnection
+from qrmi.pulser_backend.backend import PulserQRMIConnection
 from qrmi.pulser_backend.service import QRMIService
-from qrmi import QuantumResource
 
 import logging
 
@@ -43,9 +41,11 @@ if len(resources) == 0:
 # Randomly select QR
 qrmi = resources[0]
 
+target = qrmi.target()
+
 qrmi_conn = PulserQRMIConnection(qrmi)
 # Generate Pulser device
-device = AnalogDevice
+device = deserialize_device(target.value)
 reg = Register(
     {
         "q0": (-2.5, -2.5),

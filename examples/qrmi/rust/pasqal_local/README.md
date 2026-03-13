@@ -15,7 +15,6 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
 | QRMI_JOB_UID | ID of the user executing the job |
 | QRMI_JOB_ID | ID of the job |
-| {resource_name}_QRMI_JOB_ACQUISITION_TOKEN | (Optional) Session ID, can be obtained by acquire function. If exists, used to submit tasks to the QPU |
 
 
 ## Create Pulser Sequence file as input
@@ -33,7 +32,7 @@ with open("pulser_seq.json", "w") as f:
 
 ```shell-session
 $ cargo clean
-$ cargo build --release
+$ cargo build --release --features=qrmi/munge
 ```
 
 ## How to run this example
@@ -41,15 +40,14 @@ $ cargo build --release
 $ ../target/release/qrmi-example-pasqal-local --help
 QRMI for Pasqal Local - Example
 
-Usage: qrmi-example-pasqal-local --backend <BACKEND> --input <INPUT>
+Usage: qrmi-example-pasqal-local --input <INPUT>
 
 Options:
-  -b, --backend <BACKEND>        backend name
   -i, --input <INPUT>            sequence input file
   -h, --help                     Print help
   -V, --version                  Print version
 ```
 For example,
 ```shell-session
-$ ../target/release/qrmi-example-pasqal-local -b FRESNEL -i input.json
+$ ../target/release/qrmi-example-pasqal-local -i input.json
 ```
