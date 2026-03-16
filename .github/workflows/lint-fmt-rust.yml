@@ -2,7 +2,7 @@
 # This reusable workflow runs Rust format check and lint on librqmi, dependencies, examples and binaries.
 #
 # Workflow inputs:
-# - None
+# - [required] python-version
 #
 # Workflow artifacts produced:
 # - None
@@ -12,6 +12,12 @@
 name: Lint and format check Rust code
 on:
   workflow_call:
+    inputs:
+      python-version:
+        description: >-
+          Python version to lint the stubgen
+        type: string
+        required: true
 env:
   CARGO_TERM_COLOR: always
 jobs:
@@ -29,6 +35,19 @@ jobs:
       with:
         components: rustfmt, clippy
 
+    # The python3.12 installed using actions/setup-python@v6,
+    # requires a glibc version that is not available in the UBI container image
+    - name: Install python ${{ inputs.python-version }} from distro
+      run: dnf install -y python${{ inputs.python-version }}{,-pip,-devel}
+
+    - name: Create and activate venv for subsequent steps
+      run: |
+        python${{ inputs.python-version }} -m venv .venv
+        echo "${GITHUB_WORKSPACE}/.venv/bin" >> ${GITHUB_PATH}
+
+    - name: Install python requirements
+      run: pip install -r requirements-dev.txt
+
     - name: Format check libqrmi.so (includes dependencies, examples and binaries)
       run: cargo fmt --all --check --verbose
 
@@ -39,5 +58,6 @@ jobs:
     - name: Lint task_runner
       run: cargo clippy --bin task_runner --features="build-binary" -- -D warnings
 
+    # --features="pyo3" requires python3.x and python3.x-devel to be installed
     - name: Lint stubgen
       run:  cargo clippy --bin stubgen --features="pyo3" -- -D warnings

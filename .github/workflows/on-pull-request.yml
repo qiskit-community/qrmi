@@ -26,14 +26,23 @@ jobs:
     if: github.repository_owner == 'qiskit-community'
     name: Build QRMI binaries
     uses: ./.github/workflows/build-qrmi-bins.yml
+    with:
+      python-version: "3.12"
+
   lint-fmt-rust:
     if: github.repository_owner == 'qiskit-community'
     name: Lint and format check Rust code
     uses: ./.github/workflows/lint-fmt-rust.yml
+    with:
+      python-version: "3.12"
+
   unittest-rust:
     if: github.repository_owner == 'qiskit-community'
     name: Unittest Rust code
     uses: ./.github/workflows/unittest-rust.yml
+    with:
+      python-version: "3.12"
+
   build-wheels:
     if: github.repository_owner == 'qiskit-community'
     name: Build wheels
