@@ -1,0 +1,49 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright IBM Corporation 2026
+
+# This reusable workflow creates and upload the vendor tarball
+# in preparation for a new QRMI release.
+#
+# Workflow inputs:
+# - None
+#
+# Workflow artifacts uploaded:
+# - qrmi-vendor-tarball
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+
+name: Create and upload the vendor tarball
+on:
+  workflow_call:
+jobs:
+  vendor-tarball:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Install Ubuntu build dependencies
+      run: |
+        sudo apt install -y make gcc
+
+    - name: Get QRMI information
+      id: qrmi-info
+      run: |
+        QRMI_VERSION=$(make get-qrmi-version)
+        echo "version=$QRMI_VERSION" >> $GITHUB_OUTPUT
+        echo "QRMI version: $QRMI_VERSION"
+
+    - name: Create vendor tarball
+      run: make tarball-vendor
+
+    - name: Upload vendor tarball
+      uses: actions/upload-artifact@v4
+      with:
+        name: qrmi-vendor-tarball
+        path: qrmi-${{ steps.qrmi-info.outputs.version }}-vendor.tar.gz
+        if-no-files-found: error

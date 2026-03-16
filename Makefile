@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # (C) Copyright IBM Corporation 2026
 
-VERSION := $(shell grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+VERSION := $$($(MAKE) get-qrmi-version)
 DIST_DIR ?= .
 
-include Makefile.helpers
+include Makefile_helpers.mk
 
 .PHONY: all build dist dist-rhel-lib clean help
 
@@ -21,14 +21,13 @@ build:
 # Packaging targets
 # ------------------------------------------------
 
-dist:
-	git archive --format=tar.gz \
-	  --prefix=qrmi-$(VERSION)/ \
-	  HEAD \
-	  -o $(DIST_DIR)/qrmi-$(VERSION).tar.gz
+# Allow disconnected/airgapped builds
+tarball-vendor:
 	cargo vendor $(DIST_DIR)/vendor
-	tar czf $(DIST_DIR)/qrmi-$(VERSION)-vendor.tar.gz vendor/
-	rm -rf $(DIST_DIR)/vendor
+	@tar czf $(DIST_DIR)/qrmi-$(VERSION)-vendor.tar.gz vendor/
+	@rm -rf $(DIST_DIR)/vendor
+	@echo
+	@echo "Created: $(DIST_DIR)/qrmi-$(VERSION)-vendor.tar.gz"
 
 dist-rhel-lib: build
 	TARBALL="$(DIST_DIR)/libqrmi-$(VERSION)-el8-x86_64.tar.gz"; \
@@ -56,7 +55,7 @@ help:
 	@echo
 	@echo "Packaging targets:"
 	@echo
-	@echo "  dist            - Create source and vendor tarballs in DIST_DIR (default: ./)"
+	@echo "  tarball-vendor  - Create vendor tarball in DIST_DIR (default: ./)"
 	@echo "  dist-rhel-lib   - Create libqrmi tarball with libqrmi.so and qrmi.h"
 	@echo
 	@echo "Misc targets:"
