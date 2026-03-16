@@ -10,46 +10,70 @@
 #
 # Workflow dependencies:
 # - All reusable workflows called in the jobs section
+
 name: Pull request
+
 on:
   pull_request:
     branches: [ "main" ]
+
 concurrency:
   group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
   cancel-in-progress: true
+
 jobs:
+
   build-libqrmi:
     if: github.repository_owner == 'qiskit-community'
     name: Build libqrmi
     uses: ./.github/workflows/build-libqrmi.yml
+    with:
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+
   build-qrmi-bins:
     if: github.repository_owner == 'qiskit-community'
     name: Build QRMI binaries
     uses: ./.github/workflows/build-qrmi-bins.yml
+    with:
+      python-version: "3.12"
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+
   lint-fmt-rust:
     if: github.repository_owner == 'qiskit-community'
     name: Lint and format check Rust code
     uses: ./.github/workflows/lint-fmt-rust.yml
+    with:
+      python-version: "3.12"
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+
   unittest-rust:
     if: github.repository_owner == 'qiskit-community'
     name: Unittest Rust code
     uses: ./.github/workflows/unittest-rust.yml
+    with:
+      python-version: "3.12"
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+
   build-wheels:
     if: github.repository_owner == 'qiskit-community'
     name: Build wheels
     uses: ./.github/workflows/build-wheels.yml
     with:
       python-version: "3.12"
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+
   lint-fmt-python:
     if: github.repository_owner == 'qiskit-community'
     needs: build-wheels
     uses: ./.github/workflows/lint-fmt-python.yml
     with:
       python-version: "3.12"
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+
   unittest-python:
     if: github.repository_owner == 'qiskit-community'
     needs: build-wheels
     uses: ./.github/workflows/unittest-python.yml
     with:
       python-version: "3.12"
-
+      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
