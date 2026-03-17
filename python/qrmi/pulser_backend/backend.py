@@ -137,7 +137,7 @@ class PulserQRMIConnection(RemoteConnection):
                     # Get the results
                     results.append(self._qrmi.task_result(new_task_id).value)
                     break
-                if status == TaskStatus.Failed:
+                if status in (TaskStatus.Failed, TaskStatus.Cancelled):
                     break
                 print(f"Task status {status}, waiting 1s", flush=True)
                 time.sleep(1)
