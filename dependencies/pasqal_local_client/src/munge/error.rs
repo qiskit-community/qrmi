@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright Pasqal SAS 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,10 +9,19 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! QRMI implementations for Pasqal Cloud Services and Pasqal Local
+use std::fmt;
 
-mod cloud;
-mod local;
+#[derive(Debug)]
+pub enum MungeError {
+    EncodeFailed(String),
+}
 
-pub use self::cloud::PasqalCloud;
-pub use self::local::PasqalLocal;
+impl fmt::Display for MungeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MungeError::EncodeFailed(msg) => write!(f, "munge encode failed: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for MungeError {}

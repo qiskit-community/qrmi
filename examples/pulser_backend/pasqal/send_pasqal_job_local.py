@@ -9,44 +9,43 @@
 # Any modifications or derivative works of this code must retain this
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
-
 import json
-
-import pulser
+import os
 from dotenv import load_dotenv
 from pulser import Pulse, Register, Sequence
-from pulser.backend.remote import JobParams
-from target import get_device
-
-from qrmi.pulser_backend.backend import PulserQRMIBackend, PulserQRMIConnection
+from pulser.backend.remote import JobParams, RemoteBackend
+from pulser.json.abstract_repr.deserializer import (
+    deserialize_device,
+)
+from qrmi.pulser_backend.backend import PulserQRMIConnection
 from qrmi.pulser_backend.service import QRMIService
+
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,  # or INFO
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger()
+
+logger.info(json.dumps(dict(os.environ)))
 
 # Create QRMI
 load_dotenv()
 service = QRMIService()
-
 resources = service.resources()
 if len(resources) == 0:
-    raise RuntimeError("No quantum resource is available.")
+    print("No quantum resource is available.")
 
-# Select QR
-for res in resources:
-    print(f"Available resource: id={res.resource_id()} type={str(res.resource_type())}")
 
-# For this example, we select the first resource
+# Randomly select QR
 qrmi = resources[0]
 
+target = qrmi.target()
+
 qrmi_conn = PulserQRMIConnection(qrmi)
-
-# Generate Pulser device.
-# Emulator targets may not expose device specs so we fall back to the generic AnalogDevice.
-# For a real program, you may want to manually fetch the device specs and construct the corresponding Pulser device.
-# This can, for example, be done by using the PasqalCloud package.
-try:
-    device = get_device(qrmi)
-except RuntimeError:
-    device = pulser.AnalogDevice
-
+# Generate Pulser device
+device = deserialize_device(target.value)
 reg = Register(
     {
         "q0": (-2.5, -2.5),
@@ -55,6 +54,7 @@ reg = Register(
         "q3": (2.5, 2.5),
     }
 ).with_automatic_layout(device)
+print(device)
 
 seq = Sequence(reg, device)
 seq.declare_channel("rydberg", "rydberg_global")
@@ -64,6 +64,7 @@ pulse1 = Pulse.ConstantPulse(100, 2, 2, 0)
 seq.add(pulse1, "rydberg")
 seq.measure("ground-rydberg")
 
-backend = PulserQRMIBackend(seq, qrmi_conn)
-result = backend.run([JobParams(runs=1000, variables=[])], wait=True)
-print(f"Results: {json.loads(result[0])['counter']}")
+
+backend = RemoteBackend(seq, qrmi_conn)
+result = backend.run([JobParams(runs=500, variables=[])], wait=True)
+print("results", result)
