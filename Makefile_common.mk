@@ -1,13 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # (C) Copyright IBM Corporation 2026
 
+ifndef MAKEFILE_COMMON_MK_INCLUDED
+
 .PHONY: get-qrmi-version check-new-qrmi-version-valid
+
+# Get QRMI version from Cargo.toml
+QRMI_VERSION := $(shell grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
 
 MAKEFLAGS += --no-print-directory
 
 # Single source of truth to get the qrmi version.
 get-qrmi-version:
-	@grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/'
+	@echo "$(QRMI_VERSION)"
 
 # Before releasing a new qrmi version, we check if the current version was not released yet
 check-new-qrmi-version-valid:
@@ -26,3 +31,6 @@ check-new-qrmi-version-valid:
 		exit 1; \
 	fi; \
 	echo "New QRMI version v$${NEW_QRMI_VERSION} is valid"
+
+MAKEFILE_COMMON_MK_INCLUDED := true
+endif
