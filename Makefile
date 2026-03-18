@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # (C) Copyright IBM Corporation 2026
 
-VERSION := $$($(MAKE) get-qrmi-version)
+QRMI_VERSION := $$($(MAKE) get-qrmi-version)
 DIST_DIR ?= .
 
 include Makefile_helpers.mk
@@ -24,19 +24,19 @@ build:
 # Allow disconnected/airgapped builds
 tarball-vendor:
 	cargo vendor $(DIST_DIR)/vendor
-	@tar czf $(DIST_DIR)/qrmi-$(VERSION)-vendor.tar.gz vendor/
+	@tar czf $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz vendor/
 	@rm -rf $(DIST_DIR)/vendor
 	@echo
-	@echo "Created: $(DIST_DIR)/qrmi-$(VERSION)-vendor.tar.gz"
+	@echo "Created: $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz"
 
 dist-rhel-lib: build
-	TARBALL="$(DIST_DIR)/libqrmi-$(VERSION)-el8-x86_64.tar.gz"; \
-	WORKDIR="$(DIST_DIR)/libqrmi-$(VERSION)"; \
+	TARBALL="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-x86_64.tar.gz"; \
+	WORKDIR="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)"; \
 	mkdir -p $$WORKDIR; \
 	cp target/release/libqrmi.so $$WORKDIR; \
 	cp qrmi.h $$WORKDIR; \
 	cp LICENSE.txt $$WORKDIR; \
-	tar czf $$TARBALL -C $(DIST_DIR) libqrmi-$(VERSION); \
+	tar czf $$TARBALL -C $(DIST_DIR) libqrmi-$(QRMI_VERSION); \
 	rm -rf $$WORKDIR; \
 	echo "Created: $$TARBALL"
 
