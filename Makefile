@@ -4,7 +4,7 @@
 QRMI_VERSION := $$($(MAKE) get-qrmi-version)
 DIST_DIR ?= .
 
-include Makefile_helpers.mk
+include Makefile_common.mk
 
 .PHONY: all build dist dist-rhel-lib clean help
 
