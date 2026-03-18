@@ -1,14 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # (C) Copyright IBM Corporation 2026
 
-QRMI_VERSION := $$($(MAKE) get-qrmi-version)
 DIST_DIR ?= .
-
-include Makefile_common.mk
 
 .PHONY: all build dist dist-rhel-lib clean help
 
 all: build
+
+include Makefile_common.mk
 
 # ------------------------------------------------
 # Rust targets
