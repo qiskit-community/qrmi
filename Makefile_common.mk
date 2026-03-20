@@ -3,10 +3,16 @@
 
 ifndef MAKEFILE_COMMON_MK_INCLUDED
 
-.PHONY: get-qrmi-version check-new-qrmi-version-valid
+.PHONY: get-qrmi-version check-new-qrmi-version-valid check-python-version-installed check-venv-exists
 
 # Get QRMI version from Cargo.toml
 QRMI_VERSION := $(shell grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+# Python version to be used
+PYTHON_VERSION ?= 3.12
+
+PYTHON_VENV_SUFFIX = $(shell echo "py$(PYTHON_VERSION)" | sed 's/\.//')
+PYTHON_VENV_DIR = ".venv_$(PYTHON_VENV_SUFFIX)"
+PYTHON_VENV_ACTIVATE = $(PYTHON_VENV_DIR)/bin/activate
 
 MAKEFLAGS += --no-print-directory
 
@@ -31,6 +37,31 @@ check-new-qrmi-version-valid:
 		exit 1; \
 	fi; \
 	echo "New QRMI version v$${NEW_QRMI_VERSION} is valid"
+
+check-python-version-installed:
+	@if ! command -v python$(PYTHON_VERSION) >/dev/null 2>&1 ; then \
+		echo "Error: python$(PYTHON_VERSION) not found"; \
+		echo "Please install the package python$(PYTHON_VERSION)"; \
+		exit 1; \
+	fi; \
+	if ! command -v python$(PYTHON_VERSION)-config >/dev/null 2>&1 ; then \
+		echo "Error: python$(PYTHON_VERSION) library and headers not found"; \
+		echo "Please install the package python$(PYTHON_VERSION)-devel"; \
+		exit 1; \
+	fi
+
+check-doxygen-installed:
+	@if ! command -v doxygen >/dev/null 2>&1 ; then \
+		echo "Error: doxygen not found"; \
+		echo "Please install the package doxygen"; \
+		exit 1; \
+	fi
+
+check-venv-exists: check-python-version-installed
+	@if [ ! -d "$(PYTHON_VENV_DIR)" ]; then \
+	  echo "Error: $(PYTHON_VENV_DIR) not found. Run: make create-venv"; \
+	  exit 1; \
+	fi
 
 MAKEFILE_COMMON_MK_INCLUDED := true
 endif
