@@ -50,6 +50,7 @@ qrmi.h
 
 # python venvs
 *venv
+.venv*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -58,6 +59,9 @@ __pycache__/
 
 # C extensions
 *.so
+
+# Documentation
+html/
 
 # Distribution / packaging
 .Python
