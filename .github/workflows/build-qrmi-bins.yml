@@ -2,7 +2,8 @@
 # This reusable workflow builds the QRMI binaries.
 #
 # Workflow inputs:
-# - None
+# - [required] python-version
+# - [required] container-image
 #
 # Workflow artifacts produced:
 # - [not uploaded] task_runner binary
@@ -10,24 +11,54 @@
 #
 # Workflow dependencies:
 # - None. It does not dependend on any other workflow.
+
 name: Build QRMI binaries
 on:
   workflow_call:
+    inputs:
+      python-version:
+        description: >-
+          Python version to build the stubgen binary
+        type: string
+        required: true
+      container-image:
+        description: >-
+          Container image that will be used to run the workflow
+        type: string
+        required: true
 env:
   CARGO_TERM_COLOR: always
 jobs:
   build:
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6
 
+    - name: Install package dependencies from distro
+      run: xargs dnf install -y < requirements-distro.txt
+
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    # The python3.12 installed using actions/setup-python@v6,
+    # requires a glibc version that is not available in the UBI container image
+    - name: Install python ${{ inputs.python-version }} from distro
+      run: dnf install -y python${{ inputs.python-version }}{,-pip,-devel}
+
+    - name: Create and activate venv for subsequent steps
+      run: |
+        python${{ inputs.python-version }} -m venv .venv
+        echo "${GITHUB_WORKSPACE}/.venv/bin" >> ${GITHUB_PATH}
+
+    - name: Install python requirements
+      run: pip install -r requirements-dev.txt
 
     - name: Build task_runner
       run: cargo build --bin task_runner --release --features="build-binary"
 
+    # "--features=pyo3" requires python3.x and python3.x-devel to be installed
     - name: Build stubgen
       run: cargo build --bin stubgen --release --features="pyo3"
-
