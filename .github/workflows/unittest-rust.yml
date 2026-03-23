@@ -2,27 +2,58 @@
 # This reusable workflow runs Rust unittests on the libqrmi, binaries and dependencies.
 #
 # Workflow inputs:
-# - None
+# - [required] python-version
+# - [required] container-image
 #
 # Workflow artifacts produced:
 # - None
 #
 # Workflow dependencies:
 # - None. It does not depend on any other workflow.
+
 name: Unittest QRMI Rust code
 on:
   workflow_call:
+    inputs:
+      python-version:
+        description: >-
+          Python version to unittest the stubgen
+        type: string
+        required: true
+      container-image:
+        description: >-
+          Container image that will be used to run the workflow
+        type: string
+        required: true
 env:
   CARGO_TERM_COLOR: always
 jobs:
   unittest:
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6
 
+    - name: Install package dependencies from distro
+      run: xargs dnf install -y < requirements-distro.txt
+
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    # The python3.12 installed using actions/setup-python@v6,
+    # requires a glibc version that is not available in the UBI container image
+    - name: Install python ${{ inputs.python-version }} from distro
+      run: dnf install -y python${{ inputs.python-version }}{,-pip,-devel}
+
+    - name: Create and activate venv for subsequent steps
+      run: |
+        python${{ inputs.python-version }} -m venv .venv
+        echo "${GITHUB_WORKSPACE}/.venv/bin" >> ${GITHUB_PATH}
+
+    - name: Install python requirements
+      run: pip install -r requirements-dev.txt
 
     - name: Unittest libqrmi.so (includes examples)
       run: cargo test --all-targets --release
@@ -30,6 +61,7 @@ jobs:
     - name: Unittest task_runner
       run: cargo test --bin task_runner --release --features="build-binary"
 
+    # --feature="pyo3" requires python3.x and python3.x-devel to be installed
     - name: Unittest stubgen
       run: cargo test --bin stubgen --release --features="pyo3"
 

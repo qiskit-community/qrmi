@@ -27,12 +27,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Install package dependencies from distro
+      run: xargs dnf install -y < requirements-distro.txt
+
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
-
-    - name: Install RHEL build dependencies
-      run: |
-        dnf install -y gcc make
 
     - name: Create libqrmi tarball for RHEL compatible distributions
       run: |
