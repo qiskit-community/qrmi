@@ -33,7 +33,10 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///
     ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
     ///     let resource_id = qrmi.resource_id().await?;
     ///     println!("{resource_id}"); // prints "ibm_torino"
@@ -47,7 +50,10 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
+    /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///
     ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
     ///     let resource_type = qrmi.resource_type().await?;
     ///     println!("{}", resource_type.as_str()); // prints "qiskit_runtime_service"
@@ -61,9 +67,11 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     let token = qrmi.acquire().unwrap();
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let token = qrmi.acquire().await?;
     ///     println!("acquisition token = {}", token);
     ///     Ok(())
     /// }
@@ -75,8 +83,10 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
     ///     qrmi.release("your_acquisition_token").await?;
     ///     Ok(())
     /// }
@@ -92,12 +102,14 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use std::fs::File;
     ///     use std::io::prelude::*;
     ///     use std::io::BufReader;
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
     ///
     ///     let f = File::open("sampler_input.json").expect("file not found");
     ///     let mut buf_reader = BufReader::new(f);
@@ -106,9 +118,9 @@ pub trait QuantumResource: Send + Sync {
     ///
     ///     let payload = qrmi::models::Payload::QiskitPrimitive {
     ///          input: contents,
-    ///          program_id: args.program_id,
+    ///          program_id: "sampler".to_string(),
     ///     };
-    ///     let job_id = qrmi.task_start(payload).unwrap();
+    ///     let job_id = qrmi.task_start(payload).await?;
     ///     println!("Job ID: {}", job_id);
     ///     Ok(())
     /// }
@@ -124,9 +136,12 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     qrmi.task_stop("your_task_id").unwrap();
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     qrmi.task_stop("your_task_id").await?;
     ///     Ok(())
     /// }
     /// ```
@@ -141,11 +156,12 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{QiskitRuntimeService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     let status = qrmi.task_status("your_task_id").unwrap();
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let status = qrmi.task_status("your_task_id").await?;
     ///     println!("{:?}", status);
     ///     Ok(())
     /// }
@@ -161,11 +177,13 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{QiskitRuntimeService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     let result = qrmi.task_result(&job_id).unwrap();
+    ///     let job_id = "4EAAA9E2-AD53-4C5C-8EF1-C1A3F219C427";
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let result = qrmi.task_result(&job_id).await?;
     ///     println!("{:?}", result.value);
     ///     Ok(())
     /// }
@@ -181,11 +199,13 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{QiskitRuntimeService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     let log = qrmi.task_log(&job_id).unwrap();
+    ///     let job_id = "4EAAA9E2-AD53-4C5C-8EF1-C1A3F219C427";
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let log = qrmi.task_logs(&job_id).await?;
     ///     println!("{:?}", log);
     ///     Ok(())
     /// }
@@ -195,11 +215,12 @@ pub trait QuantumResource: Send + Sync {
     /// Returns a Target for the specified device. Vendor specific serialized data. This might contain the constraints(instructions, properteis and timing information etc.) of a particular device to allow compilers to compile an input circuit to something that works and is optimized for a device. In IBM implementation, it contains JSON representations of [BackendConfiguration](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_configuration_schema.json) and [BackendProperties](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/backend_properties_schema.json) so that we are able to create a Target object by calling `qiskit_ibm_runtime.utils.backend_converter.convert_to_target` or uquivalent functions.
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{QiskitRuntimeService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     let target = qrmi.target().unwrap();
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let target = qrmi.target().await?;
     ///     println!("{:?}", target.value);
     ///     Ok(())
     /// }
@@ -211,11 +232,12 @@ pub trait QuantumResource: Send + Sync {
     /// # Example
     ///
     /// ```no_run
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{QiskitRuntimeService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
     ///
-    ///     let mut qrmi = qrmi::QiskitRuntimeService::new("ibm_torino");
-    ///     let metadata = qrmi.metadata();
+    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let metadata = qrmi.metadata().await;
     ///     println!("{:?}", metadata);
     ///     Ok(())
     /// }
