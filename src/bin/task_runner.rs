@@ -237,7 +237,7 @@ impl ResourceType {
                 Ok(Box::new(PasqalCloud::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
             ResourceType::PasqalLocal { .. } => {
-                Ok(Box::new(PasqalLocal::new()?) as Box<dyn QuantumResource>)
+                Ok(Box::new(PasqalLocal::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
         }
     }

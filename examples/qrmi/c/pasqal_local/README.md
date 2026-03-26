@@ -11,12 +11,13 @@
 
 Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
 
-
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
-| QRMI_JOB_UID | ID of the user executing the job |
-| QRMI_JOB_ID | ID of the job |
+| `<backend_name>_QRMI_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`) |
+| `QRMI_JOB_UID` | ID of the user executing the job |
+| `QRMI_JOB_ID` | ID of the job |
+
+Where `<backend_name>` is the backend name passed as the first argument (e.g. `PASQAL_LOCAL`).
 
 
 
@@ -43,9 +44,9 @@ $ make
 ## How to run this example
 ```shell-session
 $ ./build/pasqal_local
-pasqal_local <input file>
+pasqal_local <backend name> <input file>
 ```
 For example,
 ```shell-session
-$ ./build/pasqal_local input.json
+$ ./build/pasqal_local PASQAL_LOCAL input.json
 ```

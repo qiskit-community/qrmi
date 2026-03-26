@@ -532,7 +532,7 @@ pub unsafe extern "C" fn qrmi_resource_new(
                     return std::ptr::null_mut();
                 }
             },
-            ResourceType::PasqalLocal => match PasqalLocal::new() {
+            ResourceType::PasqalLocal => match PasqalLocal::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     _set_last_error(format!("{}", err));

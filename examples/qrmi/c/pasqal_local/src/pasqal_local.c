@@ -13,6 +13,8 @@
  */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "qrmi.h"
@@ -22,17 +24,20 @@ extern const char *read_file(const char *);
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 2) {
-        fprintf(stderr, "pasqal_local <input file>\n");
+    if (argc != 3) {
+        fprintf(stderr, "pasqal_local <backend name> <input file>\n");
         return EXIT_SUCCESS;
     }
 
+    const char *backend_name = argv[1];
+    const char *input_file = argv[2];
+
     load_dotenv();
 
-    QrmiQuantumResource *qrmi = qrmi_resource_new("PASQAL_LOCAL", QRMI_RESOURCE_TYPE_PASQAL_LOCAL);
+    QrmiQuantumResource *qrmi = qrmi_resource_new(backend_name, QRMI_RESOURCE_TYPE_PASQAL_LOCAL);
     if (!qrmi) {
         const char *last_error = qrmi_get_last_error();
-        fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);
+        fprintf(stderr, "Failed to create QRMI for %s. %s\n", backend_name, last_error);
         qrmi_string_free((char *)last_error);
         return EXIT_FAILURE;
     }
@@ -54,7 +59,7 @@ int main(int argc, char *argv[]) {
     rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
     if (rc == QRMI_RETURN_CODE_SUCCESS) {
         if (is_accessible == false) {
-            fprintf(stderr, "%s cannot be accessed.\n", "PASQAL_LOCAL");
+            fprintf(stderr, "%s cannot be accessed.\n", backend_name);
             return -1;
         }
     } else {
@@ -74,8 +79,13 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
 
-    // Set acquisition token as env variable PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN
-    setenv("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN", acquisition_token, 1);
+    // Set acquisition token as env variable <backend_name>_QRMI_JOB_ACQUISITION_TOKEN
+    const char *suffix = "_QRMI_JOB_ACQUISITION_TOKEN";
+    char *token_var = malloc(strlen(backend_name) + strlen(suffix) + 1);
+    strcpy(token_var, backend_name);
+    strcat(token_var, suffix);
+    setenv(token_var, acquisition_token, 1);
+    free(token_var);
 
     char *target = NULL;
     rc = qrmi_resource_target(qrmi, &target);
@@ -87,7 +97,7 @@ int main(int argc, char *argv[]) {
         goto error;
     }
 
-    const char *input = read_file(argv[1]);
+    const char *input = read_file(input_file);
     const int shots = 100;
 
     fprintf(stdout, "input = %s\n", input);

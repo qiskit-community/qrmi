@@ -20,9 +20,10 @@ use std::env;
 
 use async_trait::async_trait;
 
-/// QRMI implementation for Pasqal Cloud
+/// QRMI implementation for Pasqal Local
 pub struct PasqalLocal {
     pub(crate) api_client: Client,
+    pub(crate) backend_name: String,
     pub(crate) job_uid: i32,
     pub(crate) job_id: String,
 }
@@ -30,13 +31,18 @@ pub struct PasqalLocal {
 impl PasqalLocal {
     /// Constructs a QRMI to access Pasqal on prem QPU
     ///
-    /// # Environment variables
-    /// /// * `QRMI_JOB_UID`: uid of the slurm job
-    /// /// * `PASQAL_LOCAL_QRMI_URL`: URL of the pasqd middleware (warden)
+    /// # Arguments
     ///
-    pub fn new() -> Result<Self> {
-        let url = env::var("PASQAL_LOCAL_QRMI_URL")
-            .map_err(|_| anyhow!("PASQAL_LOCAL_QRMI_URL environment variable is not set"))?;
+    /// * `backend_name` - The name of the backend/device to use
+    ///
+    /// # Environment variables
+    /// * `QRMI_JOB_UID`: uid of the slurm job
+    /// * `<backend_name>_QRMI_URL`: URL of the pasqd middleware (warden)
+    ///
+    pub fn new(backend_name: &str) -> Result<Self> {
+        let url_var = format!("{backend_name}_QRMI_URL");
+        let url =
+            env::var(&url_var).map_err(|_| anyhow!("{url_var} environment variable is not set"))?;
         let job_uid: i32 = env::var("QRMI_JOB_UID")
             .ok()
             .and_then(|s| s.parse::<i32>().ok())
@@ -44,6 +50,7 @@ impl PasqalLocal {
         let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
+            backend_name: backend_name.to_string(),
             job_uid,
             job_id,
         })
@@ -53,7 +60,7 @@ impl PasqalLocal {
 #[async_trait]
 impl QuantumResource for PasqalLocal {
     async fn resource_id(&mut self) -> Result<String> {
-        Ok("PASQAL_LOCAL".to_string())
+        Ok(self.backend_name.clone())
     }
 
     async fn resource_type(&mut self) -> Result<ResourceType> {
@@ -77,9 +84,9 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn release(&mut self, _id: &str) -> Result<()> {
-        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN").map_err(|_| {
-            anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
-        })?;
+        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
+        let session_id = env::var(&token_var)
+            .map_err(|_| anyhow!("{token_var} environment variable is not set"))?;
         match self.api_client.revoke_session(&session_id).await {
             Ok(_) => Ok(()),
             Err(err) => Err(err),
@@ -87,9 +94,9 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let session_id = env::var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN").map_err(|_| {
-            anyhow!("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN environment variable is not set")
-        })?;
+        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
+        let session_id = env::var(&token_var)
+            .map_err(|_| anyhow!("{token_var} environment variable is not set"))?;
 
         if let Payload::PasqalCloud { sequence, job_runs } = payload {
             match self
@@ -149,7 +156,8 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn metadata(&mut self) -> HashMap<String, String> {
-        let metadata: HashMap<String, String> = HashMap::new();
+        let mut metadata: HashMap<String, String> = HashMap::new();
+        metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
     }
 }

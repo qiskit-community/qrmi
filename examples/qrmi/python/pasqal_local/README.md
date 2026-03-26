@@ -20,9 +20,11 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
-| QRMI_JOB_UID | ID of the user executing the job |
-| QRMI_JOB_ID | ID of the job |
+| `<backend_name>_QRMI_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`) |
+| `QRMI_JOB_UID` | ID of the user executing the job |
+| `QRMI_JOB_ID` | ID of the job |
+
+Where `<backend_name>` is the backend name passed via `--backend` (e.g. `PASQAL_LOCAL`).
 
 
 ## Create Pulser Sequence file as input
@@ -40,17 +42,19 @@ with open("pulser_seq.json", "w") as f:
 
 ```shell-session
 $ python example.py -h
-usage: example.py [-h] input
+usage: example.py [-h] --backend BACKEND input
 
-An example of Pasqal Local Python QRMI
+An example of Pasqal Local QRMI
 
 positional arguments:
-  input       sequence input file
+  input            sequence input file
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help       show this help message and exit
+  --backend BACKEND
+                   backend name (device identifier)
 ```
 For example,
 ```shell-session
-$ python example.py input.json
+$ python example.py --backend BACKEND_NAME input.json
 ```

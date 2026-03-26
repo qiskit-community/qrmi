@@ -63,7 +63,7 @@ impl PyQuantumResource {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
                 }
             },
-            ResourceType::PasqalLocal => match PasqalLocal::new() {
+            ResourceType::PasqalLocal => match PasqalLocal::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));

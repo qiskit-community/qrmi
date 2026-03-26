@@ -23,6 +23,10 @@ use std::{thread, time};
 #[command(version = "0.1.0")]
 #[command(about = "QRMI for Pasqal Local - Example")]
 struct Args {
+    /// Backend name (device identifier)
+    #[arg(short, long)]
+    backend: String,
+
     /// primitive input file
     #[arg(short, long)]
     input: String,
@@ -37,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     println!("{}", dotenv().unwrap().display());
 
-    let mut qrmi = PasqalLocal::new()?;
+    let mut qrmi = PasqalLocal::new(&args.backend)?;
     println!(
         "Selected resource: id={} type={}",
         qrmi.resource_id().await?,
@@ -52,8 +56,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lock = qrmi.acquire().await?;
     println!("acquisition token = {}", lock);
 
-    // Set lock as env variabl with name  PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN
-    std::env::set_var("PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN", &lock);
+    // Set lock as env variable with name  <backend>_QRMI_JOB_ACQUISITION_TOKEN
+    let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", args.backend);
+    std::env::set_var(&token_var, &lock);
 
     println!("{:#?}", qrmi.metadata().await);
 

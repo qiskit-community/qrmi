@@ -21,6 +21,7 @@ import time
 from qrmi import Payload, QuantumResource, ResourceType, TaskStatus
 
 parser = argparse.ArgumentParser(description="An example of Pasqal Local QRMI")
+parser.add_argument("--backend", required=True, help="Backend name (device identifier)")
 parser.add_argument("input", help="Pulser sequence")
 args = parser.parse_args()
 
@@ -28,7 +29,7 @@ with open(args.input, encoding="utf-8") as f:
     serialized_sequence = f.read()
 
 # instantiate a QRMI
-qrmi = QuantumResource("PASQAL_LOCAL", ResourceType.PasqalLocal)
+qrmi = QuantumResource(args.backend, ResourceType.PasqalLocal)
 print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
 # Check if QR it's accessible
@@ -37,7 +38,7 @@ print("Pasqal Local QR is %s accessible" % "not" if not is_avail else "")
 
 # Get a session
 session = qrmi.acquire()
-os.environ["PASQAL_LOCAL_QRMI_JOB_ACQUISITION_TOKEN"] = session
+os.environ[f"{args.backend}_QRMI_JOB_ACQUISITION_TOKEN"] = session
 print("Pasqal Local session ID:", session)
 
 # Get target

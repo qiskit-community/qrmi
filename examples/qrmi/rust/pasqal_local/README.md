@@ -12,9 +12,11 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_URL |  URL of the QPU middleware (e.g. http://localhost:4207) |
-| QRMI_JOB_UID | ID of the user executing the job |
-| QRMI_JOB_ID | ID of the job |
+| `<backend_name>_QRMI_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`) |
+| `QRMI_JOB_UID` | ID of the user executing the job |
+| `QRMI_JOB_ID` | ID of the job |
+
+Where `<backend_name>` is the backend name passed via `--backend` (e.g. `PASQAL_LOCAL`).
 
 
 ## Create Pulser Sequence file as input
@@ -40,14 +42,15 @@ $ cargo build --release --features=qrmi/munge
 $ ../target/release/qrmi-example-pasqal-local --help
 QRMI for Pasqal Local - Example
 
-Usage: qrmi-example-pasqal-local --input <INPUT>
+Usage: qrmi-example-pasqal-local --backend <BACKEND> --input <INPUT>
 
 Options:
+  -b, --backend <BACKEND>        backend name (device identifier)
   -i, --input <INPUT>            sequence input file
   -h, --help                     Print help
   -V, --version                  Print version
 ```
 For example,
 ```shell-session
-$ ../target/release/qrmi-example-pasqal-local -i input.json
+$ ../target/release/qrmi-example-pasqal-local -b PASQAL_LOCAL -i input.json
 ```
