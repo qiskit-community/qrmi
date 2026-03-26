@@ -1,4 +1,4 @@
-# Python examples for Sampler/Estimator primitives with IBM Direct Access QRMI
+# Python examples for Sampler/Estimator primitives with IBM Quantum System QRMI
 
 ## Prerequisites
 
@@ -25,39 +25,39 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 | Environment variables | Descriptions |
 | ---- | ---- |
 | SLURM_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `ibm_torino,ibm_brisbane` |
-| SLURM_JOB_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `SLURM_JOB_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`direct-access`</li><li>`qiskit-runtime-service`</li></ul> |
+| SLURM_JOB_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `SLURM_JOB_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`ibm-quantum-system`</li><li>`qiskit-runtime-service`</li></ul> |
 
-### IBM Direct Access specific
+### IBM Quantum System specific
 
 When run as a job in a Slurm cluster, these environment variables are set by users or administrator.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_IBM_DA_ENDPOINT | Direct Access endpoint URL |
-| {resource_name}_QRMI_IBM_DA_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
-| {resource_name}_QRMI_IBM_DA_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_DA_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Direct Access instance, starting with `crn:v1:`. |
-| {resource_name}_QRMI_IBM_DA_AWS_ACCESS_KEY_ID | AWS Access Key ID to access S3 bucket |
-| {resource_name}_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY | AWS Secret Access Key to access S3 bucket |
-| {resource_name}_QRMI_IBM_DA_S3_ENDPOINT | S3 endpoint URL |
-| {resource_name}_QRMI_IBM_DA_S3_BUCKET | S3 bucket name |
-| {resource_name}_QRMI_IBM_DA_S3_REGION | S3 bucket region name(e.g. `us-east`) |
-| {resource_name}_QRMI_IBM_DA_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
+| {resource_name}_QRMI_IBM_QS_ENDPOINT | Quantum System endpoint URL |
+| {resource_name}_QRMI_IBM_QS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
+| {resource_name}_QRMI_IBM_QS_IAM_APIKEY | IBM Cloud IAM API Key |
+| {resource_name}_QRMI_IBM_QS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
+| {resource_name}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID | AWS Access Key ID to access S3 bucket |
+| {resource_name}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY | AWS Secret Access Key to access S3 bucket |
+| {resource_name}_QRMI_IBM_QS_S3_ENDPOINT | S3 endpoint URL |
+| {resource_name}_QRMI_IBM_QS_S3_BUCKET | S3 bucket name |
+| {resource_name}_QRMI_IBM_QS_S3_REGION | S3 bucket region name(e.g. `us-east`) |
+| {resource_name}_QRMI_IBM_QS_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
 
 #### Example
 ```shell-session
 export SLURM_JOB_QPU_RESOURCES=test_eagle
-export SLURM_JOB_QPU_TYPES=direct-access
-export test_eagle_QRMI_IBM_DA_ENDPOINT=http://localhost:8080
-export test_eagle_QRMI_IBM_DA_IAM_ENDPOINT=https://iam.cloud.ibm.com
-export test_eagle_QRMI_IBM_DA_IAM_APIKEY=your_apikey
-export test_eagle_QRMI_IBM_DA_SERVICE_CRN=your_instance
-export test_eagle_QRMI_IBM_DA_AWS_ACCESS_KEY_ID=your_aws_access_key_id
-export test_eagle_QRMI_IBM_DA_AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-export test_eagle_QRMI_IBM_DA_S3_ENDPOINT=https://s3.us-east.cloud-object-storage.appdomain.cloud
-export test_eagle_QRMI_IBM_DA_S3_BUCKET=test
-export test_eagle_QRMI_IBM_DA_S3_REGION=us-east
-export test_eagle_QRMI_IBM_DA_TIMEOUT_SECONDS=86400
+export SLURM_JOB_QPU_TYPES=ibm-quantum-system
+export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
+export test_eagle_QRMI_IBM_QS_IAM_ENDPOINT=https://iam.cloud.ibm.com
+export test_eagle_QRMI_IBM_QS_IAM_APIKEY=your_apikey
+export test_eagle_QRMI_IBM_QS_SERVICE_CRN=your_instance
+export test_eagle_QRMI_IBM_QS_AWS_ACCESS_KEY_ID=your_aws_access_key_id
+export test_eagle_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+export test_eagle_QRMI_IBM_QS_S3_ENDPOINT=https://s3.us-east.cloud-object-storage.appdomain.cloud
+export test_eagle_QRMI_IBM_QS_S3_BUCKET=test
+export test_eagle_QRMI_IBM_QS_S3_REGION=us-east
+export test_eagle_QRMI_IBM_QS_TIMEOUT_SECONDS=86400
 ```
 
 ### IBM Qiskit Runtime Service specific
@@ -69,7 +69,7 @@ When run as a job in a Slurm cluster, these environment variables are set by use
 | {resource_name}_QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
 | {resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | {resource_name}_QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Direct Access instance, starting with `crn:v1:`. |
+| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
 | {resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time).
 | {resource_name}_QRMI_IBM_QRS_SESSION_MODE | Session mode, default='dedicated', batch or dedicated. |
 | {resource_name}_QRMI_IBM_QRS_SESSION_ID | Session ID, set by acquire function. Optional for acquire function, however, required other functions. |

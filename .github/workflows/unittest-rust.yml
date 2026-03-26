@@ -65,8 +65,8 @@ jobs:
     - name: Unittest stubgen
       run: cargo test --bin stubgen --release --features="pyo3"
 
-    - name: Unittest direct_access_client
-      working-directory: dependencies/direct_access_client
+    - name: Unittest quantum_system_client
+      working-directory: dependencies/quantum_system_client
       run: cargo test --release
 
     - name: Unittest pasqal_cloud_client

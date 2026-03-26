@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright 2024, 2025 IBM. All Rights Reserved.
+# (C) Copyright 2024-2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""SamplerV2 example with IBM Direct Access QRMI"""
+"""SamplerV2 example with IBM Quantum System QRMI"""
 
 # pylint: disable=invalid-name
 import random

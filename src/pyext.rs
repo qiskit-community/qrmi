@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::QuantumResource;
@@ -23,6 +23,7 @@ use tokio::runtime::Runtime;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
     IBMDirectAccess,
+    IBMQuantumSystem,
     IBMQiskitRuntimeService,
     PasqalCloud,
 }
@@ -42,6 +43,12 @@ impl PyQuantumResource {
         crate::common::initialize();
         let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
             ResourceType::IBMDirectAccess => match IBMDirectAccess::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
+            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
@@ -93,6 +100,7 @@ impl PyQuantumResource {
         match result {
             Ok(v) => Ok(match v {
                 crate::models::ResourceType::IBMDirectAccess => ResourceType::IBMDirectAccess,
+                crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
                 crate::models::ResourceType::QiskitRuntimeService => {
                     ResourceType::IBMQiskitRuntimeService
                 }

@@ -20,7 +20,7 @@ path = "src/bin/task_runner.rs"
 required-features = ["build-binary"]
 
 [features]
-default = ["direct-access-api/iqp_retry_policy"]
+default = ["quantum-system-api/iqp_retry_policy"]
 pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen"]
 build-binary = ["dep:signal-hook-tokio", "dep:signal-hook", "dep:eyre"]
 
@@ -35,7 +35,7 @@ futures = "0.3.31"
 clap = { version = "4.5.29", features = ["derive"] }
 uuid = "1.16.0"
 log = "0.4.26"
-direct-access-api = { path = "dependencies/direct_access_client" }
+quantum-system-api = { path = "dependencies/quantum_system_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
@@ -53,7 +53,7 @@ cbindgen = "0.29"
 
 [workspace]
 members = [
-    "dependencies/direct_access_client",
+    "dependencies/quantum_system_client",
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
 ]
@@ -66,7 +66,7 @@ repository = "https://github.com/qiskit-community/spank-plugins"
 rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
 
 [workspace.dependencies]
-direct-access-api = { path = "dependencies/direct_access_client" }
+quantum-system-api = { path = "dependencies/quantum_system_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 
 [package.metadata.maturin]
@@ -78,8 +78,8 @@ name = "qrmi-example-qiskit-runtime-service"
 path = "examples/qrmi/rust/qiskit_runtime_service/src/main.rs"
 
 [[example]]
-name = "qrmi-example-direct-access"
-path = "examples/qrmi/rust/direct_access/src/main.rs"
+name = "qrmi-example-ibm-quantum-system"
+path = "examples/qrmi/rust/ibm_quantum_system/src/main.rs"
 
 [[example]]
 name = "qrmi-example-pasqal-cloud"
