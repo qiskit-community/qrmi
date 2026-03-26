@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 #![allow(dead_code)]
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use crate::ibm::{IBMDirectAccess, IBMQuantumSystem, IBMQiskitRuntimeService};
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use std::cell::RefCell;
@@ -513,7 +513,7 @@ pub unsafe extern "C" fn qrmi_get_last_error() -> *const c_char {
 ///
 /// @code
 ///   QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name",
-///                                                 QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
+///                                                 QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
 /// @endcode
 ///
 /// @param (resource_id) [in] A resource identifier, i.e. backend name
@@ -531,6 +531,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
         let res: Box<dyn crate::QuantumResource> = match resource_type {
             ResourceType::IBMDirectAccess => match IBMDirectAccess::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
+                    return std::ptr::null_mut();
+                }
+            },
+            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     _set_last_error(format!("{}", err));
@@ -571,7 +578,7 @@ pub unsafe extern "C" fn qrmi_resource_new(
 ///
 /// @code
 ///   QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name",
-///                                                 QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
+///                                                 QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
 ///   if (qrmi != NULL) {
 ///     qrmi_resource_free(qrmi);
 ///   }

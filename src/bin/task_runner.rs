@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2025-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -30,7 +30,7 @@ use clap::builder::TypedValueParser as _;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
-use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use qrmi::ibm::{IBMDirectAccess, IBMQuantumSystem, IBMQiskitRuntimeService};
 use qrmi::pasqal::PasqalCloud;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
 
@@ -84,8 +84,15 @@ pub struct QrmiInput {
 #[allow(dead_code)]
 /// QRMI resource types
 pub enum ResourceType {
-    /// IBM Direct Access
+    /// IBM Direct Access(deprecated)
     IBMDirectAccess {
+        /// Qiskit primitive input
+        input: String,
+        /// Qiskit primitive type
+        program_id: PrimitiveType,
+    },
+    /// IBM Quantum System
+    IBMQuantumSystem {
         /// Qiskit primitive input
         input: String,
         /// Qiskit primitive type
@@ -129,6 +136,20 @@ impl ResourceType {
                 }
             };
             Ok(Self::IBMDirectAccess { input, program_id })
+        if qpu_type == "ibm-quantum-system" {
+            let input = match &deserialized.parameters {
+                Some(v) => v.to_string(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "parameters").into());
+                }
+            };
+            let program_id = match &deserialized.program_id {
+                Some(v) => v.clone(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "program_id").into());
+                }
+            };
+            Ok(Self::IBMQuantumSystem { input, program_id })
         } else if qpu_type == "qiskit-runtime-service" {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
@@ -173,6 +194,7 @@ impl ResourceType {
     fn as_str(&self) -> &str {
         match self {
             ResourceType::IBMDirectAccess { .. } => "direct-access",
+            ResourceType::IBMQuantumSystem { .. } => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
             ResourceType::PasqalCloud { .. } => "pasqal-cloud",
         }
@@ -180,6 +202,7 @@ impl ResourceType {
     fn to_payload(&self) -> Option<Payload> {
         match self {
             ResourceType::IBMDirectAccess { input, program_id }
+            | ResourceType::IBMQuantumSystem { input, program_id }
             | ResourceType::QiskitRuntimeService { input, program_id } => {
                 Some(Payload::QiskitPrimitive {
                     input: input.to_string(),
@@ -199,6 +222,9 @@ impl ResourceType {
         match self {
             ResourceType::IBMDirectAccess { .. } => {
                 Ok(Box::new(IBMDirectAccess::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
+            ResourceType::IBMQuantumSystem { .. } => {
+                Ok(Box::new(IBMQuantumSystem::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
             ResourceType::QiskitRuntimeService { .. } => {
                 Ok(Box::new(IBMQiskitRuntimeService::new(qpu_name)?) as Box<dyn QuantumResource>)

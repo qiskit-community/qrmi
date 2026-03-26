@@ -68,8 +68,8 @@ jobs:
         cmake ..
         make
 
-    - name: Build examples/qrmi/c/direct_access
-      working-directory: examples/qrmi/c/direct_access
+    - name: Build examples/qrmi/c/ibm_quantum_system
+      working-directory: examples/qrmi/c/ibm_quantum_system
       run: |
         mkdir build ; cd build
         cmake ..

@@ -13,8 +13,8 @@
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use direct_access_api::utils::s3::S3Client;
-use direct_access_api::{
+use quantum_system_api::utils::s3::S3Client;
+use quantum_system_api::{
     models::Backend, models::BackendStatus, models::Job, models::JobStatus, models::LogLevel,
     models::ProgramId, AuthMethod, Client, ClientBuilder,
 };
