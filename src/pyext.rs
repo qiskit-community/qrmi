@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::ibm::{IBMDirectAccess, IBMQuantumSystem, IBMQiskitRuntimeService};
+use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::QuantumResource;

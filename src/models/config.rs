@@ -49,7 +49,12 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
             "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
             _ => Err(serde::de::Error::unknown_variant(
                 &s,
-                &["ibm-quantum-system", "direct-access", "qiskit-runtime-service", "pasqal-cloud"],
+                &[
+                    "ibm-quantum-system",
+                    "direct-access",
+                    "qiskit-runtime-service",
+                    "pasqal-cloud",
+                ],
             )),
         }
     }

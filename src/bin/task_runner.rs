@@ -30,7 +30,7 @@ use clap::builder::TypedValueParser as _;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
-use qrmi::ibm::{IBMDirectAccess, IBMQuantumSystem, IBMQiskitRuntimeService};
+use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use qrmi::pasqal::PasqalCloud;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
 
@@ -136,7 +136,7 @@ impl ResourceType {
                 }
             };
             Ok(Self::IBMDirectAccess { input, program_id })
-        if qpu_type == "ibm-quantum-system" {
+        } else if qpu_type == "ibm-quantum-system" {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
                 None => {
