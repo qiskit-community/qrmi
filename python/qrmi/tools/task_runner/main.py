@@ -70,6 +70,7 @@ class App:
 
     RESOURCE_TYPE_MAP = {
         "direct-access": ResourceType.IBMDirectAccess,
+        "ibm-quantum-system": ResourceType.IBMQuantumSystem,
         "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
         "pasqal-cloud": ResourceType.PasqalCloud,
     }
@@ -176,6 +177,7 @@ class App:
             task_input = json.load(input_file)
             if res_type in [
                 ResourceType.IBMDirectAccess,
+                ResourceType.IBMQuantumSystem,
                 ResourceType.IBMQiskitRuntimeService,
             ]:
                 payload = Payload.QiskitPrimitive(
