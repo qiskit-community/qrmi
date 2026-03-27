@@ -2,7 +2,7 @@
 # This reusable workflow builds the libqrmi.so and the C examples
 #
 # Workflow inputs:
-# - None
+# - [required] container-image
 #
 # Workflow artifacts produced:
 # - [uploaded] libqrmi.so
@@ -13,17 +13,29 @@
 #
 # Workflow dependencies:
 # - None. It does not dependend on any other workflow.
+
 name: Build libqrmi.so
 on:
   workflow_call:
+    inputs:
+      container-image:
+        description: >-
+          Container image that will be used to run the workflow
+        type: string
+        required: true
 env:
   CARGO_TERM_COLOR: always
 jobs:
   build:
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6
+
+    - name: Install package dependencies from distro
+      run: xargs dnf install -y < requirements-distro.txt
 
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -56,8 +68,8 @@ jobs:
         cmake ..
         make
 
-    - name: Build examples/qrmi/c/direct_access
-      working-directory: examples/qrmi/c/direct_access
+    - name: Build examples/qrmi/c/ibm_quantum_system
+      working-directory: examples/qrmi/c/ibm_quantum_system
       run: |
         mkdir build ; cd build
         cmake ..

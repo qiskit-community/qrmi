@@ -30,11 +30,11 @@
 
 /src/ibm/                                       @ohtanim @OkuyanBoga
 /python/qrmi/primitives/ibm/                    @ohtanim @OkuyanBoga
-/dependencies/direct_access_client/             @ohtanim @yoonho
+/dependencies/quantum_system_client/            @ohtanim @yoonho
 /dependencies/qiskit_runtime_client/            @OkuyanBoga @ohtanim
 /examples/qiskit_primitives/ibm/                @ohtanim @OkuyanBoga
 /examples/**/qiskit_runtime_service/            @OkuyanBoga @ohtanim
-/examples/**/direct_access/                     @ohtanim @yoonho
+/examples/**/ibm_quantum_system/                @ohtanim @yoonho
 /examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga
 
 # Override the release notes directories to have _no_ code owners, so any review

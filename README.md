@@ -39,7 +39,7 @@ This example is using QRMI with Direct Access to IBM Quantum machines.
 int main(int argc, char *argv[]) {
     ...
 
-    QrmiQuantumResource *qrmi = qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
+    QrmiQuantumResource *qrmi = qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
     ...
 
     QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);

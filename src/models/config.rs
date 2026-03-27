@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2025-2026
 //
 // This program and the accompanying materials are made available under the
 // terms of the GNU General Public License version 3, as published by the
@@ -27,8 +27,10 @@ use std::io::BufReader;
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
-    /// IBM Direct Access
+    /// IBM Direct Access(deprecated)
     IBMDirectAccess,
+    /// IBM Quantum System
+    IBMQuantumSystem,
     /// Qiskit Runtime Service
     QiskitRuntimeService,
     /// Pasqal Cloud
@@ -44,12 +46,14 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
             "direct-access" => Ok(ResourceType::IBMDirectAccess),
+            "ibm-quantum-system" => Ok(ResourceType::IBMQuantumSystem),
             "qiskit-runtime-service" => Ok(ResourceType::QiskitRuntimeService),
             "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
             "pasqal-local" => Ok(ResourceType::PasqalLocal),
             _ => Err(serde::de::Error::unknown_variant(
                 &s,
                 &[
+                    "ibm-quantum-system",
                     "direct-access",
                     "qiskit-runtime-service",
                     "pasqal-cloud",
@@ -63,6 +67,7 @@ impl ResourceType {
     pub fn as_str(&self) -> &str {
         match self {
             ResourceType::IBMDirectAccess => "direct-access",
+            ResourceType::IBMQuantumSystem => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
             ResourceType::PasqalCloud => "pasqal-cloud",
             ResourceType::PasqalLocal => "pasqal-local",

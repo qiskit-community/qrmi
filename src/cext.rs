@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 #![allow(dead_code)]
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService};
+use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
@@ -118,13 +118,15 @@ fn _set_last_error(msg: String) {
 ///
 /// # Example
 ///
-///     char *target = NULL;
-///     QrmiReturnCode rc;
-///     rc = qrmi_resource_target(qrmi, &target);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///         printf("target = %s\n", target);
-///         qrmi_string_free(target);
-///     }
+/// @code
+///   char *target = NULL;
+///   QrmiReturnCode rc;
+///   rc = qrmi_resource_target(qrmi, &target);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     printf("target = %s\n", target);
+///     qrmi_string_free(target);
+///   }
+/// @endcode
 ///
 /// @param (ptr) [in] pointer to the memory to be free
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
@@ -150,15 +152,17 @@ pub unsafe extern "C" fn qrmi_string_free(ptr: *mut c_char) -> ReturnCode {
 ///
 /// # Example
 ///
-///       size_t num_names = 0;
-///       char **names = NULL;
-///       QrmiReturnCode rc = qrmi_config_resource_names_get(cnf, &num_names, &names);
-///       if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///           for (int i = 0; i < num_names; i++) {
-///               printf("[%s]\n", names[i]);
-///           }
-///           qrmi_string_array_free(num_names, names);
-///       }
+/// @code
+///   size_t num_names = 0;
+///   char **names = NULL;
+///   QrmiReturnCode rc = qrmi_config_resource_names_get(cnf, &num_names, &names);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     for (int i = 0; i < num_names; i++) {
+///       printf("[%s]\n", names[i]);
+///     }
+///     qrmi_string_array_free(num_names, names);
+///   }
+/// @endcode
 ///
 /// @param (size) [in] number of strings in a string array
 /// @param (array) [in] a pointer to a string array to be free
@@ -198,7 +202,9 @@ pub unsafe extern "C" fn qrmi_string_array_free(
 ///
 /// # Example
 ///
-///     QrmiConfig *cnf = qrmi_config_load("/etc/slurm/qrmi_config.json");
+/// @code
+///   QrmiConfig *cnf = qrmi_config_load("/etc/slurm/qrmi_config.json");
+/// @endcode
 ///
 /// @param (filename) [in] qrmi_config.json file path
 /// @return A QrmiConfig if succeeded, otherwise NULL. Must call qrmi_config_free() to free if no longer used.
@@ -231,8 +237,10 @@ pub unsafe extern "C" fn qrmi_config_load(filename: *const c_char) -> *mut Confi
 ///
 /// # Example
 ///
-///     QrmiConfig *cnf = qrmi_config_load("/etc/slurm/qrmi_config.json");
-///     qrmi_config_free(cnf);
+/// @code
+///   QrmiConfig *cnf = qrmi_config_load("/etc/slurm/qrmi_config.json");
+///   qrmi_config_free(cnf);
+/// @endcode
 ///
 /// @param (ptr) a pointer to Config to be free
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
@@ -260,18 +268,20 @@ pub unsafe extern "C" fn qrmi_config_free(ptr: *mut Config) -> ReturnCode {
 ///
 /// # Example
 ///
-///     QrmiConfig *cnf = qrmi_config_load(argv[1]);
-///     if (!cnf) {
-///         QrmiResourceDef* res = qrmi_config_resource_def_get(cnf, "your_resource_id");
-///         if (res != NULL) {
-///             printf("%s %d\n", res->name, res->type);
-///             QrmiEnvironmentVariables envvars = res->environments;
-///             for (int j = 0; j < envvars.length; j++) {
-///                 QrmiKeyValue envvar = envvars.variables[j];
-///                 printf("%s = %s\n", envvar.key, envvar.value);
-///             }
-///         }
+/// @code
+///   QrmiConfig *cnf = qrmi_config_load(argv[1]);
+///   if (!cnf) {
+///     QrmiResourceDef* res = qrmi_config_resource_def_get(cnf, "your_resource_id");
+///     if (res != NULL) {
+///       printf("%s %d\n", res->name, res->type);
+///       QrmiEnvironmentVariables envvars = res->environments;
+///       for (int j = 0; j < envvars.length; j++) {
+///         QrmiKeyValue envvar = envvars.variables[j];
+///         printf("%s = %s\n", envvar.key, envvar.value);
+///       }
 ///     }
+///   }
+/// @endcode
 ///
 /// @param (config) [in] a Config handle
 /// @param (resource_id) [in] resource identifier
@@ -323,8 +333,10 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 ///
 /// # Example
 ///
-///      char *type_as_str = qrmi_config_resource_type_to_str(QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE):
-///      printf("%s\n", type_as_str);
+/// @code
+///   char *type_as_str = qrmi_config_resource_type_to_str(QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE):
+///   printf("%s\n", type_as_str);
+/// @endcode
 ///
 /// @param type (QrmiResourceType) ResourceType variant
 /// @return string representation of ResourceType.
@@ -347,14 +359,16 @@ pub unsafe extern "C" fn qrmi_config_resource_type_to_str(r#type: ResourceType) 
 ///
 /// # Example
 ///
-///     QrmiConfig *cnf = qrmi_config_load(argv[1]);
-///     if (!cnf) {
-///         QrmiResourceDef* res = qrmi_config_resource_def_get(cnf, "your_resource_id");
-///         if (res != NULL) {
-///             printf("%s %d\n", res->name, res->type);
-///         }
-///         qrmi_config_resource_def_free(res);
+/// @code
+///   QrmiConfig *cnf = qrmi_config_load(argv[1]);
+///   if (!cnf) {
+///     QrmiResourceDef* res = qrmi_config_resource_def_get(cnf, "your_resource_id");
+///     if (res != NULL) {
+///       printf("%s %d\n", res->name, res->type);
 ///     }
+///     qrmi_config_resource_def_free(res);
+///   }
+/// @endcode
 ///     
 /// @param (ptr) a pointer to ResourceDef to be free
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
@@ -400,15 +414,17 @@ pub unsafe extern "C" fn qrmi_config_resource_def_free(ptr: *mut ResourceDef) ->
 ///
 /// # Example
 ///
-///      size_t num_names = 0;
-///      char **names = NULL;
-///      QrmiReturnCode rc = qrmi_config_resource_names_get(cnf, &num_names, &names);
-///      if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///          for (int i = 0; i < num_names; i++) {
-///              printf("[%s]\n", names[i]);
-///          }
-///          qrmi_string_array_free(num_names, names);
-///      }
+/// @code
+///   size_t num_names = 0;
+///   char **names = NULL;
+///   QrmiReturnCode rc = qrmi_config_resource_names_get(cnf, &num_names, &names);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     for (int i = 0; i < num_names; i++) {
+///       printf("[%s]\n", names[i]);
+///     }
+///     qrmi_string_array_free(num_names, names);
+///   }
+/// @endcode
 ///
 /// @param (config) [in] A Config handle
 /// @param (num_names) [out] number of resource names in the list
@@ -463,11 +479,13 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 ///
 /// # Example
 ///
-///     const char * last_error = qrmi_get_last_error();
-///     if (last_error != NULL) {
-///         printf("last error = %s\n", last_error);
-///         qrmi_string_free(last_error);
-///     }
+/// @code
+///   const char * last_error = qrmi_get_last_error();
+///   if (last_error != NULL) {
+///     printf("last error = %s\n", last_error);
+///     qrmi_string_free(last_error);
+///   }
+/// @endcode
 ///
 /// @return message text of the most recent error
 /// @version 0.8.0
@@ -494,8 +512,10 @@ pub unsafe extern "C" fn qrmi_get_last_error() -> *const c_char {
 ///
 /// # Example
 ///
-///     QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name",
-///                                                   QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
+/// @code
+///   QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name",
+///                                                 QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
+/// @endcode
 ///
 /// @param (resource_id) [in] A resource identifier, i.e. backend name
 /// @param (resource_type) [in] QrmiResourceType variant
@@ -512,6 +532,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
         let res: Box<dyn crate::QuantumResource> = match resource_type {
             ResourceType::IBMDirectAccess => match IBMDirectAccess::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
+                    return std::ptr::null_mut();
+                }
+            },
+            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     _set_last_error(format!("{}", err));
@@ -557,11 +584,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
 ///
 /// # Example
 ///
-///     QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name",
-///                                                   QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS);
-///     if (qrmi != NULL) {
-///         qrmi_resource_free(qrmi);
-///     }
+/// @code
+///   QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name",
+///                                                 QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
+///   if (qrmi != NULL) {
+///     qrmi_resource_free(qrmi);
+///   }
+/// @endcode
 ///
 /// @param (ptr) [in] A QrmiQuantumResource handle to be free
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
@@ -589,15 +618,17 @@ pub unsafe extern "C" fn qrmi_resource_free(ptr: *mut QuantumResource) -> Return
 ///
 /// # Example
 ///
-///     bool is_accessible = false;
-///     int rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///        if (is_accessible == false) {
-///            printf("%s cannot be accessed.\n", argv[1]);
-///        }
-///     } else {
-///        printf("qrmi_resource_is_accessible() failed.\n");
+/// @code
+///   bool is_accessible = false;
+///   int rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     if (is_accessible == false) {
+///       printf("%s cannot be accessed.\n", argv[1]);
 ///     }
+///   } else {
+///     printf("qrmi_resource_is_accessible() failed.\n");
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (outp) [out] accessible or not
@@ -711,14 +742,16 @@ pub unsafe extern "C" fn qrmi_resource_type(
 ///
 /// # Example
 ///
-///     char *acquisition_token;
-///     QrmiReturnCode rc = qrmi_resource_acquire(qrmi, &acquisition_token);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///         printf("acquisition token = %s\n", acquisition_token);
-///     }
-///     else {
-///         printf("qrmi_resource_acquire failed.");
-///     }
+/// @code
+///   char *acquisition_token;
+///   QrmiReturnCode rc = qrmi_resource_acquire(qrmi, &acquisition_token);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     printf("acquisition token = %s\n", acquisition_token);
+///   }
+///   else {
+///     printf("qrmi_resource_acquire failed.");
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (acquisition_token) [out] An acquisition token if succeeded. Must call qrmi_string_free() to free if no longer used.
@@ -766,14 +799,16 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
 ///
 /// # Example
 ///
-///     char *acquisition_token = NULL;
-///     QrmiReturnCode rc = qrmi_resource_acquire(qrmi, &acquisition_token);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///         rc = qrmi_resource_release(qrmi, acquisition_token);
-///         if (rc != QRMI_RETURN_CODE_SUCCESS) {
-///             printf("Failed to release a quantum resource\n");
-///         }
+/// @code
+///   char *acquisition_token = NULL;
+///   QrmiReturnCode rc = qrmi_resource_acquire(qrmi, &acquisition_token);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     rc = qrmi_resource_release(qrmi, acquisition_token);
+///     if (rc != QRMI_RETURN_CODE_SUCCESS) {
+///       printf("Failed to release a quantum resource\n");
 ///     }
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (acquisition_token) [in] An acquisition token returned by qrmi_resource_acquire() call.
@@ -821,21 +856,24 @@ pub unsafe extern "C" fn qrmi_resource_release(
 ///
 /// # Example
 ///
-///     QrmiPayload payload;
-///     char *job_id = NULL;
-///     QrmiReturnCode rc;
+/// @code
+///   QrmiPayload payload;
+///   char *job_id = NULL;
+///   QrmiReturnCode rc;
+///   const char* input = "your Qiskit estimator primitive input";
 ///
-///     payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
-///     payload.QISKIT_PRIMITIVE.input = (char *)input;
-///     payload.QISKIT_PRIMITIVE.program_id = "estimator";
+///   payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
+///   payload.QISKIT_PRIMITIVE.input = (char *)input;
+///   payload.QISKIT_PRIMITIVE.program_id = "estimator";
 ///
-///     rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///         printf("Job ID: %s\n", job_id);
-///     }
-///     else {
-///         printf("failed to start a task.\n");
-///     }
+///   rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     printf("Job ID: %s\n", job_id);
+///   }
+///   else {
+///     printf("failed to start a task.\n");
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (payload) [in] payload
@@ -908,10 +946,12 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
 ///
 /// # Example
 ///
-///     QrmiReturnCode rc = qrmi_resource_task_stop(qrmi, job_id);
-///     if (rc != QRMI_RETURN_CODE_SUCCESS) {
-///         printf("Failed to stop a task\n");
-///     }
+/// @code
+///   QrmiReturnCode rc = qrmi_resource_task_stop(qrmi, job_id);
+///   if (rc != QRMI_RETURN_CODE_SUCCESS) {
+///     printf("Failed to stop a task\n");
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (task_id) [in] A task ID, returned by a previous call to qrmi_resource_task_start()
@@ -960,14 +1000,16 @@ pub unsafe extern "C" fn qrmi_resource_task_stop(
 ///
 /// # Example
 ///
-///     QrmiTaskStatus status;
-///     while (1) {
-///         rc = qrmi_resource_task_status(qrmi, job_id, &status);
-///         if (rc != QRMI_RETURN_CODE_SUCCESS || status != QRMI_TASK_STATUS_RUNNING) {
-///             break;
-///         }
-///         sleep(1);
+/// @code
+///   QrmiTaskStatus status;
+///   while (1) {
+///     rc = qrmi_resource_task_status(qrmi, job_id, &status);
+///     if (rc != QRMI_RETURN_CODE_SUCCESS || status != QRMI_TASK_STATUS_RUNNING) {
+///       break;
 ///     }
+///     sleep(1);
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (task_id) [in] A task identifier
@@ -1020,13 +1062,15 @@ pub unsafe extern "C" fn qrmi_resource_task_status(
 ///
 /// # Example
 ///
-///     QrmiReturnCode rc = qrmi_resource_task_status(qrmi, job_id, &status);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
-///         char *result = NULL;
-///         qrmi_resource_task_result(qrmi, job_id, &result);
-///         printf("%s\n", result);
-///         qrmi_string_free((char *)result);
-///     }
+/// @code
+///   QrmiReturnCode rc = qrmi_resource_task_status(qrmi, job_id, &status);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
+///     char *result = NULL;
+///     qrmi_resource_task_result(qrmi, job_id, &result);
+///     printf("%s\n", result);
+///     qrmi_string_free((char *)result);
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (task_id) [in] A task identifier
@@ -1083,13 +1127,15 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
 ///
 /// # Example
 ///
-///     QrmiReturnCode rc = qrmi_resource_task_status(qrmi, job_id, &status);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
-///         char *logs = NULL;
-///         qrmi_resource_task_logs(qrmi, job_id, &logs);
-///         printf("%s\n", logs);
-///         qrmi_string_free((char *)logs);
-///     }
+/// @code
+///   QrmiReturnCode rc = qrmi_resource_task_status(qrmi, job_id, &status);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
+///     char *logs = NULL;
+///     qrmi_resource_task_logs(qrmi, job_id, &logs);
+///     printf("%s\n", logs);
+///     qrmi_string_free((char *)logs);
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (task_id) [in] A task identifier
@@ -1142,13 +1188,15 @@ pub unsafe extern "C" fn qrmi_resource_task_logs(
 ///
 /// # Example
 ///
-///     char *target = NULL;
-///     QrmiReturnCode rc;
-///     rc = qrmi_resource_target(qrmi, &target);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///         printf("target = %s\n", target);
-///         qrmi_string_free(target);
-///     }
+/// @code
+///   char *target = NULL;
+///   QrmiReturnCode rc;
+///   rc = qrmi_resource_target(qrmi, &target);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     printf("target = %s\n", target);
+///     qrmi_string_free(target);
+///   }
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (outp) [out] A serialized target data if succeeded. Must call qrmi_string_free() to free if no longer used.
@@ -1194,8 +1242,10 @@ pub unsafe extern "C" fn qrmi_resource_target(
 ///
 /// # Example
 ///
-///     QrmiResourceMetadata *metadata = NULL;
-///     QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
+/// @code
+///   QrmiResourceMetadata *metadata = NULL;
+///   QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
+/// @endcode
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (outp) [out] A QrmiResourceMetadata handle. Must call qrmi_resource_metadata_free() to free if no longer used.
@@ -1230,11 +1280,13 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
 ///
 /// # Example
 ///
-///     QrmiResourceMetadata *metadata = NULL;
-///     QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
-///     if (retval == QRMI_RETURN_CODE_SUCCESS) {
-///         qrmi_resource_metadata_free(metadata);
-///     }
+/// @code
+///   QrmiResourceMetadata *metadata = NULL;
+///   QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
+///   if (retval == QRMI_RETURN_CODE_SUCCESS) {
+///     qrmi_resource_metadata_free(metadata);
+///   }
+/// @endcode
 ///
 /// @param (ptr) [in] A QrmiResourceMetadata handle to be free
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
@@ -1264,9 +1316,11 @@ pub unsafe extern "C" fn qrmi_resource_metadata_free(ptr: *mut ResourceMetadata)
 ///
 /// # Example
 ///
-///     char *value = qrmi_resource_metadata_value(metadata, "backend_name");
-///     printf("metadata value=[%s]\n", value);
-///     qrmi_string_free(value);
+/// @code
+///   char *value = qrmi_resource_metadata_value(metadata, "backend_name");
+///   printf("metadata value=[%s]\n", value);
+///   qrmi_string_free(value);
+/// @endcode
 ///
 /// @param (metadata) [in] A QrmiResourceMetadata handle
 /// @param (key) [in] metadata key name
@@ -1304,15 +1358,17 @@ pub unsafe extern "C" fn qrmi_resource_metadata_value(
 ///
 /// # Example
 ///
-///     size_t num_keys = 0;
-///     char **metadata_keys = NULL;
-///     QrmiReturnCode rc = qrmi_resource_metadata_keys(metadata, &num_keys, &metadata_keys);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///         for (int i = 0; i < num_keys; i++) {
-///             printf("%s\n", metadata_keys[i]);
-///         }
-///         qrmi_string_array_free(num_keys, metadata_keys);
+/// @code
+///   size_t num_keys = 0;
+///   char **metadata_keys = NULL;
+///   QrmiReturnCode rc = qrmi_resource_metadata_keys(metadata, &num_keys, &metadata_keys);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     for (int i = 0; i < num_keys; i++) {
+///       printf("%s\n", metadata_keys[i]);
 ///     }
+///     qrmi_string_array_free(num_keys, metadata_keys);
+///   }
+/// @endcode
 ///
 /// @param (metadata) [in] A QrmiResourceMetadata handle
 /// @param (num_keys) [out] number of keys available in the metadata

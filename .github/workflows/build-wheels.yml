@@ -2,13 +2,15 @@
 # This reusable workflow builds the python wheels for the QRMI package.
 #
 # Workflow inputs:
-# - [required] python-version: the Python version to build the wheels for
+# - [required] python-version
+# - [required] container-image
 #
 # Workflow artifacts produced:
 # - [uploaded] qrmi-wheels for the specified Python version. File: qrmi-*.whl
 #
 # Workflow dependencies:
 # - None. It does not depend on any other workflow.
+
 name: Build wheels
 on:
   workflow_call:
@@ -18,27 +20,35 @@ on:
           Python version to build the wheels
         type: string
         required: true
+      container-image:
+        description: >-
+          Container image that will be used to run the workflow
+        type: string
+        required: true
 jobs:
   build:
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container-image }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6
 
+    - name: Install package dependencies from distro
+      run: xargs dnf install -y < requirements-distro.txt
+
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
 
-    - name: Setup Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ inputs.python-version }}
+    # The python3.12 installed using actions/setup-python@v6,
+    # requires a glibc version that is not available in the UBI container image
+    - name: Install python ${{ inputs.python-version }} from distro
+      run: dnf install -y python${{ inputs.python-version }}{,-pip}
 
-    - name: Prepare venv
+    - name: Create and activate venv for subsequent steps
       run: |
-        set -e
-        python -m pip install --upgrade pip setuptools wheel
-        python -m venv .venv
-        echo "PATH=${GITHUB_WORKSPACE}/.venv/bin:$PATH" >> ${GITHUB_ENV}
+        python${{ inputs.python-version }} -m venv .venv
+        echo "${GITHUB_WORKSPACE}/.venv/bin" >> ${GITHUB_PATH}
 
     - name: Install python requirements
       run: pip install -r requirements-dev.txt

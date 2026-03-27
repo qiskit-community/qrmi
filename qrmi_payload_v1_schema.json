@@ -7,7 +7,7 @@
     "oneOf": [
 	{
             "type": "object",
-            "description": "Payload for `direct-access` and `qiskit-runtime-service` QPU resource",
+            "description": "Payload for `ibm-quantum-system`, `direct-access` and `qiskit-runtime-service` QPU resource",
 	    "required": ["program_id", "parameters"],
             "properties": {
                 "program_id": {

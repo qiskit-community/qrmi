@@ -13,7 +13,7 @@
 use super::super::IBMDirectAccess;
 use crate::models::ResourceType;
 use crate::QuantumResource;
-use direct_access_api::ClientBuilder;
+use quantum_system_api::ClientBuilder;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {

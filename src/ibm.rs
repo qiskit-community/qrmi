@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2025-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -26,6 +26,8 @@
 
 mod direct_access;
 mod qiskit_runtime_service;
+mod quantum_system;
 
 pub use self::direct_access::IBMDirectAccess;
 pub use self::qiskit_runtime_service::IBMQiskitRuntimeService;
+pub use self::quantum_system::IBMQuantumSystem;
