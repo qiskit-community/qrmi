@@ -51,10 +51,6 @@ module-name   = "qrmi._core"
 features = ["pyo3/extension-module", "pyo3/abi3", "qrmi/pyo3"]
 python-packages = [
     "qrmi",
-    "qrmi.pulser_backend",
-    "qrmi.primitives",
-    "qrmi.primitives.ibm",
-    "qrmi.primitives.pasqal",
 ]
 include = [
   "python/qrmi/py.typed",
