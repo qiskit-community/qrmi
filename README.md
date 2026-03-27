@@ -201,11 +201,20 @@ pre-commit install
 ```
 Please find `.pre-commit-config.yaml` for the initial setup.  
 Following command was used to generate `.secrets.baseline` and to maximize the 
-detection coverage.
+detection coverage. 
 ```
 detect-secrets scan --force-use-all-plugins > .secrets.baseline
 ```
-
+**Handling False Positives**   
+If the pre-commit hook identifies a secret that you have verified is not 
+sensitive (a false positive), please use the following command to audit and 
+update the baseline file. Once updated, include the modified .secrets.baseline 
+in your Pull Request to ensure the pre-commit passes in the future.
+```
+pip install detect-secrets
+detect-secrets scan --baseline .secrets.baseline
+detect-secrets audit .secrets.baseline
+```
 ----
 
 ### How to Give Feedback
