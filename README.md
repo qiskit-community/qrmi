@@ -215,6 +215,18 @@ pip install detect-secrets
 detect-secrets scan --baseline .secrets.baseline
 detect-secrets audit .secrets.baseline
 ```
+**Manual Execution and Overrides**  
+To manually trigger a scan of all files in the repository for a local sanity check, execute the following command:
+```
+pre-commit run --all-files
+```
+
+**Bypassing the Hook (Not Recommended)**   
+While not recommended, if you must force a commit without running the pre-commit checks (e.g., during an emergency fix), you may use the `--no-verify` flag:
+```
+git commit -m "Your message" --no-verify
+```
+
 ----
 
 ### How to Give Feedback
