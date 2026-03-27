@@ -15,6 +15,7 @@ QRMI: Quantum Resource Management Interface
 > | Resource type(Python) | ResourceType.IBMDirectAccess | ResourceType.IBMQuantumSystem |
 > | Resource type(Rust) | ResourceType::IBMDirectAccess | ResourceType::IBMQuantumSystem |
 > | QuantumResource trait implementator(Rust) | qrmi::ibm::IBMDirectAccess | qrmi::ibm::IBMQuantumSystem |
+> | Environment variable prefixes | QRMI_IBM_DA_ | QRMI_IBM_QS_ |
 > 
 > A transition period will be in effect until **July 2, 2026**. During this period, both the legacy and the new resource names and environment variable prefixes are supported to ensure backward compatibility. After the transition period ends, support for the legacy names will be removed, and users are expected to migrate fully to the new naming scheme.
 
