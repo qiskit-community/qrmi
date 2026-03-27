@@ -1,6 +1,24 @@
 QRMI: Quantum Resource Management Interface
 ===========================================
 
+> [!IMPORTANT]
+> **New Deprecations(Since 0.13.0)**
+>
+> The **IBM Direct Access API** has been renamed to the **IBM Quantum System API**.
+> 
+> As part of this change, **the resource names and the prefixes of environment variables** used by QRMI have been updated accordingly.
+>
+> | Items | Deprecated names | New names |
+> | :--- | :--- | :--- |
+> | Resource type text | direct-access | ibm-quantum-system |
+> | Resource type(C) | QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS | QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM |
+> | Resource type(Python) | ResourceType.IBMDirectAccess | ResourceType.IBMQuantumSystem |
+> | Resource type(Rust) | ResourceType::IBMDirectAccess | ResourceType::IBMQuantumSystem |
+> | QuantumResource trait implementator(Rust) | qrmi::ibm::IBMDirectAccess | qrmi::ibm::IBMQuantumSystem |
+> | Environment variable prefixes | QRMI_IBM_DA_ | QRMI_IBM_QS_ |
+> 
+> A transition period will be in effect until **July 2, 2026**. During this period, both the legacy and the new resource names and environment variable prefixes are supported to ensure backward compatibility. After the transition period ends, support for the legacy names will be removed, and users are expected to migrate fully to the new naming scheme.
+
 This is repository with Quantum Resource Management Interface (QRMI) implementation.
 
 QRMI ⚛️ is a vendor agnostic library to control state, run tasks and monitor behavior of quantum computational resources (qubits, QPUs, entire quantum systems, etc.).
@@ -31,7 +49,7 @@ All full examples are available in [examples folder](./examples/).
 
 ### C
 
-This example is using QRMI with Direct Access to IBM Quantum machines.
+This example demonstrates QRMI using the Quantum System API for IBM Quantum machines.
 
 ```c++
 #include "qrmi.h"
@@ -75,7 +93,7 @@ error:
 }
 ```
 
-Full example is available [here](./examples/qrmi/c/direct_access/src/direct_access.c).
+Full example is available [here](./examples/qrmi/c/ibm_quantum_system/src/quantum_system.c).
 
 See example of QRMI C working with [IBM Qiskit Runtime Service](./examples/qrmi/c/qiskit_runtime_service/src/qiskit_runtime_service.c) or [Pasqal Cloud](./examples/qrmi/c/pasqal_cloud/src/pasqal_cloud.c).
 
@@ -83,13 +101,13 @@ All examples for QRMI C are available in [this folder](./examples/qrmi/c/).
 
 ### Python
 
-This example is using QRMI with Direct Access to IBM Quantum machines.
+This example demonstrates QRMI using the Quantum System API for IBM Quantum machines.
 
 ``` python
 from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
 # create resource handler
-qrmi = QuantumResource("ibm_rensselaer", ResourceType.IBMDirectAccess)
+qrmi = QuantumResource("ibm_rensselaer", ResourceType.IBMQuantumSystem)
 
 # acquire resource
 lock = qrmi.acquire()
@@ -106,7 +124,7 @@ qrmi.task_stop(job_id)
 qrmi.release(lock)
 ```
 
-Full example is available [here](./examples/qrmi/python/direct_access/example.py).
+Full example is available [here](./examples/qrmi/python/ibm_quantum_system/example.py).
 
 Python QRMI can be used to implement Qiskit primitives (Sampler and Estimator).
 See example of Qiskit primitives here [for IBM backends](./examples/qiskit_primitives/ibm/sampler.py) or [for Pasqal machines](./examples/qiskit_primitives/pasqal/sampler.py).
@@ -125,16 +143,16 @@ See the Pasqal Cloud examples in this repository:
 
 ### Rust
 
-This example is using QRMI with Direct Access to IBM Quantum machines.
+This example demonstrates QRMI using the Quantum System API for IBM Quantum machines.
 
 ```rust
-use qrmi::{ibm::IBMDirectAccess, models::Payload, models::TaskStatus, QuantumResource};
+use qrmi::{ibm::IBMQuantumSystem, models::Payload, models::TaskStatus, QuantumResource};
 ...
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ...
-    let mut qrmi = IBMDirectAccess::new(&args.backend);
+    let mut qrmi = IBMQuantumSystem::new(&args.backend);
 
     let lock = qrmi.acquire().await?;
     ...
@@ -168,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Full example is available [here](./examples/qrmi/rust/direct_access/src/main.rs).
+Full example is available [here](./examples/qrmi/rust/ibm_quantum_system/src/main.rs).
 
 See example of QRMI Rust working with [IBM Qiskit Runtime Service](./examples/qrmi/rust/qiskit_runtime_service/src/main.rs) or [Pasqal Cloud](./examples/qrmi/rust/pasqal_cloud/src/main.rs).
 
