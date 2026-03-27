@@ -47,7 +47,7 @@ jobs:
   create-libqrmi-tarball-rhel:
     if: github.repository_owner == 'qiskit-community'
     name: Create libqrmi tarball for RHEL compatible distributions
-    uses: ./.github/workflows/libqrmi-tarball-rhel.yml
+    uses: ./.github/workflows/tarball-libqrmi-el8.yml
       
   create-draft-release:
     if: github.repository_owner == 'qiskit-community'
