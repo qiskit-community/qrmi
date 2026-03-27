@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 
 use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use qrmi::pasqal::PasqalCloud;
+use qrmi::pasqal::PasqalLocal;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
 
 static IS_RUNNING: AtomicBool = AtomicBool::new(true);
@@ -112,6 +113,13 @@ pub enum ResourceType {
         /// Number of times the pulser sequence is repeated.
         job_runs: i32,
     },
+    /// Pasqal Local
+    PasqalLocal {
+        /// Pulser sequence
+        sequence: String,
+        /// Number of times the pulser sequence is repeated.
+        job_runs: i32,
+    },
 }
 impl ResourceType {
     fn new(qpu_type: &str, args: Args) -> Result<Self, Box<dyn std::error::Error>> {
@@ -181,6 +189,23 @@ impl ResourceType {
                 sequence,
                 job_runs: *job_runs,
             })
+        } else if qpu_type == "pasqal-local" {
+            let job_runs = match &deserialized.job_runs {
+                Some(v) => v,
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "job_runs").into());
+                }
+            };
+            let sequence = match &deserialized.sequence {
+                Some(v) => v.to_string(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "sequence").into());
+                }
+            };
+            Ok(Self::PasqalLocal {
+                sequence,
+                job_runs: *job_runs,
+            })
         } else {
             Err(
                 eyre!(
@@ -197,6 +222,7 @@ impl ResourceType {
             ResourceType::IBMQuantumSystem { .. } => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
             ResourceType::PasqalCloud { .. } => "pasqal-cloud",
+            ResourceType::PasqalLocal { .. } => "pasqal-local",
         }
     }
     fn to_payload(&self) -> Option<Payload> {
@@ -210,6 +236,10 @@ impl ResourceType {
                 })
             }
             ResourceType::PasqalCloud { sequence, job_runs } => Some(Payload::PasqalCloud {
+                sequence: sequence.to_string(),
+                job_runs: *job_runs,
+            }),
+            ResourceType::PasqalLocal { sequence, job_runs } => Some(Payload::PasqalCloud {
                 sequence: sequence.to_string(),
                 job_runs: *job_runs,
             }),
@@ -231,6 +261,9 @@ impl ResourceType {
             }
             ResourceType::PasqalCloud { .. } => {
                 Ok(Box::new(PasqalCloud::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
+            ResourceType::PasqalLocal { .. } => {
+                Ok(Box::new(PasqalLocal::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
         }
     }

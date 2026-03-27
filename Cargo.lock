@@ -2011,6 +2011,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "pasqal-local-api"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "assert-json-diff",
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "crypto-common",
+ "digest",
+ "env_logger",
+ "hmac",
+ "http 1.4.0",
+ "jwt",
+ "log",
+ "mockito",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "retry-policies",
+ "rhexdump",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2221,6 +2251,7 @@ dependencies = [
  "libc",
  "log",
  "pasqal-cloud-api",
+ "pasqal-local-api",
  "pyo3",
  "pyo3-stub-gen",
  "qiskit_runtime_client",

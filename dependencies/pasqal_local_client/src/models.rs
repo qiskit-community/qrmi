@@ -1,6 +1,5 @@
-// This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright Pasqal SAS 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,10 +9,6 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! QRMI implementations for Pasqal Cloud Services and Pasqal Local
+pub mod job;
 
-mod cloud;
-mod local;
-
-pub use self::cloud::PasqalCloud;
-pub use self::local::PasqalLocal;
+pub use self::job::JobStatus;

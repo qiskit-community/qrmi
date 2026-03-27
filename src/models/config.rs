@@ -35,6 +35,8 @@ pub enum ResourceType {
     QiskitRuntimeService,
     /// Pasqal Cloud
     PasqalCloud,
+    // Pasqal Local
+    PasqalLocal,
 }
 impl<'de> serde::Deserialize<'de> for ResourceType {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -47,6 +49,7 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
             "ibm-quantum-system" => Ok(ResourceType::IBMQuantumSystem),
             "qiskit-runtime-service" => Ok(ResourceType::QiskitRuntimeService),
             "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
+            "pasqal-local" => Ok(ResourceType::PasqalLocal),
             _ => Err(serde::de::Error::unknown_variant(
                 &s,
                 &[
@@ -54,6 +57,7 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
                     "direct-access",
                     "qiskit-runtime-service",
                     "pasqal-cloud",
+                    "pasqal-local",
                 ],
             )),
         }
@@ -66,6 +70,7 @@ impl ResourceType {
             ResourceType::IBMQuantumSystem => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
             ResourceType::PasqalCloud => "pasqal-cloud",
+            ResourceType::PasqalLocal => "pasqal-local",
         }
     }
 }
