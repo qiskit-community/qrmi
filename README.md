@@ -2,13 +2,13 @@ QRMI: Quantum Resource Management Interface
 ===========================================
 
 > [!IMPORTANT]
-> **API Renaming Notice**
+> **New Deprecations(Since 0.13.0)**
 >
 > The **IBM Direct Access API** has been renamed to the **IBM Quantum System API**.
 > 
 > As part of this change, **the resource names and the prefixes of environment variables** used by QRMI have been updated accordingly.
 >
-> | Items | Current name | New name |
+> | Items | Deprecated names | New names |
 > | :--- | :--- | :--- |
 > | Resource type text | direct-access | ibm-quantum-system |
 > | Resource type(C) | QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS | QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM |
