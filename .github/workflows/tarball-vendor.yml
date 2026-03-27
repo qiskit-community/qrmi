@@ -20,6 +20,8 @@ on:
 jobs:
   vendor-tarball:
     runs-on: ubuntu-24.04
+    container:
+      image: 'registry.access.redhat.com/ubi8/ubi:8.10'
     steps:
     - name: Checkout
       uses: actions/checkout@v4
