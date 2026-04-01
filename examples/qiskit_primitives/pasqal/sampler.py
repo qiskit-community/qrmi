@@ -11,14 +11,14 @@
 # that they have been altered from the originals.
 
 
-import json
 import random
 
 from dotenv import load_dotenv
-from pulser_qrmi_backend.service import QRMIService
 from qiskit.circuit import QuantumCircuit
 from qiskit_pasqal_provider.providers.gate import HamiltonianGate, InterpolatePoints
-from qrmi.primitives.pasqal.sampler import QPPSamplerV2
+from qiskit_pasqal_provider.providers.sampler import SamplerV2
+from qrmi.primitives.pasqal.sampler import QRMIPasqalBackend
+from qrmi.pulser.service import QRMIService
 
 # Create QRMI
 load_dotenv()
@@ -64,6 +64,8 @@ gate = HamiltonianGate(ampl, det, phase, coords, grid_transform="triangular")
 qc = QuantumCircuit(len(coords))
 qc.append(gate, qc.qubits)
 
-sampler = QPPSamplerV2(qrmi=qrmi)
-res = sampler.run([qc])
-print(json.loads(res[0])["counter"])
+backend = QRMIPasqalBackend(qrmi=qrmi)
+sampler = SamplerV2(backend)
+job = sampler.run([qc], shots=100)
+result = job.result()
+print(result[0].data.counts)
