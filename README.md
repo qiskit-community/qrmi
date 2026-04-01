@@ -128,6 +128,8 @@ Full example is available [here](./examples/qrmi/python/ibm_quantum_system/examp
 
 Python QRMI can be used to implement Qiskit primitives (Sampler and Estimator).
 See example of Qiskit primitives here [for IBM backends](./examples/qiskit_primitives/ibm/sampler.py) or [for Pasqal machines](./examples/qiskit_primitives/pasqal/sampler.py).
+The Pasqal example uses provider `SamplerV2` with QRMI backend integration and returns a
+Qiskit result object via `job.result()`.
 
 See [example](./examples/pulser_backend/pasqal/pulser_backend.py) of QRMI working with Pasqal Pulser.
 

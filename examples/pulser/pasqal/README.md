@@ -33,7 +33,7 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 
 ### SamplerV2
 
-Use the `PulserBackend`.
+Use Pulser's `QPUBackend` with `PulserQRMIConnection`.
 
 ```shell-session
 $ python pulser_backend.py
