@@ -35,6 +35,24 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 
 Use the Qiskit Pasqal Provider `SamplerV2`.
 
+This example uses:
+- `qiskit_pasqal_provider.providers.sampler.SamplerV2`
+- QRMI integration backend `qrmi.primitives.pasqal.sampler.QRMIPasqalBackend`
+
+Execution returns a job object and Qiskit-style result object:
+```python
+job = sampler.run([qc], shots=100)
+result = job.result()
+print(result[0].data.counts)
+```
+
+QRMI run options can be passed through sampler options:
+- `poll_interval_seconds`
+- `timeout_seconds`
+- `delete_job`
+
+For emulator resources where device specs are not exposed, QRMI falls back to Pulser `MockDevice`.
+
 ```shell-session
 $ python sampler.py
 ```

@@ -10,7 +10,18 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""IBM implementations of Primitive"""
+"""Pasqal implementations of Primitive."""
 
-from .sampler import Sampler as SamplerV2  # Todo, fix upstream rename base as SamplerV2
+from .sampler import QPPSamplerV2, QRMIPasqalBackend, QRMIPasqalJob
 from .target import get_device, get_target
+
+SamplerV2 = QPPSamplerV2
+
+__all__ = [
+    "SamplerV2",
+    "QPPSamplerV2",
+    "QRMIPasqalBackend",
+    "QRMIPasqalJob",
+    "get_device",
+    "get_target",
+]

@@ -66,6 +66,7 @@ class QRMIService:
                 logger.warning(
                     "Unsupported resource type: %s specified for %s", qpu_types[i], qpu
                 )
+                continue
 
             if qrmi.is_accessible() is True:
                 self._qrmi_resources[qpu] = qrmi

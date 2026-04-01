@@ -129,7 +129,13 @@ impl ResourceType {
                 return Err(eyre!("Failed to open {}. reason = {}", args.input, err).into());
             }
         };
-        let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
+        let deserialized: QrmiInput = serde_json::from_str(&payload).map_err(|err| {
+            eyre!(
+                "Failed to parse input payload {} as JSON. reason = {}",
+                args.input,
+                err
+            )
+        })?;
         if qpu_type == "direct-access" {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
@@ -339,7 +345,7 @@ fn find_qpu_type(
     qpu_name: String,
 ) -> Option<String> {
     if let Some(index) = qpu_resources.iter().position(|&r| r == qpu_name) {
-        return Some(qpu_types[index].to_string());
+        return qpu_types.get(index).map(|qpu_type| (*qpu_type).to_string());
     }
     None
 }
@@ -410,6 +416,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let qpu_types: Vec<&str> = envvar_qpu_types.split(',').collect();
+    if qpu_names.len() != qpu_types.len() {
+        return Err(eyre!(
+            "Inconsistent specifications of QPU resources and types: SLURM_JOB_QPU_RESOURCES has {} entries while SLURM_JOB_QPU_TYPES has {} entries.",
+            qpu_names.len(),
+            qpu_types.len()
+        )
+        .into());
+    }
 
     let qpu_name = args.qpu_name.clone();
     let res_type: ResourceType;
@@ -419,7 +433,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(eyre!("{} is not specified in --qpu option", qpu_name).into());
     }
 
-    let payload = res_type.to_payload().unwrap();
+    let payload = res_type
+        .to_payload()
+        .ok_or_else(|| eyre!("Failed to build payload from the selected resource type."))?;
     let mut qrmi = res_type.create_qrmi(&qpu_name)?;
 
     // setup signal handler for slurm, and start it

@@ -18,6 +18,7 @@
 
 import pulser
 import pulser.abstract_repr
+from pulser import MockDevice
 from pulser.devices import Device
 from qiskit.transpiler.target import Target
 
@@ -33,8 +34,14 @@ def get_device(qrmi: QuantumResource) -> Device:
     Returns:
         pulser.devices.Device: Pulser device
     """
-    target = qrmi.target()
-    return pulser.abstract_repr.deserialize_device(target)
+    try:
+        target = qrmi.target()
+    except RuntimeError as err:
+        if "Device specs are not available for emulators." in str(err):
+            return MockDevice
+        raise
+    target_value = target.value if hasattr(target, "value") else target
+    return pulser.abstract_repr.deserialize_device(target_value)
 
 
 def get_target(qrmi: QuantumResource) -> Target:
