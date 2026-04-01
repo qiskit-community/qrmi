@@ -18,7 +18,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from qiskit import QuantumCircuit
-from qiskit.primitives import BasePrimitiveJob
+from qiskit.primitives import (
+    BasePrimitiveJob,
+    DataBin,
+    PrimitiveResult,
+    SamplerPubResult,
+)
 from qiskit.providers import JobStatus
 from qiskit.providers.jobstatus import JOB_FINAL_STATES
 from qiskit_pasqal_provider.providers import SamplerV2 as PasqalSamplerV2
@@ -26,7 +31,6 @@ from qiskit_pasqal_provider.providers.pulse_utils import (
     gen_seq,
     get_register_from_circuit,
 )
-from qiskit_pasqal_provider.providers.result import PasqalResult
 
 from qrmi import Payload, QuantumResource, TaskStatus
 
@@ -41,6 +45,36 @@ STATUS_MAP = {
 }
 
 
+def _normalize_pasqal_payload(payload: Any) -> dict[str, Any]:
+    """Return payload as a dictionary from JSON text or dict."""
+    if isinstance(payload, str):
+        parsed_payload = json.loads(payload)
+    elif isinstance(payload, dict):
+        parsed_payload = payload
+    else:
+        raise TypeError("Unsupported payload type. Expected JSON string or dict.")
+
+    if not isinstance(parsed_payload, dict):
+        raise TypeError("Invalid payload. Expected a JSON object.")
+
+    return parsed_payload
+
+
+def _extract_counts(payload: dict[str, Any]) -> dict[str, int]:
+    """Return normalized bitstring counts from Pasqal payload."""
+    counter_payload = payload.get("counter", payload)
+    if not isinstance(counter_payload, dict):
+        raise RuntimeError(f"Unsupported counter payload: {counter_payload!r}.")
+    counts = {
+        str(bitstring): int(count)
+        for bitstring, count in counter_payload.items()
+        if isinstance(count, (int, float))
+    }
+    if not counts:
+        raise RuntimeError(f"No valid counts found in payload: {payload!r}.")
+    return counts
+
+
 @dataclass
 class Options:
     """Options for :class:`~.QRMIPasqalBackend`."""
@@ -49,7 +83,7 @@ class Options:
     run_options: dict[str, Any] = field(default_factory=dict)
 
 
-class QRMIPasqalJob(BasePrimitiveJob[PasqalResult, JobStatus]):
+class QRMIPasqalJob(BasePrimitiveJob[PrimitiveResult[SamplerPubResult], JobStatus]):
     """Representation of a QRMI Pasqal sampler job."""
 
     def __init__(
@@ -79,7 +113,7 @@ class QRMIPasqalJob(BasePrimitiveJob[PasqalResult, JobStatus]):
         """Cancel the job."""
         self._qrmi.task_stop(self._job_id)
 
-    def result(self) -> PasqalResult:
+    def result(self) -> PrimitiveResult[SamplerPubResult]:
         """Return the result of the job."""
         if self._result is not None and self._last_status == JobStatus.DONE:
             return self._result
@@ -89,24 +123,31 @@ class QRMIPasqalJob(BasePrimitiveJob[PasqalResult, JobStatus]):
             status = self.status()
             if status in JOB_FINAL_STATES:
                 break
-            if self._timeout_seconds is not None and (
-                time.time() - start_time
-            ) > self._timeout_seconds:
+            if (
+                self._timeout_seconds is not None
+                and (time.time() - start_time) > self._timeout_seconds
+            ):
                 raise TimeoutError(
                     f"QRMI task {self._job_id} timed out after {self._timeout_seconds}s."
                 )
             time.sleep(self._poll_interval_seconds)
 
         if self._last_status != JobStatus.DONE:
-            raise RuntimeError(f"QRMI task {self._job_id} ended with status {self._last_status}.")
+            raise RuntimeError(
+                f"QRMI task {self._job_id} ended with status {self._last_status}."
+            )
 
         raw_result = self._qrmi.task_result(self._job_id).value
-        parsed_result = json.loads(raw_result) if isinstance(raw_result, str) else raw_result
-        self._result = PasqalResult(
-            backend_name=self._backend_name,
-            job_id=self._job_id,
-            results=parsed_result,
-            metadata={"status": "DONE", "success": True},
+        parsed_result = _normalize_pasqal_payload(raw_result)
+        counts = _extract_counts(parsed_result)
+        self._result = PrimitiveResult(
+            [SamplerPubResult(data=DataBin(counts=counts))],
+            metadata={
+                "status": "DONE",
+                "success": True,
+                "backend_name": self._backend_name,
+                "job_id": self._job_id,
+            },
         )
         return self._result
 
@@ -152,6 +193,7 @@ class QRMIPasqalBackend:
         values: dict | None = None,
         **_: Any,
     ) -> QRMIPasqalJob:
+        """Submit a circuit to QRMI and return a Pasqal job handle."""
         analog_register = get_register_from_circuit(run_input)
         device = get_device(self._qrmi)
 
@@ -188,4 +230,5 @@ class QPPSamplerV2(PasqalSamplerV2):
         *,
         options: dict | None = None,
     ) -> None:
+        """Create a SamplerV2 bound to a QRMI Pasqal backend."""
         super().__init__(backend=QRMIPasqalBackend(qrmi=qrmi, options=options))

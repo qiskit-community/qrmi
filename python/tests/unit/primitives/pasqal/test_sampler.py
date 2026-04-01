@@ -1,57 +1,73 @@
 """Tests for QRMI Pasqal SamplerV2 integration."""
 
 from qiskit.circuit import QuantumCircuit
+from qiskit.primitives import PrimitiveResult
 from qiskit.providers import JobStatus
-from qiskit_pasqal_provider.providers.result import PasqalResult
 from pulser import MockDevice
 
 from qrmi import TaskStatus
 from qrmi.primitives.pasqal import sampler as pasqal_sampler
-from qrmi.primitives.pasqal.sampler import QPPSamplerV2, QRMIPasqalBackend, QRMIPasqalJob
+from qrmi.primitives.pasqal.sampler import (
+    QPPSamplerV2,
+    QRMIPasqalBackend,
+    QRMIPasqalJob,
+)
 from qrmi.primitives.pasqal.target import get_device
 
 
 class _TaskResult:
     def __init__(self, value):
+        """Store raw task result payload."""
         self.value = value
 
 
 class _Seq:
     def __init__(self):
+        """Create sequence stub."""
         self.values = None
 
     def build(self, **values):
+        """Capture build values and return self."""
         self.values = values
         return self
 
     def to_abstract_repr(self):
+        """Return serialized sequence payload."""
         return "serialized-seq"
 
 
 class _FakeQRMI:
     def __init__(self):
+        """Create a minimal QRMI stub."""
         self.payloads = []
 
     def task_start(self, payload):
+        """Track payload and return job id."""
         self.payloads.append(payload)
         return "job-1"
 
     def task_status(self, _job_id):
+        """Return completed status for all jobs."""
         return TaskStatus.Completed
 
     def task_result(self, _job_id):
+        """Return successful Pasqal-style counter payload."""
         return _TaskResult('{"counter": {"00": 3, "11": 1}}')
 
     def task_stop(self, _job_id):
+        """No-op stop."""
         return None
 
     def resource_id(self):
+        """Return emulator-style resource identifier."""
         return "EMU_FREE"
 
 
 def _patch_sequence_build(monkeypatch):
     seq = _Seq()
-    monkeypatch.setattr(pasqal_sampler, "get_register_from_circuit", lambda _qc: object())
+    monkeypatch.setattr(
+        pasqal_sampler, "get_register_from_circuit", lambda _qc: object()
+    )
     monkeypatch.setattr(
         pasqal_sampler,
         "gen_seq",
@@ -85,8 +101,8 @@ def test_backend_run_returns_job_and_uses_target_device(monkeypatch):
     assert seq.values is None
 
 
-def test_job_result_returns_pasqal_result():
-    """Return a PasqalResult for completed QRMI jobs."""
+def test_job_result_returns_primitive_result():
+    """Return a PrimitiveResult for completed QRMI jobs."""
     qrmi = _FakeQRMI()
     job = QRMIPasqalJob(
         qrmi=qrmi,
@@ -97,7 +113,7 @@ def test_job_result_returns_pasqal_result():
 
     result = job.result()
 
-    assert isinstance(result, PasqalResult)
+    assert isinstance(result, PrimitiveResult)
     assert result[0].data.counts == {"00": 3, "11": 1}
     assert job.status() == JobStatus.DONE
 
@@ -142,15 +158,17 @@ def test_qpp_sampler_v2_returns_job(monkeypatch):
     assert job.result()[0].data.counts == {"00": 3, "11": 1}
 
 
-def test_get_device_falls_back_to_mock_device_for_emulator_without_specs():
+def test_get_device_uses_mock_device_without_specs():
     """Return MockDevice when emulator does not expose device specs."""
 
     class _NoSpecsQRMI:
         @staticmethod
         def target():
+            """Raise QRMI device-specs-not-available error."""
             raise RuntimeError(
                 "Status: 404 Not Found, Fail "
-                '{"status":"fail","message":"Not found.","code":"CD1202","data":{"description":"Device specs are not available for emulators."}}'
+                '{"status":"fail","message":"Not found.","code":"CD1202","data":'
+                '{"description":"Device specs are not available for emulators."}}'
             )
 
     assert get_device(_NoSpecsQRMI()) is MockDevice

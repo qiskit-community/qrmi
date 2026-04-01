@@ -17,7 +17,7 @@ from pulser.backend.remote import JobParams, RemoteBackend
 from pulser.json.abstract_repr.deserializer import (
     deserialize_device,
 )
-from qrmi.pulser.backend import PulserQRMIConnection
+from qrmi.pulser.connection import PulserQRMIConnection
 from qrmi.pulser.service import QRMIService
 
 import logging

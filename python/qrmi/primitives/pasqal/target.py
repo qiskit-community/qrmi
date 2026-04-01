@@ -43,7 +43,7 @@ def _is_missing_device_specs_error(err: RuntimeError) -> bool:
 def _normalize_target_payload(target: Any) -> str:
     """Return target payload as a JSON string.
 
-    The target may be a QRMI wrapper object with `.value`, a JSON string, or a dict.
+    The target may be a QRMI wrapper object with `.value`, JSON text, or a dict.
     """
     target_value = target.value if hasattr(target, "value") else target
 
