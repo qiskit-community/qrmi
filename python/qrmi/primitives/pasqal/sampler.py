@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""Sampler V2 base class for Pasqal Cloud QRMI."""
+"""Sampler V2 base class for Pasqal QRMI resources."""
 
 import json
 import time
@@ -180,7 +180,7 @@ class QRMIPasqalBackend:
 
 
 class QPPSamplerV2(PasqalSamplerV2):
-    """SamplerV2 for Pasqal Cloud execution through QRMI."""
+    """SamplerV2 for Pasqal execution through QRMI."""
 
     def __init__(
         self,
