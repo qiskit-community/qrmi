@@ -114,10 +114,12 @@ class App:
         """
         qpu_resources = self._get_list_envvars("SLURM_JOB_QPU_RESOURCES")
         qpu_types = self._get_list_envvars("SLURM_JOB_QPU_TYPES")
+        if len(qpu_resources) != len(qpu_types):
+            raise ValueError("Inconsistent specifications of QPU resources and types")
         for index, qpu_resource in enumerate(qpu_resources):
             if qpu_resource == qpu_name:
                 return self.RESOURCE_TYPE_MAP[qpu_types[index]]
-        return ValueError(f"{qpu_name} is not available")
+        raise ValueError(f"{qpu_name} is not available")
 
     def _exit_callback(self):
         """A callback called when program is finished.

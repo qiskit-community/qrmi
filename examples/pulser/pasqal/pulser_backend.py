@@ -14,12 +14,13 @@ import json
 
 import pulser
 from dotenv import load_dotenv
-from pulser import Pulse, Register, Sequence
+from pulser import Pulse, Sequence
 from pulser.backend.remote import JobParams
+from pulser.register import Register
 from target import get_device
 
-from qrmi.pulser_backend.backend import PulserQRMIBackend, PulserQRMIConnection
-from qrmi.pulser_backend.service import QRMIService
+from qrmi.pulser.backend import PulserQRMIConnection
+from qrmi.pulser.service import QRMIService
 
 # Create QRMI
 load_dotenv()
@@ -64,6 +65,6 @@ pulse1 = Pulse.ConstantPulse(100, 2, 2, 0)
 seq.add(pulse1, "rydberg")
 seq.measure("ground-rydberg")
 
-backend = PulserQRMIBackend(seq, qrmi_conn)
+backend = pulser.QPUBackend(seq, qrmi_conn)
 result = backend.run([JobParams(runs=1000, variables=[])], wait=True)
 print(f"Results: {json.loads(result[0])['counter']}")

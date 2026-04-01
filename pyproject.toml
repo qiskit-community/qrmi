@@ -37,7 +37,7 @@ keywords = [
 dependencies = [
   "qiskit_ibm_runtime>=0.30.0",
   "qiskit_qasm3_import",
-  "qiskit-pasqal-provider>=0.1.1",
+  "qiskit-pasqal-provider>=0.2.0",
   "pulser>=1.5.3",
   "python-dotenv",
   "python-dateutil",
@@ -51,7 +51,7 @@ module-name   = "qrmi._core"
 features = ["pyo3/extension-module", "pyo3/abi3", "qrmi/pyo3"]
 python-packages = [
     "qrmi",
-    "qrmi.pulser_backend",
+    "qrmi.pulser",
     "qrmi.primitives",
     "qrmi.primitives.ibm",
     "qrmi.primitives.pasqal",
