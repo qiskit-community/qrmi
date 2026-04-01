@@ -37,8 +37,43 @@ from qrmi import Payload, QuantumResource, TaskStatus  # type: ignore
 logger = logging.getLogger(__name__)
 
 
+def _is_missing_device_specs_error(err: RuntimeError) -> bool:
+    """Return True when QRMI reports device specs are unavailable."""
+    message = str(err)
+    start = message.find("{")
+    if start < 0:
+        return False
+    try:
+        payload = json.loads(message[start:])
+    except json.JSONDecodeError:
+        return False
+    return payload.get("code") == "CD1202"
+
+
+def _normalize_target_payload(target: typing.Any) -> dict[str, typing.Any]:
+    """Return target payload as a dictionary.
+
+    The target may be a QRMI wrapper object with `.value`, a JSON string, or a dict.
+    """
+    target_value = target.value if hasattr(target, "value") else target
+
+    if isinstance(target_value, str):
+        payload = json.loads(target_value)
+    elif isinstance(target_value, dict):
+        payload = target_value
+    else:
+        raise TypeError(
+            "Unsupported target payload type. Expected JSON string or dict."
+        )
+
+    if not isinstance(payload, dict):
+        raise TypeError("Invalid target payload. Expected JSON object.")
+
+    return payload
+
+
 class PulserQRMIConnection(RemoteConnection):
-    """A connection to Pasqal Cloud, to submit Sequences to QPUs."""
+    """A connection to Pasqal QRMI resources, to submit Sequences to QPUs."""
 
     def __init__(self, qrmi: QuantumResource) -> None:
         self._qrmi = qrmi
@@ -50,16 +85,9 @@ class PulserQRMIConnection(RemoteConnection):
         return False
 
     def fetch_available_devices(self) -> dict[str, pulser.devices.Device]:
-        try:
-            target = self._qrmi.target()
-        except RuntimeError as err:
-            if "Device specs are not available for emulators." in str(err):
-                raise NotImplementedError(
-                    "Device specs are not available for this resource."
-                ) from err
-            raise
-        target = json.loads(target.value)
-        dev = Device(**target)
+        target = self._qrmi.target()
+        target_payload = _normalize_target_payload(target)
+        dev = Device(**target_payload)
         return {dev.name: dev}
 
     def _fetch_result(
@@ -148,22 +176,34 @@ class PulserQRMIConnection(RemoteConnection):
                 "with QRMI."
             )
 
-        # TODO, reinstate check
-        # Create a new batch by submitting to the targeted qpu
-        # Find the targeted QPU
-        # for qpu_id, device in self.fetch_available_devices().items():
-        #    if sequence.device.name == device.name:
-        #        break
-        # else:
-        #    raise ValueError(
-        #        f"The Sequence's device {sequence.device.name} doesn't match the "
-        #        "name of a device of any available QPU. Select your device among"
-        #        "fetch_available_devices() and change your Sequence's device using"
-        #        "its switch_device method."
-        #    )
+        # Create a new batch by submitting to the targeted qpu.
+        # If QRMI exposes device specs for the selected resource, enforce a
+        # sequence-device match and validate runs against the target max_runs.
+        try:
+            available_devices = self.fetch_available_devices()
+        except RuntimeError as err:
+            if not _is_missing_device_specs_error(err):
+                raise
+            logger.debug("Skipping device/job-params validation: %s", err)
+            available_devices = {}
 
-        # Check JobParams
-        # pulser.QPUBackend.validate_job_params(job_params, device.max_runs)
+        if available_devices:
+            target_device = next(
+                (
+                    device
+                    for device in available_devices.values()
+                    if sequence.device.name == device.name
+                ),
+                None,
+            )
+            if target_device is None:
+                raise ValueError(
+                    f"The Sequence's device {sequence.device.name} doesn't match the "
+                    "name of a device of any available QPU. Select your device among "
+                    "fetch_available_devices() and change your Sequence's device using "
+                    "its switch_device method."
+                )
+            pulser.QPUBackend.validate_job_params(job_params, target_device.max_runs)
 
         # Submit one QRMI Job per job params
         new_job_ids: list[str] = []
