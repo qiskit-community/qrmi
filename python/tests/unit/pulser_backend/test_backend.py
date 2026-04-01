@@ -8,33 +8,44 @@ from pulser.backend.remote import RemoteResultsError
 from pulser.result import SampledResult
 
 from qrmi import TaskStatus
-from qrmi.pulser.backend import PulserQRMIConnection
+from qrmi.pulser.connection import PulserQRMIConnection
 
 
 class _TaskResult:
     def __init__(self, value):
+        """Store raw task result payload."""
         self.value = value
 
 
 class _FakeQRMI:
     def __init__(self, status: TaskStatus = TaskStatus.Completed):
+        """Create a minimal QRMI stub."""
         self._status = status
         self.started: list[str] = []
         self.stopped: list[str] = []
 
     def task_start(self, _payload):
+        """Track submitted payloads and return task id."""
         job_id = f"job-{len(self.started) + 1}"
         self.started.append(job_id)
         return job_id
 
     def task_status(self, _job_id):
+        """Return configured task status."""
         return self._status
 
     @staticmethod
+    def target():
+        """Return target payload as abstract device representation."""
+        return _TaskResult(pulser.MockDevice.to_abstract_repr())
+
+    @staticmethod
     def task_result(_job_id):
+        """Return a successful Pasqal-style counter payload."""
         return _TaskResult('{"counter":{"0":3}}')
 
     def task_stop(self, job_id):
+        """Track stopped jobs."""
         self.stopped.append(job_id)
 
 
@@ -53,7 +64,7 @@ def test_supports_open_batch_is_false() -> None:
     assert connection.supports_open_batch() is False
 
 
-def test_submit_wait_false_returns_remote_results_with_job_id() -> None:
+def test_submit_wait_false_returns_remote_results() -> None:
     """Return a remote-results handler with QRMI task IDs."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
 
@@ -67,7 +78,7 @@ def test_submit_wait_false_returns_remote_results_with_job_id() -> None:
     assert remote_results.job_ids == ["job-1"]
 
 
-def test_submit_wait_true_preserves_legacy_payload_shape() -> None:
+def test_submit_wait_true_returns_legacy_payload_shape() -> None:
     """Return legacy raw payloads when wait=True."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
 
@@ -81,7 +92,7 @@ def test_submit_wait_true_preserves_legacy_payload_shape() -> None:
     assert json.loads(result[0])["counter"] == {"0": 3}
 
 
-def test_remote_results_return_sampled_result_for_completed_task() -> None:
+def test_remote_results_return_sampled_result() -> None:
     """Return sampled results from a completed QRMI task."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
     remote_results = connection.submit(
@@ -110,12 +121,13 @@ def test_remote_results_raise_when_task_is_running() -> None:
         _ = remote_results.results
 
 
-def test_get_available_results_ignores_malformed_completed_payload() -> None:
+def test_get_available_results_ignores_bad_payload() -> None:
     """Return no available results when completed payload is malformed."""
 
     class _BadResultQRMI(_FakeQRMI):
         @staticmethod
         def task_result(_job_id):
+            """Return malformed payload."""
             return _TaskResult("not-json")
 
     connection = PulserQRMIConnection(qrmi=_BadResultQRMI())  # type: ignore[arg-type]

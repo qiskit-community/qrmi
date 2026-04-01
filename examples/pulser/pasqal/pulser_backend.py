@@ -19,7 +19,7 @@ from pulser.backend.remote import JobParams
 from pulser.register import Register
 from target import get_device
 
-from qrmi.pulser.backend import PulserQRMIConnection
+from qrmi.pulser.connection import PulserQRMIConnection
 from qrmi.pulser.service import QRMIService
 
 # Create QRMI

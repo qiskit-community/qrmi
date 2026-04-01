@@ -29,12 +29,26 @@ from pulser.backend.remote import (
     RemoteResultsError,
 )
 from pulser.backend.results import Results
-from pulser.devices import Device
 from pulser.result import SampledResult
 
 from qrmi import Payload, QuantumResource, TaskStatus  # type: ignore
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_json_payload(payload: typing.Any) -> dict[str, typing.Any]:
+    """Return payload as a dictionary from JSON text or dict."""
+    if isinstance(payload, str):
+        normalized = json.loads(payload)
+    elif isinstance(payload, dict):
+        normalized = payload
+    else:
+        raise TypeError("Unsupported payload type. Expected JSON string or dict.")
+
+    if not isinstance(normalized, dict):
+        raise TypeError("Invalid payload. Expected a JSON object.")
+
+    return normalized
 
 
 def _is_missing_device_specs_error(err: RuntimeError) -> bool:
@@ -53,23 +67,10 @@ def _is_missing_device_specs_error(err: RuntimeError) -> bool:
 def _normalize_target_payload(target: typing.Any) -> dict[str, typing.Any]:
     """Return target payload as a dictionary.
 
-    The target may be a QRMI wrapper object with `.value`, a JSON string, or a dict.
+    The target may be a QRMI wrapper object with `.value`, JSON text, or a dict.
     """
     target_value = target.value if hasattr(target, "value") else target
-
-    if isinstance(target_value, str):
-        payload = json.loads(target_value)
-    elif isinstance(target_value, dict):
-        payload = target_value
-    else:
-        raise TypeError(
-            "Unsupported target payload type. Expected JSON string or dict."
-        )
-
-    if not isinstance(payload, dict):
-        raise TypeError("Invalid target payload. Expected JSON object.")
-
-    return payload
+    return _normalize_json_payload(target_value)
 
 
 class PulserQRMIConnection(RemoteConnection):
@@ -87,8 +88,22 @@ class PulserQRMIConnection(RemoteConnection):
     def fetch_available_devices(self) -> dict[str, pulser.devices.Device]:
         target = self._qrmi.target()
         target_payload = _normalize_target_payload(target)
-        dev = Device(**target_payload)
+        dev = pulser.abstract_repr.deserialize_device(json.dumps(target_payload))
         return {dev.name: dev}
+
+    def update_sequence_device(self, sequence: pulser.Sequence) -> pulser.Sequence:
+        """Match sequence device to remote specs when available."""
+        try:
+            return super().update_sequence_device(sequence)
+        except RuntimeError as err:
+            if not _is_missing_device_specs_error(err):
+                raise
+            logging.warning(
+                "The selected connection doesn't give access to the latest "
+                "device specs. Execution might fail if the sequence is "
+                "incompatible with the device."
+            )
+            return sequence
 
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
@@ -98,7 +113,9 @@ class PulserQRMIConnection(RemoteConnection):
         results: list[Results] = []
         for job_id in selected_job_ids:
             if job_id not in jobs:
-                raise RemoteResultsError(f"Job {job_id!r} does not exist in batch {batch_id!r}.")
+                raise RemoteResultsError(
+                    f"Job {job_id!r} does not exist in batch {batch_id!r}."
+                )
             status, result = jobs[job_id]
             if status in (JobStatus.PENDING, JobStatus.RUNNING):
                 raise RemoteResultsError(
@@ -110,7 +127,10 @@ class PulserQRMIConnection(RemoteConnection):
         return tuple(results)
 
     def _get_batch_status(self, batch_id: str) -> BatchStatus:
-        statuses = [self._to_job_status(self._qrmi.task_status(job_id)) for job_id in self._get_job_ids(batch_id)]
+        statuses = [
+            self._to_job_status(self._qrmi.task_status(job_id))
+            for job_id in self._get_job_ids(batch_id)
+        ]
         if not statuses:
             return BatchStatus.DONE
         if any(status == JobStatus.ERROR for status in statuses):
@@ -133,7 +153,13 @@ class PulserQRMIConnection(RemoteConnection):
             if status == JobStatus.DONE:
                 try:
                     result = self._task_result_to_results(job_id)
-                except Exception as err:
+                except (
+                    RemoteResultsError,
+                    json.JSONDecodeError,
+                    KeyError,
+                    TypeError,
+                    ValueError,
+                ) as err:
                     logger.warning(
                         "Failed to parse QRMI result for job %s: %s", job_id, err
                     )
@@ -223,9 +249,7 @@ class PulserQRMIConnection(RemoteConnection):
             self._task_sequences[task_id] = seq_to_submit
             new_job_ids.append(task_id)
 
-        new_batch_id = (
-            new_job_ids[0] if len(new_job_ids) == 1 else str(uuid.uuid4())
-        )
+        new_batch_id = new_job_ids[0] if len(new_job_ids) == 1 else str(uuid.uuid4())
         self._batch_job_ids[new_batch_id] = new_job_ids
 
         if not wait:
@@ -276,40 +300,22 @@ class PulserQRMIConnection(RemoteConnection):
 
     def _task_result_to_results(self, task_id: str) -> Results:
         raw_result = self._qrmi.task_result(task_id).value
-        if isinstance(raw_result, str):
-            try:
-                return Results.from_abstract_repr(raw_result)
-            except Exception:
-                raw_result = json.loads(raw_result)
-
-        if not isinstance(raw_result, dict):
+        parsed_result = _normalize_json_payload(raw_result)
+        counter_payload = parsed_result.get("counter", parsed_result)
+        if not isinstance(counter_payload, dict):
             raise RemoteResultsError(
-                f"Unsupported task result type for task {task_id!r}: {type(raw_result)}."
+                f"Unsupported counter payload for task {task_id!r}: {counter_payload!r}."
             )
-
-        serialized_results = raw_result.get("serialised_results")
-        if isinstance(serialized_results, str):
-            try:
-                return Results.from_abstract_repr(serialized_results)
-            except Exception:
-                pass
-
-        counter = raw_result.get("counter", raw_result)
-        if isinstance(counter, dict) and len(counter) == 1:
-            nested = next(iter(counter.values()))
-            if isinstance(nested, dict):
-                counter = nested.get("counter", nested)
-
-        if not isinstance(counter, dict):
-            raise RemoteResultsError(f"Unsupported counter payload for task {task_id!r}: {counter!r}.")
 
         bitstring_counts = {
             str(bitstring): int(count)
-            for bitstring, count in counter.items()
+            for bitstring, count in counter_payload.items()
             if isinstance(count, (int, float))
         }
         if not bitstring_counts:
-            raise RemoteResultsError(f"No valid counts found in task {task_id!r} payload: {raw_result!r}.")
+            raise RemoteResultsError(
+                f"No valid counts found in task {task_id!r} payload: {parsed_result!r}."
+            )
 
         sequence = self._task_sequences.get(task_id)
         if sequence is None:
@@ -318,8 +324,8 @@ class PulserQRMIConnection(RemoteConnection):
         basis = sequence.get_measurement_basis()
         if basis is None:
             raise RemoteResultsError(f"Missing measurement basis for task {task_id!r}.")
-        return SampledResult(
-            atom_order=register.qubit_ids,
+        return SampledResult(  # pylint: disable=no-value-for-parameter
+            atom_order=tuple(register.qubit_ids),
             meas_basis=basis,
             bitstring_counts=bitstring_counts,
         )
