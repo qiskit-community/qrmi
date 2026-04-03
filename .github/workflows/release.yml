@@ -88,10 +88,10 @@ jobs:
         run: |
           gh release upload "v${{ needs.valid-qrmi-version.outputs.version }}" libqrmi-${{ needs.valid-qrmi-version.outputs.version }}-el8-x86_64.tar.gz --clobber
     
-  publish-release:
+  publish-github:
     if: github.repository_owner == 'qiskit-community'
-    name: Publish release
-    needs: [valid-qrmi-version, create-draft-release]
+    name: Publish github release
+    needs: [valid-qrmi-version, create-draft-release, check-testpypi-release]
     permissions:
       contents: write # This is required to publish the draft release
     runs-on: ubuntu-24.04
@@ -105,3 +105,108 @@ jobs:
       run: |
         # Make the release live on github
         gh release edit "v${{ needs.valid-qrmi-version.outputs.version }}" --verify-tag --draft=false
+
+  build-and-test-wheels:
+    if: github.repository_owner == 'qiskit-community'
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: 3.12
+    # The manylinux image comes with various cpython versions installed.
+    # We use the cpython 3.12 to build the wheels, as defined in the CIBW_BUILD.
+    # The generated wheels is abi3 compatible, so it is compatible with other python versions.
+    - name: Build QRMI wheels
+      uses: pypa/cibuildwheel@v3.4.1
+      env:
+        CIBW_PLATFORM: linux
+        CIBW_BUILD: cp312-manylinux_x86_64
+    - name: Upload QRMI wheels
+      uses: actions/upload-artifact@v6
+      if: ${{ success() }}
+      with:
+        name: release-wheels-x86_64
+        path: ./wheelhouse/*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  wheels-sdist:
+    if: github.repository_owner == 'qiskit-community'
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+    - name: Build sdist
+      uses: PyO3/maturin-action@v1
+      with:
+        target: x86_64
+        manylinux: 2_28
+        command: sdist
+        args: --out dist
+    - name: Upload QRMI sdist
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: release-wheels-sdist
+        path: dist/*.tar.gz
+        if-no-files-found: error
+        retention-days: 1
+
+  publish-testpypi:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [build-and-test-wheels, wheels-sdist]
+    runs-on: ubuntu-24.04
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/qrmi/
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: release-wheels-*
+        merge-multiple: true
+        path: dist/
+    - name: Publish QRMI wheels
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        verbose: true
+        print-hash: true
+
+  check-testpypi-release:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [publish-testpypi, valid-qrmi-version]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: 3.12
+    - name: Check published wheel
+      run: |
+        python3.12 -m venv .venv_py312
+        source .venv_py312/bin/activate
+        pip install --upgrade pip
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qrmi==${{ needs.valid-qrmi-version.outputs.version }}
+        pip download --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qrmi==${{ needs.valid-qrmi-version.outputs.version }} --no-binary qrmi --no-deps
+
+  publish-pypi:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [build-and-test-wheels, wheels-sdist, check-testpypi-release, publish-github]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/qrmi
+    permissions:
+      id-token: write  # IMPORTANN: this permission is mandatory for trusted publishing
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: release-wheels-*
+        merge-multiple: true
+        path: dist/
+    - name: Publish QRMI wheels
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        verbose: true
+        print-hash: true
