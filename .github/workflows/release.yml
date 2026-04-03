@@ -88,10 +88,10 @@ jobs:
         run: |
           gh release upload "v${{ needs.valid-qrmi-version.outputs.version }}" libqrmi-${{ needs.valid-qrmi-version.outputs.version }}-el8-x86_64.tar.gz --clobber
     
-  publish-release:
+  publish-github:
     if: github.repository_owner == 'qiskit-community'
-    name: Publish release
-    needs: [valid-qrmi-version, create-draft-release]
+    name: Publish github release
+    needs: [valid-qrmi-version, create-draft-release, test-testpypi-release]
     permissions:
       contents: write # This is required to publish the draft release
     runs-on: ubuntu-24.04
@@ -105,3 +105,108 @@ jobs:
       run: |
         # Make the release live on github
         gh release edit "v${{ needs.valid-qrmi-version.outputs.version }}" --verify-tag --draft=false
+
+  linux-wheel-x86_64:
+    if: github.repository_owner == 'qiskit-community'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: x86_64
+        manylinux: 2_28   # manylinux_2_28 is based on Almalinux 8
+        command: build
+        args: --release --locked -o dist --compatibility pypi -i python3.12
+    - name: Upload QRMI wheels
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: pypi-linux-x86_64
+        path: dist/qrmi-*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  linux-sdist:
+    if: github.repository_owner == 'qiskit-community'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Build sdist
+      uses: PyO3/maturin-action@v1
+      with:
+        target: x86_64
+        manylinux: 2_28
+        command: sdist
+        args: --out dist
+    - name: Upload QRMI sdist
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: pypi-dist
+        path: dist/qrmi-*.tar.gz
+        if-no-files-found: error
+        retention-days: 1
+
+  publish-testpypi:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [linux-wheel-x86_64, linux-sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/qrmi/
+    permissions:
+      id-token: write  # IMPORTANN: this permission is mandatory for trusted publishing
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: pypi-*
+        merge-multiple: true
+        path: dist/
+    - name: Publish QRMI wheels
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        verbose: true
+        print-hash: true
+
+  test-testpypi-release:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [publish-testpypi]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+    - name: Test published wheel
+      run: |
+        python3.12 -m venv .venv_py312
+        source .venv_py312/bin/activate
+        pip install --upgrade pip
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qrmi
+        pip download --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qrmi --no-binary qrmi --no-deps
+        mkdir qrmi && cd qrmi
+        tar xf ../qrmi-*.tar.gz --strip-components=1
+        pip install pytest
+        pytest
+
+  # publish-pypi:
+  #   if: github.repository_owner == 'qiskit-community'
+  #   needs: [linux-wheel-x86_64, linux-sdist, test-testpypi-release]
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: pypi
+  #     url: https://pypi.org/project/qrmi
+  #   permissions:
+  #     id-token: write  # IMPORTANN: this permission is mandatory for trusted publishing
+  #   steps:
+  #   - uses: actions/download-artifact@v6
+  #     with:
+  #       pattern: pypi-*
+  #       merge-multiple: true
+  #       path: dist/
+  #   - name: Publish QRMI wheels
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+  #     with:
+  #       verbose: true
+  #       print-hash: true
