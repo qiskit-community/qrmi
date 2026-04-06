@@ -1,0 +1,50 @@
+---
+# This reusable workflow builds the python wheels for the QRMI package.
+#
+# Workflow inputs:
+# - [required] python-version
+# - [required] container-image
+#
+# Workflow artifacts produced:
+# - [uploaded] qrmi-wheels for the specified Python version. File: qrmi-*.whl
+#
+# Workflow dependencies:
+# - None. It does not depend on any other workflow.
+
+name: Build ppc64le wheels
+on:
+  [push, pull_request, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-ppc64le
+    container:
+      image: quay.io/pypa/manylinux_2_28_ppc64le:latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Create and activate venv for subsequent steps
+      run: |
+        cpython3.12 -m venv .venv
+        echo "${GITHUB_WORKSPACE}/.venv/bin" >> ${GITHUB_PATH}
+
+    - name: Install python requirements
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Build QRMI wheels
+      run: maturin build --release --locked --compatibility pypi
+
+    - name: Upload QRMI wheels
+      uses: actions/upload-artifact@v6
+      if: ${{ success() }}
+      with:
+        name: qrmi-wheels
+        path: target/wheels/qrmi-*.whl
+        if-no-files-found: error
+        retention-days: 5
