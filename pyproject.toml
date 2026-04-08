@@ -37,7 +37,7 @@ keywords = [
 dependencies = [
   "qiskit_ibm_runtime>=0.30.0",
   "qiskit_qasm3_import",
-  "qiskit-pasqal-provider>=0.2.0",
+  "qiskit-pasqal-provider>=0.2.1",
   "pulser>=1.5.3",
   "python-dotenv",
   "python-dateutil",
