@@ -1,4 +1,4 @@
-# Python examples for Pulser backend with Pasqal Cloud QRMI
+# Python examples for Pulser connection with Pasqal Cloud QRMI
 
 ## Prerequisites
 
@@ -36,5 +36,5 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 Use Pulser's `QPUBackend` with `PulserQRMIConnection`.
 
 ```shell-session
-$ python pulser_backend.py
+$ python pulser.py
 ```

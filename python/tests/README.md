@@ -26,7 +26,7 @@ python/
 
 Example:
 
-`python/tests/unit/pulser_backend/test_backend.md`
+`python/tests/unit/pulser/test_connection.py`
 
 This allows:
 

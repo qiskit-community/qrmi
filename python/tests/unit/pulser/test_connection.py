@@ -1,4 +1,4 @@
-"""Tests for pulser backend integration."""
+"""Tests for pulser connection integration."""
 
 import json
 

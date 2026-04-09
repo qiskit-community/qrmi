@@ -131,7 +131,7 @@ See example of Qiskit primitives here [for IBM backends](./examples/qiskit_primi
 The Pasqal example uses provider `SamplerV2` with QRMI backend integration and returns a
 Qiskit result object via `job.result()`.
 
-See [example](./examples/pulser_backend/pasqal/pulser_backend.py) of QRMI working with Pasqal Pulser.
+See [example](./examples/pulser/pasqal/pulser.py) of QRMI working with Pasqal Pulser.
 
 ### Pasqal Cloud Examples
 

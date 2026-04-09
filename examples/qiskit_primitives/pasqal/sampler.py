@@ -11,6 +11,8 @@
 # that they have been altered from the originals.
 
 
+import random
+
 from dotenv import load_dotenv
 from qiskit.circuit import QuantumCircuit
 from qiskit_pasqal_provider.providers.gate import HamiltonianGate, InterpolatePoints
@@ -29,7 +31,8 @@ if len(resources) == 0:
 for res in resources:
     print(f"Available resource: id={res.resource_id()} type={str(res.resource_type())}")
 
-qrmi = next((res for res in resources if res.resource_id() == "EMU_FREE"), resources[0])
+# Randomly select QR
+qrmi = resources[random.randrange(len(resources))]
 
 ######################################################
 #                Create Quantum Program              #

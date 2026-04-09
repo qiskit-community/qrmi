@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright 2025 Pasqal, IBM. All Rights Reserved.
+# (C) Copyright 2025-2026 Pasqal. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory

@@ -345,7 +345,7 @@ fn find_qpu_type(
     qpu_name: String,
 ) -> Option<String> {
     if let Some(index) = qpu_resources.iter().position(|&r| r == qpu_name) {
-        return qpu_types.get(index).map(|qpu_type| (*qpu_type).to_string());
+        return Some(qpu_types[index].to_string());
     }
     None
 }
@@ -416,14 +416,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let qpu_types: Vec<&str> = envvar_qpu_types.split(',').collect();
-    if qpu_names.len() != qpu_types.len() {
-        return Err(eyre!(
-            "Inconsistent specifications of QPU resources and types: SLURM_JOB_QPU_RESOURCES has {} entries while SLURM_JOB_QPU_TYPES has {} entries.",
-            qpu_names.len(),
-            qpu_types.len()
-        )
-        .into());
-    }
 
     let qpu_name = args.qpu_name.clone();
     let res_type: ResourceType;
