@@ -46,6 +46,12 @@ pub struct CreateJob {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct AccessibleResponse {
+    pub is_accessible: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct SessionResponse {
     pub id: String,
 }
@@ -116,6 +122,20 @@ impl Client {
             .send()
             .await?;
 
+        self.handle_request(resp).await
+    }
+
+    pub async fn get_accessible(
+        &self,
+    ) -> Result<AccessibleResponse> {
+        let url = format!("{}/accessible", self.base_url);
+
+        let resp = self
+            .client
+            .get(url)
+            .send()
+            .await?;
+        
         self.handle_request(resp).await
     }
 
