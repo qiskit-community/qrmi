@@ -68,14 +68,8 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn is_accessible(&mut self) -> Result<bool> {
-        match self
-            .api_client
-            .get_accessible()
-            .await
-        {
-            Ok(accessible) => {
-                Ok(accessible.is_accessible)
-            }
+        match self.api_client.get_accessible().await {
+            Ok(accessible) => Ok(accessible.is_accessible),
             Err(err) => Err(err),
         }
     }
