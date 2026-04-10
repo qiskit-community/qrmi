@@ -158,7 +158,7 @@ def test_qpp_sampler_v2_returns_job(monkeypatch):
     assert job.result()[0].data.counts == {"00": 3, "11": 1}
 
 
-def test_get_device_uses_digital_analog_device_without_specs():
+def test_get_device_falls_back_to_dad_without_specs():
     """Return DigitalAnalogDevice when emulator does not expose device specs."""
 
     class _NoSpecsQRMI:

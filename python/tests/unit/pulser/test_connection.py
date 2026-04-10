@@ -64,7 +64,7 @@ def test_supports_open_batch_is_false() -> None:
     assert connection.supports_open_batch() is False
 
 
-def test_init_without_qrmi_uses_single_scheduled_resource(monkeypatch) -> None:
+def test_init_without_qrmi_uses_single_resource(monkeypatch) -> None:
     """Use the only scheduled QRMI resource when no explicit resource is given."""
 
     fake_qrmi = _FakeQRMI()
@@ -72,6 +72,7 @@ def test_init_without_qrmi_uses_single_scheduled_resource(monkeypatch) -> None:
     class _FakeService:
         @staticmethod
         def resources():
+            """Return one resource."""
             return [fake_qrmi]
 
     monkeypatch.setattr("qrmi.pulser.connection.QRMIService", _FakeService)
@@ -85,6 +86,7 @@ def test_init_without_qrmi_raises_when_no_resource(monkeypatch) -> None:
     class _FakeService:
         @staticmethod
         def resources():
+            """Return no resources."""
             return []
 
     monkeypatch.setattr("qrmi.pulser.connection.QRMIService", _FakeService)
@@ -92,7 +94,7 @@ def test_init_without_qrmi_raises_when_no_resource(monkeypatch) -> None:
         PulserQRMIConnection()
 
 
-def test_init_without_qrmi_raises_when_multiple_resources(monkeypatch) -> None:
+def test_init_without_qrmi_raises_for_many_resources(monkeypatch) -> None:
     """Raise if multiple resources are scheduled and no explicit one is selected."""
 
     class _FakeResource(_FakeQRMI):
@@ -101,11 +103,13 @@ def test_init_without_qrmi_raises_when_multiple_resources(monkeypatch) -> None:
             self._resource_id = resource_id
 
         def resource_id(self) -> str:
+            """Return the fake resource id."""
             return self._resource_id
 
     class _FakeService:
         @staticmethod
         def resources():
+            """Return multiple resources."""
             return [_FakeResource("EMU_FREE"), _FakeResource("PASQAL_LOCAL")]
 
     monkeypatch.setattr("qrmi.pulser.connection.QRMIService", _FakeService)
