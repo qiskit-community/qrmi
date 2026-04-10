@@ -32,6 +32,7 @@ from pulser.backend.results import Results
 from pulser.result import SampledResult
 
 from qrmi import Payload, QuantumResource, TaskStatus  # type: ignore
+from qrmi.pulser.service import QRMIService
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +77,28 @@ def _normalize_target_payload(target: typing.Any) -> dict[str, typing.Any]:
 class PulserQRMIConnection(RemoteConnection):
     """A connection to Pasqal QRMI resources, to submit Sequences to QPUs."""
 
-    def __init__(self, qrmi: QuantumResource) -> None:
-        self._qrmi = qrmi
+    def __init__(self, qrmi: QuantumResource | None = None) -> None:
+        self._qrmi = qrmi or self._resolve_single_resource()
         self._batch_job_ids: dict[str, list[str]] = {}
         self._task_sequences: dict[str, pulser.Sequence] = {}
+
+    @staticmethod
+    def _resolve_single_resource() -> QuantumResource:
+        """Return the only accessible QRMI resource in the current job context."""
+        resources = QRMIService().resources()
+        if len(resources) == 1:
+            return resources[0]
+        if len(resources) == 0:
+            raise RuntimeError(
+                "No accessible QRMI resource found. "
+                "Specify one explicitly with PulserQRMIConnection(qrmi=...)."
+            )
+        resource_ids = ", ".join(resource.resource_id() for resource in resources)
+        raise ValueError(
+            "Multiple QRMI resources are available in this job context: "
+            f"{resource_ids}. Specify one explicitly with "
+            "PulserQRMIConnection(qrmi=...)."
+        )
 
     def supports_open_batch(self) -> bool:
         """Flag to confirm this class doesn't support open batch creation."""

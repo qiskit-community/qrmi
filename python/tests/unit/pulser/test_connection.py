@@ -64,6 +64,55 @@ def test_supports_open_batch_is_false() -> None:
     assert connection.supports_open_batch() is False
 
 
+def test_init_without_qrmi_uses_single_scheduled_resource(monkeypatch) -> None:
+    """Use the only scheduled QRMI resource when no explicit resource is given."""
+
+    fake_qrmi = _FakeQRMI()
+
+    class _FakeService:
+        @staticmethod
+        def resources():
+            return [fake_qrmi]
+
+    monkeypatch.setattr("qrmi.pulser.connection.QRMIService", _FakeService)
+    connection = PulserQRMIConnection()
+    assert connection._qrmi is fake_qrmi
+
+
+def test_init_without_qrmi_raises_when_no_resource(monkeypatch) -> None:
+    """Raise if no accessible resource exists in the current job context."""
+
+    class _FakeService:
+        @staticmethod
+        def resources():
+            return []
+
+    monkeypatch.setattr("qrmi.pulser.connection.QRMIService", _FakeService)
+    with pytest.raises(RuntimeError, match="No accessible QRMI resource found"):
+        PulserQRMIConnection()
+
+
+def test_init_without_qrmi_raises_when_multiple_resources(monkeypatch) -> None:
+    """Raise if multiple resources are scheduled and no explicit one is selected."""
+
+    class _FakeResource(_FakeQRMI):
+        def __init__(self, resource_id: str) -> None:
+            super().__init__()
+            self._resource_id = resource_id
+
+        def resource_id(self) -> str:
+            return self._resource_id
+
+    class _FakeService:
+        @staticmethod
+        def resources():
+            return [_FakeResource("EMU_FREE"), _FakeResource("PASQAL_LOCAL")]
+
+    monkeypatch.setattr("qrmi.pulser.connection.QRMIService", _FakeService)
+    with pytest.raises(ValueError, match="Multiple QRMI resources are available"):
+        PulserQRMIConnection()
+
+
 def test_submit_wait_false_returns_remote_results() -> None:
     """Return a remote-results handler with QRMI task IDs."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]

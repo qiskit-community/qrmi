@@ -36,5 +36,5 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 Use Pulser's `QPUBackend` with `PulserQRMIConnection`.
 
 ```shell-session
-$ python pulser.py
+$ python pulser_qrmi.py
 ```

@@ -10,6 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+import ast
 import json
 
 import pulser
@@ -67,4 +68,16 @@ seq.measure("ground-rydberg")
 
 backend = pulser.QPUBackend(seq, qrmi_conn)
 result = backend.run([JobParams(runs=1000, variables=[])], wait=True)
-print(f"Results: {json.loads(result[0])['counter']}")
+raw_result = result[0]
+if isinstance(raw_result, str):
+    try:
+        parsed_result = json.loads(raw_result)
+    except json.JSONDecodeError:
+        parsed_result = ast.literal_eval(raw_result)
+else:
+    parsed_result = raw_result
+if isinstance(parsed_result, dict):
+    counts = parsed_result.get("counter", parsed_result.get("counts", parsed_result))
+else:
+    counts = parsed_result
+print(f"Results: {counts}")
