@@ -20,6 +20,7 @@ import typing
 import uuid
 
 import pulser
+import pulser.abstract_repr
 from pulser.backend.remote import (
     BatchStatus,
     JobParams,
