@@ -129,13 +129,7 @@ impl ResourceType {
                 return Err(eyre!("Failed to open {}. reason = {}", args.input, err).into());
             }
         };
-        let deserialized: QrmiInput = serde_json::from_str(&payload).map_err(|err| {
-            eyre!(
-                "Failed to parse input payload {} as JSON. reason = {}",
-                args.input,
-                err
-            )
-        })?;
+        let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
         if qpu_type == "direct-access" {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
@@ -425,9 +419,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(eyre!("{} is not specified in --qpu option", qpu_name).into());
     }
 
-    let payload = res_type
-        .to_payload()
-        .ok_or_else(|| eyre!("Failed to build payload from the selected resource type."))?;
+    let payload = res_type.to_payload().unwrap();
     let mut qrmi = res_type.create_qrmi(&qpu_name)?;
 
     // setup signal handler for slurm, and start it
