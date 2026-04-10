@@ -125,17 +125,11 @@ impl Client {
         self.handle_request(resp).await
     }
 
-    pub async fn get_accessible(
-        &self,
-    ) -> Result<AccessibleResponse> {
+    pub async fn get_accessible(&self) -> Result<AccessibleResponse> {
         let url = format!("{}/accessible", self.base_url);
 
-        let resp = self
-            .client
-            .get(url)
-            .send()
-            .await?;
-        
+        let resp = self.client.get(url).send().await?;
+
         self.handle_request(resp).await
     }
 
