@@ -62,7 +62,7 @@ def _normalize_pasqal_payload(payload: Any) -> dict[str, Any]:
 
 def _extract_counts(payload: dict[str, Any]) -> dict[str, int]:
     """Return normalized bitstring counts from Pasqal payload."""
-    counter_payload = payload.get("counter", payload)
+    counter_payload = payload.get("counter")
     if not isinstance(counter_payload, dict):
         raise RuntimeError(f"Unsupported counter payload: {counter_payload!r}.")
     counts = {

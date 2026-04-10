@@ -320,7 +320,7 @@ class PulserQRMIConnection(RemoteConnection):
     def _task_result_to_results(self, task_id: str) -> Results:
         raw_result = self._qrmi.task_result(task_id).value
         parsed_result = _normalize_json_payload(raw_result)
-        counter_payload = parsed_result.get("counter", parsed_result)
+        counter_payload = parsed_result.get("counter")
         if not isinstance(counter_payload, dict):
             raise RemoteResultsError(
                 f"Unsupported counter payload for task {task_id!r}: {counter_payload!r}."
