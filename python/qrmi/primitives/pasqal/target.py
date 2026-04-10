@@ -20,7 +20,7 @@ import json
 from typing import Any
 import pulser
 import pulser.abstract_repr
-from pulser import MockDevice
+from pulser import DigitalAnalogDevice
 from pulser.devices import Device
 from qiskit.transpiler.target import Target
 
@@ -67,7 +67,7 @@ def get_device(qrmi: QuantumResource) -> Device:
         target = qrmi.target()
     except RuntimeError as err:
         if _is_missing_device_specs_error(err):
-            return MockDevice
+            return DigitalAnalogDevice
         raise
     target_payload = _normalize_target_payload(target)
     return pulser.abstract_repr.deserialize_device(target_payload)

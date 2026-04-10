@@ -58,7 +58,7 @@ backend = QRMIPasqalBackend(
 sampler = SamplerV2(backend)
 ```
 
-For emulator resources where device specs are not exposed, QRMI falls back to Pulser `MockDevice`.
+For emulator resources where device specs are not exposed, QRMI falls back to Pulser `DigitalAnalogDevice`.
 
 ```shell-session
 $ python sampler.py

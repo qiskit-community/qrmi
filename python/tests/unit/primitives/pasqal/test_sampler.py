@@ -3,7 +3,7 @@
 from qiskit.circuit import QuantumCircuit
 from qiskit.primitives import PrimitiveResult
 from qiskit.providers import JobStatus
-from pulser import MockDevice
+from pulser import DigitalAnalogDevice
 
 from qrmi import TaskStatus
 from qrmi.primitives.pasqal import sampler as pasqal_sampler
@@ -158,8 +158,8 @@ def test_qpp_sampler_v2_returns_job(monkeypatch):
     assert job.result()[0].data.counts == {"00": 3, "11": 1}
 
 
-def test_get_device_uses_mock_device_without_specs():
-    """Return MockDevice when emulator does not expose device specs."""
+def test_get_device_uses_digital_analog_device_without_specs():
+    """Return DigitalAnalogDevice when emulator does not expose device specs."""
 
     class _NoSpecsQRMI:
         @staticmethod
@@ -171,4 +171,4 @@ def test_get_device_uses_mock_device_without_specs():
                 '{"description":"Device specs are not available for emulators."}}'
             )
 
-    assert get_device(_NoSpecsQRMI()) is MockDevice
+    assert get_device(_NoSpecsQRMI()) is DigitalAnalogDevice

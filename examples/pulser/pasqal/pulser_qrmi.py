@@ -40,13 +40,13 @@ qrmi = resources[0]
 qrmi_conn = PulserQRMIConnection(qrmi)
 
 # Generate Pulser device.
-# Emulator targets may not expose device specs so we fall back to the generic AnalogDevice.
+# Emulator targets may not expose device specs so we fall back to DigitalAnalogDevice.
 # For a real program, you may want to manually fetch the device specs and construct the corresponding Pulser device.
 # This can, for example, be done by using the PasqalCloud package.
 try:
     device = get_device(qrmi)
 except RuntimeError:
-    device = pulser.AnalogDevice
+    device = pulser.DigitalAnalogDevice
 
 reg = Register(
     {
