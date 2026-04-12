@@ -200,6 +200,50 @@ QRMI is used in Slurm plugin to control quantum resources during lifetime of Slu
 
 See implementation and documentation of [Slurm plugin for quantum resources here](https://github.com/qiskit-community/spank-plugins).
 
+----
+
+### Pre-commit detect-secrets 
+`detect-secrets` is an open-source, developer-friendly tool designed to scan 
+codebases for mistakenly committed secrets—such as API keys, passwords, and 
+private tokens—before they leak. To keep our credentials secure, we recommend 
+that all developers integrate this into their workflow using the following 
+instructions.
+
+* Prerequisites: Before you begin, ensure you have a Python virtual environment 
+  (venv) active. You will need to install pre-commit, which manages the hooks 
+  that run detect-secrets automatically.
+
+```
+pip install pre-commit
+pre-commit install
+```
+Please find `.pre-commit-config.yaml` for the initial setup.  
+Following command was used to generate `.secrets.baseline` and to maximize the 
+detection coverage. 
+```
+detect-secrets scan --force-use-all-plugins > .secrets.baseline
+```
+**Handling False Positives**   
+If the pre-commit hook identifies a secret that you have verified is not 
+sensitive (a false positive), please use the following command to audit and 
+update the baseline file. Once updated, include the modified .secrets.baseline 
+in your Pull Request to ensure the pre-commit passes in the future.
+```
+pip install detect-secrets
+detect-secrets scan --baseline .secrets.baseline
+detect-secrets audit .secrets.baseline
+```
+**Manual Execution and Overrides**  
+To manually trigger a scan of all files in the repository for a local sanity check, execute the following command:
+```
+pre-commit run --all-files
+```
+
+**Bypassing the Hook (Not Recommended)**   
+While not recommended, if you must force a commit without running the pre-commit checks (e.g., during an emergency fix), you may use the `--no-verify` flag:
+```
+git commit -m "Your message" --no-verify
+```
 
 ----
 
