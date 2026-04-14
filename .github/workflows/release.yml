@@ -16,6 +16,10 @@ on:
   workflow_dispatch:
   
 jobs:
+
+  # Check if the current QRMI version has already been released.
+  # It also provides the checked QRMI version to other jobs through
+  # the needs field.
   valid-qrmi-version:
     if: github.repository_owner == 'qiskit-community'
     name: Check new QRMI version is valid
@@ -47,6 +51,7 @@ jobs:
   create-libqrmi-tarball-rhel:
     if: github.repository_owner == 'qiskit-community'
     name: Create libqrmi tarball for RHEL compatible distributions
+    needs: [valid-qrmi-version]
     uses: ./.github/workflows/tarball-libqrmi-el8.yml
       
   create-draft-release:
@@ -108,6 +113,7 @@ jobs:
 
   build-and-test-wheels:
     if: github.repository_owner == 'qiskit-community'
+    needs: [valid-qrmi-version]
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
@@ -133,6 +139,7 @@ jobs:
 
   wheels-sdist:
     if: github.repository_owner == 'qiskit-community'
+    needs: [valid-qrmi-version]
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
