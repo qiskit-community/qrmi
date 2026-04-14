@@ -14,12 +14,13 @@ import json
 
 import pulser
 from dotenv import load_dotenv
-from pulser import Pulse, Register, Sequence
+from pulser import Pulse, Sequence
 from pulser.backend.remote import JobParams
+from pulser.register import Register
 from target import get_device
 
-from qrmi.pulser_backend.backend import PulserQRMIBackend, PulserQRMIConnection
-from qrmi.pulser_backend.service import QRMIService
+from qrmi.pulser.connection import PulserQRMIConnection
+from qrmi.pulser.service import QRMIService
 
 # Create QRMI
 load_dotenv()
@@ -39,13 +40,13 @@ qrmi = resources[0]
 qrmi_conn = PulserQRMIConnection(qrmi)
 
 # Generate Pulser device.
-# Emulator targets may not expose device specs so we fall back to the generic AnalogDevice.
+# Emulator targets may not expose device specs so we fall back to DigitalAnalogDevice.
 # For a real program, you may want to manually fetch the device specs and construct the corresponding Pulser device.
 # This can, for example, be done by using the PasqalCloud package.
 try:
     device = get_device(qrmi)
 except RuntimeError:
-    device = pulser.AnalogDevice
+    device = pulser.DigitalAnalogDevice
 
 reg = Register(
     {
@@ -64,6 +65,6 @@ pulse1 = Pulse.ConstantPulse(100, 2, 2, 0)
 seq.add(pulse1, "rydberg")
 seq.measure("ground-rydberg")
 
-backend = PulserQRMIBackend(seq, qrmi_conn)
+backend = pulser.QPUBackend(seq, qrmi_conn)
 result = backend.run([JobParams(runs=1000, variables=[])], wait=True)
 print(f"Results: {json.loads(result[0])['counter']}")

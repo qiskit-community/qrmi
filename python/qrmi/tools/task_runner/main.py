@@ -117,7 +117,7 @@ class App:
         for index, qpu_resource in enumerate(qpu_resources):
             if qpu_resource == qpu_name:
                 return self.RESOURCE_TYPE_MAP[qpu_types[index]]
-        return ValueError(f"{qpu_name} is not available")
+        raise ValueError(f"{qpu_name} is not available")
 
     def _exit_callback(self):
         """A callback called when program is finished.
