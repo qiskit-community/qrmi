@@ -91,7 +91,7 @@ jobs:
   publish-github:
     if: github.repository_owner == 'qiskit-community'
     name: Publish github release
-    needs: [valid-qrmi-version, create-draft-release, check-testpypi-release]
+    needs: [valid-qrmi-version, create-draft-release]
     permissions:
       contents: write # This is required to publish the draft release
     runs-on: ubuntu-24.04
@@ -152,13 +152,13 @@ jobs:
         if-no-files-found: error
         retention-days: 1
 
-  publish-testpypi:
+  publish-pypi:
     if: github.repository_owner == 'qiskit-community'
-    needs: [build-and-test-wheels, wheels-sdist]
-    runs-on: ubuntu-24.04
+    needs: [build-and-test-wheels, wheels-sdist, publish-github]
+    runs-on: ubuntu-latest
     environment:
-      name: testpypi
-      url: https://test.pypi.org/project/qrmi/
+      name: pypi
+      url: https://pypi.org/project/qrmi
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
@@ -170,13 +170,16 @@ jobs:
     - name: Publish QRMI wheels
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        repository-url: https://test.pypi.org/legacy/
         verbose: true
         print-hash: true
 
-  check-testpypi-release:
+  # Once a package version is released to either pypi.org or test.pypi.org,
+  # it cannot be overwritten or deleted/reused. This job checks if the
+  # version released to pypi can be installed and downloaded correctly.
+  # That could help to catch and address issues early.
+  check-pypi-post-release:
     if: github.repository_owner == 'qiskit-community'
-    needs: [publish-testpypi, valid-qrmi-version]
+    needs: [publish-pypi, valid-qrmi-version]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-python@v6
@@ -187,26 +190,5 @@ jobs:
         python3.12 -m venv .venv_py312
         source .venv_py312/bin/activate
         pip install --upgrade pip
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qrmi==${{ needs.valid-qrmi-version.outputs.version }}
-        pip download --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qrmi==${{ needs.valid-qrmi-version.outputs.version }} --no-binary qrmi --no-deps
-
-  publish-pypi:
-    if: github.repository_owner == 'qiskit-community'
-    needs: [build-and-test-wheels, wheels-sdist, check-testpypi-release, publish-github]
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/project/qrmi
-    permissions:
-      id-token: write  # IMPORTANN: this permission is mandatory for trusted publishing
-    steps:
-    - uses: actions/download-artifact@v8
-      with:
-        pattern: release-wheels-*
-        merge-multiple: true
-        path: dist/
-    - name: Publish QRMI wheels
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        verbose: true
-        print-hash: true
+        pip install qrmi==${{ needs.valid-qrmi-version.outputs.version }}
+        pip download qrmi==${{ needs.valid-qrmi-version.outputs.version }} --no-binary qrmi --no-deps
