@@ -43,7 +43,7 @@ dependencies = [
   "python-dateutil",
 ]
 [project.urls]
-repository = "https://github.com/qiskit-community/spank-plugins"
+repository = "https://github.com/qiskit-community/qrmi"
 
 [tool.maturin]
 python-source = "python"
