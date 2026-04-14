@@ -35,7 +35,7 @@ jobs:
 
     - name: Create libqrmi tarball for RHEL compatible distributions
       run: |
-        make dist-rhel-lib
+        make tarball-libqrmi-el8
 
     - name: Get QRMI version
       id: qrmi-version
