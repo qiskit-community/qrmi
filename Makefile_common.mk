@@ -20,7 +20,8 @@ MAKEFLAGS += --no-print-directory
 get-qrmi-version:
 	@echo "$(QRMI_VERSION)"
 
-# Before releasing a new qrmi version, we check if the current version was not released yet
+# Before releasing a new qrmi version, we check if the current version
+# was not released yet in github and pypi.
 check-new-qrmi-version-valid:
 	@NEW_QRMI_VERSION=$$($(MAKE) get-qrmi-version); \
 	if [ -z "$${NEW_QRMI_VERSION}" ]; then \
@@ -34,6 +35,11 @@ check-new-qrmi-version-valid:
 		exit 1; \
 	elif [ "$${HTTP_CODE}" != "404" ]; then \
 		echo "Error: Failed to check GitHub releases (HTTP $${HTTP_CODE})"; \
+		exit 1; \
+	fi; \
+	if curl -s https://pypi.org/pypi/qrmi/json | jq -r '.releases | keys[]' | grep -q "$${NEW_QRMI_VERSION}"; then \
+		echo "Error: Release v$${NEW_QRMI_VERSION} already exists in PyPI"; \
+		echo "Please update the version in Cargo.toml and try again"; \
 		exit 1; \
 	fi; \
 	echo "New QRMI version v$${NEW_QRMI_VERSION} is valid"
