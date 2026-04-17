@@ -57,7 +57,7 @@ jobs:
       run: maturin build --release
 
     - name: Upload QRMI wheels
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: ${{ success() }}
       with:
         name: qrmi-wheels

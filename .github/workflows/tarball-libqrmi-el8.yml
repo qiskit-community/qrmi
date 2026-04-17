@@ -25,7 +25,7 @@ jobs:
       image: registry.access.redhat.com/ubi8/ubi:8.10
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Install package dependencies from distro
       run: xargs dnf install -y < requirements-distro.txt
@@ -45,7 +45,7 @@ jobs:
         echo "QRMI version: $VERSION"
 
     - name: Upload libqrmi tarball
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: ${{ success() }}
       with:
         name: libqrmi-${{ steps.qrmi-version.outputs.value }}-el8-x86_64-tarball

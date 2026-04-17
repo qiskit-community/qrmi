@@ -24,7 +24,7 @@ jobs:
       image: 'registry.access.redhat.com/ubi8/ubi:8.10'
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Install package dependencies from distro
       run: xargs dnf install -y < requirements-distro.txt
@@ -43,7 +43,7 @@ jobs:
       run: make tarball-vendor
 
     - name: Upload vendor tarball
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: qrmi-vendor-tarball
         path: qrmi-${{ steps.qrmi-info.outputs.version }}-vendor.tar.gz

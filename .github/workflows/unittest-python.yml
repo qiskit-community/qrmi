@@ -38,7 +38,7 @@ jobs:
       run: xargs dnf install -y < requirements-distro.txt
 
     - name: Download QRMI wheels
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
       with:
         name: qrmi-wheels
 

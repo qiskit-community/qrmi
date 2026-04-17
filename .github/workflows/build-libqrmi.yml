@@ -47,7 +47,7 @@ jobs:
 
     # Upload artifacts to help developers with testing/debugging in their local environment
     - name: Upload libqrmi qrmi.h and librqmi.so
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: ${{ success() }}
       with:
         name: libqrmi-artifacts
