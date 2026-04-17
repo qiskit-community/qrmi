@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.qrmi-info.outputs.version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Ubuntu runner already comes with the package make installed
 
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Create draft release
         env:
@@ -72,7 +72,7 @@ jobs:
           gh release create --draft --generate-notes --title "QRMI v${{ needs.valid-qrmi-version.outputs.version }}" "v${{ needs.valid-qrmi-version.outputs.version }}"
   
       - name: Download vendor tarball
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: qrmi-vendor-tarball
 
@@ -83,7 +83,7 @@ jobs:
           gh release upload "v${{ needs.valid-qrmi-version.outputs.version }}" qrmi-${{ needs.valid-qrmi-version.outputs.version }}-vendor.tar.gz --clobber
 
       - name: Download libqrmi tarball for RHEL compatible distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: libqrmi-${{ needs.valid-qrmi-version.outputs.version }}-el8-x86_64-tarball
 
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Publish release
       env:
@@ -129,7 +129,7 @@ jobs:
         CIBW_PLATFORM: linux
         CIBW_BUILD: cp312-manylinux_x86_64
     - name: Upload QRMI wheels
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: ${{ success() }}
       with:
         name: release-wheels-x86_64
