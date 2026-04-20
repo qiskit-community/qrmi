@@ -40,6 +40,7 @@ quantum-system-api = { path = "dependencies/quantum_system_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
+alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.25.0", features = ["anyhow"], optional = true }
 ffi_helpers = "0.3.0"
@@ -58,6 +59,7 @@ members = [
     "dependencies/quantum_system_client",
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
+    "dependencies/alice_bob_felis_client",
 ]
 resolver = "2"
 
