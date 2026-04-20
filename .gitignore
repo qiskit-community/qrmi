@@ -83,3 +83,6 @@ share/python-wheels/
 *.egg
 MANIFEST
 *.tar.gz
+
+# dotenv
+.env
