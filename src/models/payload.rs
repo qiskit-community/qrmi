@@ -24,6 +24,8 @@ pub enum Payload {
     QiskitPrimitive { input: String, program_id: String },
     /// Payload for Pasqal Cloud
     PasqalCloud { sequence: String, job_runs: i32 },
+    /// Payload for Alice and Bob's Cloud API AKA. Felis
+    AliceBobFelis { human_qir: String, input_params: String },
 }
 #[cfg(feature = "pyo3")]
 define_stub_info_gatherer!(stub_info);
