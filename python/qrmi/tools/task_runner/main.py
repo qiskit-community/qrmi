@@ -112,8 +112,8 @@ class App:
         Returns:
             ResourceType: ResourceType of `qpu_name`
         """
-        qpu_resources = self._get_list_envvars("SLURM_JOB_QPU_RESOURCES")
-        qpu_types = self._get_list_envvars("SLURM_JOB_QPU_TYPES")
+        qpu_resources = self._get_list_envvars("QRMI_QPU_RESOURCES")
+        qpu_types = self._get_list_envvars("QRMI_QPU_TYPES")
         for index, qpu_resource in enumerate(qpu_resources):
             if qpu_resource == qpu_name:
                 return self.RESOURCE_TYPE_MAP[qpu_types[index]]
@@ -147,7 +147,8 @@ class App:
                 f"The environment variable `{envvar_name}` is not set "
                 "and as such configuration could not be loaded."
             )
-        return values.split(",")
+        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
+        return values.split(sep)
 
     @property
     def is_running(self) -> bool:

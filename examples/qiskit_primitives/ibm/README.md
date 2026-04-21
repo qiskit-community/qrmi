@@ -24,8 +24,8 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `ibm_torino,ibm_brisbane` |
-| SLURM_JOB_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `SLURM_JOB_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`ibm-quantum-system`</li><li>`qiskit-runtime-service`</li></ul> |
+| QRMI_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `ibm_torino,ibm_brisbane` |
+| QRMI_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `QRMI_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`ibm-quantum-system`</li><li>`qiskit-runtime-service`</li></ul> |
 
 ### IBM Quantum System specific
 
@@ -46,8 +46,8 @@ When run as a job in a Slurm cluster, these environment variables are set by use
 
 #### Example
 ```shell-session
-export SLURM_JOB_QPU_RESOURCES=test_eagle
-export SLURM_JOB_QPU_TYPES=ibm-quantum-system
+export QRMI_QPU_RESOURCES=test_eagle
+export QRMI_QPU_TYPES=ibm-quantum-system
 export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
 export test_eagle_QRMI_IBM_QS_IAM_ENDPOINT=https://iam.cloud.ibm.com
 export test_eagle_QRMI_IBM_QS_IAM_APIKEY=your_apikey
@@ -77,8 +77,8 @@ System execution time is the amount of time that the system is dedicated to proc
 
 #### Example
 ```shell-session
-export SLURM_JOB_QPU_RESOURCES=ibm_torino,ibm_marrakesh
-export SLURM_JOB_QPU_TYPES=qiskit-runtime-service,qiskit-runtime-service
+export QRMI_QPU_RESOURCES=ibm_torino,ibm_marrakesh
+export QRMI_QPU_TYPES=qiskit-runtime-service,qiskit-runtime-service
 export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
 export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
 export ibm_torino_QRMI_IBM_QRS_IAM_APIKEY=your_apikey

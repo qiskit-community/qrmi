@@ -24,8 +24,8 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `FRESNEL` |
-| SLURM_JOB_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `SLURM_JOB_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`pasqal-cloud`</li></ul> |
+| QRMI_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `FRESNEL` |
+| QRMI_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `QRMI_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`pasqal-cloud`</li></ul> |
 
 
 

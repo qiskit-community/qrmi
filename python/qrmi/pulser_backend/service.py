@@ -31,19 +31,20 @@ class QRMIService:
         if plugin_error is not None:
             raise RuntimeError(plugin_error)
 
-        qpus = os.environ["SLURM_JOB_QPU_RESOURCES"]
+        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
+        qpus = os.environ["QRMI_QPU_RESOURCES"]
         logger.debug("qpus: %s", qpus)
         if len(qpus) == 0:
             qpus = []
         else:
-            qpus = qpus.split(",")
+            qpus = qpus.split(sep)
 
-        qpu_types = os.environ["SLURM_JOB_QPU_TYPES"]
+        qpu_types = os.environ["QRMI_QPU_TYPES"]
         logger.debug("qpu types: %s", qpu_types)
         if len(qpu_types) == 0:
             qpu_types = []
         else:
-            qpu_types = qpu_types.split(",")
+            qpu_types = qpu_types.split(sep)
 
         if len(qpus) != len(qpu_types):
             raise ValueError("Inconsistent specifications of QPU resources and types")
