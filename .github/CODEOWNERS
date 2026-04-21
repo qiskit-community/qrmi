@@ -37,6 +37,10 @@
 /examples/**/ibm_quantum_system/                @ohtanim @yoonho
 /examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga
 
+/src/alice_bob/                                 @machjn
+/dependencies/quantum_system_client/            @machjn
+/examples/**/alice_bob/                         @machjn
+
 # Override the release notes directories to have _no_ code owners, so any review
 # from somebody with write access is acceptable.
 /releasenotes/notes
