@@ -390,12 +390,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| ",".to_string());
 
-    let envvar_qpu_names = match env::var("QRMI_QPU_RESOURCES") {
+    let envvar_qpu_names = match env::var("SLURM_JOB_QPU_RESOURCES") {
         Ok(v) => v,
         Err(err) => {
             return Err(
                 eyre!(
-                    "The environment variable `QRMI_QPU_RESOURCES` is not set and as such configuration could not be loaded. reason = {}",
+                    "The environment variable `SLURM_JOB_QPU_RESOURCES` is not set and as such configuration could not be loaded. reason = {}",
                     err)
                 .into()
             );
@@ -403,12 +403,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let qpu_names: Vec<&str> = envvar_qpu_names.split(&delimiter).collect();
 
-    let envvar_qpu_types = match env::var("QRMI_QPU_TYPES") {
+    let envvar_qpu_types = match env::var("SLURM_JOB_QPU_TYPES") {
         Ok(v) => v,
         Err(err) => {
             return Err(
                 eyre!(
-                    "The environment variable `QRMI_QPU_TYPES` is not set and as such configuration could not be loaded. reason = {}",
+                    "The environment variable `SLURM_JOB_QPU_TYPES` is not set and as such configuration could not be loaded. reason = {}",
                     err)
                 .into()
             );
