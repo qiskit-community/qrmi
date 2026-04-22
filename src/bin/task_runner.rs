@@ -385,6 +385,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
     }
 
+    let delimiter = env::var("QRMI_LIST_DELIMITER")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| ",".to_string());
+
     let envvar_qpu_names = match env::var("SLURM_JOB_QPU_RESOURCES") {
         Ok(v) => v,
         Err(err) => {
@@ -396,7 +401,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
     };
-    let qpu_names: Vec<&str> = envvar_qpu_names.split(',').collect();
+    let qpu_names: Vec<&str> = envvar_qpu_names.split(&delimiter).collect();
 
     let envvar_qpu_types = match env::var("SLURM_JOB_QPU_TYPES") {
         Ok(v) => v,
@@ -409,7 +414,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
     };
-    let qpu_types: Vec<&str> = envvar_qpu_types.split(',').collect();
+    let qpu_types: Vec<&str> = envvar_qpu_types.split(&delimiter).collect();
 
     let qpu_name = args.qpu_name.clone();
     let res_type: ResourceType;

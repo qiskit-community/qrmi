@@ -147,7 +147,8 @@ class App:
                 f"The environment variable `{envvar_name}` is not set "
                 "and as such configuration could not be loaded."
             )
-        return values.split(",")
+        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
+        return values.split(sep)
 
     @property
     def is_running(self) -> bool:
