@@ -127,7 +127,7 @@ class PulserQRMIConnection(RemoteConnection):
 
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
-    ) -> pulser.Sequence[Results]:
+    ) -> typing.Sequence[Results]:
         jobs = self._query_job_progress(batch_id)
         selected_job_ids = list(jobs.keys()) if job_ids is None else job_ids
         results: list[Results] = []
