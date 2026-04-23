@@ -114,7 +114,13 @@ jobs:
   build-and-test-wheels:
     if: github.repository_owner == 'qiskit-community'
     needs: [valid-qrmi-version]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
@@ -132,7 +138,37 @@ jobs:
       uses: actions/upload-artifact@v7
       if: ${{ success() }}
       with:
-        name: release-wheels-x86_64
+        name: release-wheels-${{ matrix.os }}
+        path: ./wheelhouse/*.whl
+        if-no-files-found: error
+        retention-days: 1
+  crossbuild-ppc64_wheels:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [valid-qrmi-version]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: 3.12
+    - uses: docker/setup-qemu-action@v4
+      with:
+        platforms: all
+    # The manylinux image comes with various cpython versions installed.
+    # We use the cpython 3.12 to build the wheels, as defined in the CIBW_BUILD.
+    # The generated wheels is abi3 compatible, so it is compatible with other python versions.
+    - name: Build QRMI wheels
+      uses: pypa/cibuildwheel@v3.4.1
+      env:
+        CIBW_PLATFORM: linux
+        CIBW_BUILD: cp312-manylinux_ppc64le
+        CIBW_ARCHS_LINUX: ppc64le
+        CIBW_TEST_SKIP: "cp*"
+    - name: Upload QRMI wheels
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: release-wheels-ppc64le
         path: ./wheelhouse/*.whl
         if-no-files-found: error
         retention-days: 1
