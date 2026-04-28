@@ -35,13 +35,21 @@ keywords = [
     "rust",
 ]
 dependencies = [
-  "qiskit_ibm_runtime>=0.30.0",
-  "qiskit_qasm3_import",
-  "qiskit-pasqal-provider>=0.1.1",
-  "pulser>=1.5.3",
   "python-dotenv",
   "python-dateutil",
 ]
+
+[project.optional-dependencies]
+ibm = [
+  "qiskit_ibm_runtime>=0.30.0",
+  "qiskit_qasm3_import",
+]
+pasqal = [
+  "qiskit-pasqal-provider>=0.1.1",
+  "pulser>=1.5.3",
+]
+all = ["qrmi[ibm,pasqal]"]
+
 [project.urls]
 repository = "https://github.com/qiskit-community/qrmi"
 

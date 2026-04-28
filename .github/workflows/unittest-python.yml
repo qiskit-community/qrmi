@@ -56,7 +56,7 @@ jobs:
       run: pip install -r requirements-dev.txt
 
     - name: Install QRMI wheels
-      run: pip install qrmi-*.whl
+      run: pip install "$(ls qrmi-*.whl)[all]"
 
     - name: Unittest with pytest
       run: pytest -v ./python
