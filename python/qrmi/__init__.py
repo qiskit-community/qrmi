@@ -14,4 +14,4 @@
 
 """QRMI python package"""
 
-from ._core import *
+from ._core import *  # pylint: disable=import-error
