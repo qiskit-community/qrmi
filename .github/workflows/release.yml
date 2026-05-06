@@ -121,7 +121,7 @@ jobs:
         os:
           - ubuntu-24.04
           - ubuntu-24.04-arm
-          - ubuntu-24.04-ppc64le
+        #  - ubuntu-24.04-ppc64le
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
@@ -129,8 +129,10 @@ jobs:
         python-version: 3.12
     - name: Build QRMI wheels
       uses: pypa/cibuildwheel@v3.4.1
+      # Skip free-threaded python for qiskit installation
       env:
         CIBW_TEST_EXTRAS: all
+        CIBW_SKIP: "cp*t-*"
     - name: Upload QRMI wheels
       uses: actions/upload-artifact@v7
       if: ${{ success() }}
