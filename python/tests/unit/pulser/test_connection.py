@@ -129,20 +129,24 @@ def test_submit_wait_false_returns_remote_results() -> None:
 
     assert remote_results.batch_id == "job-1"
     assert remote_results.job_ids == ["job-1"]
+    assert len(remote_results.results) == 1
+    assert remote_results.results[0].bitstring_counts == {"0": 3}
 
 
-def test_submit_wait_true_returns_legacy_payload_shape() -> None:
-    """Return legacy raw payloads when wait=True."""
+def test_submit_wait_true_returns_remote_results() -> None:
+    """Return remote-results payloads when wait=True."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
 
-    result = connection.submit(
+    remote_results = connection.submit(
         _build_sequence(),
         wait=True,
         job_params=[{"runs": 5}],
     )
 
-    assert isinstance(result, list)
-    assert json.loads(result[0])["counter"] == {"0": 3}
+    assert remote_results.batch_id == "job-1"
+    assert remote_results.job_ids == ["job-1"]
+    assert len(remote_results.results) == 1
+    assert remote_results.results[0].bitstring_counts == {"0": 3}
 
 
 def test_remote_results_return_sampled_result() -> None:
