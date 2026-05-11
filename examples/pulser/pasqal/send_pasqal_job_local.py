@@ -12,8 +12,8 @@
 import json
 import os
 from dotenv import load_dotenv
-from pulser import Pulse, Register, Sequence
-from pulser.backend.remote import JobParams, RemoteBackend
+from pulser import Pulse, Register, Sequence, QPUBackend
+from pulser.backend.remote import JobParams
 from pulser.json.abstract_repr.deserializer import (
     deserialize_device,
 )
@@ -65,6 +65,6 @@ seq.add(pulse1, "rydberg")
 seq.measure("ground-rydberg")
 
 
-backend = RemoteBackend(seq, qrmi_conn)
+backend = QPUBackend(seq, qrmi_conn)
 result = backend.run([JobParams(runs=500, variables=[])], wait=True)
 print("results", result)

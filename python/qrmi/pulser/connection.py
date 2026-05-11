@@ -128,6 +128,7 @@ class PulserQRMIConnection(RemoteConnection):
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
     ) -> typing.Sequence[Results]:
+        """Fetches the results of a completed batch."""
         jobs = self._query_job_progress(batch_id)
         selected_job_ids = list(jobs.keys()) if job_ids is None else job_ids
         results: list[Results] = []
@@ -147,6 +148,7 @@ class PulserQRMIConnection(RemoteConnection):
         return tuple(results)
 
     def _get_batch_status(self, batch_id: str) -> BatchStatus:
+        """Gets the status of a batch from its ID."""
         statuses = [
             self._to_job_status(self._qrmi.task_status(job_id))
             for job_id in self._get_job_ids(batch_id)
@@ -166,6 +168,13 @@ class PulserQRMIConnection(RemoteConnection):
     def _query_job_progress(
         self, batch_id: str
     ) -> typing.Mapping[str, tuple[JobStatus, Results | None]]:
+        """Fetches the status and results of all the jobs in a batch.
+
+        Unlike `_fetch_result`, this method does not raise an error if some
+        jobs in the batch do not have results.
+
+        It returns a dictionary mapping the job ID to its status and results.
+        """
         progress: dict[str, tuple[JobStatus, Results | None]] = {}
         for job_id in self._get_job_ids(batch_id):
             status = self._to_job_status(self._qrmi.task_status(job_id))
@@ -173,15 +182,9 @@ class PulserQRMIConnection(RemoteConnection):
             if status == JobStatus.DONE:
                 try:
                     result = self._task_result_to_results(job_id)
-                except (
-                    RemoteResultsError,
-                    json.JSONDecodeError,
-                    KeyError,
-                    TypeError,
-                    ValueError,
-                ) as err:
+                except Exception:
                     logger.warning(
-                        "Failed to parse QRMI result for job %s: %s", job_id, err
+                        "Failed to parse QRMI result for job %s", job_id, exc_info=True
                     )
             progress[job_id] = (status, result)
         return progress
@@ -193,13 +196,8 @@ class PulserQRMIConnection(RemoteConnection):
         open: bool = False,  # pylint: disable=redefined-builtin
         batch_id: str | None = None,
         **kwargs: typing.Any,
-    ) -> RemoteResults | list[typing.Any]:
-        """Submits the sequence for execution on a remote Pasqal backend.
-
-        For compatibility with older QRMI Pulser examples:
-        - `wait=False` returns `RemoteResults`
-        - `wait=True` returns the legacy list of raw QRMI payloads.
-        """
+    ) -> RemoteResults:
+        """Submits the sequence for execution on a remote Pasqal backend."""
         if open:
             raise NotImplementedError("Open batches are not implemented in QRMI.")
         sequence = self._add_measurement_to_sequence(sequence)
@@ -272,29 +270,25 @@ class PulserQRMIConnection(RemoteConnection):
         new_batch_id = new_job_ids[0] if len(new_job_ids) == 1 else str(uuid.uuid4())
         self._batch_job_ids[new_batch_id] = new_job_ids
 
-        if not wait:
-            return self.get_results(batch_id=new_batch_id, job_ids=new_job_ids)
+        if wait:
+            for job_id in new_job_ids:
+                self._wait_job_execution(job_id)
 
-        raw_results: list[typing.Any] = []
-        for job_id in new_job_ids:
-            while True:
-                status = self._qrmi.task_status(job_id)
-                if status == TaskStatus.Completed:
-                    raw_results.append(self._qrmi.task_result(job_id).value)
-                    break
-                if status in (TaskStatus.Failed, TaskStatus.Cancelled):
-                    break
-                time.sleep(1)
+        return RemoteResults(
+            batch_id=new_batch_id, connection=self, job_ids=new_job_ids
+        )
 
-        return raw_results
-
-    def get_results(
-        self,
-        batch_id: str,
-        job_ids: list[str] | None = None,
-    ) -> RemoteResults:
-        """Gets the results handle for a specific batch."""
-        return RemoteResults(batch_id=batch_id, connection=self, job_ids=job_ids)
+    def _wait_job_execution(self, job_id: str):
+        "Waits until job execution is complete"
+        while True:
+            status = self._qrmi.task_status(job_id)
+            if status in (
+                TaskStatus.Completed,
+                TaskStatus.Failed,
+                TaskStatus.Cancelled,
+            ):
+                break
+            time.sleep(1)
 
     def _get_job_ids(self, batch_id: str) -> list[str]:
         if batch_id in self._batch_job_ids:
