@@ -1,0 +1,47 @@
+---
+# workflow that runs a major set of tests on a defined schedule 
+
+name: Schedule
+
+on:
+  # Runs at 00:00 UTC every Saturday
+  schedule:
+  - cron: '0 0 * * 6'
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+  # Select all supported architectures for libqrmi in this worflow.
+  # All tasks are performed in the selected architectures
+  libqrmi:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/build-libqrmi.yml
+    with:
+      arch-x86_64: true
+      arch-ppc64le: true
+      arch-arm64: true
+      build-target: 'all'
+      unit-test-target: 'all'
+      lint-target: 'all'
+      format-check: true
+      libqrmi-tarball: true
+      vendor-tarball: true
+      artifact-prefix: 'schedule'
+
+  # Select all supported architectures for wheels in this worflow.
+  # All tasks are performed in the selected architectures
+  wheels:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/build-wheels.yml
+    with:
+      arch-x86_64: true
+      arch-ppc64le: true
+      arch-arm64: true
+      unit-test: true
+      format-check: true
+      lint: true
+      sdist: true
+      artifact-prefix: 'schedule'
