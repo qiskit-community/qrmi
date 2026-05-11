@@ -146,8 +146,11 @@ impl QuantumResource for PasqalLocal {
         }
     }
 
-    async fn task_logs(&mut self, _task_id: &str) -> Result<String> {
-        Ok("There are no logs for this job.".to_string())
+    async fn task_logs(&mut self, task_id: &str) -> Result<String> {
+        match self.api_client.get_task_logs(task_id).await {
+            Ok(resp) => Ok(resp.logs),
+            Err(err) => Err(err),
+        }
     }
 
     async fn target(&mut self) -> Result<Target> {

@@ -141,6 +141,16 @@ class PulserQRMIConnection(RemoteConnection):
                     break
                 print(f"Task status {status}, waiting 1s", flush=True)
                 time.sleep(1)
+            try:
+                logs = self._qrmi.task_logs(new_task_id)
+                print(f"Task logs: \n---\n{logs}---")
+            except RuntimeError as err:
+                if "404" in repr(err):
+                    print(
+                        "Task logs: Your Warden version doesn't support task_logs yet"
+                    )
+                else:
+                    raise err
         return results
 
 
