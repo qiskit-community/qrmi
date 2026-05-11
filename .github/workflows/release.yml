@@ -36,7 +36,7 @@ jobs:
   libqrmi:
     if: github.repository_owner == 'qiskit-community'
     needs: [qrmi-info]
-    uses: ./.github/workflows/build-libqrmi.yml
+    uses: ./.github/workflows/libqrmi.yml
     with:
       arch-x86_64: true
       arch-arm64: true
@@ -82,7 +82,7 @@ jobs:
   wheels:
     if: github.repository_owner == 'qiskit-community'
     needs: [qrmi-info]
-    uses: ./.github/workflows/build-wheels.yml
+    uses: ./.github/workflows/wheels.yml
     with:
       arch-x86_64: true
       arch-arm64: true
