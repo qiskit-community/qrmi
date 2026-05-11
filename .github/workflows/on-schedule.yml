@@ -18,7 +18,7 @@ jobs:
   # All tasks are performed in the selected architectures
   libqrmi:
     if: github.repository_owner == 'qiskit-community'
-    uses: ./.github/workflows/build-libqrmi.yml
+    uses: ./.github/workflows/libqrmi.yml
     with:
       arch-x86_64: true
       arch-ppc64le: true
@@ -35,7 +35,7 @@ jobs:
   # All tasks are performed in the selected architectures
   wheels:
     if: github.repository_owner == 'qiskit-community'
-    uses: ./.github/workflows/build-wheels.yml
+    uses: ./.github/workflows/wheels.yml
     with:
       arch-x86_64: true
       arch-ppc64le: true
