@@ -37,6 +37,16 @@ from qrmi.pulser.service import QRMIService
 
 logger = logging.getLogger(__name__)
 
+_QRMI_TASK_STATUS_MAP: dict[TaskStatus, JobStatus] = {
+    TaskStatus.Queued: JobStatus.PENDING,
+    TaskStatus.Running: JobStatus.RUNNING,
+    TaskStatus.Completed: JobStatus.DONE,
+    TaskStatus.Failed: JobStatus.ERROR,
+    TaskStatus.Cancelled: JobStatus.CANCELED,
+}
+
+JOB_EXEUTION_POLLING_INTERVAL_S = 1
+
 
 def _normalize_json_payload(payload: typing.Any) -> dict[str, typing.Any]:
     """Return payload as a dictionary from JSON text or dict."""
@@ -288,7 +298,7 @@ class PulserQRMIConnection(RemoteConnection):
                 TaskStatus.Cancelled,
             ):
                 break
-            time.sleep(1)
+            time.sleep(JOB_EXEUTION_POLLING_INTERVAL_S)
 
     def _get_job_ids(self, batch_id: str) -> list[str]:
         if batch_id in self._batch_job_ids:
@@ -303,14 +313,7 @@ class PulserQRMIConnection(RemoteConnection):
 
     @staticmethod
     def _to_job_status(status: TaskStatus) -> JobStatus:
-        status_map = {
-            TaskStatus.Queued: JobStatus.PENDING,
-            TaskStatus.Running: JobStatus.RUNNING,
-            TaskStatus.Completed: JobStatus.DONE,
-            TaskStatus.Failed: JobStatus.ERROR,
-            TaskStatus.Cancelled: JobStatus.CANCELED,
-        }
-        return status_map.get(status, JobStatus.ERROR)
+        return _QRMI_TASK_STATUS_MAP.get(status, JobStatus.ERROR)
 
     def _task_result_to_results(self, task_id: str) -> Results:
         raw_result = self._qrmi.task_result(task_id).value

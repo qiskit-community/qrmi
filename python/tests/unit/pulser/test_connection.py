@@ -1,7 +1,5 @@
 """Tests for pulser connection integration."""
 
-import json
-
 import pulser
 import pytest
 from pulser.backend.remote import RemoteResultsError

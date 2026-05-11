@@ -10,8 +10,6 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-import json
-
 import pulser
 from dotenv import load_dotenv
 from pulser import Pulse, Sequence
