@@ -1,90 +1,390 @@
 ---
-# This reusable workflow builds the libqrmi.so and the C examples
-#
-# Workflow inputs:
-# - [required] container-image
-#
-# Workflow artifacts produced:
-# - [uploaded] libqrmi.so
-# - [uploaded] qrmi.h
-# - [not uploaded] rust dependencies from the dependencies directory
-#   [not uploaded] rust examples from the examples/qrmi/rust directory
-# - [not uploaded] C examples from the examples/qrmi/c directory
-#
-# Workflow dependencies:
-# - None. It does not dependend on any other workflow.
+# libqrmi workflow
+# - Triggered manually from the GitHub UI (Actions tab) or from another workflow.
+# - Perform multiple tasks related to libqrmi - e.g. build, test, lint, etc.
+# - Selected task(s) are performed on the architecture(s) selected
+# - Task(s) and architecture(s) available are defined as workflow inputs
 
-name: Build libqrmi.so
+name: libqrmi
 on:
+
+  # ATTENTION:
+  # workflow_dispatch inputs are used to run this workflow manually from the GitHub UI
+  # workflow_call inputs are used to run this workflow from another workflow
+  # For feature parity, please keep them in-sync (with same input names)
+
+  workflow_dispatch:
+    inputs:
+      arch-x86_64:
+        description: >-
+          Build libqrmi for x86_64
+        type: boolean
+        required: false
+        default: true
+      arch-ppc64le:
+        description: >-
+          Build libqrmi for ppc64le
+        type: boolean
+        required: false
+        default: false
+      arch-arm64:
+        description: >-
+          Build libqrmi for arm64
+        type: boolean
+        required: false
+        default: false
+      build-target:
+        description: >-
+          Part of the Rust code to build
+        type: choice
+        options:
+          - none
+          - libqrmi-only
+          - all
+        required: false
+        default: none
+      unit-test-target:
+        description: >-
+          Part of the Rust code to unit test
+        type: choice
+        options:
+          - none
+          - libqrmi-only
+          - all
+        default: none
+        required: false
+      lint-target:
+        description: >-
+          Part of the Rust code to lint
+        type: choice
+        options:
+          - none
+          - libqrmi-only
+          - all
+        default: none
+        required: false
+      format-check:
+        description: >-
+          Format check all Rust code
+        type: boolean
+        default: false
+        required: false
+      libqrmi-tarball:
+        description: >-
+          Create tarball with RHEL8-compatible libqrmi and header
+        type: boolean
+        default: false
+        required: false
+      vendor-tarball:
+        description: >-
+          Create tarball with vendor source code
+        type: boolean
+        default: false
+        required: false
+      artifact-prefix:
+        description: >-
+          Prefix for the artifact name (e.g. pr, release)
+        type: string
+        default: 'manual'
+        required: false
+
   workflow_call:
     inputs:
-      container-image:
+      arch-x86_64:
         description: >-
-          Container image that will be used to run the workflow
+          Build libqrmi for x86_64
+        type: boolean
+        required: false
+        default: true
+      arch-ppc64le:
+        description: >-
+          Build libqrmi for ppc64le
+        type: boolean
+        required: false
+        default: false
+      arch-arm64:
+        description: >-
+          Build libqrmi for arm64
+        type: boolean
+        required: false
+        default: false
+      # workflow_call does not support type choice
+      build-target:
+        description: >-
+          Part of the Rust code to build [none, libqrmi-only, all]
         type: string
-        required: true
+        required: false
+        default: none
+      unit-test-target:
+        description: >-
+          Part of the Rust code to unit test [none, libqrmi-only, all]
+        type: string
+        default: none
+        required: false
+      lint-target:
+        description: >-
+          Part of the Rust code to lint [none, libqrmi-only, all]
+        type: string
+        default: none
+        required: false
+      format-check:
+        description: >-
+          Format check all Rust code
+        type: boolean
+        default: false
+        required: false
+      libqrmi-tarball:
+        description: >-
+          Create tarball with RHEL8-compatible libqrmi and header
+        type: boolean
+        default: false
+        required: false
+      vendor-tarball:
+        description: >-
+          Create tarball with vendor source code
+        type: boolean
+        default: false
+        required: false
+      artifact-prefix:
+        description: >-
+          Prefix for the artifact name (e.g. pr, release)
+        type: string
+        default: 'manual'
+        required: false
+
 env:
   CARGO_TERM_COLOR: always
 jobs:
-  build:
+
+  info:
     runs-on: ubuntu-24.04
-    container:
-      image: ${{ inputs.container-image }}
+    outputs:
+      qrmi-version: ${{ steps.sysinfo.outputs.qrmi-version }}
+      python-version: ${{ steps.sysinfo.outputs.python-version }}
+      manylinux-version: ${{ steps.sysinfo.outputs.manylinux-version }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v6
+    - uses: actions/checkout@v6
+    - name: Query some information
+      id: sysinfo
+      run: |
+        echo "qrmi-version=$(make get-qrmi-version)" >> $GITHUB_OUTPUT
+        echo "python-version=$(make get-python-version)" >> $GITHUB_OUTPUT
+        echo "manylinux-version=$(make get-manylinux-version)" >> $GITHUB_OUTPUT
 
-    - name: Install package dependencies from distro
-      run: xargs dnf install -y < requirements-distro.txt
-
-    - name: Setup Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-
-    # --all-targets does not include the binaries, hence they need
-    # to be built separately
-    - name: Build libqrmi.so (includes the rust dependencies and examples)
-      run: cargo build --all-targets --release
-
-    # Upload artifacts to help developers with testing/debugging in their local environment
-    - name: Upload libqrmi qrmi.h and librqmi.so
+  libqrmi-arch-agnostic:
+    if: inputs.vendor-tarball == true
+    runs-on: ubuntu-24.04
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - name: Create tarball with vendor source code
+      run: make vendor-tarball
+    - name: Upload vendor source code tarball
       uses: actions/upload-artifact@v7
-      if: ${{ success() }}
       with:
-        name: libqrmi-artifacts
-        path: |
-          target/release/libqrmi.so
-          qrmi.h
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-vendor-tarball
+        path: qrmi-${{ needs.info.outputs.qrmi-version }}-vendor.tar.gz
         if-no-files-found: error
-        retention-days: 5
+        retention-days: 1
 
-    #
-    # Build C examples. They depend on the libqrmi.so and qrmi.h built in the previous step.
-    #
-
-    - name: Build examples/qrmi/c/config
-      working-directory: examples/qrmi/c/config
+  # Handle stubgen as it requires libpython, which can't be used in manylinux images without having linking issues
+  libqrmi-x86_64-ubuntu:
+    if: inputs.arch-x86_64 == true && (inputs.unit-test-target == 'all' || inputs.lint-target == 'all' || inputs.build-target == 'all')
+    runs-on: ubuntu-24.04
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install PYO3 dependencies
       run: |
-        mkdir build ; cd build
-        cmake ..
-        make
+        # ubuntu repositories have limited versions of python
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt update
+        sudo apt install -y python${{ needs.info.outputs.python-version }}{,-dev,-venv} python3-pip
+    - if: inputs.lint-target == 'all'
+      name: Lint stubgen
+      run: make lint-stubgen
+    - if: inputs.build-target == 'all'
+      name: Build stubgen
+      run: make build-stubgen
+    - if: inputs.unit-test-target == 'all'
+      name: Test stubgen
+      run: make test-stubgen
 
-    - name: Build examples/qrmi/c/ibm_quantum_system
-      working-directory: examples/qrmi/c/ibm_quantum_system
-      run: |
-        mkdir build ; cd build
-        cmake ..
-        make
+  libqrmi-x86_64-manylinux:
+    if: inputs.arch-x86_64 == true
+    runs-on: ubuntu-24.04
+    env:
+      INSIDE_CONTAINER: 1
+    needs: [info]
+    container:
+      image: quay.io/pypa/${{ needs.info.outputs.manylinux-version }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - if: inputs.format-check == true
+      name: Format check the Rust code
+      run: make fmt-rust
+    - if: inputs.lint-target == 'libqrmi-only'
+      name: Lint libqrmi only
+      run: make lint
+    - if: inputs.lint-target == 'all'
+      name: Lint all the Rust code (except stubgen)
+      run: make lint-rust-all
+    - if: inputs.build-target == 'libqrmi-only'
+      name: Build libqrmi only
+      run: make build
+    - if: inputs.build-target == 'all'
+      name: Build all Rust code (except stubgen)
+      run: make build-rust-all
+    - if: inputs.unit-test-target == 'libqrmi-only'
+      name: Unit test libqrmi only
+      run: make test
+    - if: inputs.unit-test-target == 'all'
+      name: Unit test all Rust code (except stubgen)
+      run: make test-rust-all
+    - if: inputs.libqrmi-tarball == true
+      name: Create libqrmi tarball
+      run: make libqrmi-tarball
+    - if: inputs.libqrmi-tarball == true
+      name: Upload libqrmi tarball
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-libqrmi-${{ needs.info.outputs.qrmi-version }}-tarball-x86_64
+        path: libqrmi-${{ needs.info.outputs.qrmi-version }}*.tar.gz
+        if-no-files-found: error
+        retention-days: 1
 
-    - name: Build examples/qrmi/c/pasqal_cloud
-      working-directory: examples/qrmi/c/pasqal_cloud
+  # Handle stubgen as it requires libpython, which can't be used in manylinux images without having linking issues
+  libqrmi-ppc64le-ubuntu:
+    if: inputs.arch-ppc64le == true && (inputs.unit-test-target == 'all' || inputs.lint-target == 'all' || inputs.build-target == 'all')
+    runs-on: ubuntu-24.04-ppc64le
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install PYO3 dependencies
       run: |
-        mkdir build ; cd build
-        cmake ..
-        make
+        # ubuntu repositories have limited versions of python
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt update
+        sudo apt install -y python${{ needs.info.outputs.python-version }}{,-dev,-venv} python3-pip
+    - if: inputs.lint-target == 'all'
+      name: Lint stubgen
+      run: make lint-stubgen
+    - if: inputs.build-target == 'all'
+      name: Build stubgen
+      run: make build-stubgen
+    - if: inputs.unit-test-target == 'all'
+      name: Test stubgen
+      run: make test-stubgen
 
-    - name: Build examples/qrmi/c/qiskit_runtime_service
-      working-directory: examples/qrmi/c/qiskit_runtime_service
+  libqrmi-ppc64le-manylinux:
+    if: inputs.arch-ppc64le == true
+    runs-on: ubuntu-24.04-ppc64le
+    env:
+      INSIDE_CONTAINER: 1
+    needs: [info]
+    container:
+      image: quay.io/pypa/${{ needs.info.outputs.manylinux-version }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - if: inputs.format-check == true
+      name: Format check the Rust code
+      run: make fmt-rust
+    - if: inputs.lint-target == 'libqrmi-only'
+      name: Lint libqrmi only
+      run: make lint
+    - if: inputs.lint-target == 'all'
+      name: Lint all the Rust code (except stubgen)
+      run: make lint-rust-all
+    - if: inputs.build-target == 'libqrmi-only'
+      name: Build libqrmi only
+      run: make build
+    - if: inputs.build-target == 'all'
+      name: Build all Rust code (except stubgen)
+      run: make build-rust-all
+    - if: inputs.unit-test-target == 'libqrmi-only'
+      name: Unit test libqrmi only
+      run: make test
+    - if: inputs.unit-test-target == 'all'
+      name: Unit test all Rust code (except stubgen)
+      run: make test-rust-all
+    - if: inputs.libqrmi-tarball == true
+      name: Create libqrmi tarball
+      run: make libqrmi-tarball
+    - if: inputs.libqrmi-tarball == true
+      name: Upload libqrmi tarball
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-libqrmi-${{ needs.info.outputs.qrmi-version }}-tarball-ppc64le
+        path: libqrmi-${{ needs.info.outputs.qrmi-version }}*.tar.gz
+        if-no-files-found: error
+        retention-days: 1
+  
+  # Handle stubgen as it requires libpython, which can't be used in manylinux images without having linking issues
+  libqrmi-arm64-ubuntu:
+    if: inputs.arch-arm64 == true && (inputs.unit-test-target == 'all' || inputs.lint-target == 'all' || inputs.build-target == 'all')
+    runs-on: ubuntu-24.04
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install PYO3 dependencies
       run: |
-        mkdir build ; cd build
-        cmake ..
-        make
+        # ubuntu repositories have limited versions of python
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt update
+        sudo apt install -y python${{ needs.info.outputs.python-version }}{,-dev,-venv} python3-pip
+    - if: inputs.lint-target == 'all'
+      name: Lint stubgen
+      run: make lint-stubgen
+    - if: inputs.build-target == 'all'
+      name: Build stubgen
+      run: make build-stubgen
+    - if: inputs.unit-test-target == 'all'
+      name: Test stubgen
+      run: make test-stubgen
+
+  libqrmi-arm64-manylinux:
+    if: inputs.arch-arm64 == true
+    runs-on: ubuntu-24.04-arm
+    env:
+      INSIDE_CONTAINER: 1
+    needs: [info]
+    container:
+      image: quay.io/pypa/${{ needs.info.outputs.manylinux-version }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - if: inputs.format-check == true
+      name: Format check the Rust code
+      run: make fmt-rust
+    - if: inputs.lint-target == 'libqrmi-only'
+      name: Lint libqrmi only
+      run: make lint
+    - if: inputs.lint-target == 'all'
+      name: Lint all the Rust code (except stubgen)
+      run: make lint-rust-all
+    - if: inputs.build-target == 'libqrmi-only'
+      name: Build libqrmi only
+      run: make build
+    - if: inputs.build-target == 'all'
+      name: Build all Rust code (except stubgen)
+      run: make build-rust-all
+    - if: inputs.unit-test-target == 'libqrmi-only'
+      name: Unit test libqrmi only
+      run: make test
+    - if: inputs.unit-test-target == 'all'
+      name: Unit test all Rust code (except stubgen)
+      run: make test-rust-all
+    - if: inputs.libqrmi-tarball == true
+      name: Create libqrmi tarball
+      run: make libqrmi-tarball
+    - if: inputs.libqrmi-tarball == true
+      name: Upload libqrmi tarball
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-libqrmi-${{ needs.info.outputs.qrmi-version }}-tarball-arm64
+        path: libqrmi-${{ needs.info.outputs.qrmi-version }}*.tar.gz
+        if-no-files-found: error
+        retention-days: 1
