@@ -66,5 +66,5 @@ seq.add(pulse1, "rydberg")
 seq.measure("ground-rydberg")
 
 backend = pulser.QPUBackend(seq, qrmi_conn)
-result = backend.run([JobParams(runs=1000, variables=[])], wait=True)
-print(f"Results: {json.loads(result[0])['counter']}")
+remote_results = backend.run([JobParams(runs=500, variables=[])], wait=True)
+print(f"Results: {remote_results.results}")
