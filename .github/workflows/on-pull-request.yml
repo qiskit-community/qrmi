@@ -1,15 +1,5 @@
 ---
-# This workflow defines the CI pipeline for pull requests to the main branch.
-# Other workflows are called as jobs, preferably in parallel. The jobs annotated with the needs keyword will run sequentially.
-#
-# Workflow inputs:
-# - None
-#
-# Workflow artifacts produced:
-# - qrmi-wheels artifact (uploaded in the build-wheels job)
-#
-# Workflow dependencies:
-# - All reusable workflows called in the jobs section
+# Workflow that runs on pull requests
 
 name: Pull request
 
@@ -23,57 +13,27 @@ concurrency:
 
 jobs:
 
-  build-libqrmi:
+  # Only x86_64 is selected for libqrmi in this worflow. The other architectures are handled in the on-schedule workflow.
+  # Build, unit-test, lint and format-check all QRMI Rust targets (including libqrmi)
+  libqrmi:
     if: github.repository_owner == 'qiskit-community'
-    name: Build libqrmi
     uses: ./.github/workflows/build-libqrmi.yml
     with:
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+      arch-x86_64: true
+      build-target: 'all'
+      unit-test-target: 'all'
+      lint-target: 'all'
+      format-check: true
+      artifact-prefix: 'pr-${{ github.event.number }}'
 
-  build-qrmi-bins:
+  # Only x86_64 is selected for wheels in this workflow. The other architectures are handled in the on-schedule workflow.
+  # Build, unit-test, lint and format check wheels.
+  wheels:
     if: github.repository_owner == 'qiskit-community'
-    name: Build QRMI binaries
-    uses: ./.github/workflows/build-qrmi-bins.yml
-    with:
-      python-version: "3.12"
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
-
-  lint-fmt-rust:
-    if: github.repository_owner == 'qiskit-community'
-    name: Lint and format check Rust code
-    uses: ./.github/workflows/lint-fmt-rust.yml
-    with:
-      python-version: "3.12"
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
-
-  unittest-rust:
-    if: github.repository_owner == 'qiskit-community'
-    name: Unittest Rust code
-    uses: ./.github/workflows/unittest-rust.yml
-    with:
-      python-version: "3.12"
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
-
-  build-wheels:
-    if: github.repository_owner == 'qiskit-community'
-    name: Build wheels
     uses: ./.github/workflows/build-wheels.yml
     with:
-      python-version: "3.12"
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
-
-  lint-fmt-python:
-    if: github.repository_owner == 'qiskit-community'
-    needs: build-wheels
-    uses: ./.github/workflows/lint-fmt-python.yml
-    with:
-      python-version: "3.12"
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
-
-  unittest-python:
-    if: github.repository_owner == 'qiskit-community'
-    needs: build-wheels
-    uses: ./.github/workflows/unittest-python.yml
-    with:
-      python-version: "3.12"
-      container-image: 'registry.access.redhat.com/ubi8/ubi:8.10'
+      arch-x86_64: true
+      unit-test: true
+      format-check: true
+      lint: true
+      artifact-prefix: 'pr-${{ github.event.number }}'
