@@ -14,9 +14,6 @@ import os
 from dotenv import load_dotenv
 from pulser import Pulse, Register, Sequence, QPUBackend
 from pulser.backend.remote import JobParams
-from pulser.json.abstract_repr.deserializer import (
-    deserialize_device,
-)
 from qrmi.pulser.connection import PulserQRMIConnection
 from qrmi.pulser.service import QRMIService
 
@@ -41,11 +38,13 @@ if len(resources) == 0:
 # Randomly select QR
 qrmi = resources[0]
 
-target = qrmi.target()
 
 qrmi_conn = PulserQRMIConnection(qrmi)
-# Generate Pulser device
-device = deserialize_device(target.value)
+# Fetch Pulser device
+avail_devices = qrmi_conn.fetch_available_devices()
+name, device = next(iter(avail_devices.items()))
+print(f"Found device: '{name}' from the QRMI connection.")
+
 reg = Register(
     {
         "q0": (-2.5, -2.5),

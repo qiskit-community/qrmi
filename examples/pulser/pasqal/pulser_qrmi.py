@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 from pulser import Pulse, Sequence
 from pulser.backend.remote import JobParams
 from pulser.register import Register
-from target import get_device
 
 from qrmi.pulser.connection import PulserQRMIConnection
 from qrmi.pulser.service import QRMIService
@@ -42,9 +41,12 @@ qrmi_conn = PulserQRMIConnection(qrmi)
 # For a real program, you may want to manually fetch the device specs and construct the corresponding Pulser device.
 # This can, for example, be done by using the PasqalCloud package.
 try:
-    device = get_device(qrmi)
+    avail_devices = qrmi_conn.fetch_available_devices()
+    name, device = next(iter(avail_devices.items()))
+    print(f"Found device: '{name}' from the QRMI connection.")
 except RuntimeError:
     device = pulser.DigitalAnalogDevice
+    print("Could not find device from the QRMI connection. Defaulted to 'DigitalAnaloDevice'")
 
 reg = Register(
     {
