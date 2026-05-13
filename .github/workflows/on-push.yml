@@ -1,0 +1,26 @@
+---
+# workflow that runs a major set of tests on a defined schedule 
+
+name: test-archs
+
+on:
+  [push, pull_request, workflow_dispatch]
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+  wheels:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/wheels.yml
+    with:
+      arch-x86_64: false
+      arch-ppc64le: true
+      arch-arm64: false
+      unit-test: false
+      format-check: false
+      lint: true
+      sdist: false
+      artifact-prefix: 'schedule'
