@@ -11,6 +11,7 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
@@ -46,6 +47,11 @@ pub enum Payload {
         sequence: *mut c_char,
         /// Number of job runs
         job_runs: i32,
+    },
+    /// Payload for IQM Server
+    IQMServer {
+        /// IQM-JSON input
+        iqmjson: *mut c_char,
     },
 }
 
@@ -566,6 +572,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                     return std::ptr::null_mut();
                 }
             },
+            ResourceType::IQMServer => match IQMServer::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
+                    return std::ptr::null_mut();
+                }
+            },
         };
         let qrmi = Box::new(QuantumResource {
             inner: res,
@@ -907,6 +920,12 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             qrmi_payload = Some(crate::models::Payload::PasqalCloud {
                 sequence: sequence_str.to_string(),
                 job_runs,
+            });
+        }
+    } else if let Payload::IQMServer { iqmjson } = *payload {
+        if let Ok(json_str) = CStr::from_ptr(iqmjson).to_str() {
+            qrmi_payload = Some(crate::models::Payload::IQMServer {
+                iqmjson: json_str.to_string(),
             });
         }
     }
