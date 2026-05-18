@@ -16,11 +16,12 @@ from __future__ import annotations
 import json
 import logging
 import time
-import typing
+from typing import Any, Mapping, Sequence
 import uuid
 
 import pulser
-import pulser.abstract_repr
+from pulser.abstract_repr import deserialize_device
+from pulser.exceptions.serialization import DeserializeDeviceError
 from pulser.backend.remote import (
     BatchStatus,
     JobParams,
@@ -29,6 +30,7 @@ from pulser.backend.remote import (
     RemoteResults,
     RemoteResultsError,
 )
+from pulser.devices import Device
 from pulser.backend.results import Results
 from pulser.result import SampledResult
 
@@ -48,7 +50,7 @@ _QRMI_TASK_STATUS_MAP: dict[TaskStatus, JobStatus] = {
 JOB_EXEUTION_POLLING_INTERVAL_S = 1
 
 
-def _normalize_json_payload(payload: typing.Any) -> dict[str, typing.Any]:
+def _normalize_json_payload(payload: Any) -> dict[str, Any]:
     """Return payload as a dictionary from JSON text or dict."""
     if isinstance(payload, str):
         normalized = json.loads(payload)
@@ -76,7 +78,7 @@ def _is_missing_device_specs_error(err: RuntimeError) -> bool:
     return payload.get("code") == "CD1202"
 
 
-def _normalize_target_payload(target: typing.Any) -> dict[str, typing.Any]:
+def _normalize_target_payload(target: Any) -> dict[str, Any]:
     """Return target payload as a dictionary.
 
     The target may be a QRMI wrapper object with `.value`, JSON text, or a dict.
@@ -115,10 +117,16 @@ class PulserQRMIConnection(RemoteConnection):
         """Flag to confirm this class doesn't support open batch creation."""
         return False
 
-    def fetch_available_devices(self) -> dict[str, pulser.devices.Device]:
+    def fetch_available_devices(self) -> dict[str, Device]:
+        """Fetches the devices available through this connection."""
+
         target = self._qrmi.target()
         target_payload = _normalize_target_payload(target)
-        dev = pulser.abstract_repr.deserialize_device(json.dumps(target_payload))
+        try:
+            dev = deserialize_device(json.dumps(target_payload))
+        except DeserializeDeviceError as err:
+            logger.error(f"Failed to deserialize device: {err}")
+            raise RuntimeError from err
         return {dev.name: dev}
 
     def update_sequence_device(self, sequence: pulser.Sequence) -> pulser.Sequence:
@@ -137,7 +145,7 @@ class PulserQRMIConnection(RemoteConnection):
 
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
-    ) -> typing.Sequence[Results]:
+    ) -> Sequence[Results]:
         """Fetches the results of a completed batch."""
         jobs = self._query_job_progress(batch_id)
         selected_job_ids = list(jobs.keys()) if job_ids is None else job_ids
@@ -177,7 +185,7 @@ class PulserQRMIConnection(RemoteConnection):
 
     def _query_job_progress(
         self, batch_id: str
-    ) -> typing.Mapping[str, tuple[JobStatus, Results | None]]:
+    ) -> Mapping[str, tuple[JobStatus, Results | None]]:
         """Fetches the status and results of all the jobs in a batch.
 
         Unlike `_fetch_result`, this method does not raise an error if some
@@ -205,7 +213,7 @@ class PulserQRMIConnection(RemoteConnection):
         wait: bool = True,
         open: bool = False,  # pylint: disable=redefined-builtin
         batch_id: str | None = None,
-        **kwargs: typing.Any,
+        **kwargs: Any,
     ) -> RemoteResults:
         """Submits the sequence for execution on a remote Pasqal backend."""
         if open:
