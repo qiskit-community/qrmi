@@ -186,11 +186,11 @@ class App:
                     input=json.dumps(task_input["parameters"]),
                     program_id=task_input["program_id"],
                 )
-            else if res_type in [
+            elif res_type in [
                 ResourceType.IQMServer,
             ]:
                 payload = Payload.IQMServer(
-                    iqmjson=json.dumps(task_input["body"]),
+                    iqmjson=json.dumps(task_input["iqmjson"]),
                     use_timeslot=task_input["use_timeslot"],
                     tag=task_input["tag"],
                     job_type=task_input["job_type"],

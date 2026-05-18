@@ -50,8 +50,8 @@ options:
 ```
 For example,
 ```shell-session
-export sirius_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
-export sirius_mock_QRMI_IQM_ISA_TOKEN=your api token
+export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
+export garnet_mock_QRMI_IQM_ISA_TOKEN=your api token
 
-python example.py sirius /shared/iqm_json_sirius\:mock.json circuit
+python example.py garnet_mock /shared/qrmi/examples/task_runner/iqm/iqm_json_garnet\:mock_params_only.json circuit
 ```

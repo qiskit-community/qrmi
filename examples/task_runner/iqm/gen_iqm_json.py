@@ -14,6 +14,7 @@ def dump_run_request(
     shots: int = 1024,
     use_timeslot: bool = False,
     output_path: str | Path = "run_request.json",
+    params_only: bool = False,
     **options,
 ) -> dict:
     """Serialize a RunRequest to a JSON file without submitting it to the server.
@@ -55,15 +56,25 @@ def dump_run_request(
     # Serialize using the same method as the real submission path (model_dump_json).
     json_str = run_request.model_dump_json()
 
+    # params_only file
     output_path = Path(output_path)
     # output_path.write_text(json_str, encoding="utf-8")
-    pretty_json_str = json.dumps(json.loads(json_str), indent=2, ensure_ascii=False)
+    if params_only:
+        pretty_json_str = json.dumps(json.loads(json_str), indent=2, ensure_ascii=False)
+    else:
+        full_json = {
+            "iqmjson": json.loads(json_str),
+            "job_type": "circuit",
+            "use_timeslot": resolved_use_timeslot,
+            "tag": None,
+        }
+        pretty_json_str = json.dumps(full_json, indent=2, ensure_ascii=False)
     output_path.write_text(pretty_json_str, encoding="utf-8")
     print(f"RunRequest written to: {output_path}  ({output_path.stat().st_size} bytes)")
 
     print(f"use_timeslot: {resolved_use_timeslot}")
 
-    return json.loads(json_str)
+    return json.loads(pretty_json_str)
 
 
 def main():
@@ -99,12 +110,25 @@ def main():
         qc_transpiled,
         shots=1024,
         use_timeslot=False,
-        output_path=f"iqm_json_{args.qc_alias}.json",
+        params_only=True,
+        output_path=f"iqm_json_{args.qc_alias}_params_only.json",
     )
-
     print(f"circuits:  {len(payload['circuits'])}")
     print(f"shots:     {payload['shots']}")
     print(f"calset_id: {payload['calibration_set_id']}")
+
+    payload = dump_run_request(
+        backend,
+        qc_transpiled,
+        shots=1024,
+        use_timeslot=False,
+        params_only=False,
+        output_path=f"iqm_json_{args.qc_alias}.json",
+    )
+
+    print(f"circuits:  {len(payload['iqmjson']['circuits'])}")
+    print(f"shots:     {payload['iqmjson']['shots']}")
+    print(f"calset_id: {payload['iqmjson']['calibration_set_id']}")
 
 if __name__ == "__main__":
     main()

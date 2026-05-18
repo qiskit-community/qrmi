@@ -35,13 +35,13 @@ $ make
 
 ## How to run this example
 ```shell-session
-$ ./build/qiskit_runtime_service
+$ ./build/iqm_server
 iqm_server <qc_alias> <IQM JSON> <job_type('circuit','run' or 'sweep')
 ```
 For example,
 ```shell-session
-export sirius_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
-export sirius_mock_QRMI_IQM_ISA_TOKEN=your api token
+export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
+export garnet_mock_QRMI_IQM_ISA_TOKEN=your api token
 
-./iqm_server sirius_mock /shared/iqm_json_sirius\:mock.json circuit
+./iqm_server garnet_mock /shared/qrmi/examples/task_runner/iqm/iqm_json_garnet\:mock_params_only.json circuit
 ```
