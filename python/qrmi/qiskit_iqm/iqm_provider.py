@@ -361,8 +361,10 @@ def _build_run_request(
     options: CircuitCompilationOptions,
 ) -> RunRequest:
     """Construct a RunRequest from serialized circuits and options."""
-    #options_dict = options.model_dump(exclude_none=True)
-    options_dict = {k: v for k, v in dataclasses.asdict(options).items() if v is not None}
+    # options_dict = options.model_dump(exclude_none=True)
+    options_dict = {
+        k: v for k, v in dataclasses.asdict(options).items() if v is not None
+    }
     return RunRequest(
         circuits=circuits,
         calibration_set_id=calibration_set_id,
@@ -411,6 +413,7 @@ def _format_single_circuit_results(
         ]
         for s in range(shots)
     ]
+
 
 class IQMProvider:
     """Provider for IQM backends.
@@ -464,4 +467,6 @@ class IQMProvider:
         service = QRMIService()
         qc_alias_name = name if name is not None else self.quantum_computer
         qrmi = service.resource(qc_alias_name.replace(":", "_"))
-        return QRMIBackend(qrmi, calibration_set_id=calibration_set_id, use_metrics=use_metrics)
+        return QRMIBackend(
+            qrmi, calibration_set_id=calibration_set_id, use_metrics=use_metrics
+        )
