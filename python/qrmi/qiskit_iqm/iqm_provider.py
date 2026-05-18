@@ -315,10 +315,10 @@ class QRMIBackend(IQMBackendBase):
                 shots=shots,
                 options=circuit_compilation_options,
             )
-        except CircuitValidationError as e:
+        except CircuitValidationError as cve:
             raise CircuitValidationError(
-                f"{e}\nMake sure circuits were transpiled with this backend."
-            ) from e
+                f"{cve}\nMake sure circuits were transpiled with this backend."
+            ) from cve
 
         return run_request
 
