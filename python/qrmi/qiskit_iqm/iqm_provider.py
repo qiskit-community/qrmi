@@ -11,6 +11,8 @@
 # that they have been altered from the originals.
 """Qiskit backend provider for QRMI IQM backends."""
 
+# pylint: disable=import-error
+
 from __future__ import annotations
 
 import dataclasses
