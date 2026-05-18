@@ -11,4 +11,5 @@
 # that they have been altered from the originals.
 
 """QRMI python package for Qiskit IQM"""
+
 from qrmi.qiskit_iqm.iqm_provider import QRMIBackend, IQMProvider
