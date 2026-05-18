@@ -34,7 +34,7 @@ from pulser.devices import Device
 from pulser.backend.results import Results
 from pulser.result import SampledResult
 
-from qrmi import Payload, QuantumResource, TaskStatus  # type: ignore
+from qrmi import Payload, QuantumResource, TaskStatus, ResourceType  # type: ignore
 from qrmi.pulser.service import QRMIService
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,11 @@ _QRMI_TASK_STATUS_MAP: dict[TaskStatus, JobStatus] = {
 }
 
 JOB_EXEUTION_POLLING_INTERVAL_S = 1
+
+_COMPATIBLE_RESOURCE_TYPES: tuple[ResourceType] = (
+    ResourceType.PasqalLocal,
+    ResourceType.PasqalCloud,
+)
 
 
 def _normalize_json_payload(payload: Any) -> dict[str, Any]:
@@ -78,15 +83,6 @@ def _is_missing_device_specs_error(err: RuntimeError) -> bool:
     return payload.get("code") == "CD1202"
 
 
-def _normalize_target_payload(target: Any) -> dict[str, Any]:
-    """Return target payload as a dictionary.
-
-    The target may be a QRMI wrapper object with `.value`, JSON text, or a dict.
-    """
-    target_value = target.value if hasattr(target, "value") else target
-    return _normalize_json_payload(target_value)
-
-
 class PulserQRMIConnection(RemoteConnection):
     """A connection to Pasqal QRMI resources, to submit Sequences to QPUs."""
 
@@ -94,6 +90,13 @@ class PulserQRMIConnection(RemoteConnection):
         self._qrmi = qrmi or self._resolve_single_resource()
         self._batch_job_ids: dict[str, list[str]] = {}
         self._task_sequences: dict[str, pulser.Sequence] = {}
+
+        _type: ResourceType = self._qrmi.resource_type()
+        if _type not in _COMPATIBLE_RESOURCE_TYPES:
+            raise ValueError(
+                "PulserQRMIConnection can only be used with 'PasqalLocal' or 'PasqalCloud' QRMI resources,"
+                f" got: '{_type}'"
+            )
 
     @staticmethod
     def _resolve_single_resource() -> QuantumResource:
@@ -120,12 +123,12 @@ class PulserQRMIConnection(RemoteConnection):
     def fetch_available_devices(self) -> dict[str, Device]:
         """Fetches the devices available through this connection."""
 
-        target = self._qrmi.target()
-        target_payload = _normalize_target_payload(target)
+        # Pasqal local/cloud implementation deserialize specs as strings already
+        dev_str = self._qrmi.target().value
         try:
-            dev = deserialize_device(json.dumps(target_payload))
+            dev = deserialize_device(dev_str)
         except DeserializeDeviceError as err:
-            logger.error(f"Failed to deserialize device: {err}")
+            logger.error(f"Failed to deserialize device: {dev_str}")
             raise RuntimeError from err
         return {dev.name: dev}
 
