@@ -25,13 +25,13 @@ from uuid import UUID
 import warnings
 import json
 
-from qrmi import QuantumResource, Payload, TaskStatus
-from qrmi.qiskit_iqm import QRMIService
-
 import numpy as np
+
 from qiskit import QuantumCircuit
 from qiskit.providers import JobStatus, JobV1, Options
 from qiskit.result import Counts, Result
+
+from qrmi import QuantumResource, Payload, TaskStatus
 
 from iqm.iqm_client import CircuitCompilationOptions, CircuitValidationError
 from iqm.iqm_client.util import to_json_dict
@@ -46,6 +46,7 @@ from iqm.station_control.interface.models import (
     DynamicQuantumArchitecture,
     RunRequest,
 )
+from .service import QRMIService
 
 # ---------------------------------------------------------------------------
 # Job
