@@ -14,6 +14,9 @@ use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
+use iqm_server_api::apis::calibration_sets_api::{
+    get_calibration_set_v1, get_dynamic_quantum_architecture_v1, get_quality_metrics_v1,
+};
 use iqm_server_api::apis::configuration;
 use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
 use iqm_server_api::apis::quantum_computers_api::get_qc_health_v1;
@@ -220,8 +223,53 @@ impl QuantumResource for IQMServer {
     /// This function combines the results of GET /backends/{id}/configuration and
     /// GET /backends/{id}/properties into a single JSON object.
     async fn target(&mut self) -> Result<Target> {
+        let mut resp = json!({});
+        resp["dynamic_quantum_architecture"] =
+            match get_dynamic_quantum_architecture_v1(&self.config, &self.backend_name, "default")
+                .await
+            {
+                Ok(bytes) => {
+                    serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
+                        error!("Failed to parse dynamic_quantum_architecture: {:?}", e);
+                        json!(null)
+                    })
+                }
+                Err(e) => {
+                    error!("Failed to get dynamic_quantum_architecture: {:?}", e);
+                    json!(null)
+                }
+            };
+
+        resp["calibration_set"] =
+            match get_calibration_set_v1(&self.config, &self.backend_name, "default").await {
+                Ok(bytes) => {
+                    serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
+                        error!("Failed to parse calibration_set: {:?}", e);
+                        json!(null)
+                    })
+                }
+                Err(e) => {
+                    error!("Failed to get calibration_set: {:?}", e);
+                    json!(null)
+                }
+            };
+
+        resp["quality_metrics"] =
+            match get_quality_metrics_v1(&self.config, &self.backend_name, "default").await {
+                Ok(bytes) => {
+                    serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
+                        error!("Failed to parse quality_metrics: {:?}", e);
+                        json!(null)
+                    })
+                }
+                Err(e) => {
+                    error!("Failed to get quality_metrics: {:?}", e);
+                    json!(null)
+                }
+            };
+
         Ok(Target {
-            value: "{}".to_string(),
+            value: resp.to_string(),
         })
     }
 

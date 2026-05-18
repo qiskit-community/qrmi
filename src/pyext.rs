@@ -11,10 +11,10 @@
 // that they have been altered from the originals.
 
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::iqm::IQMServer;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
-use crate::iqm::IQMServer;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
