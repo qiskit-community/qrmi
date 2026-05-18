@@ -12,4 +12,5 @@
 
 """QRMI python package for Qiskit IQM"""
 
+from .service import QRMIService
 from qrmi.qiskit_iqm.iqm_provider import QRMIBackend, IQMProvider

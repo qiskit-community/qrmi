@@ -25,6 +25,9 @@ from uuid import UUID
 import warnings
 import json
 
+from qrmi import QuantumResource, Payload, TaskStatus
+from qrmi.qiskit_iqm import QRMIService
+
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.providers import JobStatus, JobV1, Options
@@ -43,8 +46,6 @@ from iqm.station_control.interface.models import (
     DynamicQuantumArchitecture,
     RunRequest,
 )
-from qrmi import QuantumResource, Payload, TaskStatus
-from qrmi.primitives import QRMIService
 
 # ---------------------------------------------------------------------------
 # Job
@@ -436,14 +437,9 @@ class IQMProvider:
 
     def __init__(
         self,
-        url: str,
-        *,
-        quantum_computer: str | None = None,
-        **user_auth_args,  # contains keyword args token or tokens_file
+        **args,
     ):
-        self.url = url
-        self.quantum_computer = quantum_computer
-        self.user_auth_args = user_auth_args
+        pass
 
     def get_backend(
         self,
@@ -468,8 +464,10 @@ class IQMProvider:
 
         """
         service = QRMIService()
-        qc_alias_name = name if name is not None else self.quantum_computer
-        qrmi = service.resource(qc_alias_name.replace(":", "_"))
+        if name is not None:
+            qrmi = service.resource(name.replace(":", "_"))
+        else:
+            qrmi = service.resources()[0]
         return QRMIBackend(
             qrmi, calibration_set_id=calibration_set_id, use_metrics=use_metrics
         )
