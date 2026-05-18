@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -15,7 +15,7 @@ use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use iqm_server_api::apis::configuration;
-use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts};
+use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
 use iqm_server_api::apis::quantum_computers_api::get_qc_health_v1;
 use iqm_server_api::models::IqmServerJobStatus;
 use log::error;
@@ -105,10 +105,33 @@ impl QuantumResource for IQMServer {
 
     /// Starts a job task.
     ///
-    /// This function sends a POST request to /jobs. The input payload is parsed as JSON,
-    /// and the job is created using the qiskit_runtime_api client function jobs_api::create_job.
-    async fn task_start(&mut self, _payload: Payload) -> Result<String> {
-        bail!("Function not supported")
+    async fn task_start(&mut self, payload: Payload) -> Result<String> {
+        if let Payload::IQMServer {
+            iqmjson,
+            job_type,
+            use_timeslot,
+            tag,
+        } = payload
+        {
+            let job: serde_json::Value = serde_json::from_str(iqmjson.as_str())?;
+            match job_submit(
+                &self.config,
+                &self.backend_name,
+                &job_type,
+                use_timeslot,
+                tag.as_deref(),
+                Some(job),
+            )
+            .await
+            {
+                Ok(val) => Ok(val.id.to_string()),
+                Err(err) => {
+                    bail!("An error occurred during starting a task: {:#?}", err);
+                }
+            }
+        } else {
+            bail!(format!("Payload type is not supported. {:?}", payload));
+        }
     }
 
     /// Stops a running job.
@@ -198,7 +221,7 @@ impl QuantumResource for IQMServer {
     /// GET /backends/{id}/properties into a single JSON object.
     async fn target(&mut self) -> Result<Target> {
         Ok(Target {
-            value: "".to_string(),
+            value: "{}".to_string(),
         })
     }
 

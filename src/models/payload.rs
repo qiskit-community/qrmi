@@ -25,7 +25,16 @@ pub enum Payload {
     /// Payload for Pasqal Cloud
     PasqalCloud { sequence: String, job_runs: i32 },
     /// Payload for IQM Server
-    IQMServer { iqmjson: String },
+    IQMServer {
+        /// IQM JSON request body
+        iqmjson: String,
+        /// Job type(circuit, run, sweep)
+        job_type: String,
+        /// submit the job to the timeslot queue instead of the default FIFO queue
+        use_timeslot: Option<bool>,
+        /// Optional user-defined tag associated with the job
+        tag: Option<String>,
+    },
 }
 #[cfg(feature = "pyo3")]
 define_stub_info_gatherer!(stub_info);

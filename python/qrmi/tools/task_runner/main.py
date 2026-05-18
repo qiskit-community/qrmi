@@ -73,6 +73,7 @@ class App:
         "ibm-quantum-system": ResourceType.IBMQuantumSystem,
         "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
         "pasqal-cloud": ResourceType.PasqalCloud,
+        "iqm-server": ResourceType.IQMServer,
     }
 
     def __init__(self, name: str, input_filename: str, output_filename: str):
@@ -184,6 +185,15 @@ class App:
                 payload = Payload.QiskitPrimitive(
                     input=json.dumps(task_input["parameters"]),
                     program_id=task_input["program_id"],
+                )
+            else if res_type in [
+                ResourceType.IQMServer,
+            ]:
+                payload = Payload.IQMServer(
+                    iqmjson=json.dumps(task_input["body"]),
+                    use_timeslot=task_input["use_timeslot"],
+                    tag=task_input["tag"],
+                    job_type=task_input["job_type"],
                 )
             else:
                 payload = Payload.PasqalCloud(
