@@ -48,7 +48,10 @@ pasqal = [
   "qiskit-pasqal-provider>=0.1.1",
   "pulser>=1.5.3",
 ]
-all = ["qrmi[ibm,pasqal]"]
+iqm = [
+  "iqm-client[qiskit]",
+]
+all = ["qrmi[ibm,pasqal,iqm]"]
 
 [project.urls]
 repository = "https://github.com/qiskit-community/qrmi"
