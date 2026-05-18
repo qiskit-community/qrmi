@@ -13,7 +13,7 @@
 use super::super::IQMServer;
 use crate::models::ResourceType;
 use crate::QuantumResource;
-use qiskit_runtime_client::apis::configuration;
+use iqm_server_api::apis::configuration;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
@@ -26,7 +26,7 @@ async fn resource_id_and_type_match_backend() {
     let mut qrmi = IQMServer {
         config: configuration::Configuration::new(),
         backend_name: BACKEND_NAME.to_string(),
-        acqusition_token: None,
+        acquisition_token: None,
     };
 
     let resource_id = qrmi
