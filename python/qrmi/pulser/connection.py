@@ -127,7 +127,7 @@ class PulserQRMIConnection(RemoteConnection):
             return super().update_sequence_device(sequence)
         except RuntimeError as err:
             if not _is_missing_device_specs_error(err):
-                raise
+                raise err
             logging.warning(
                 "The selected connection doesn't give access to the latest "
                 "device specs. Execution might fail if the sequence is "
