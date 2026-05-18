@@ -209,6 +209,7 @@ class QRMIBackend(IQMBackendBase):
 
     @property
     def max_circuits(self) -> int | None:
+        """max_circuits property"""
         return self._max_circuits
 
     @max_circuits.setter
