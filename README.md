@@ -230,7 +230,7 @@ update the baseline file. Once updated, include the modified .secrets.baseline
 in your Pull Request to ensure the pre-commit passes in the future.
 ```
 pip install detect-secrets
-detect-secrets scan --baseline .secrets.baseline
+detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
 detect-secrets audit .secrets.baseline
 ```
 **Manual Execution and Overrides**  
