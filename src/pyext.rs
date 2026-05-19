@@ -11,6 +11,7 @@
 // that they have been altered from the originals.
 
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::iqm::IQMServer;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
@@ -28,6 +29,7 @@ pub enum ResourceType {
     IBMQiskitRuntimeService,
     PasqalCloud,
     PasqalLocal,
+    IQMServer,
 }
 
 #[gen_stub_pyclass]
@@ -76,6 +78,12 @@ impl PyQuantumResource {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
                 }
             },
+            ResourceType::IQMServer => match IQMServer::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
         };
 
         Ok(Self {
@@ -114,6 +122,7 @@ impl PyQuantumResource {
                 }
                 crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
                 crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+                crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
             }),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }

@@ -11,12 +11,13 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 use std::sync::Arc;
 
 /// Integer return codes returned to C.
@@ -46,6 +47,18 @@ pub enum Payload {
         sequence: *mut c_char,
         /// Number of job runs
         job_runs: i32,
+    },
+    /// Payload for IQM Server
+    IQMServer {
+        /// IQM JSON request body
+        iqmjson: *mut c_char,
+        /// Job type(circuit, run, sweep)
+        job_type: *mut c_char,
+        /// submit the job to the timeslot queue instead of the default FIFO queue.
+        /// 0 = false, 1 = true
+        use_timeslot: c_int,
+        /// Optional user-defined tag associated with the job
+        tag: *mut c_char,
     },
 }
 
@@ -566,6 +579,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                     return std::ptr::null_mut();
                 }
             },
+            ResourceType::IQMServer => match IQMServer::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
+                    return std::ptr::null_mut();
+                }
+            },
         };
         let qrmi = Box::new(QuantumResource {
             inner: res,
@@ -909,6 +929,35 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
                 job_runs,
             });
         }
+    } else if let Payload::IQMServer {
+        iqmjson,
+        job_type,
+        tag,
+        use_timeslot,
+    } = *payload
+    {
+        let Ok(json_str) = CStr::from_ptr(iqmjson).to_str() else {
+            return ReturnCode::Error;
+        };
+        let Ok(type_str) = CStr::from_ptr(job_type).to_str() else {
+            return ReturnCode::Error;
+        };
+        let tag_opt = if tag.is_null() {
+            None
+        } else {
+            CStr::from_ptr(tag).to_str().ok().map(|s| s.to_string())
+        };
+        let use_timeslot_opt = match use_timeslot {
+            1 => Some(true),
+            _ => Some(false),
+        };
+
+        qrmi_payload = Some(crate::models::Payload::IQMServer {
+            iqmjson: json_str.to_string(),
+            job_type: type_str.to_string(),
+            tag: tag_opt,
+            use_timeslot: use_timeslot_opt,
+        });
     }
 
     if qrmi_payload.is_some() {

@@ -1597,6 +1597,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2"
 
 [[package]]
+name = "iqm-server-api"
+version = "1.0.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "iri-string"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2237,7 +2252,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.13.4"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2248,6 +2263,7 @@ dependencies = [
  "eyre",
  "ffi_helpers",
  "futures",
+ "iqm-server-api",
  "libc",
  "log",
  "pasqal-cloud-api",
@@ -3526,6 +3542,7 @@ dependencies = [
  "getrandom 0.4.2",
  "js-sys",
  "rand 0.9.3",
+ "serde_core",
  "wasm-bindgen",
 ]
 
