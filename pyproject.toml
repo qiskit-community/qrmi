@@ -70,9 +70,12 @@ task_runner = "qrmi.tools.task_runner.main:run"
 
 [tool.cibuildwheel]
 manylinux-x86_64-image = "manylinux_2_28"
+manylinux-ppc64le-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.linux]
 before-all = 'curl -sSf https://sh.rustup.rs | sh -s -- -y'
 before-test = 'pip install -r requirements-dev.txt'
 environment = { PATH='$HOME/.cargo/bin:$PATH' }
+skip = '*musllinux* cp*t-*'
 test-command = 'pytest {project}/python/tests'
