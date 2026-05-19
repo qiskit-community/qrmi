@@ -25,7 +25,7 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 | Environment variables | Descriptions |
 | ---- | ---- |
 | SLURM_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `garnet,emerald` |
-| SLURM_JOB_QPU_TYPES | Quantum resource types. Comma-separated values corresponding to each Quantum resource name specified by `SLURM_JOB_QPU_RESOURCES`.<br><br>Supported types:<ul><li>`ibm-quantum-system`</li><li>`qiskit-runtime-service`</li><li>`iqm-server`</li></ul> |
+| SLURM_JOB_QPU_TYPES | Quantum resource types. Specify `iqm-server` for this example |
 
 ### IQM Server specific
 

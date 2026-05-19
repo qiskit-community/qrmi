@@ -43,4 +43,5 @@ Output:
 
 | Files | Descriptions |
 | ---- | ---- |
-| iqm_json_{qc_alias}.json | An input for QRMI task runner. |
+| iqm_json_{qc_alias}_params_only.json | IQM JSON input. |
+| iqm_json_{qc_alias}.json | An input for QRMI task runner, which contains additional properties - `job_type`, `use_timeslot` and `tag`. |
