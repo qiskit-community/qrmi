@@ -14,6 +14,7 @@ use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
+use crate::alice_bob::AliceBobFelis;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
@@ -28,6 +29,7 @@ pub enum ResourceType {
     IBMQiskitRuntimeService,
     PasqalCloud,
     PasqalLocal,
+    AliceBobFelis,
 }
 
 #[gen_stub_pyclass]
@@ -76,6 +78,12 @@ impl PyQuantumResource {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
                 }
             },
+            ResourceType::AliceBobFelis => match AliceBobFelis::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
         };
 
         Ok(Self {
@@ -114,6 +122,7 @@ impl PyQuantumResource {
                 }
                 crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
                 crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+                crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
             }),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }

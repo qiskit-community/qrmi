@@ -40,6 +40,7 @@ quantum-system-api = { path = "dependencies/quantum_system_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
+alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.25.0", features = ["anyhow"], optional = true }
 ffi_helpers = "0.3.0"
@@ -49,6 +50,7 @@ pyo3-stub-gen = { version = "0.10.0", optional = true }
 signal-hook-tokio = { version = "0.3.1", features = ["futures-v0_3"], optional = true }
 signal-hook = { version = "0.3.17", optional = true }
 eyre = { version = "0.6.8", optional = true }
+base64 = "0.22.1"
 
 [build-dependencies]
 cbindgen = "0.29"
@@ -58,6 +60,7 @@ members = [
     "dependencies/quantum_system_client",
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
+    "dependencies/alice_bob_felis_client",
 ]
 resolver = "2"
 

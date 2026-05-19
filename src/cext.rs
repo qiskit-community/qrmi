@@ -14,6 +14,7 @@ use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
+use crate::alice_bob::AliceBobFelis;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -560,6 +561,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 }
             },
             ResourceType::PasqalLocal => match PasqalLocal::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
+                    return std::ptr::null_mut();
+                }
+            },
+            ResourceType::AliceBobFelis => match AliceBobFelis::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     _set_last_error(format!("{}", err));
