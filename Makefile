@@ -2,9 +2,9 @@
 # (C) Copyright IBM Corporation 2026
 
 DIST_DIR ?= .
+SHELL := /bin/bash
 
-.PHONY: _build
-_build: build
+default: build
 
 include Makefile_common.mk
 
@@ -13,7 +13,9 @@ include Makefile_common.mk
 # ------------------------------------------------
 
 .PHONY: build build-rust-examples build-task-runner build-stubgen
-.PHONY: build-c-examples build-pypkg build-rust-all build-all
+.PHONY: build-c-examples build-wheels build-rust-all
+
+LIBQRMI_SO_PATH : build
 
 build:
 	cargo build --locked --release --lib
@@ -24,13 +26,15 @@ build-rust-examples:
 build-task-runner:
 	cargo build --locked --release --bin task_runner --features="build-binary"
 
-build-stubgen: check-venv-exists
-	@source $(PYTHON_VENV_ACTIVATE) && \
-	cargo build --locked --release --bin stubgen --features="pyo3"
+build-stubgen: check-python-devel-installed
+ifeq ($(INSIDE_CONTAINER),1)
+	$(error "Manylinux images don't come with libpython, please run the command without ./run_in_container.sh")
+endif
+	PYO3_PYTHON=python$(PYTHON_VERSION) cargo build --locked --release --bin stubgen --features="pyo3"
 
-build-c-examples: build
-	@mkdir -p examples/qrmi/c/direct_access/build
-	@cd examples/qrmi/c/direct_access/build && \
+build-c-examples: $(LIBQRMI_SO_PATH)
+	@mkdir -p examples/qrmi/c/ibm_quantum_system/build
+	@cd examples/qrmi/c/ibm_quantum_system/build && \
 		cmake -DCMAKE_BUILD_TYPE=Release .. && \
 		cmake --build .
 	@mkdir -p examples/qrmi/c/qiskit_runtime_service/build
@@ -46,20 +50,21 @@ build-c-examples: build
 		cmake -DCMAKE_BUILD_TYPE=Release .. && \
 		cmake --build .
 
-build-pypkg: check-venv-exists
+$(WHEELS_PATH):
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	maturin build --locked --release
+	CIBW_CONTAINER_ENGINE=$(CONTAINER_ENGINE) CIBW_TEST_SKIP='cp*' cibuildwheel
 
-build-rust-all: build build-rust-examples build-task-runner build-stubgen
+build-wheels: $(PYTHON_VENV_DIR) $(WHEELS_PATH)
 
-build-all: build-rust-all build-c-examples build-pypkg
+# build-stubgen has very specific requirements, please do not include it in this target
+build-rust-all: build build-rust-examples build-task-runner
 
 # ------------------------------------------------
 # Linting targets
 # ------------------------------------------------
 
 .PHONY: lint lint-rust-examples lint-task-runner lint-stubgen
-.PHONY: lint-pypkg lint-rust-all lint-all
+.PHONY: lint-wheels lint-rust-all
 
 lint:
 	cargo clippy --locked --release --lib -- -D warnings
@@ -70,24 +75,25 @@ lint-rust-examples:
 lint-task-runner:
 	cargo clippy --locked --release --bin task_runner --features="build-binary" -- -D warnings
 
-lint-stubgen: check-venv-exists
-	@source $(PYTHON_VENV_ACTIVATE) && \
-	cargo clippy --locked --release --bin stubgen --features="pyo3" -- -D warnings
+lint-stubgen: check-python-devel-installed
+ifeq ($(INSIDE_CONTAINER),1)
+	$(error "Manylinux images don't come with libpython, please run the command without ./run_in_container.sh")
+endif
+	PYO3_PYTHON=python$(PYTHON_VERSION) cargo clippy --locked --release --bin stubgen --features="pyo3" -- -D warnings
 
-lint-pypkg: check-venv-exists install-pypkg
+lint-wheels: $(PYTHON_VENV_DIR) install-wheels
 	@source $(PYTHON_VENV_ACTIVATE) && \
 	pylint ./python
 
-lint-rust-all: lint-with-examples lint-task-runner lint-stubgen
-
-lint-all: lint-rust-all lint-pypkg
+# lint-stubgen has very specific requirements, please do not include it in this target
+lint-rust-all: lint lint-rust-examples lint-task-runner
 
 # ------------------------------------------------
 # Unit test targets
 # ------------------------------------------------
 
 .PHONY: test test-doc test-deps test-rust-examples test-task-runner
-.PHONY: test-stubgen test-pypkg test-rust-all test-all
+.PHONY: test-stubgen test-wheels test-rust-all
 
 test:
 	cargo test --lib --locked --release
@@ -96,7 +102,7 @@ test-doc:
 	cargo test --doc --locked --release
 
 test-deps:
-	cargo test --locked --release -p direct-access-api
+	cargo test --locked --release -p quantum-system-api
 	cargo test --locked --release -p pasqal-cloud-api
 	cargo test --locked --release -p qiskit_runtime_client
 
@@ -106,47 +112,42 @@ test-rust-examples:
 test-task-runner:
 	cargo test --locked --release --bin task_runner --features="build-binary"
 
-test-stubgen: check-venv-exists
+test-stubgen: check-python-devel-installed
+ifeq ($(INSIDE_CONTAINER),1)
+	$(error "Manylinux images don't come with libpython, please run the command without ./run_in_container.sh")
+endif
+	PYO3_PYTHON=python$(PYTHON_VERSION) cargo test --locked --release --bin stubgen --features="pyo3"
+
+test-wheels: $(PYTHON_VENV_DIR)
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	cargo test --locked --release --bin stubgen --features="pyo3"
+	CIBW_CONTAINER_ENGINE=$(CONTAINER_ENGINE) CIBW_TEST_EXTRAS=all cibuildwheel
 
-test-pypkg: check-venv-exists install-pypkg
-	@source $(PYTHON_VENV_ACTIVATE) && \
-	pytest python/tests/
-
-test-rust-all: test test-rust-examples test-rust-doc test-task-runner test-stubgen
-
-test-all: test-rust-all test-pypkg
+# test-stubgen has very specific requirements, please do not include it in this target
+test-rust-all: test test-doc test-deps test-rust-examples test-task-runner
 
 # ------------------------------------------------
 # Format check targets
 # ------------------------------------------------
 
-.PHONY: fmt fmt-rust fmt-pypkg fmt-all
+.PHONY: fmt fmt-rust fmt-python
 
 fmt: fmt-rust
 
 fmt-rust:
 	cargo fmt --all -- --check --verbose
 
-fmt-pypkg: check-venv-exists
+fmt-python: $(PYTHON_VENV_DIR)
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	black --check ./python
-
-fmt-all: fmt-rust fmt-pypkg
+	black --check --target-version py$(PYTHON_VERSION_NO_DOTS) ./python
 
 # ------------------------------------------------
 # Setup targets
 # ------------------------------------------------
 
-.PHONY: create-env install-pypkg
+.PHONY: create-venv install-wheels
 
-create-venv: check-python-version-installed
-	@if [ -d $(PYTHON_VENV_DIR) ]; then \
-	  echo "Error: $(PYTHON_VENV_DIR) already exists. Remove it first or just skip this step."; \
-	  exit 1; \
-	fi; \
-	python$(PYTHON_VERSION) -m venv $(PYTHON_VENV_DIR) && \
+$(PYTHON_VENV_DIR):
+	@python$(PYTHON_VERSION) -m venv $(PYTHON_VENV_DIR) && \
 	source $(PYTHON_VENV_ACTIVATE) && \
 	pip install --upgrade pip && \
 	pip install -r requirements-dev.txt && \
@@ -157,43 +158,52 @@ create-venv: check-python-version-installed
 	echo "you can manually activate it with: source $(PYTHON_VENV_DIR)/bin/activate" && \
 	echo
 
-install-pypkg: check-venv-exists
+create-venv: $(PYTHON_VENV_DIR) check-python-version-installed
+
+# ------------------------------------------------
+
+install-wheels: $(PYTHON_VENV_DIR) $(WHEELS_PATH)
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	maturin develop --locked --release
+	pip install --force-reinstall $(WHEELS_PATH)[all]
 
 # ------------------------------------------------
 # Clean targets
 # ------------------------------------------------
 
-.PHONY: clean clean-c-examples clean-tarballs
+.PHONY: clean clean-c-examples clean-tarballs clean-wheels clean-all
 
 clean:
 	cargo clean
-	@rm -f qrmi.h
+	rm -f qrmi.h
 
 clean-c-examples:
-	@rm -rf examples/qrmi/c/direct_access/build
-	@rm -rf examples/qrmi/c/qiskit_runtime_service/build
-	@rm -rf examples/qrmi/c/pasqal_cloud/build
-	@rm -rf examples/qrmi/c/config/build
+	rm -rf examples/qrmi/c/ibm_quantum_system/build
+	rm -rf examples/qrmi/c/qiskit_runtime_service/build
+	rm -rf examples/qrmi/c/pasqal_cloud/build
+	rm -rf examples/qrmi/c/config/build
 
 clean-tarballs:
 	rm -f $(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-x86_64.tar.gz
 	rm -f $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz
 
+clean-wheels:
+	rm -rf $(DIST_DIR)/wheelhouse
+
 clean-docs:
 	rm -rf $(DIST_DIR)/html
+
+clean-all: clean clean-c-examples clean-tarballs clean-wheels
 
 # ------------------------------------------------
 # Documentation targets
 # ------------------------------------------------
 
-.PHONY: doc doc-pypkg doc-c
+.PHONY: doc doc-python doc-c
 
 doc:
 	cargo doc --no-deps --open
 
-doc-pypkg: check-venv-exists
+doc-python: $(PYTHON_VENV_DIR)
 	@source $(PYTHON_VENV_ACTIVATE) && \
 	python -m pydoc -b
 
@@ -206,109 +216,145 @@ doc-c: check-doxygen-installed
 # Packaging targets
 # ------------------------------------------------
 
-.PHONY: tarball-vendor tarball-libqrmi-el8 clean-tarballs
+.PHONY: vendor-tarball libqrmi-tarball pypi-sdist
 
-tarball-vendor:
+vendor-tarball:
 	cargo vendor $(DIST_DIR)/vendor
 	@tar czf $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz vendor/
 	@rm -rf $(DIST_DIR)/vendor
 	@echo
 	@echo "Created: $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz"
 
-tarball-libqrmi-el8: build
-	@TARBALL="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-x86_64.tar.gz" && \
+libqrmi-tarball: LIBQRMI_SO_PATH
+	@TARBALL="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-$(ARCH).tar.gz" && \
 	WORKDIR="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)" && \
 	mkdir -p $$WORKDIR && \
-	cp target/release/libqrmi.so $$WORKDIR && \
-	cp qrmi.h $$WORKDIR && \
+	cp $(LIBQRMI_SO_PATH) $$WORKDIR && \
+	cp $(QRMI_H_PATH) $$WORKDIR && \
 	cp LICENSE.txt $$WORKDIR && \
 	tar czf $$TARBALL -C $(DIST_DIR) libqrmi-$(QRMI_VERSION) && \
-	rm -rf $$WORKDIR && \
-	echo "Created: $$TARBALL"
+	rm -rf $$WORKDIR
+
+pypi-sdist: $(PYTHON_VENV_DIR)
+	@source $(PYTHON_VENV_ACTIVATE) && \
+	maturin sdist
 
 # ------------------------------------------------
 # Other targets
 # ------------------------------------------------
 
+.PHONY: help
+
 define HELP_TEXT
 Usage: make <target>
 
+As shown below, some targets can be executed within a ${MANYLINUX_VERSION} container using the "./run_in_container.sh" script.
+
+Main reasons why you may want to use "./run_in_container.sh":
+1. Negligible time overhead. In the first call, some time will be spent to fetch the manylinux image and rebuild it
+   locally adding some tooling for QRMI, however, after that running a make command with or without
+   "./run_in_container.sh" is almost the same.
+2. Artifacts are produced the same way as in the CI - release, on-pull-request, on-schedule, etc.
+3. Less packages to install and configure in your system.
+
+Targets that leverages cibuildwheel cannot be executed using "./run_in_container.sh". No need to have nested containers ;-)
+
 Build targets:
-    build                - Build libqrmi (default target)
-    build-rust-examples  - Build rust examples
-    build-c-examples     - Build C examples
-    build-task-runner    - Build task_runner binary
-    build-stubgen        - Build stubgen binary. Requires: create-venv
-    build-pypkg          - Build qrmi python package. Requires: create-venv
-    build-rust-all       - Build libqrmi, rust examples and binaries
-    build-all            - Build everything!
+    [./run_in_container.sh] build                - Build libqrmi (default target)
+    [./run_in_container.sh] build-rust-examples  - Build rust examples
+    [./run_in_container.sh] build-c-examples     - Build C examples
+    [./run_in_container.sh] build-task-runner    - Build task_runner binary
+                            build-stubgen        - Build stubgen binary
+                            build-wheels         - Build qrmi wheels using cibuildwheel
+    [./run_in_container.sh] build-rust-all       - Build libqrmi, rust examples and binaries (except stubgen)
 
 Linting targets:
-    lint                 - Lint libqrmi
-    lint-rust-examples   - Lint rust examples
-    lint-task-runner     - Lint task_runner binary
-    lint-stubgen         - Lint stubgen binary. (Requires: create-venv)
-    lint-pypkg           - Lint qrmi python package installed in the venv. (Requires: create-venv)
-                           The qrmi python package will be built and installed if necessary
-    lint-rust-all        - Lint libqrmi, rust examples and binaries
-    lint-all             - Lint everything!
+    [./run_in_container.sh] lint                 - Lint libqrmi
+    [./run_in_container.sh] lint-rust-examples   - Lint rust examples
+    [./run_in_container.sh] lint-task-runner     - Lint task_runner binary
+                            lint-stubgen         - Lint stubgen binary
+    [./run_in_container.sh] lint-wheels          - Lint built wheels with python-$(PYTHON_VERSION) (cibuildwheel not required)
+                                                   The qrmi python package will be built and installed if necessary
+    [./run_in_container.sh] lint-rust-all        - Lint libqrmi, rust examples and binaries (except stubgen)
 
 Unit test targets:
-    test                 - Test libqrmi
-    test-deps            - Test libqrmi dependencies
-    test-doc             - Test libqrmi doctests
-    test-rust-examples   - Test rust examples
-    test-task-runner     - Test task_runner binary
-    test-stubgen         - Test stubgen binary. (Requires: create-venv)
-    test-pypkg           - Test the qrmi python package installed in the venv. (Requires: create-venv)
-                           The qrmi python package will be built and installed if necessary
-    test-rust-all        - Test libqrmi, doctests, rust examples and binaries
-    test-all             - Test everything!
+    [./run_in_container.sh] test                 - Test libqrmi
+    [./run_in_container.sh] test-deps            - Test libqrmi dependencies
+    [./run_in_container.sh] test-doc             - Test libqrmi doctests
+    [./run_in_container.sh] test-rust-examples   - Test rust examples
+    [./run_in_container.sh] test-task-runner     - Test task_runner binary
+                            test-stubgen         - Test stubgen binary
+                            test-wheels          - Build and test wheels with all python >=$(PYTHON_VERSION) using cibuildwheel
+                                                   The qrmi python package will be built and installed if necessary
+    [./run_in_container.sh] test-rust-all        - Test libqrmi, doctests, rust examples and binaries (except stubgen)
 
 Format check targets:
-    fmt                  - Same as "fmt-rust"
-    fmt-rust             - Format check libqrmi, dependencies, examples and binaries
-    fmt-pypkg            - Format check the ./python directory. (Requires: create-venv)
-    fmt-all              - Format check everything!
+    [./run_in_container.sh] fmt                  - Same as "fmt-rust"
+    [./run_in_container.sh] fmt-rust             - Format check libqrmi, dependencies, examples and binaries
+    [./run_in_container.sh] fmt-python           - Format check the ./python directory with python-$(PYTHON_VERSION)
 
 Clean targets:
-    clean                - Remove ./target directory and qrmi.h
-    clean-c-examples     - Remove C examples build directories
-    clean-tarballs       - Remove tarballs generated
-    clean-all            - Remove all artifacts built
+    [./run_in_container.sh] clean                - Remove ./target directory and qrmi.h
+    [./run_in_container.sh] clean-c-examples     - Remove C examples build directories
+    [./run_in_container.sh] clean-tarballs       - Remove tarballs generated
+    [./run_in_container.sh] clean-all            - Remove all artifacts built
 
 Documentation targets:
-    doc                  - Generate rust API documentation and open it in a browser
-    doc-pypkg            - Generate python API documentation and open it in a browser. (Requires: create-venv)
-    doc-c                - Generate C API documentation
+    [./run_in_container.sh] doc                  - Generate rust API documentation and open it in a browser
+    [./run_in_container.sh] doc-python           - Generate python API documentation and open it in a browser
+    [./run_in_container.sh] doc-c                - Generate C API documentation
 
 Setup targets:
-    create-venv          - Create python virtual environment for QRMI using the python version
-                           defined in PYTHON_VERSION (default: "3.12").
-                           Once created, the makefile target will activate the venv automatically.
-    install-pypkg        - Build (if needed) and install the qrmi python package
+    [./run_in_container.sh] create-venv          - Create python virtual environment for QRMI using the python version
+                                                   defined in PYTHON_VERSION (default: 'make get-python-version').
+                                                   Once created, the makefile target will activate the venv automatically.
+    [./run_in_container.sh] install-wheels       - Install the wheels in the venv
 
 Packaging targets:
-    tarball-libqrmi-el8  - Create versioned libqrmi tarball with libqrmi.so and qrmi.h
-                           for RHEL8 compatible distributions
-    tarball-vendor       - Create versioned vendor tarball in DIST_DIR (default: ./).
-                           It can be used to build the qrmi version locally without
-                           relying on the vendor crates to be available upstream.
+    [./run_in_container.sh] libqrmi-tarball      - Create versioned libqrmi tarball with libqrmi.so and qrmi.h
+                                                   for RHEL8 compatible distributions
+    [./run_in_container.sh] vendor-tarball       - Create versioned vendor tarball in DIST_DIR (default: ./).
+                                                   It can be used to build the qrmi version locally without
+                                                   relying on the vendor crates to be available upstream.
+                            pypi-sdist           - Create source distribution tarball for PyPI    
 
 Other targets:
-    check-new-qrmi-version-valid   - Check if the qrmi version returned by "get-qrmi-version"
-                                     has already been released in github.
-    check-python-version-installed - Check if the RHEL 8 required python packages are installed
-    check-venv-exists    - Check if the venv for PYTHON_VERSION (default: "3.12") has already been created
-    get-qrmi-version     - Read the qrmi version from Cargo.toml and print it
-    help                 - Show this help message
+    [./run_in_container.sh] check-new-qrmi-version-valid   - Check if the qrmi version returned by "get-qrmi-version"
+                                                             has already been released in github.
+    [./run_in_container.sh] check-python-version-installed - Check if the RHEL 8 required python packages are installed
+                            get-qrmi-version      - Read the qrmi version from Cargo.toml and print it
+                            get-python-version    - Read the python version from pyproject.toml and print it
+                            get-manylinux-version - Read the manylinux version from pyproject.toml and print it
+                            get-venv-activate     - Print the path for the venv activate binary. Tip: 'source $$(make get-venv-activate)'
+    [./run_in_container.sh] help                  - Show this help message
+
+
+Examples:
+
+Build libqrmi.so and qrmi.h inside a ${MANYLINUX_VERSION} container.
+$$ ./run_in_container.sh make build
+
+Build wheels using cibuildwheel as defined in pyproject.toml (python ${PYTHON_VERSION} and ${MANYLINUX_VERSION}).
+The wheel is saved in ./wheelhouse/
+$$ make build-wheels
+
+Save the latest QRMI version in a bash variable.
+$$ QRMI_VERSION=$$(make get-qrmi-version)
+
+Activate the venv created by the makefile. The default python is ${PYTHON_VERSION} as defined in the pyproject.toml.
+$$ source $$(make get-venv-activate)
+
+Create a venv for a custom python version.
+$$ PYTHON_VERSION=3.13 make create-venv
+
+Activate a customized venv created by the makefile.
+$$ source $$(PYTHON=3.12 make get-venv-activate)
+
+Create the libqrmi tarball. It will be saved in $(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-$(ARCH).tar.gz
+$$ ./run_in_container.sh make libqrmi-tarball
 
 endef
 export HELP_TEXT
-
-.PHONY: clean-all help
-
-clean-all: clean clean-c-examples clean-tarballs
 
 help:
 	@echo "$$HELP_TEXT"

@@ -1,0 +1,254 @@
+---
+# wheels workflow
+# - Triggered manually from the GitHub UI (Actions tab) or from another workflow.
+# - Perform multiple tasks related to weels - e.g. build, test, lint, etc.
+# - Selected task(s) are performed on the architecture(s) selected
+#   - Exception: sdist, it does not require architecture selection
+# - wheels is always built and uploaded on the selected architecture(s)
+# - Task(s) and architecture(s) available are defined as workflow inputs
+
+name: wheels
+on:
+
+  # ATTENTION:
+  # workflow_dispatch inputs are used to run this workflow manually from the GitHub UI
+  # workflow_call inputs are used to run this workflow from another workflow
+  # For feature parity, please keep them in-sync (with same input names)
+
+  workflow_dispatch:
+    inputs:
+      arch-x86_64:
+        description: >-
+          Build wheels for x86_64
+        type: boolean
+        default: true
+        required: false
+      # Enable this with caution. Many python wheels are not pre-built in pypi for ppc64le
+      # and so they are built locally. Each python venv takes about 24 min to setup,
+      # which means about 2 hours total to test all python versions we support.
+      arch-ppc64le:
+        description: >-
+          Build wheels for ppc64le
+        type: boolean
+        default: false
+        required: false
+      arch-arm64:
+        description: >-
+          Build wheels for arm64
+        type: boolean
+        default: false
+        required: false
+      unit-test:
+        description: >-
+          pytest after building the wheels
+        type: boolean
+        default: false
+        required: false
+      format-check:
+        description: >-
+          format check before building the wheels
+        type: boolean
+        default: false
+        required: false
+      lint:
+        description: >-
+          pylint after bulding the wheels
+        type: boolean
+        default: false
+        required: false
+      sdist:
+        description: >-
+          Create the source distribution for pypi
+        type: boolean
+        default: false
+        required: false
+      artifact-prefix:
+        description: >-
+          Prefix for the artifact name (e.g. pr, release)
+        type: string
+        default: 'manual'
+        required: false
+
+  workflow_call:
+    inputs:
+      arch-x86_64:
+        description: >-
+          Build wheels for x86_64
+        type: boolean
+        default: true
+        required: false
+      # Enable this with caution. Many python wheels are not pre-built in pypi for ppc64le
+      # and so they are built locally. Each python venv takes about 24 min to setup,
+      # which means about 2 hours total to test all python versions we support.
+      arch-ppc64le:
+        description: >-
+          Build wheels for ppc64le
+        type: boolean
+        default: false
+        required: false
+      arch-arm64:
+        description: >-
+          Build wheels for arm64
+        type: boolean
+        default: false
+        required: false
+      unit-test:
+        description: >-
+          pytest after building the wheels
+        type: boolean
+        default: false
+        required: false
+      format-check:
+        description: >-
+          format check before building the wheels
+        type: boolean
+        default: false
+        required: false
+      lint:
+        description: >-
+          pylint after bulding the wheels
+        type: boolean
+        default: false
+        required: false
+      sdist:
+        description: >-
+          Create the source distribution for pypi
+        type: boolean
+        default: false
+        required: false
+      artifact-prefix:
+        description: >-
+          Prefix for the artifact name (e.g. pr, release)
+        type: string
+        default: 'manual'
+        required: false
+
+jobs:
+  info:
+    runs-on: ubuntu-24.04
+    outputs:
+      qrmi-version: ${{ steps.sysinfo.outputs.qrmi-version }}
+      python-version: ${{ steps.sysinfo.outputs.python-version }}
+    steps:
+    - uses: actions/checkout@v6
+    - name: System info
+      id: sysinfo
+      run: |
+        echo "qrmi-version=$(make get-qrmi-version)" >> $GITHUB_OUTPUT
+        echo "python-version=$(make get-python-version)" >> $GITHUB_OUTPUT
+
+  pypi-sdist:
+    if: inputs.sdist == true
+    runs-on: ubuntu-24.04
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ needs.info.outputs.python-version }}
+    - name: Create sdist for pypi
+      run: make pypi-sdist
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-pypi-sdist
+        path: ./target/wheels/qrmi-${{ needs.info.outputs.qrmi-version }}.tar.gz
+        if-no-files-found: error
+        retention-days: 1
+
+  wheels-x86_64:
+    if: inputs.arch-x86_64 == true
+    runs-on: ubuntu-24.04
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ needs.info.outputs.python-version }}
+    - if: inputs.format-check == true
+      name: Use black to check formatting
+      run: make fmt-python
+    - if: inputs.unit-test == false
+      name: Skip wheels unit test
+      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v3.4.1
+      env:
+        CIBW_TEST_EXTRAS: all
+    - if: inputs.lint == true
+      name: Lint wheels
+      run: make lint-wheels
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-x86_64
+        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  wheels-ppc64le:
+    if: ${{ inputs.arch-ppc64le == true }}
+    runs-on: ubuntu-24.04-ppc64le
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    # cibuildwheel requires a recent python version to run, it supports the last three python releases.
+    # However, actions/setup-python@v6 does not support ppc64le yet
+    # https://github.com/actions/setup-python/issues/1154 
+    # For now we have to install python manually.
+    - name: Install python3 manually for cibuildwheel
+      run: |
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt update
+        sudo apt install -y python${{ needs.info.outputs.python-version }}{,-dev,-venv} python3-pip
+    - if: ${{ inputs.format-check == true }}
+      name: Format check the .python directory
+      run: make fmt-python
+    - if: ${{ inputs.unit-test == false }}
+      name: Skip wheel unit tests
+      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
+    # pypa/cibuildwheel action can't be used because it calls actions/setup-python@v6 internally, which
+    # does not support ppc64le yet
+    - name: Build wheels
+      run: |
+        make create-venv
+        source $(make get-venv-activate)
+        # Indirect package dependencies for the pulser-core wheel
+        CIBW_BEFORE_ALL="dnf install -y openblas-devel libjpeg-turbo-devel zlib-devel" CIBW_TEST_EXTRAS=all cibuildwheel
+    - if: inputs.lint == true
+      name: Lint wheels
+      run: |
+        sudo apt install -y libopenblas-dev libjpeg-turbo8-dev zlib1g-dev gfortran pkgconf
+        make lint-wheels
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-ppc64le
+        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  wheels-arm64:
+    if: ${{ inputs.arch-arm64 == true }}
+    runs-on: ubuntu-24.04-arm
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ needs.info.outputs.python-version }}
+    - if: ${{ inputs.format-check == true }}
+      name: Format check the .python directory
+      run: make fmt-python
+    - if: ${{ inputs.unit-test == false }}
+      name: Skip wheel unit tests
+      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
+    - uses: pypa/cibuildwheel@v3.4.1
+      env:
+        CIBW_TEST_EXTRAS: all
+    - if: inputs.lint == true
+      name: Lint wheels
+      run: make lint-wheels
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-arm64
+        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        if-no-files-found: error
+        retention-days: 1
