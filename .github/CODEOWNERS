@@ -29,13 +29,19 @@
 /examples/task_runner/qpp/                      @awennersteen @MatthieuMoreau0
 
 /src/ibm/                                       @ohtanim @OkuyanBoga
+/src/iqm/                                       @ohtanim @yoonho
 /python/qrmi/primitives/ibm/                    @ohtanim @OkuyanBoga
+/python/qrmi/qiskit_iqm/                        @ohtanim @yoonho
 /dependencies/quantum_system_client/            @ohtanim @yoonho
 /dependencies/qiskit_runtime_client/            @OkuyanBoga @ohtanim
+/dependencies/iqm_client/                       @ohtanim @yoonho
 /examples/qiskit_primitives/ibm/                @ohtanim @OkuyanBoga
+/examples/qiskit_primitives/iqm/                @ohtanim @yoonho
 /examples/**/qiskit_runtime_service/            @OkuyanBoga @ohtanim
 /examples/**/ibm_quantum_system/                @ohtanim @yoonho
+/examples/**/iqm_server/                        @ohtanim @yoonho
 /examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga
+/examples/task_runner/iqm/                      @ohtanim @yoonho
 
 # Override the release notes directories to have _no_ code owners, so any review
 # from somebody with write access is acceptable.
