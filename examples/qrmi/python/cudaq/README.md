@@ -55,16 +55,29 @@ cudaq.set_target("pasqal", machine="qrmi")
 
 See the CUDA-Q docs too see how to send a C++ job. To use QRMI, simply set the target and machine as above.
 
-### For custom builds
+## How to run
 
-For up-to-date  information, follow CUDA-Q's official build docs and scripts.
+All information is baked into the Python script.
 
-We assume Slurm containers as setup by the [spank-plugins development INSTALL.md](https://github.com/qiskit-community/spank-plugins/blob/main/demo/qrmi/slurm-docker-cluster/INSTALL.md).
+```shell-session
+
+For example,
+```shell-session
+$ python pasqal.py
+```
+
+## Build from source
+
+> For up-to-date  information on how to build the latest version, we suggest you follow CUDA-Q's [official build docs and scripts](https://nvidia.github.io/cuda-quantum/latest/using/install/data_center_install.html).
+
+We assume Slurm containers as setup by the [spank-plugins development INSTALL.md](https://github.com/qiskit-community/spank-plugins/blob/main/demo/qrmi/slurm-docker-cluster/INSTALL.md) and the cudaq repo cloned in `/shared`.
 
 ```bash
 # 1) Rebuild QRMI
 cd /shared/qrmi
 cargo build --release --lib
+# For pasqal-local support
+cargo build --release --lib --features munge
 
 # 2) Build CUDA-Q with local QRMI
 cd /shared/cuda-quantum
@@ -78,7 +91,7 @@ pip install --no-build-isolation /shared/cuda-quantum
 
 Do not use editable install for CUDA-Q in this workspace (`pip install -e .`) as it requires further manually specifying paths to get a working environment.
 
-The CUDA-Q build config used during development were these:
+> The CUDA-Q build config used during development were these:
 ```bash
 dnf install epel-release
 dnf makecache
@@ -88,13 +101,6 @@ PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python ./scripts/i
 PATH=/opt/llvm/bin:$PATH Python3_EXECUTABLE=/shared/pyenv/bin/python QRMI_INSTALL_PREFIX=/shared/qrmi CUDAQ_BUILD_TESTS=FALSE CUDAQ_WERROR=OFF ./scripts/build_cudaq.sh -j nproc -- -DCUDAQ_ENABLE_PASQAL_QRMI_CONNECTOR=ON -DCUDAQ_ENABLE_BRAKET_BACKEND=OFF -DCUDAQ_ENABLE_QCI_BACKEND=OFF -DCUDAQ_ENABLE_QUANTUM_MACHINES_BACKEND=OFF
 ```
 
-## How to run
+### Troubleshooting
 
-All information is baked into the Python script.
-
-```shell-session
-
-For example,
-```shell-session
-$ python pasqal.py
-```
+To be sure that Cuda-Q detected and is using the QRMI lib that you just built, checkout the `QRMI_LIBRARY` var in `cuda-quantum/build/CMakeCache.txt`. By default, that QRMI lib build is located in `qrmi/target/release/libqrmi.so`, so you can copy it to where `QRMI_LIBRARY` is pointing if there is a mismatch.

@@ -32,10 +32,15 @@ logger.info(json.dumps(dict(os.environ)))
 
 # Create QRMI
 load_dotenv()
-service = QRMIService()
+try:
+    service = QRMIService()
+except RuntimeError as e:
+    logger.error(f"Something went wrong in the QRMI: {e}")
+    exit(1)
 resources = service.resources()
 if len(resources) == 0:
-    print("No quantum resource is available.")
+    logger.error("No quantum resource is available.")
+    exit(1)
 
 
 # Randomly select QR
