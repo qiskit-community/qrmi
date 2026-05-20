@@ -27,6 +27,7 @@ async fn resource_id_and_type_match_backend() {
         config: configuration::Configuration::new(),
         backend_name: BACKEND_NAME.to_string(),
         acquisition_token: None,
+        calibration_set_id: "default".to_string(),
     };
 
     let resource_id = qrmi
