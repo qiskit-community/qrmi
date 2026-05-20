@@ -498,8 +498,9 @@ class IQMProvider:
             if name in self._iqm_resources:
                 backend_name = name.replace(":", "_")
             else:
+                qc_alias_name = self._iqm_resources[0].replace("_", ":")
                 warnings.warn(
-                    f"QC '{name}' is not available. Use '{self._iqm_resources[0].replace("_", ":")}' instead"
+                    f"QC '{name}' is not available. Use '{qc_alias_name}' instead"
                 )
 
         if calset_id is None:
