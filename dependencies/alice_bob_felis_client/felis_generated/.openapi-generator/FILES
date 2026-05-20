@@ -3,7 +3,7 @@
 Cargo.toml
 README.md
 docs/CreateExternalJob.md
-docs/Default.md
+docs/DefaultValue.md
 docs/EventType.md
 docs/ExternalJob.md
 docs/ExternalJobMetrics.md
@@ -31,7 +31,7 @@ src/apis/mod.rs
 src/apis/targets_service.rs
 src/lib.rs
 src/models/create_external_job.rs
-src/models/default.rs
+src/models/default_value.rs
 src/models/event_type.rs
 src/models/external_job.rs
 src/models/external_job_metrics.rs

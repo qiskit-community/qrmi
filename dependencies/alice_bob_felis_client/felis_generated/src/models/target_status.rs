@@ -11,42 +11,29 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct InputParamConfiguration {
-    #[serde(rename = "required")]
-    pub required: bool,
-    #[serde(rename = "type")]
-    pub r#type: Type,
-    #[serde(rename = "default", deserialize_with = "Option::deserialize")]
-    pub default: Option<Box<models::Default>>,
-    #[serde(rename = "constraints")]
-    pub constraints: Vec<models::InputParamRangeConstraint>,
+/// TargetStatus : The status of the target
+/// The status of the target
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Default)]
+pub enum TargetStatus {
+    #[serde(rename = "OFF")]
+    #[default]
+    Off,
+    #[serde(rename = "OK")]
+    Ok,
+    #[serde(rename = "NOK")]
+    Nok,
+
 }
 
-impl InputParamConfiguration {
-    pub fn new(required: bool, r#type: Type, default: Option<models::Default>, constraints: Vec<models::InputParamRangeConstraint>) -> InputParamConfiguration {
-        InputParamConfiguration {
-            required,
-            r#type,
-            default: if let Some(x) = default {Some(Box::new(x))} else {None},
-            constraints,
+impl std::fmt::Display for TargetStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Off => write!(f, "OFF"),
+            Self::Ok => write!(f, "OK"),
+            Self::Nok => write!(f, "NOK"),
         }
     }
 }
-/// 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub enum Type {
-    #[serde(rename = "float")]
-    Float,
-    #[serde(rename = "int")]
-    Int,
-    #[serde(rename = "bool")]
-    Bool,
-}
 
-impl Default for Type {
-    fn default() -> Type {
-        Self::Float
-    }
-}
 

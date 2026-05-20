@@ -11,10 +11,13 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// 
+/// EventType : The type of an event recorded for a job
+/// The type of an event recorded for a job
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum EventType {
     #[serde(rename = "CREATED")]
+    #[default]
     Created,
     #[serde(rename = "FETCHING_INPUT")]
     FetchingInput,
@@ -66,9 +69,4 @@ impl std::fmt::Display for EventType {
     }
 }
 
-impl Default for EventType {
-    fn default() -> EventType {
-        Self::Created
-    }
-}
 

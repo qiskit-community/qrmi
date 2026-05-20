@@ -5,8 +5,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **required** | **bool** |  | 
-**r#type** | **String** |  | 
-**default** | Option<[**models::Default**](Default.md)> |  | 
+**r#type** | **String** | The type of the input parameter | 
+**default** | Option<[**models::DefaultValue**](DefaultValue.md)> |  | 
 **constraints** | [**Vec<models::InputParamRangeConstraint>**](InputParamRangeConstraint.md) |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

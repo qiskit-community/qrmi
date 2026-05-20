@@ -1,7 +1,7 @@
 pub mod create_external_job;
 pub use self::create_external_job::CreateExternalJob;
-pub mod default;
-pub use self::default::Default;
+pub mod default_value;
+pub use self::default_value::DefaultValue;
 pub mod event_type;
 pub use self::event_type::EventType;
 pub mod external_job;

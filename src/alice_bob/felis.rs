@@ -8,8 +8,8 @@ use uuid::Uuid;
 use alice_bob_felis::apis::{configuration, targets_service, jobs_service};
 use alice_bob_felis::models::{EventType, create_external_job};
 use alice_bob_felis::models;
+use alice_bob_felis::helpers::decode_api_key;
 use serde_json::json;
-use base64::{engine::general_purpose, Engine};
 use anyhow::{anyhow, bail, Result};
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
@@ -63,7 +63,7 @@ impl AliceBobFelis {
     }
 
     async fn most_recent_event(&mut self, task_id: &str) -> Result<models::EventType> {
-        let job = jobs_service::get_job(&self.config, &task_id, None).await?;
+        let job = jobs_service::get_job(&self.config, task_id, None).await?;
         // Can safely assume events is non-empty
         let event = job.events.last().unwrap().r#type;
         Ok(event)
@@ -78,33 +78,8 @@ fn target_to_device(target: &str) -> String {
 }
 
 fn device_to_target(device: &str) -> String {
-    device.strip_prefix("ab_").unwrap_or(&device).replacen("_", ":", 2).to_uppercase()
+    device.strip_prefix("ab_").unwrap_or(device).replacen("_", ":", 2).to_uppercase()
 }
-
-// Felis API keys are basic auth credentials in disguise.
-// We need to decode them to pass them to our client in the format it expects.
-// The client will then reencode.
-fn decode_api_key(encoded: &str) -> Result<Option<(String, Option<String>)>, Box<dyn std::error::Error>> {
-    // Decode from Base64
-    let decoded_bytes = general_purpose::STANDARD.decode(encoded)?;
-    let decoded_str = String::from_utf8(decoded_bytes)?;
-
-    // Split at the first ':'
-    let mut parts = decoded_str.splitn(2, ':');
-
-    let username = parts
-        .next()
-        .ok_or("missing username part")?
-        .to_string();
-
-    let password = parts
-        .next()
-        .ok_or("missing password part")?
-        .to_string();
-
-    Ok(Some((username, Some(password))))
-}
-
 
 #[async_trait]
 impl QuantumResource for AliceBobFelis {
@@ -183,7 +158,7 @@ impl QuantumResource for AliceBobFelis {
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let output_csv = jobs_service::download_output(&self.config, &task_id, None).await?;
+        let output_csv = jobs_service::download_output(&self.config, task_id, None).await?;
         Ok(TaskResult { value: output_csv })
     }
 
@@ -191,6 +166,7 @@ impl QuantumResource for AliceBobFelis {
         Ok("Logging not implemented for this QuantumResource".to_string())
     }
 
+    #[allow(clippy::expect_fun_call)]
     async fn target(&mut self) -> Result<Target> {
         let targets = targets_service::list_targets(&self.config).await?;
 

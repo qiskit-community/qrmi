@@ -11,31 +11,18 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub enum TargetStatus {
-    #[serde(rename = "OFF")]
-    Off,
-    #[serde(rename = "OK")]
-    Ok,
-    #[serde(rename = "NOK")]
-    Nok,
-
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum DefaultValue {
+    String(String),
+    Number(f64),
+    Integer(i32),
+    Boolean(bool),
 }
 
-impl std::fmt::Display for TargetStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::Off => write!(f, "OFF"),
-            Self::Ok => write!(f, "OK"),
-            Self::Nok => write!(f, "NOK"),
-        }
-    }
-}
-
-impl Default for TargetStatus {
-    fn default() -> TargetStatus {
-        Self::Off
+impl Default for DefaultValue {
+    fn default() -> Self {
+        Self::String(Default::default())
     }
 }
 

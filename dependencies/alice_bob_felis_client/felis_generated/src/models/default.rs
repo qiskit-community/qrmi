@@ -20,9 +20,9 @@ pub enum Default {
     Boolean(bool),
 }
 
-// impl Default for Default {
-//     fn default() -> Self {
-//         Self::String(Default::default())
-//     }
-// }
+impl Default for Default {
+    fn default() -> Self {
+        Self::String(Default::default())
+    }
+}
 
