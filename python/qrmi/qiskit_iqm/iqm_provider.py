@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -23,6 +24,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 import warnings
+from logging import getLogger
 import json
 
 import numpy as np
@@ -31,7 +33,7 @@ from qiskit import QuantumCircuit
 from qiskit.providers import JobStatus, JobV1, Options
 from qiskit.result import Counts, Result
 
-from qrmi import QuantumResource, Payload, TaskStatus
+from qrmi import QuantumResource, Payload, TaskStatus, ResourceType
 
 from iqm.iqm_client import CircuitCompilationOptions, CircuitValidationError
 from iqm.iqm_client.util import to_json_dict
@@ -46,7 +48,8 @@ from iqm.station_control.interface.models import (
     DynamicQuantumArchitecture,
     RunRequest,
 )
-from .service import QRMIService
+
+logger = getLogger("qrmi")
 
 # ---------------------------------------------------------------------------
 # Job
@@ -438,9 +441,33 @@ class IQMProvider:
 
     def __init__(
         self,
-        **args,
+        **_args,
     ):
-        pass
+        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
+        qpus = os.environ["SLURM_JOB_QPU_RESOURCES"]
+        logger.debug("qpus: %s", qpus)
+        if len(qpus) == 0:
+            qpus = []
+        else:
+            qpus = qpus.split(sep)
+
+        qpu_types = os.environ["SLURM_JOB_QPU_TYPES"]
+        logger.debug("qpu types: %s", qpu_types)
+        if len(qpu_types) == 0:
+            qpu_types = []
+        else:
+            qpu_types = qpu_types.split(sep)
+
+        if len(qpus) != len(qpu_types):
+            raise ValueError("Inconsistent specifications of QPU resources and types")
+
+        self._iqm_resources = []
+        for i, qpu in enumerate(qpus):
+            qpu = qpu.strip()
+            if qpu_types[i] == "iqm-server":
+                self._iqm_resources.append(qpu)
+            else:
+                continue
 
     def get_backend(
         self,
@@ -464,11 +491,25 @@ class IQMProvider:
             Backend instance for connecting to a quantum computer.
 
         """
-        service = QRMIService()
+        calset_id = str(calibration_set_id) if calibration_set_id is not None else None
+
+        backend_name = self._iqm_resources[0].replace(":", "_")
         if name is not None:
-            qrmi = service.resource(name.replace(":", "_"))
+            if name in self._iqm_resources:
+                backend_name = name.replace(":", "_")
+            else:
+                warnings.warn(
+                    f"QC '{name}' is not available."
+                    f" Use '{self._iqm_resources[0].replace("_", ":")}' instead"
+                )
+
+        if calset_id is None:
+            qrmi = QuantumResource(backend_name, ResourceType.IQMServer)
         else:
-            qrmi = service.resources()[0]
+            qrmi = QuantumResource(
+                f"{backend_name},{calset_id}", ResourceType.IQMServer
+            )
+
         return QRMIBackend(
             qrmi, calibration_set_id=calibration_set_id, use_metrics=use_metrics
         )

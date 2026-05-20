@@ -32,6 +32,7 @@ use uuid::Uuid;
 pub struct IQMServer {
     pub(crate) config: configuration::Configuration,
     pub(crate) backend_name: String,
+    pub(crate) calibration_set_id: String,
     pub(crate) acquisition_token: Option<String>,
 }
 
@@ -42,7 +43,14 @@ impl IQMServer {
     /// * QRMI_IQM_ISA_ENDPOINT - IQM Server API endpoint URL
     /// * QRMI_IQM_ISA_TOKEN - IQM Server API token
     /// * QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
-    pub fn new(backend_name: &str) -> Result<Self> {
+    pub fn new(resource_id: &str) -> Result<Self> {
+        let buf: Vec<&str> = resource_id.split(",").collect();
+        let (backend_name, calset_id) = match buf.as_slice() {
+            [name, id, ..] => (*name, *id),
+            [name] => (*name, "default"),
+            _ => unreachable!("buf should never be empty due to split()"),
+        };
+
         let iqm_endpoint =
             env::var(format!("{backend_name}_QRMI_IQM_ISA_ENDPOINT")).map_err(|_| {
                 anyhow!("{backend_name}_QRMI_IQM_ISA_ENDPOINT environment variable is not set")
@@ -68,6 +76,7 @@ impl IQMServer {
             config,
             backend_name: converted,
             acquisition_token,
+            calibration_set_id: calset_id.to_string(),
         })
     }
 }
@@ -224,49 +233,56 @@ impl QuantumResource for IQMServer {
     /// GET /backends/{id}/properties into a single JSON object.
     async fn target(&mut self) -> Result<Target> {
         let mut resp = json!({});
-        resp["dynamic_quantum_architecture"] =
-            match get_dynamic_quantum_architecture_v1(&self.config, &self.backend_name, "default")
-                .await
-            {
-                Ok(bytes) => {
-                    serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
-                        error!("Failed to parse dynamic_quantum_architecture: {:?}", e);
-                        json!(null)
-                    })
-                }
-                Err(e) => {
-                    error!("Failed to get dynamic_quantum_architecture: {:?}", e);
-                    json!(null)
-                }
-            };
+        resp["dynamic_quantum_architecture"] = match get_dynamic_quantum_architecture_v1(
+            &self.config,
+            &self.backend_name,
+            &self.calibration_set_id,
+        )
+        .await
+        {
+            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
+                error!("Failed to parse dynamic_quantum_architecture: {:?}", e);
+                json!(null)
+            }),
+            Err(e) => {
+                error!("Failed to get dynamic_quantum_architecture: {:?}", e);
+                json!(null)
+            }
+        };
 
-        resp["calibration_set"] =
-            match get_calibration_set_v1(&self.config, &self.backend_name, "default").await {
-                Ok(bytes) => {
-                    serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
-                        error!("Failed to parse calibration_set: {:?}", e);
-                        json!(null)
-                    })
-                }
-                Err(e) => {
-                    error!("Failed to get calibration_set: {:?}", e);
-                    json!(null)
-                }
-            };
+        resp["calibration_set"] = match get_calibration_set_v1(
+            &self.config,
+            &self.backend_name,
+            &self.calibration_set_id,
+        )
+        .await
+        {
+            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
+                error!("Failed to parse calibration_set: {:?}", e);
+                json!(null)
+            }),
+            Err(e) => {
+                error!("Failed to get calibration_set: {:?}", e);
+                json!(null)
+            }
+        };
 
-        resp["quality_metrics"] =
-            match get_quality_metrics_v1(&self.config, &self.backend_name, "default").await {
-                Ok(bytes) => {
-                    serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
-                        error!("Failed to parse quality_metrics: {:?}", e);
-                        json!(null)
-                    })
-                }
-                Err(e) => {
-                    error!("Failed to get quality_metrics: {:?}", e);
-                    json!(null)
-                }
-            };
+        resp["quality_metrics"] = match get_quality_metrics_v1(
+            &self.config,
+            &self.backend_name,
+            &self.calibration_set_id,
+        )
+        .await
+        {
+            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
+                error!("Failed to parse quality_metrics: {:?}", e);
+                json!(null)
+            }),
+            Err(e) => {
+                error!("Failed to get quality_metrics: {:?}", e);
+                json!(null)
+            }
+        };
 
         Ok(Target {
             value: resp.to_string(),
