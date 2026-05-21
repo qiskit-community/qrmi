@@ -61,7 +61,7 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
                     "qiskit-runtime-service",
                     "pasqal-cloud",
                     "pasqal-local",
-                    "alice-bob-felis"
+                    "alice-bob-felis",
                 ],
             )),
         }

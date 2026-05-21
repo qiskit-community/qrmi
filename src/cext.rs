@@ -10,11 +10,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 #![allow(dead_code)]
+use crate::alice_bob::AliceBobFelis;
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
-use crate::alice_bob::AliceBobFelis;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -923,7 +923,11 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
                 job_runs,
             });
         }
-    } else if let Payload::AliceBobFelis { human_qir, input_params } = *payload {
+    } else if let Payload::AliceBobFelis {
+        human_qir,
+        input_params,
+    } = *payload
+    {
         if let (Ok(human_qir_str), Ok(input_params_str)) = (
             CStr::from_ptr(human_qir).to_str(),
             CStr::from_ptr(input_params).to_str(),

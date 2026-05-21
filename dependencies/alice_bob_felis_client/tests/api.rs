@@ -1,7 +1,7 @@
-use felis::apis::{health_service, configuration, targets_service};
-use felis::helpers::decode_api_key;
-use anyhow::{Result};
+use anyhow::Result;
 use dotenvy::dotenv;
+use felis::apis::{configuration, health_service, targets_service};
+use felis::helpers::decode_api_key;
 
 async fn prepare_config() -> Result<configuration::Configuration, anyhow::Error> {
     dotenv().ok();

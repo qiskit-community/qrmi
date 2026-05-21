@@ -1,16 +1,15 @@
-
-use crate::models::{ResourceType, Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
-use async_trait::async_trait;
-use std::env;
-use std::collections::HashMap;
-use uuid::Uuid;
-use alice_bob_felis::apis::{configuration, targets_service, jobs_service};
-use alice_bob_felis::models::{EventType, create_external_job};
-use alice_bob_felis::models;
+use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
 use alice_bob_felis::helpers::decode_api_key;
-use serde_json::json;
+use alice_bob_felis::models;
+use alice_bob_felis::models::{create_external_job, EventType};
 use anyhow::{anyhow, bail, Result};
+use async_trait::async_trait;
+use serde_json::json;
+use std::collections::HashMap;
+use std::env;
+use uuid::Uuid;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
 pub struct AliceBobFelis {
@@ -26,26 +25,16 @@ impl AliceBobFelis {
     ///
     /// * QRMI_FELIS_API_KEY: API key obtained from the Felis web console
     /// * QRMI_AB_FELIS_BASE_ENDPOINT: URL for Felis API base endpoint
-    /// 
+    ///
     /// These may be optionally be prefixed by the backend name
     pub fn new(backend_name: &str) -> Result<Self> {
         // Handle environment variables
-        let api_key =
-            env::var(format!("{backend_name}_QRMI_AB_FELIS_API_KEY"))
+        let api_key = env::var(format!("{backend_name}_QRMI_AB_FELIS_API_KEY"))
             .or(env::var("QRMI_AB_FELIS_API_KEY"))
-            .map_err(|_| {
-                anyhow!(
-                    "QRMI_AB_FELIS_API_KEY environment variable is not set"
-                )
-            })?;
-        let endpoint =
-            env::var(format!("{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT"))
+            .map_err(|_| anyhow!("QRMI_AB_FELIS_API_KEY environment variable is not set"))?;
+        let endpoint = env::var(format!("{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT"))
             .or(env::var("QRMI_AB_FELIS_BASE_ENDPOINT"))
-            .map_err(|_| {
-                anyhow!(
-                    "QRMI_AB_FELIS_BASE_ENDPOINT environment variable is not set"
-                )
-            })?;
+            .map_err(|_| anyhow!("QRMI_AB_FELIS_BASE_ENDPOINT environment variable is not set"))?;
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
         config.basic_auth = decode_api_key(&api_key).unwrap();
@@ -58,7 +47,10 @@ impl AliceBobFelis {
 
     pub async fn list_backends(&mut self) -> Result<Vec<String>> {
         let targets = targets_service::list_targets(&self.config).await?;
-        let names: Vec<String> = targets.iter().map(|t| target_to_device(&t.name.clone())).collect();
+        let names: Vec<String> = targets
+            .iter()
+            .map(|t| target_to_device(&t.name.clone()))
+            .collect();
         Ok(names)
     }
 
@@ -70,7 +62,6 @@ impl AliceBobFelis {
     }
 }
 
-
 // e.g. Felis target    EMU:40Q:PHYSICAL_CATS
 // becomes device       ab_emu_40q_physical_cats
 fn target_to_device(target: &str) -> String {
@@ -78,12 +69,15 @@ fn target_to_device(target: &str) -> String {
 }
 
 fn device_to_target(device: &str) -> String {
-    device.strip_prefix("ab_").unwrap_or(device).replacen("_", ":", 2).to_uppercase()
+    device
+        .strip_prefix("ab_")
+        .unwrap_or(device)
+        .replacen("_", ":", 2)
+        .to_uppercase()
 }
 
 #[async_trait]
 impl QuantumResource for AliceBobFelis {
-
     async fn resource_id(&mut self) -> Result<String> {
         Ok(self.backend_name.clone())
     }
@@ -107,7 +101,11 @@ impl QuantumResource for AliceBobFelis {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        if let Payload::AliceBobFelis { human_qir, input_params } = payload {
+        if let Payload::AliceBobFelis {
+            human_qir,
+            input_params,
+        } = payload
+        {
             let job = create_external_job::CreateExternalJob {
                 // For now Felis supports only a single input/output format
                 input_data_format: Some(json!("HUMAN_QIR")),
@@ -115,22 +113,23 @@ impl QuantumResource for AliceBobFelis {
                 target: self.felis_target.clone(),
                 input_params: serde_json::from_str(&input_params).unwrap(),
             };
-            
+
             let external_job = jobs_service::create_job(&self.config, job, None).await?;
             jobs_service::upload_input(&self.config, &external_job.id, human_qir, None).await?;
             // If here we can assume all went well
             Ok(external_job.id)
-
         } else {
-            bail!(format!("Payload type {:?} is not supported by Felis.", payload))
+            bail!(format!(
+                "Payload type {:?} is not supported by Felis.",
+                payload
+            ))
         }
     }
 
     // task_stop seems to be expected to be idempotent
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
         let event = &self.most_recent_event(task_id).await?;
-        if *event != EventType::Succeeded &&
-           *event != EventType::Cancelled {
+        if *event != EventType::Succeeded && *event != EventType::Cancelled {
             jobs_service::cancel_job(&self.config, task_id, None).await?;
         }
         Ok(())
@@ -173,7 +172,10 @@ impl QuantumResource for AliceBobFelis {
         let target = targets
             .iter()
             .find(|obj| obj.name == self.felis_target)
-            .expect(&format!("No matching target found {t}", t=self.felis_target));
+            .expect(&format!(
+                "No matching target found {t}",
+                t = self.felis_target
+            ));
 
         Ok(Target {
             value: serde_json::to_string(&target).unwrap(),

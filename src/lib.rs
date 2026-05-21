@@ -10,11 +10,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+pub mod alice_bob;
 pub(crate) mod common;
 pub(crate) mod consts;
 pub mod ibm;
 pub mod pasqal;
-pub mod alice_bob;
 
 mod cext;
 pub mod models;

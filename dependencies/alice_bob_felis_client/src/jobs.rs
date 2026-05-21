@@ -1,8 +1,8 @@
-use serde::{de::Error as _};
-use generated::{apis::ResponseContent};
-use generated::apis::{Error, configuration};
 use generated::apis::jobs_service::UploadInputError;
-use reqwest::multipart::{Part};
+use generated::apis::ResponseContent;
+use generated::apis::{configuration, Error};
+use reqwest::multipart::Part;
+use serde::de::Error as _;
 
 /// Internal use only
 /// A content type supported by this client.
@@ -10,7 +10,7 @@ use reqwest::multipart::{Part};
 enum ContentType {
     Json,
     Text,
-    Unsupported(String)
+    Unsupported(String),
 }
 
 impl From<&str> for ContentType {
@@ -26,13 +26,24 @@ impl From<&str> for ContentType {
 }
 
 /// Upload the input code for a job in QIR format to trigger its execution (provided that the target is available).
-pub async fn upload_input(configuration: &configuration::Configuration, job_id: &str, input: String, authorization: Option<&str>) -> Result<serde_json::Value, Error<UploadInputError>> {
+pub async fn upload_input(
+    configuration: &configuration::Configuration,
+    job_id: &str,
+    input: String,
+    authorization: Option<&str>,
+) -> Result<serde_json::Value, Error<UploadInputError>> {
     // add a prefix to parameters to efficiently prevent name collisions
     let p_path_job_id = job_id;
     let p_header_authorization = authorization;
 
-    let uri_str = format!("{}/v1/jobs/{job_id}/input", configuration.base_path, job_id=crate::apis::urlencode(p_path_job_id));
-    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+    let uri_str = format!(
+        "{}/v1/jobs/{job_id}/input",
+        configuration.base_path,
+        job_id = crate::apis::urlencode(p_path_job_id)
+    );
+    let mut req_builder = configuration
+        .client
+        .request(reqwest::Method::POST, &uri_str);
 
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
@@ -45,7 +56,7 @@ pub async fn upload_input(configuration: &configuration::Configuration, job_id: 
     };
 
     let part = Part::bytes(input.into_bytes())
-        .file_name("input")                 // REQUIRED to mimic Python
+        .file_name("input") // REQUIRED to mimic Python
         .mime_str("application/octet-stream")?; // matches Python behavior
     let multipart_form = reqwest::multipart::Form::new().part("input", part);
     // TODO: support file upload for 'input' parameter
@@ -72,6 +83,10 @@ pub async fn upload_input(configuration: &configuration::Configuration, job_id: 
     } else {
         let content = resp.text().await?;
         let entity: Option<UploadInputError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+        Err(Error::ResponseError(ResponseContent {
+            status,
+            content,
+            entity,
+        }))
     }
 }
