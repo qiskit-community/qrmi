@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM, Pasqal 2025, 2026
+// (C) Copyright IBM, Pasqal, Alice and Bob 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -47,6 +47,12 @@ pub enum Payload {
         sequence: *mut c_char,
         /// Number of job runs
         job_runs: i32,
+    },
+    AliceBobFelis {
+        /// Human-readable QIR input
+        human_qir: *mut c_char,
+        /// Input parameters in JSON format
+        input_params: *mut c_char,
     },
 }
 
@@ -915,6 +921,16 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             qrmi_payload = Some(crate::models::Payload::PasqalCloud {
                 sequence: sequence_str.to_string(),
                 job_runs,
+            });
+        }
+    } else if let Payload::AliceBobFelis { human_qir, input_params } = *payload {
+        if let (Ok(human_qir_str), Ok(input_params_str)) = (
+            CStr::from_ptr(human_qir).to_str(),
+            CStr::from_ptr(input_params).to_str(),
+        ) {
+            qrmi_payload = Some(crate::models::Payload::AliceBobFelis {
+                human_qir: human_qir_str.to_string(),
+                input_params: input_params_str.to_string(),
             });
         }
     }

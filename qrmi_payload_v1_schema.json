@@ -39,6 +39,22 @@
                     "description": "Pulser sequence. Refer https://pulser.readthedocs.io/en/stable/tutorials/serialization.html for creation."
                 }
             }
+        },
+	{
+        "type": "object",
+        "description": "Payload for `alice-bob-felis`",
+        "required": ["human_qir", "input_params"],
+        "properties": {
+            "human_qir": {
+                "type": "string",
+                "description": "Human-readable QIR code."
+            },
+            "input_params": {
+                "type": "object",
+                "description": "Input parameters for the Felis Job. These vary depending on the quantum resource."
+            }
         }
+	}
     ]
 }
+
