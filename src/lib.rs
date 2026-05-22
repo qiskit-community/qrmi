@@ -14,6 +14,7 @@ pub mod alice_bob;
 pub(crate) mod common;
 pub(crate) mod consts;
 pub mod ibm;
+pub mod iqm;
 pub mod pasqal;
 
 mod cext;
