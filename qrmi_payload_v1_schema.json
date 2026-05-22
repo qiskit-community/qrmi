@@ -39,6 +39,31 @@
                     "description": "Pulser sequence. Refer https://pulser.readthedocs.io/en/stable/tutorials/serialization.html for creation."
                 }
             }
+        },
+	{
+            "type": "object",
+            "description": "Payload for `iqm-server` QPU resource",
+	    "required": ["iqmjson", "job_type"],
+            "properties": {
+	        "iqmjson": {
+                    "type": "string",
+                    "description": "IQM JSON string."
+                },
+	        "job_type": {
+                    "type": "string",
+		    "enum": ["circuit", "run", "sweep"],
+                    "description": "Job type."
+                },
+	        "use_timeslot": {
+                    "type": "boolean",
+		    "default": false,
+                    "description": "Set use_timeslot=true to submit the job to the timeslot queue instead of the default FIFO queue."
+                },
+                "tag": {
+                    "type": "string",
+                    "description": "Optional user-defined tag associated with the job. Can be used for external identification or filtering jobs. Max length is 50 characters."
+                }
+            }
         }
     ]
 }
