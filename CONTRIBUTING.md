@@ -8,7 +8,7 @@ community in this goal.
 ## Contents
 * [Before you start](#before-you-start)
 * [Set up Python virtual development environment](#set-up-python-virtual-development-environment)
-* [Installing QRMI from source](#installing-qiskit-from-source)
+* [Installing QRMI from source](#installing-qrmi-from-source)
 * [Issues and pull requests](#issues-and-pull-requests)
 * [Contributor Licensing Agreement](#contributor-licensing-agreement)
 * [Testing](#testing)
