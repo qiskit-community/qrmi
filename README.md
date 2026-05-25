@@ -47,7 +47,7 @@ To install from source, follow the instructions in the [documentation](https://g
 
 ## Getting Started
 
-This GitHub repository contains [a variety of example code](https://github.com/qiskit-community/qrmi/examples). See the README in each directory for details.
+This GitHub repository contains [a variety of example code](https://github.com/qiskit-community/qrmi/blob/main/examples). See the README in each directory for details.
 
 One of example of usage of QRMI in compute infrastrcture project is Slurm plugin for quantum resources. QRMI is used in Slurm plugin to control quantum resources during lifetime of Slurm job. See implementation and documentation of [Quantum spank plugins for Slurm](https://github.com/qiskit-community/spank-plugins).
 
