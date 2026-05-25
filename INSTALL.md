@@ -1,6 +1,5 @@
 # Installation for Quantum Resource Management Interface(QRMI)
 
-> **Supported OS**: AlmaLinux 9, Amazon Linux 2023, CentOS Stream 9, CentOS Stream 10, RedHat Enterprise Linux 8, RedHat Enterprise Linux 9, RedHat Enterprise Linux 10, Rocky Linux 8, Rocky Linux 9, SuSE 15, Ubuntu 22.04, Ubuntu 24.04, MacOS Sequoia 15.1 or above
 
 ## Prerequisites
 
