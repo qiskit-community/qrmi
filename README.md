@@ -10,19 +10,19 @@ An optional task_runner command line tool to execute quantum payloads against qu
 
 ### Python
 
-For running QRMI on Python we recommend installing QRMI via ``pip``:
+We encourage installing QRMI via ``pip``:
 
 ```bash
 pip install qrmi
 ```
 
-To include support for specific quantum resources, install with the corresponding extras:
+To use a specific quantum resource, install QRMI with the corresponding optional dependencies:
 
 ```bash
-pip install "qrmi[ibm]"       # IBM quantum resources
-pip install "qrmi[iqm]"       # IQM quantum resources
-pip install "qrmi[pasqal]"    # Pasqal quantum resources
-pip install "qrmi[all]"       # All quantum resources
+pip install "qrmi[ibm]"       # Include dependencies for IBM
+pip install "qrmi[iqm]"       # Include dependencies for IQM
+pip install "qrmi[pasqal]"    # Include dependencies for Pasqal
+pip install "qrmi[all]"       # Include dependencies for all quantum resources
 ```
 
 Or combine multiple resources:
@@ -40,7 +40,7 @@ To install from source, follow the instructions in the [documentation](https://g
 
 ### Standalone C library
 
-Prebuilt binaries for Linux x86_64, ppc64le, and arm64 platforms are available for download from the [Releases](https://github.com/qiskit-community/qrmi/releases/latest) tab of this GitHub repository.
+Prebuilt binaries for Linux(glibc 2.28 compatible) on x86_64, ppc64le, and aarch64 platforms are available for download from the [Releases](https://github.com/qiskit-community/qrmi/releases/latest) tab of this GitHub repository.
 
 To install from source, follow the instructions in the [documentation](https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md).
 
@@ -61,10 +61,10 @@ Note we expect multiple versions of the overview paper to be released as the pro
 
 ## Contribution Guidelines
 
-For information on how to contribute to this project, please take a look at our [contribution guidelines](CONTRIBUTING.md).
+For information on how to contribute to this project, please take a look at our [contribution guidelines](https://github.com/qiskit-community/qrmi/blob/main/CONTRIBUTING.md).
 
 If you'd like to contribute to QRMI, please take a look at our
-[contribution guidelines](CONTRIBUTING.md). By participating, you are expected to uphold our [code of conduct](CODE_OF_CONDUCT.md).
+[contribution guidelines](https://github.com/qiskit-community/qrmi/blob/main/CONTRIBUTING.md). By participating, you are expected to uphold our [code of conduct](https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md).
 
 We use [GitHub issues](https://github.com/qiskit-community/qrmi/issues) for tracking requests and bugs. Please
 [join the Qiskit Slack community](https://qisk.it/join-slack) for discussion, comments, and questions.
