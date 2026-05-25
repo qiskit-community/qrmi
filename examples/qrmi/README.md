@@ -1,4 +1,4 @@
-# Quantum Resource Management Interface(QRMI) Examples
+# Quantum Resource Management Interface(QRMI) Rust/Python/C Binding Examples
 
 * [Examples in Rust](./rust)
 * [Examples in Python](./python)
