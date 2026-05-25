@@ -106,7 +106,7 @@ pub struct ResourceDefs {
 ///
 /// ```no_run
 /// use qrmi::models::Config;
-/// 
+///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let config = Config::load("./qrmi_example_config.json")?;
 ///
