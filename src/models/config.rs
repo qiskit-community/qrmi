@@ -113,6 +113,9 @@ pub struct ResourceDefs {
 /// if let Some(resource) = config.resource_map.get("ibm_osaka") {
 ///     println!("Found resource: {}", resource.name);
 ///     println!("Type: {:?}", resource.r#type);
+///     for (key, value) in &resource.environment {
+///         println!("Environment variable: {}={}", key, value);
+///     }
 /// }
 /// # Ok(())
 /// # }
