@@ -1,282 +1,81 @@
-QRMI: Quantum Resource Management Interface
-===========================================
+# Quantum resource management interface (QRMI)
 
-> [!IMPORTANT]
-> **New Deprecations(Since 0.13.0)**
->
-> The **IBM Direct Access API** has been renamed to the **IBM Quantum System API**.
-> 
-> As part of this change, **the resource names and the prefixes of environment variables** used by QRMI have been updated accordingly.
->
-> | Items | Deprecated names | New names |
-> | :--- | :--- | :--- |
-> | Resource type text | direct-access | ibm-quantum-system |
-> | Resource type(C) | QRMI_RESOURCE_TYPE_IBM_DIRECT_ACCESS | QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM |
-> | Resource type(Python) | ResourceType.IBMDirectAccess | ResourceType.IBMQuantumSystem |
-> | Resource type(Rust) | ResourceType::IBMDirectAccess | ResourceType::IBMQuantumSystem |
-> | QuantumResource trait implementator(Rust) | qrmi::ibm::IBMDirectAccess | qrmi::ibm::IBMQuantumSystem |
-> | Environment variable prefixes | QRMI_IBM_DA_ | QRMI_IBM_QS_ |
-> 
-> A transition period will be in effect until **July 2, 2026**. During this period, both the legacy and the new resource names and environment variable prefixes are supported to ensure backward compatibility. After the transition period ends, support for the legacy names will be removed, and users are expected to migrate fully to the new naming scheme.
+The Quantum resource management interface (QRMI) is a vendor-agnostic library for high-performance compute (HPC) systems to access, control, and monitor the behavior of quantum computational resources. It acts as a thin middleware layer that abstracts away the complexities associated with controlling quantum resources through a set of simple APIs. Written in Rust, this interface also exposes Python and C APIs for ease of integration into nearly any computational environment.
 
-This is repository with Quantum Resource Management Interface (QRMI) implementation.
+Find the source code to build and deploy QRMI in this [GitHub repository](https://github.com/qiskit-community/qrmi).
 
-QRMI ⚛️ is a vendor agnostic library to control state, run tasks and monitor behavior of quantum computational resources (qubits, QPUs, entire quantum systems, etc.).
+An optional task_runner command line tool to execute quantum payloads against quantum hardware is included in the Python package. Find the [full documentation](https://github.com/qiskit-community/qrmi/blob/main/python/qrmi/tools/task_runner/README.md) in the GitHub repository.
 
-QRMI acts like a thin middleware layer that abstracts away complexities of controling quantum resources by exposing set of simple APIs to acquire/release hardware, run tasks and monitor state of quantum resources.
-
-QRMI is written in Rust 🦀 with Python 🐍 and C ©️ APIs exposed for ease of integration to pretty much any computational envrionment.
-
-## 📒 Contents
-
-- [⬇️ Installation](INSTALL.md)
-- [▶️ Examples](#examples)
-  - [C  ©️](#c)
-  - [Python 🐍](#python)
-  - [Rust 🦀](#rust)
-  - [Usage in Slurm plugin for quantum resources](#qrmi-usage-in-slurm-plugin-for-quantum-resources)
-- [How to Give Feedback](#how-to-give-feedback)
-- [How to Cite This Work](#how-to-cite-this-work)
-- [Contribution Guidelines](#contribution-guidelines)
-- [References and Acknowledgements](#references-and-acknowledgements)
-
-----
-
-## Examples
-
-All full examples are available in [examples folder](./examples/).
-
-
-### C
-
-This example demonstrates QRMI using the Quantum System API for IBM Quantum machines.
-
-```c++
-#include "qrmi.h"
-
-int main(int argc, char *argv[]) {
-    ...
-
-    QrmiQuantumResource *qrmi = qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
-    ...
-
-    QrmiReturnCode rc = qrmi_resource_metadata(qrmi, &metadata);
-    ...
-
-    QrmiResourceMetadata *metadata = NULL;
-    rc = qrmi_resource_acquire(qrmi, &acquisition_token);
-    ...
-
-    QrmiPayload payload;
-    payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
-    payload.QISKIT_PRIMITIVE.input = (char *)input;
-    payload.QISKIT_PRIMITIVE.program_id = argv[3];
-    ...
-
-    char *job_id = NULL;
-    rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
-    ...
-
-    QrmiTaskStatus status;
-    rc = qrmi_resource_task_status(qrmi, job_id, &status);
-    ...
-
-    qrmi_resource_task_stop(qrmi, job_id);
-    qrmi_string_free(job_id);
-    qrmi_resource_free(qrmi);
-
-    return EXIT_SUCCESS;
-
-error:
-    qrmi_resource_free(qrmi);
-    return EXIT_FAILURE;
-}
-```
-
-Full example is available [here](./examples/qrmi/c/ibm_quantum_system/src/quantum_system.c).
-
-See example of QRMI C working with [IBM Qiskit Runtime Service](./examples/qrmi/c/qiskit_runtime_service/src/qiskit_runtime_service.c) or [Pasqal Cloud](./examples/qrmi/c/pasqal_cloud/src/pasqal_cloud.c).
-
-All examples for QRMI C are available in [this folder](./examples/qrmi/c/).
+## Installation
 
 ### Python
 
-This example demonstrates QRMI using the Quantum System API for IBM Quantum machines.
+We encourage installing QRMI via ``pip``:
 
-``` python
-from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
-
-# create resource handler
-qrmi = QuantumResource("ibm_rensselaer", ResourceType.IBMQuantumSystem)
-
-# acquire resource
-lock = qrmi.acquire()
-
-# run task
-payload = Payload.QiskitPrimitive(input=primitive_input, program_id=args.program_id)
-job_id = qrmi.task_start(payload)
-
-print(qrmi.task_result(job_id).value)
-
-qrmi.task_stop(job_id)
-
-# release resource
-qrmi.release(lock)
+```bash
+pip install qrmi
 ```
 
-Full example is available [here](./examples/qrmi/python/ibm_quantum_system/example.py).
+To use a specific quantum resource, install QRMI with the corresponding optional dependencies:
 
-Python QRMI can be used to implement Qiskit primitives (Sampler and Estimator).
-See example of Qiskit primitives here [for IBM backends](./examples/qiskit_primitives/ibm/sampler.py) or [for Pasqal machines](./examples/qiskit_primitives/pasqal/sampler.py).
-
-See [example](./examples/pulser_backend/pasqal/pulser_backend.py) of QRMI working with Pasqal Pulser.
-
-### Pasqal Cloud Examples
-
-QRMI Pasqal Cloud supports both Qiskit, Pulser and CUDA-Q analog programs.
-
-See the Pasqal Cloud examples in this repository:
-- Python: [examples/qrmi/python/pasqal_cloud](./examples/qrmi/python/pasqal_cloud)
-- Rust: [examples/qrmi/rust/pasqal_cloud](./examples/qrmi/rust/pasqal_cloud)
-- C: [examples/qrmi/c/pasqal_cloud](./examples/qrmi/c/pasqal_cloud)
-- CUDA-Q [examples/qrmi/python/cudaq](./examples/qrmi/python/cudaq)
-
-### Rust
-
-This example demonstrates QRMI using the Quantum System API for IBM Quantum machines.
-
-```rust
-use qrmi::{ibm::IBMQuantumSystem, models::Payload, models::TaskStatus, QuantumResource};
-...
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ...
-    let mut qrmi = IBMQuantumSystem::new(&args.backend);
-
-    let lock = qrmi.acquire().await?;
-    ...
-
-    let target = qrmi.target().await;
-    ...
-
-    let payload = Payload::QiskitPrimitive {
-        input: contents,
-        program_id: args.program_id,
-    };
-
-    let job_id = qrmi.task_start(payload).await?;
-    println!("Job ID: {}", job_id);
-    let one_sec = time::Duration::from_millis(1000);
-    loop {
-        let status = qrmi.task_status(&job_id).await?;
-        println!("{:?}", status);
-        if matches!(status, TaskStatus::Completed) {
-            println!("{}", qrmi.task_result(&job_id).await?.value);
-            break;
-        } else if matches!(status, TaskStatus::Failed | TaskStatus::Cancelled) {
-            break;
-        }
-        thread::sleep(one_sec);
-    }
-    let _ = qrmi.task_stop(&job_id).await;
-
-    let _ = qrmi.release(&lock).await;
-    Ok(())
-}
+```bash
+pip install "qrmi[ibm]"       # Include dependencies for IBM
+pip install "qrmi[iqm]"       # Include dependencies for IQM
+pip install "qrmi[pasqal]"    # Include dependencies for Pasqal
+pip install "qrmi[all]"       # Include dependencies for all quantum resources
 ```
 
-Full example is available [here](./examples/qrmi/rust/ibm_quantum_system/src/main.rs).
+Or combine multiple resources:
 
-See example of QRMI Rust working with [IBM Qiskit Runtime Service](./examples/qrmi/rust/qiskit_runtime_service/src/main.rs) or [Pasqal Cloud](./examples/qrmi/rust/pasqal_cloud/src/main.rs).
-
-All examples for QRMI C are available in [this folder](./examples/qrmi/rust/).
-
-
-### QRMI usage in Slurm plugin for quantum resources
-
-One of example of usage of QRMI in compute infrastrcture project is Slurm plugin for quantum resources.
-QRMI is used in Slurm plugin to control quantum resources during lifetime of Slurm job.
-
-See implementation and documentation of [Slurm plugin for quantum resources here](https://github.com/qiskit-community/spank-plugins).
-
-----
-
-### Pre-commit detect-secrets 
-`detect-secrets` is an open-source, developer-friendly tool designed to scan 
-codebases for mistakenly committed secrets—such as API keys, passwords, and 
-private tokens—before they leak. To keep our credentials secure, we recommend 
-that all developers integrate this into their workflow using the following 
-instructions.
-
-* Prerequisites: Before you begin, ensure you have a Python virtual environment 
-  (venv) active. You will need to install pre-commit, which manages the hooks 
-  that run detect-secrets automatically.
-
-```
-pip install pre-commit
-pre-commit install
-```
-Please find `.pre-commit-config.yaml` for the initial setup.  
-Following command was used to generate `.secrets.baseline` and to maximize the 
-detection coverage. 
-```
-detect-secrets scan --force-use-all-plugins > .secrets.baseline
-```
-**Handling False Positives**   
-If the pre-commit hook identifies a secret that you have verified is not 
-sensitive (a false positive), please use the following command to audit and 
-update the baseline file. Once updated, include the modified .secrets.baseline 
-in your Pull Request to ensure the pre-commit passes in the future.
-```
-pip install detect-secrets
-detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
-detect-secrets audit .secrets.baseline
-```
-**Manual Execution and Overrides**  
-To manually trigger a scan of all files in the repository for a local sanity check, execute the following command:
-```
-pre-commit run --all-files
+```bash
+pip install "qrmi[ibm,pasqal]"
 ```
 
-**Bypassing the Hook (Not Recommended)**   
-While not recommended, if you must force a commit without running the pre-commit checks (e.g., during an emergency fix), you may use the `--no-verify` flag:
-```
-git commit -m "Your message" --no-verify
-```
+> [!NOTE]
+> Note: `ibm` and `iqm` extras cannot be installed together, as they depend on incompatible versions of Qiskit.
 
-----
+Pip will handle all dependencies automatically and you will always install the latest (and well-tested) version.
 
-### How to Give Feedback
+To install from source, follow the instructions in the [documentation](https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md).
 
-We encourage your feedback! You can share your thoughts with us by:
-- [Opening an issue](https://github.com/qiskit-community/qrmi/issues) in the repository
+### Standalone C library
 
+Prebuilt binaries for Linux(glibc 2.28 compatible) on x86_64, ppc64le, and aarch64 platforms are available for download from the [Releases](https://github.com/qiskit-community/qrmi/releases/latest) tab of this GitHub repository.
 
-----
-
-### How to Cite This Work
-
-If you use the “Quantum Spank plugin” or "QRMI" in your research or projects, please consider citing the associated overview paper  [Quantum resources in resource management systems](https://arxiv.org/abs/2506.10052). 
-This helps support the continued development and visibility of the repository. 
-The BibTeX citation handle can be found in the [CITATION.bib](CITATION.bib) file.
-
-Note that the overview paper is a work  in progress, and we expect multiple versions to be released as the project evolves.
-
-----
-
-### Contribution Guidelines
-
-For information on how to contribute to this project, please take a look at our [contribution guidelines](CONTRIBUTING.md).
+To install from source, follow the instructions in the [documentation](https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md).
 
 
-----
+## Getting Started
+
+This GitHub repository contains [a variety of example code](https://github.com/qiskit-community/qrmi/blob/main/examples). See the README in each directory for details.
+
+One of example of usage of QRMI in compute infrastrcture project is Slurm plugin for quantum resources. QRMI is used in Slurm plugin to control quantum resources during lifetime of Slurm job. See implementation and documentation of [Quantum spank plugins for Slurm](https://github.com/qiskit-community/spank-plugins).
+
+## How to Cite This Work
+
+QRMI is the work of [many people](https://github.com/qiskit-community/qrmi/graphs/contributors) who contribute
+to the project at different levels. If you use QRMI, please consider citing the associated overview paper  [Quantum resources in resource management systems](https://arxiv.org/abs/2506.10052). This helps support the continued development and visibility of the repository. The BibTeX citation handle can be found in the [BibTeX file](CITATION.bib) file.
+
+Note we expect multiple versions of the overview paper to be released as the project evolves.
+
+
+## Contribution Guidelines
+
+For information on how to contribute to this project, please take a look at our [contribution guidelines](https://github.com/qiskit-community/qrmi/blob/main/CONTRIBUTING.md).
+
+If you'd like to contribute to QRMI, please take a look at our
+[contribution guidelines](https://github.com/qiskit-community/qrmi/blob/main/CONTRIBUTING.md). By participating, you are expected to uphold our [code of conduct](https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md).
+
+We use [GitHub issues](https://github.com/qiskit-community/qrmi/issues) for tracking requests and bugs. Please
+[join the Qiskit Slack community](https://qisk.it/join-slack) for discussion, comments, and questions.
+
 
 ## References and Acknowledgements
 1. Quantum spank plugins for Slurm https://github.com/qiskit-community/spank-plugins
-1. Slurm documentation https://slurm.schedmd.com/
-2. Qiskit https://www.ibm.com/quantum/qiskit
-3. IBM Quantum https://www.ibm.com/quantum
-4. Pasqal https://pasqal.com
-5. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
-6. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
+2. Slurm documentation https://slurm.schedmd.com/
+3. Qiskit https://www.ibm.com/quantum/qiskit
+4. IBM Quantum https://www.ibm.com/quantum
+5. Pasqal https://pasqal.com
+6. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
+7. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
+8. Alice & Bob https://alice-bob.com/

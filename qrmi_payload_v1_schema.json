@@ -2,13 +2,16 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "QRMI Payload",
     "description": "The input to QPU resource",
-    "version": "0.1.0",
+    "version": "0.4.0",
     "type": "object",
     "oneOf": [
-	{
+        {
             "type": "object",
             "description": "Payload for `ibm-quantum-system`, `direct-access` and `qiskit-runtime-service` QPU resource",
-	    "required": ["program_id", "parameters"],
+            "required": [
+                "program_id",
+                "parameters"
+            ],
             "properties": {
                 "program_id": {
                     "type": "string",
@@ -17,19 +20,22 @@
                         "sampler"
                     ],
                     "description": "ID of the primitive to be executed."
-		},
+                },
                 "parameters": {
                     "type": "object",
                     "description": "Parameters to inject into the primitive. Estimator schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json, Sampler schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json"
                 }
             }
-	},
-	{
+        },
+        {
             "type": "object",
             "description": "Payload for `pasqal-cloud` QPU resource",
-	          "required": ["job_runs", "sequence"],
+            "required": [
+                "job_runs",
+                "sequence"
+            ],
             "properties": {
-	              "job_runs": {
+                "job_runs": {
                     "type": "integer",
                     "minimum": 1,
                     "description": "Number of times the pulser sequence is repeated."
@@ -39,39 +45,49 @@
                     "description": "Pulser sequence. Refer https://pulser.readthedocs.io/en/stable/tutorials/serialization.html for creation."
                 }
             }
-  },
-	{
-        "type": "object",
-        "description": "Payload for `alice-bob-felis`",
-        "required": ["human_qir", "input_params"],
-        "properties": {
-            "human_qir": {
-                "type": "string",
-                "description": "Human-readable QIR code."
-            },
-            "input_params": {
-                "type": "object",
-                "description": "Input parameters for the Felis Job. These vary depending on the quantum resource."
+        },
+        {
+            "type": "object",
+            "description": "Payload for `alice-bob-felis`",
+            "required": [
+                "human_qir",
+                "input_params"
+            ],
+            "properties": {
+                "human_qir": {
+                    "type": "string",
+                    "description": "Human-readable QIR code."
+                },
+                "input_params": {
+                    "type": "object",
+                    "description": "Input parameters for the Felis Job. These vary depending on the quantum resource."
+                }
             }
-        }
-  },
-      {
+        },
+        {
             "type": "object",
             "description": "Payload for `iqm-server` QPU resource",
-	    "required": ["iqmjson", "job_type"],
+            "required": [
+                "iqmjson",
+                "job_type"
+            ],
             "properties": {
-	        "iqmjson": {
+                "iqmjson": {
                     "type": "string",
                     "description": "IQM JSON string."
                 },
-	        "job_type": {
+                "job_type": {
                     "type": "string",
-		    "enum": ["circuit", "run", "sweep"],
+                    "enum": [
+                        "circuit",
+                        "run",
+                        "sweep"
+                    ],
                     "description": "Job type."
                 },
-	        "use_timeslot": {
+                "use_timeslot": {
                     "type": "boolean",
-		    "default": false,
+                    "default": false,
                     "description": "Set use_timeslot=true to submit the job to the timeslot queue instead of the default FIFO queue."
                 },
                 "tag": {
