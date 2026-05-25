@@ -101,6 +101,22 @@ pub struct ResourceDefs {
 }
 
 /// QRMI configuration file
+///
+/// # Example
+///
+/// ```no_run
+/// use qrmi::models::Config;
+/// 
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let config = Config::load("./qrmi_example_config.json")?;
+///
+/// if let Some(resource) = config.resource_map.get("ibm_osaka") {
+///     println!("Found resource: {}", resource.name);
+///     println!("Type: {:?}", resource.r#type);
+/// }
+/// # Ok(())
+/// # }
+/// ```
 pub struct Config {
     pub resource_map: HashMap<String, ResourceDef>,
 }
