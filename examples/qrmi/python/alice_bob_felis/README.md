@@ -9,7 +9,7 @@
 ## Install dependencies
 
 ```shell-session
-pip install -r ../requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Set environment variables
@@ -32,23 +32,7 @@ You may also use separate URLs and API keys for different target resources:
 
 Felis accepts circuits expressed in human-readable QIR, a language which expresses intermediate representations of quantum circuits. It supports standard QIR gates together with a few custom Alice & Bob gates.
 
-A trivial QIR circuit can be generated with:
-
-```
-cd examples/qrmi/python/alice_bob/
-pip install qsharp
-python generate_input.py > generated_circuit.ll
-```
-
-If you want to run circuits which use native Alice & Bob gates (`initialize` and `measure_x`), you will also need to install Alice and Bob's Qiskit provider:
-
-```shell-session
-pip install qiskit-alice-bob-provider
-```
-
-⚠️ Warning: Installing `qiskit-alice-bob-provider` will downgrade `qiskit` to version 1.x, which could break other vendor implementations. You may want to use a separate python environment for this step.
-
-Then, you can optionally modify the Qiskit circuit in `generate_input_native_gates.py` before generating it in QIR form as follows:
+You can optionally modify the Qiskit circuit in `generate_input_native_gates.py` before generating it in QIR form as follows:
 
 ```
 export QRMI_AB_FELIS_BASE_ENDPOINT='<felis endpoint>'
@@ -57,6 +41,14 @@ python generate_input_native_gates.py EMU:1Q:LESCANNE_2020 > generated_circuit.l
 ```
 
 The environment variables are necessary for transpilation, which requires access to the Felis API.
+
+If you installed `qrmi` without the `alice-bob` dependency, which installs [qiskit-alice-bob-provider](https://github.com/Alice-Bob-SW/qiskit-alice-bob-provider), you will still be able to run trivial circuits using [generate_input_generic.py](./generate_input_generic.py), however you won't be able to use Alice and Bob native gates like `measure_x`. To do so:
+
+```
+cd examples/qrmi/python/alice_bob/
+pip install qsharp
+python generate_input.py > generated_circuit.ll
+```
 
 ## How to run
 

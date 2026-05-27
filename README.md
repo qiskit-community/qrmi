@@ -22,6 +22,7 @@ To use a specific quantum resource, install QRMI with the corresponding optional
 pip install "qrmi[ibm]"       # Include dependencies for IBM
 pip install "qrmi[iqm]"       # Include dependencies for IQM
 pip install "qrmi[pasqal]"    # Include dependencies for Pasqal
+pip install "qrmi[alice-bob]" # Include dependencies for Alice and Bob
 pip install "qrmi[all]"       # Include dependencies for all quantum resources
 ```
 
