@@ -16,25 +16,65 @@
 
 # pylint: disable=invalid-name
 
-import pulser
-import pulser.abstract_repr
+import logging
+
+import json
+from json import JSONDecodeError
+from pulser import DigitalAnalogDevice
 from pulser.devices import Device
+from pulser.abstract_repr import deserialize_device
+from pulser.exceptions.serialization import DeserializeDeviceError
 from qiskit.transpiler.target import Target
 
 from qrmi import QuantumResource
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_available_devices(qrmi: QuantumResource) -> dict[str, Device]:
+    """Fetches the devices available through this connection."""
+
+    devices = {}
+    # Serialized data from the Pasqal QRMI matches the one from
+    # the /api/v1/devices/public-specs cloud endpoint.
+    devices_str = qrmi.target().value
+    try:
+        data = json.loads(devices_str)
+    except JSONDecodeError:
+        logger.exception("Failed to deserialize device information: %s", devices_str)
+        return devices
+    for specs in data:
+        name = specs["device_type"]
+        try:
+            dev = deserialize_device(specs["specs"])
+        except DeserializeDeviceError:
+            logger.exception("Failed to deserialize device: %s", name)
+            continue
+        devices[name] = dev
+    return devices
 
 
 def get_device(qrmi: QuantumResource) -> Device:
     """Returns Pulser Device
 
     Args:
-        qrmi: Pasqal Cloud QRMI object
+        qrmi: Pasqal QRMI resource object
 
     Returns:
         pulser.devices.Device: Pulser device
     """
-    target = qrmi.target()
-    return pulser.abstract_repr.deserialize_device(target)
+    resource_id = qrmi.resource_id()
+    if "emu" in resource_id.lower():
+        return DigitalAnalogDevice
+    devices = _parse_available_devices(qrmi)
+    if resource_id in devices:
+        # Expected cloud case
+        specs = devices.get(resource_id)
+    else:
+        # Expected local case
+        # Get first device specs
+        specs = next(iter(devices.values()))
+    return specs
 
 
 def get_target(qrmi: QuantumResource) -> Target:

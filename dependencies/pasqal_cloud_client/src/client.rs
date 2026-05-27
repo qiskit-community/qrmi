@@ -70,8 +70,9 @@ pub struct GetDeviceResponseData {
     pub availability: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GetDeviceSpecsResponseData {
+    pub device_type: String,
     pub specs: String,
 }
 
@@ -294,16 +295,24 @@ impl Client {
         }
     }
 
-    pub async fn get_device_specs(
-        &mut self,
-        device_type: DeviceType,
-    ) -> Result<Response<GetDeviceSpecsResponseData>> {
-        let url = format!(
-            "{}/core-fast/api/v1/devices/specs/{}",
-            self.base_url, device_type
-        );
-        let resp: Response<GetDeviceSpecsResponseData> = self.get(&url).await?;
-        Ok(resp)
+    pub async fn get_device_specs(&mut self, device_type: DeviceType) -> Result<String> {
+        // In case of emulator devices, we return public specs to enable users to build sequences
+        // according to current cloud specs
+        if device_type.to_string().starts_with("EMU") {
+            let url = format!("{}/core-fast/api/v1/devices/public-specs", self.base_url);
+            let raw_response: Response<Vec<GetDeviceSpecsResponseData>> = self.get(&url).await?;
+            let specs_string = serde_json::to_string(&raw_response.data)?;
+            Ok(specs_string)
+        } else {
+            let url = format!(
+                "{}/core-fast/api/v1/devices/specs/{}",
+                self.base_url, device_type
+            );
+            let raw_response: Response<GetDeviceSpecsResponseData> = self.get(&url).await?;
+            // Matching the data structure from the /public-specs endpoint
+            let specs_string = serde_json::to_string(&vec![raw_response.data])?;
+            Ok(specs_string)
+        }
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {

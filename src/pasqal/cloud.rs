@@ -475,11 +475,8 @@ impl QuantumResource for PasqalCloud {
             self.backend_name
         );
         let device_type = self.parse_device_type()?;
-
         match self.api_client.get_device_specs(device_type).await {
-            Ok(resp) => Ok(Target {
-                value: resp.data.specs,
-            }),
+            Ok(resp) => Ok(Target { value: resp }),
             Err(err) => Err(err),
         }
     }

@@ -155,7 +155,7 @@ impl QuantumResource for PasqalLocal {
 
     async fn target(&mut self) -> Result<Target> {
         match self.api_client.get_device_specs().await {
-            Ok(resp) => Ok(Target { value: resp.specs }),
+            Ok(resp) => Ok(Target { value: resp }),
             Err(err) => Err(err),
         }
     }

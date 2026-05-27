@@ -66,6 +66,17 @@ pub struct GetTaskLogsResponse {
     pub logs: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct Specs {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DeviceSpecs {
+    pub device_type: String,
+    pub specs: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateSessionPayload {
     pub user_id: String,
@@ -170,10 +181,19 @@ impl Client {
         self.handle_request(resp).await
     }
 
-    pub async fn get_device_specs(&mut self) -> Result<GetDeviceSpecsResponse> {
+    pub async fn get_device_specs(&mut self) -> Result<String> {
         let url = format!("{}/qpu/specs", self.base_url);
         let resp: GetDeviceSpecsResponse = self.get(&url).await?;
-        Ok(resp)
+        let specs: String = resp.specs.clone();
+        // Parse into a dynamic JSON value instead of a custom Struct
+        let parsed_specs: Specs = serde_json::from_str(&resp.specs)?;
+
+        let device_specs = DeviceSpecs {
+            device_type: parsed_specs.name,
+            specs,
+        };
+        // Matching the cloud client's serialized data return type
+        Ok(serde_json::to_string(&vec![device_specs])?)
     }
 
     pub async fn get_task_logs(&mut self, task_id: &str) -> Result<GetTaskLogsResponse> {
