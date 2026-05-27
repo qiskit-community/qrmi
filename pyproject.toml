@@ -60,7 +60,7 @@ iqm = [
 alice-bob = [
   "qiskit-alice-bob-provider",
 ]
-all = ["qrmi[ibm,pasqal,iqm,alice-bob]"]
+all = ["qrmi[ibm,pasqal,iqm]"]
 
 [project.urls]
 repository = "https://github.com/qiskit-community/qrmi"
