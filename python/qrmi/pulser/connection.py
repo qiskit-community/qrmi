@@ -114,14 +114,16 @@ class PulserQRMIConnection(RemoteConnection):
         try:
             data = json.loads(devices_str)
         except JSONDecodeError:
-            logger.exception(f"Failed to deserialize device information: {devices_str}")
+            logger.exception(
+                "Failed to deserialize device information: %s", devices_str
+            )
             return devices
         for specs in data:
             name = specs["device_type"]
             try:
                 dev = deserialize_device(specs["specs"])
             except DeserializeDeviceError:
-                logger.exception(f"Failed to deserialize device: {name}")
+                logger.exception("Failed to deserialize device: %s", {name})
                 continue
             devices[name] = dev
         return devices
@@ -185,7 +187,13 @@ class PulserQRMIConnection(RemoteConnection):
             if status == JobStatus.DONE:
                 try:
                     result = self._task_result_to_results(job_id)
-                except Exception:
+                except (
+                    RemoteResultsError,
+                    json.JSONDecodeError,
+                    KeyError,
+                    TypeError,
+                    ValueError,
+                ):
                     logger.warning(
                         "Failed to parse QRMI result for job %s", job_id, exc_info=True
                     )
@@ -264,7 +272,7 @@ class PulserQRMIConnection(RemoteConnection):
         return "|".join(job_ids)
 
     def _wait_job_execution(self, job_id: str):
-        "Waits until job execution is complete"
+        """Waits until job execution is complete"""
         while True:
             status = self._qrmi.task_status(job_id)
             if status in (
@@ -275,8 +283,7 @@ class PulserQRMIConnection(RemoteConnection):
                 return
             time.sleep(JOB_EXECUTION_POLLING_INTERVAL_S)
 
-    @staticmethod
-    def _get_job_ids(batch_id: str) -> list[str]:
+    def _get_job_ids(self, batch_id: str) -> list[str]:
         """Retrieve the list of Job IDs from the Batch ID"""
         return batch_id.split("|")
 

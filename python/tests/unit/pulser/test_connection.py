@@ -1,12 +1,12 @@
 """Tests for pulser connection integration."""
 
-import pulser
 import json
+
+import pulser
 import pytest
 from pulser.backend.remote import RemoteResultsError
 from pulser.result import SampledResult
-
-from qrmi import TaskStatus, ResourceType
+from qrmi import ResourceType, TaskStatus
 from qrmi.pulser.connection import PulserQRMIConnection
 
 
@@ -231,7 +231,7 @@ def test_fetch_available_devices() -> None:
     assert isinstance(devices["DUMMY"], pulser.devices.VirtualDevice)
 
 
-def test_get_batch_status_returns_running_when_any_job_is_running() -> None:
+def test_get_batch_status_running_any_job_is_running() -> None:
     """Return BatchStatus.RUNNING when at least one job has RUNNING status, even if others are PENDING or DONE."""
 
     class _MixedStatusQRMI(_FakeQRMI):
@@ -254,7 +254,7 @@ def test_get_batch_status_returns_running_when_any_job_is_running() -> None:
     assert result == BatchStatus.RUNNING
 
 
-def test_get_batch_status_returns_running_when_no_running_but_some_pending() -> None:
+def test_get_batch_status_running_no_running_pending() -> None:
     """Return BatchStatus.RUNNING when no jobs are RUNNING but at least one job has PENDING status."""
 
     class _PendingStatusQRMI(_FakeQRMI):
@@ -277,7 +277,7 @@ def test_get_batch_status_returns_running_when_no_running_but_some_pending() -> 
     assert result == BatchStatus.RUNNING
 
 
-def test_get_batch_status_returns_canceled_when_all_jobs_are_canceled() -> None:
+def test_batch_status_canceled_all_jobs_are_canceled() -> None:
     """Return BatchStatus.CANCELED when all jobs have CANCELED status."""
 
     class _CanceledStatusQRMI(_FakeQRMI):
@@ -295,7 +295,7 @@ def test_get_batch_status_returns_canceled_when_all_jobs_are_canceled() -> None:
     assert result == BatchStatus.CANCELED
 
 
-def test_get_batch_status_not_canceled_when_only_one_job_is_canceled() -> None:
+def test_batch_status_not_canceled_one_job_canceled() -> None:
     """Return BatchStatus.DONE (not CANCELED) when only one job has CANCELED status and others are DONE."""
 
     class _PartialCanceledStatusQRMI(_FakeQRMI):
@@ -319,7 +319,7 @@ def test_get_batch_status_not_canceled_when_only_one_job_is_canceled() -> None:
     assert result == BatchStatus.DONE
 
 
-def test_get_batch_status_returns_error_when_all_jobs_have_error_status() -> None:
+def test_batch_status_error_when_all_jobs_error_status() -> None:
     """Return BatchStatus.ERROR when all jobs have ERROR status."""
 
     class _ErrorStatusQRMI(_FakeQRMI):
@@ -337,7 +337,7 @@ def test_get_batch_status_returns_error_when_all_jobs_have_error_status() -> Non
     assert result == BatchStatus.ERROR
 
 
-def test_get_batch_status_returns_done_when_all_jobs_completed() -> None:
+def test_batch_status_done_all_jobs_completed() -> None:
     """Return BatchStatus.DONE when all jobs have completed successfully."""
 
     class _AllCompletedQRMI(_FakeQRMI):
@@ -355,7 +355,7 @@ def test_get_batch_status_returns_done_when_all_jobs_completed() -> None:
     assert result == BatchStatus.DONE
 
 
-def test_get_batch_status_returns_running_when_mix_of_running_and_error() -> None:
+def test_batch_status_running_mix_running_error() -> None:
     """Return BatchStatus.RUNNING when a mix of RUNNING and ERROR statuses exist."""
 
     class _RunningAndErrorQRMI(_FakeQRMI):
@@ -378,8 +378,10 @@ def test_get_batch_status_returns_running_when_mix_of_running_and_error() -> Non
     assert result == BatchStatus.RUNNING
 
 
-def test_get_batch_status_returns_done_when_mix_of_done_canceled_and_error() -> None:
-    """Return BatchStatus.DONE when there is a mix of DONE, CANCELED, and ERROR statuses (not all CANCELED, not all ERROR)."""
+def test_batch_status_done_mix_done_canceled_error() -> None:
+    """
+    Return BatchStatus.DONE when there is a mix of DONE, CANCELED, and ERROR statuses (not all CANCELED, not all ERROR).
+    """
 
     class _MixedDoneCanceledErrorQRMI(_FakeQRMI):
         _statuses = [TaskStatus.Completed, TaskStatus.Cancelled, TaskStatus.Failed]
@@ -401,7 +403,7 @@ def test_get_batch_status_returns_done_when_mix_of_done_canceled_and_error() -> 
     assert result == BatchStatus.DONE
 
 
-def test_get_batch_status_returns_running_when_mix_of_pending_and_error() -> None:
+def test_batch_status_running_mix_pending_error() -> None:
     """Return BatchStatus.RUNNING when a mix of PENDING and ERROR statuses exist but none are RUNNING."""
 
     class _PendingAndErrorQRMI(_FakeQRMI):
@@ -424,7 +426,7 @@ def test_get_batch_status_returns_running_when_mix_of_pending_and_error() -> Non
     assert result == BatchStatus.RUNNING
 
 
-def test_get_batch_status_returns_done_when_single_job_is_completed() -> None:
+def test_batch_status_done_single_job_completed() -> None:
     """Return BatchStatus.DONE when a single job has a DONE status."""
 
     class _SingleDoneQRMI(_FakeQRMI):

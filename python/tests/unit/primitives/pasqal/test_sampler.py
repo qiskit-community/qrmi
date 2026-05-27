@@ -180,6 +180,7 @@ def test_get_device_falls_back_to_dad_for_emul():
     class _NoSpecsQRMI:
         @staticmethod
         def resource_id():
+            """QRMI resource ID."""
             return "EMU_FREE"
 
     assert get_device(_NoSpecsQRMI()) is DigitalAnalogDevice
@@ -191,6 +192,7 @@ def test_get_device_match_resource_id():
     class _NoSpecsQRMI:
         @staticmethod
         def resource_id():
+            """QRMI resource ID."""
             return "FRESNEL"
 
         @staticmethod
@@ -215,6 +217,7 @@ def test_get_device_pasqal_local():
     class _NoSpecsQRMI:
         @staticmethod
         def resource_id():
+            """QRMI resource ID."""
             return "PASQAL_LOCAL"
 
         @staticmethod

@@ -41,14 +41,14 @@ def _parse_available_devices(qrmi: QuantumResource) -> dict[str, Device]:
     try:
         data = json.loads(devices_str)
     except JSONDecodeError:
-        logger.exception(f"Failed to deserialize device information: {devices_str}")
+        logger.exception("Failed to deserialize device information: %s", devices_str)
         return devices
     for specs in data:
         name = specs["device_type"]
         try:
             dev = deserialize_device(specs["specs"])
         except DeserializeDeviceError:
-            logger.exception(f"Failed to deserialize device: {name}")
+            logger.exception("Failed to deserialize device: %s", name)
             continue
         devices[name] = dev
     return devices
