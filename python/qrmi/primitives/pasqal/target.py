@@ -69,7 +69,7 @@ def get_device(qrmi: QuantumResource) -> Device:
     devices = _parse_available_devices(qrmi)
     if resource_id in devices:
         # Expected cloud case
-        specs = devices[resource_id]
+        specs = devices.get(resource_id)
     else:
         # Expected local case
         # Get first device specs
