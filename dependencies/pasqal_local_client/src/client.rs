@@ -190,7 +190,7 @@ impl Client {
 
         let device_specs = DeviceSpecs {
             device_type: parsed_specs.name,
-            specs: specs,
+            specs,
         };
         // Matching the cloud client's serialized data return type
         Ok(serde_json::to_string(&vec![device_specs])?)
