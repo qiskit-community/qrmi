@@ -23,7 +23,7 @@ pip install "qrmi[ibm]"       # Include dependencies for IBM
 pip install "qrmi[iqm]"       # Include dependencies for IQM
 pip install "qrmi[pasqal]"    # Include dependencies for Pasqal
 pip install "qrmi[alice-bob]" # Include dependencies for Alice and Bob
-pip install "qrmi[all]"       # Include dependencies for all quantum resources
+pip install "qrmi[all]"       # Include dependencies for all quantum resources except `alice-bob`
 ```
 
 Or combine multiple resources:
@@ -34,6 +34,9 @@ pip install "qrmi[ibm,pasqal]"
 
 > [!NOTE]
 > Note: `ibm` and `iqm` extras cannot be installed together, as they depend on incompatible versions of Qiskit.
+
+> [!NOTE]
+> Note: `alice-bob` cannot be installed alongside `ibm` or `iqm`, as it depends on Qiskit versions earlier than 2.0.
 
 Pip will handle all dependencies automatically and you will always install the latest (and well-tested) version.
 
