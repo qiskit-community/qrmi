@@ -1,2 +1,3 @@
 python-dotenv
 qrmi[alice-bob]
+qsharp
