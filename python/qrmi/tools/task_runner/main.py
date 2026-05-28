@@ -201,7 +201,7 @@ class App:
             ]:
                 payload = Payload.AliceBobFelis(
                     human_qir=json.dumps(task_input["human_qir"]),
-                    input_params=json.dumps(task_input["input_params"])
+                    input_params=json.dumps(task_input["input_params"]),
                 )
             else:
                 payload = Payload.PasqalCloud(
