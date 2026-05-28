@@ -46,8 +46,7 @@ If you installed `qrmi` without the `alice-bob` dependency, which installs [qisk
 
 ```
 cd examples/qrmi/python/alice_bob/
-pip install qsharp
-python generate_input.py > generated_circuit.ll
+python generate_input_generic.py > generated_circuit.ll
 ```
 
 ## How to run
