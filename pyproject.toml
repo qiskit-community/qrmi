@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "qrmi"
 authors = [
   {email = "qiskit@us.ibm.com"},
-  {name = "IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)"}
+  {name = "Alice and Bob, IBM, Pasqal SAS and UKRI-STFC (Hartree Centre)"}
 ]
 requires-python = ">=3.11"
 classifiers = [
@@ -56,6 +56,9 @@ pasqal = [
 ]
 iqm = [
   "iqm-client[qiskit]",
+]
+alice-bob = [
+  "qiskit-alice-bob-provider",
 ]
 all = ["qrmi[ibm,pasqal,iqm]"]
 

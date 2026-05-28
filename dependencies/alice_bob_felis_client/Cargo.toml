@@ -1,0 +1,30 @@
+[package]
+name = "alice-bob-felis"
+version = "0.1.0"
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+description = "The Felis Cloud API lets you execute quantum circuits on emulators and real quantum hardware made by Alice & Bob."
+
+[dependencies]
+generated = { package = "felis-generated", path = "felis_generated/" }
+base64 = "0.22.1"
+anyhow = "1.0.102"
+serde = { version = "^1.0", features = ["derive"] }
+serde_with = { version = "^3.8", default-features = false, features = ["base64", "std", "macros"] }
+serde_json = "^1.0"
+serde_repr = "^0.1"
+url = "^2.5"
+uuid = { version = "^1.8", features = ["serde", "v4"] }
+reqwest = { version = "^0.12", default-features = false, features = ["json", "multipart"] }
+
+
+[dev-dependencies]
+dotenvy = "0.15.7"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[features]
+default = ["rustls-tls"]
+native-tls = ["reqwest/native-tls"]
+rustls-tls = ["reqwest/rustls-tls"]

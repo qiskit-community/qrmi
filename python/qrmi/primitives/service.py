@@ -63,6 +63,8 @@ class QRMIService:
                 qrmi = QuantumResource(qpu, ResourceType.PasqalCloud)
             elif qpu_types[i] == "pasqal-local":
                 qrmi = QuantumResource(qpu, ResourceType.PasqalLocal)
+            elif qpu_types[i] == "alice-bob-felis":
+                qrmi = QuantumResource(qpu, ResourceType.AliceBobFelis)
             elif qpu_types[i] == "iqm-server":
                 qrmi = QuantumResource(qpu, ResourceType.IQMServer)
             else:

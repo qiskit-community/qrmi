@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "QRMI Payload",
     "description": "The input to QPU resource",
-    "version": "0.1.0",
+    "version": "0.4.0",
     "type": "object",
     "oneOf": [
         {
@@ -48,6 +48,24 @@
         },
         {
             "type": "object",
+            "description": "Payload for `alice-bob-felis`",
+            "required": [
+                "human_qir",
+                "input_params"
+            ],
+            "properties": {
+                "human_qir": {
+                    "type": "string",
+                    "description": "Human-readable QIR code."
+                },
+                "input_params": {
+                    "type": "object",
+                    "description": "Input parameters for the Felis Job. These vary depending on the quantum resource."
+                }
+            }
+        },
+        {
+            "type": "object",
             "description": "Payload for `iqm-server` QPU resource",
             "required": [
                 "iqmjson",
@@ -80,3 +98,4 @@
         }
     ]
 }
+

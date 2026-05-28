@@ -5,6 +5,7 @@ members = [
     "pasqal_cloud",
     "pasqal_local",
     "qrmi_config",
+    "alice_bob_felis",
     "iqm_server",
 ]
 resolver = "2"

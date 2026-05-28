@@ -40,6 +40,7 @@ quantum-system-api = { path = "dependencies/quantum_system_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
+alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
 iqm-server-api = { path = "dependencies/iqm_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 pyo3 = { version = "0.25.0", features = ["anyhow"], optional = true }
@@ -59,6 +60,7 @@ members = [
     "dependencies/quantum_system_client",
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
+    "dependencies/alice_bob_felis_client",
 ]
 resolver = "2"
 
@@ -72,6 +74,7 @@ rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.
 quantum-system-api = { path = "dependencies/quantum_system_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
+alice-bob-felis-api = { path = "dependencies/alice_bob_felis_client" }
 iqm-server-api = { path = "dependencies/iqm_client" }
 
 [package.metadata.maturin]

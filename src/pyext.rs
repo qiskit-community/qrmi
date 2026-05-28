@@ -10,6 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::alice_bob::AliceBobFelis;
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
@@ -29,6 +30,7 @@ pub enum ResourceType {
     IBMQiskitRuntimeService,
     PasqalCloud,
     PasqalLocal,
+    AliceBobFelis,
     IQMServer,
 }
 
@@ -78,6 +80,12 @@ impl PyQuantumResource {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
                 }
             },
+            ResourceType::AliceBobFelis => match AliceBobFelis::new(resource_id) {
+                Ok(v) => Box::new(v),
+                Err(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                }
+            },
             ResourceType::IQMServer => match IQMServer::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
@@ -122,6 +130,7 @@ impl PyQuantumResource {
                 }
                 crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
                 crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+                crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
                 crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
             }),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
