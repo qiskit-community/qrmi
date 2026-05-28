@@ -74,6 +74,7 @@ class App:
         "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
         "pasqal-cloud": ResourceType.PasqalCloud,
         "iqm-server": ResourceType.IQMServer,
+        "alice-bob-felis": ResourceType.AliceBobFelis,
     }
 
     def __init__(self, name: str, input_filename: str, output_filename: str):
@@ -194,6 +195,13 @@ class App:
                     use_timeslot=task_input["use_timeslot"],
                     tag=task_input["tag"],
                     job_type=task_input["job_type"],
+                )
+            elif res_type in [
+                ResourceType.AliceBobFelis,
+            ]:
+                payload = Payload.AliceBobFelis(
+                    human_qir=json.dumps(task_input["human_qir"]),
+                    input_params=json.dumps(task_input["input_params"])
                 )
             else:
                 payload = Payload.PasqalCloud(
