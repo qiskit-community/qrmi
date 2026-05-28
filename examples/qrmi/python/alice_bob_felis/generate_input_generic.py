@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+"""A tool to generate input for Alice & Bob example"""
 # This code is part of Qiskit.
 #
 # (C) Copyright 2026 Alice and Bob. All Rights Reserved.
