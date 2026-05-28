@@ -199,6 +199,29 @@ export FRESNEL_QRMI_PASQAL_CLOUD_AUTH_TOKEN=<your auth token>
 task_runner FRESNEL /shared/input/sequence_input_FRESNEL.json
 ```
 
+#### Alice & Bob
+
+| Environment variables | Descriptions |
+| ---- | ---- |
+| SLURM_JOB_QPU_RESOURCES | Backend name |
+| SLURM_JOB_QPU_TYPES | Should be `alice-bob-felis` |
+| <backend_name>_QRMI_AB_FELIS_BASE_ENDPOINT | Felis URL |
+| <backend_name>_QRMI_AB_FELIS_API_KEY | Felis API Key |
+
+Example:
+
+```shell-session
+source ~/py312_qrmi_venv/bin/activate
+
+export SLURM_JOB_QPU_RESOURCES=ab_emu_1q_lescanne_2020
+export SLURM_JOB_QPU_TYPES=alice-bob-felis
+export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_BASE_ENDPOINT=<Felis URL>
+export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_API_KEY=<Felis API Key>
+
+task_runner ab_emu_1q_lescanne_2020 /shared/input/alice_bob_felis_input.json
+```
+
+
 ## License
 
 [Apache-2.0](https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt)
