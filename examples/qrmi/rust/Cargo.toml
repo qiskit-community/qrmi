@@ -2,6 +2,7 @@
 members = [
     "ibm_quantum_system",
     "qiskit_runtime_service",
+    "qiskit_runtime_service_provider",
     "pasqal_cloud",
     "pasqal_local",
     "qrmi_config",

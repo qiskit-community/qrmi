@@ -16,6 +16,7 @@ pub(crate) mod consts;
 pub mod ibm;
 pub mod iqm;
 pub mod pasqal;
+pub mod resource_provider;
 
 mod cext;
 pub mod models;

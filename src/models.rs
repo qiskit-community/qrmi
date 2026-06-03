@@ -14,12 +14,14 @@
 
 mod config;
 mod payload;
+mod provider_config;
 mod target;
 mod task_result;
 mod task_status;
 
 pub use self::config::{Config, ResourceDef, ResourceType};
 pub use self::payload::Payload;
+pub use self::provider_config::{ProviderConfig, ProviderDef};
 pub use self::target::Target;
 pub use self::task_result::TaskResult;
 pub use self::task_status::TaskStatus;

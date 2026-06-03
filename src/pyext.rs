@@ -12,10 +12,12 @@
 
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::iqm::IQMServer;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
+use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
@@ -41,6 +43,17 @@ pub struct PyQuantumResource {
     qrmi: Box<dyn QuantumResource + Send + Sync>,
     rt: Runtime,
 }
+
+impl PyQuantumResource {
+    /// Internal constructor used by `PyResourceProvider::backends()`.
+    pub(crate) fn from_inner(qrmi: Box<dyn QuantumResource + Send + Sync>) -> Self {
+        Self {
+            qrmi,
+            rt: Runtime::new().unwrap(),
+        }
+    }
+}
+
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyQuantumResource {
@@ -226,6 +239,89 @@ impl PyQuantumResource {
     }
 }
 
+// ---------------------------------------------------------------------------
+// ResourceProvider Python bindings
+// ---------------------------------------------------------------------------
+
+/// Python wrapper for `IBMQiskitRuntimeServiceProvider`.
+///
+/// Reads connection parameters from `QRMI_RESOURCE_PROVIDER_CONFIG_FILE`
+/// on construction and exposes `backends(filters)` to Python.
+///
+/// # Example (Python)
+///
+/// ```python
+/// import os
+/// from qrmi import IBMQiskitRuntimeServiceProvider
+///
+/// os.environ["QRMI_RESOURCE_PROVIDER_CONFIG_FILE"] = "/path/to/qrmi_config.json"
+///
+/// provider = IBMQiskitRuntimeServiceProvider()
+///
+/// # List all non-simulator backends, sorted by queue length
+/// resources = provider.backends("")
+///
+/// # With filters
+/// resources = provider.backends("num_qubits=127&name=ibm_*&status=online")
+///
+/// for r in resources:
+///     print(r.resource_id())
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[pyo3(name = "IBMQiskitRuntimeServiceProvider")]
+pub struct PyIBMQiskitRuntimeServiceProvider {
+    inner: IBMQiskitRuntimeServiceProvider,
+    rt: Runtime,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyIBMQiskitRuntimeServiceProvider {
+    /// Constructs a new provider.
+    ///
+    /// Reads `QRMI_RESOURCE_PROVIDER_CONFIG_FILE` and locates the
+    /// `"qiskit-runtime-service"` block in the config file.
+    #[new]
+    pub fn new() -> PyResult<Self> {
+        crate::common::initialize();
+        match IBMQiskitRuntimeServiceProvider::new() {
+            Ok(inner) => Ok(Self {
+                inner,
+                rt: Runtime::new().unwrap(),
+            }),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
+    /// Returns available backends, optionally filtered.
+    ///
+    /// # Arguments
+    ///
+    /// * `filters` - Filter string of the form `key=value&key=value`.
+    ///
+    /// Supported keys:
+    /// - `num_qubits=<N>`      — only backends with `qubits >= N`
+    /// - `name=<glob>`         — only backends whose name matches the glob pattern
+    /// - `is_simulator=<bool>` — include/exclude simulators (default: `false`)
+    /// - `status=online`       — only online backends
+    ///
+    /// Results are sorted by `queue_length` ascending (least busy first).
+    pub fn backends(&self, filters: &str) -> PyResult<Vec<PyQuantumResource>> {
+        crate::common::initialize();
+        let result = self
+            .rt
+            .block_on(async { self.inner.backends(filters.to_string()).await });
+        match result {
+            Ok(resources) => Ok(resources
+                .into_iter()
+                .map(PyQuantumResource::from_inner)
+                .collect()),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+}
+
 /// A Python module implemented in Rust.
 #[pymodule(name = "_core")]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -235,6 +331,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<crate::models::Payload>()?;
     m.add_class::<crate::models::Target>()?;
     m.add_class::<crate::models::TaskResult>()?;
+    m.add_class::<PyIBMQiskitRuntimeServiceProvider>()?;
     Ok(())
 }
 define_stub_info_gatherer!(stub_info);

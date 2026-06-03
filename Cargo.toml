@@ -43,6 +43,7 @@ pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
 iqm-server-api = { path = "dependencies/iqm_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
+glob = "0.3"
 pyo3 = { version = "0.25.0", features = ["anyhow"], optional = true }
 ffi_helpers = "0.3.0"
 async-trait = "0.1.88"
@@ -92,3 +93,7 @@ path = "examples/qrmi/rust/ibm_quantum_system/src/main.rs"
 [[example]]
 name = "qrmi-example-pasqal-cloud"
 path = "examples/qrmi/rust/pasqal_cloud/src/main.rs"
+
+[[example]]
+name = "qrmi-example-qiskit-runtime-service-provider"
+path = "examples/qrmi/rust/qiskit_runtime_service_provider/src/main.rs"
