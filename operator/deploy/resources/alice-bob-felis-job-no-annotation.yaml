@@ -2,7 +2,6 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: alice-bob-felis-example
-  namespace: platform-qrmi
 spec:
   ttlSecondsAfterFinished: 300
   template:

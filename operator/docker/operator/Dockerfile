@@ -13,10 +13,14 @@ WORKDIR /build
 
 # Copy workspace manifests first to cache dependency downloads.
 # rust-toolchain.toml must be present before any cargo/rustup invocation
-# so the pinned toolchain is activated and its targets (musl) are installed.
+# so the pinned toolchain is activated.
 COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
 COPY dependencies/ dependencies/
 COPY operator/Cargo.toml operator/Cargo.toml
+
+# Install the musl target here (rather than in rust-toolchain.toml) so
+# only the container build pays the cost, not every contributor's rustup.
+RUN rustup target add x86_64-unknown-linux-musl
 
 # cbindgen.toml is required by the qrmi crate's build.rs
 COPY cbindgen.toml .
