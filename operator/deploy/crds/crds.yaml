@@ -1,0 +1,181 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: quantumresources.quantum.qrmi.io
+spec:
+  group: quantum.qrmi.io
+  names:
+    categories: []
+    kind: QuantumResource
+    plural: quantumresources
+    shortNames:
+    - qr
+    singular: quantumresource
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.resourceId
+      name: Resource ID
+      type: string
+    - jsonPath: .spec.resourceType
+      name: Type
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for QuantumResourceSpec via `CustomResource`
+        properties:
+          spec:
+            description: |-
+              QuantumResource is a cluster-scoped custom resource that describes a single quantum backend available through QRMI.
+
+              Administrators create one QuantumResource per backend.  Workloads request access by creating a `QuantumResourceClaim`.
+            properties:
+              envVars:
+                additionalProperties:
+                  type: string
+                default: {}
+                description: Plain-text environment variables forwarded to the QRMI backend constructor and injected into the workload Secret on bind.
+                type: object
+              resourceId:
+                description: Backend / resource identifier (e.g. `ibm_torino`, `eagle`).
+                type: string
+              resourceType:
+                description: QRMI resource type.
+                enum:
+                - direct-access
+                - ibm-quantum-system
+                - qiskit-runtime-service
+                - pasqal-cloud
+                - pasqal-local
+                - alice-bob-felis
+                - iqm-server
+                type: string
+              secretRefs:
+                default: []
+                description: Secret-backed environment variables resolved at acquisition time.
+                items:
+                  description: Reference to a key inside a Kubernetes Secret that should be surfaced as an environment variable when the resource is acquired.
+                  properties:
+                    envVarName:
+                      description: Name of the environment variable to expose to the workload.
+                      type: string
+                    secretKey:
+                      description: Key within the Secret's `data` map.
+                      type: string
+                    secretName:
+                      description: Name of the Kubernetes Secret (in the same namespace as the claim, or cluster-level for cluster-scoped resources — the operator resolves this in the operator's own namespace).
+                      type: string
+                  required:
+                  - envVarName
+                  - secretKey
+                  - secretName
+                  type: object
+                type: array
+            required:
+            - resourceId
+            - resourceType
+            type: object
+        required:
+        - spec
+        title: QuantumResource
+        type: object
+    served: true
+    storage: true
+    subresources: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: quantumresourceclaims.quantum.qrmi.io
+spec:
+  group: quantum.qrmi.io
+  names:
+    categories: []
+    kind: QuantumResourceClaim
+    plural: quantumresourceclaims
+    shortNames:
+    - qrc
+    singular: quantumresourceclaim
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.quantumResource
+      name: Resource
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.secretName
+      name: Secret
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for QuantumResourceClaimSpec via `CustomResource`
+        properties:
+          spec:
+            description: |-
+              QuantumResourceClaim is a namespace-scoped resource through which a workload requests exclusive access to a [`QuantumResource`].
+
+              The operator reconciles the claim lifecycle: - Creates a managed Secret with backend credentials once the QRMI lock is acquired. - Deletes the Secret and releases the lock when the claim is deleted or expires.
+            properties:
+              quantumResource:
+                description: Name of the `QuantumResource` (cluster-scoped) to claim.
+                type: string
+              secretName:
+                description: Optional name for the managed Secret.  Defaults to `qrc-<claim-name>`.
+                nullable: true
+                type: string
+              ttl:
+                description: Optional time-to-live in seconds.  When elapsed the operator releases the claim automatically, even if the owning workload is still running.
+                format: uint32
+                minimum: 0.0
+                nullable: true
+                type: integer
+            required:
+            - quantumResource
+            type: object
+          status:
+            description: Status sub-resource for [`QuantumResourceClaim`].
+            nullable: true
+            properties:
+              boundAt:
+                description: When the claim transitioned to `Bound`. RFC3339 timestamp when the claim was bound.
+                nullable: true
+                type: string
+              expiresAt:
+                description: When the claim will be automatically released (derived from `spec.ttl`). RFC3339 timestamp when the claim expires (based on TTL).
+                nullable: true
+                type: string
+              message:
+                description: Human-readable message, populated on `Failed`.
+                nullable: true
+                type: string
+              phase:
+                description: Current lifecycle phase.
+                enum:
+                - Pending
+                - Bound
+                - Released
+                - Failed
+                type: string
+              secretName:
+                description: Name of the managed Secret containing the injected environment variables. Set when `phase == Bound`.
+                nullable: true
+                type: string
+            required:
+            - phase
+            type: object
+        required:
+        - spec
+        title: QuantumResourceClaim
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

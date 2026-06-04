@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qrmi-operator
+  namespace: platform-qrmi
+  labels:
+    app.kubernetes.io/name: qrmi-operator
+    app.kubernetes.io/component: operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: qrmi-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qrmi-operator
+        app.kubernetes.io/component: operator
+    spec:
+      serviceAccountName: qrmi-operator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: operator
+          image: qrmi-operator:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: RUST_LOG
+              value: "qrmi_operator=info,kube_client=error,kube_runtime=error,tower=error,hyper=error,warn"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alice-bob-felis-example
+  namespace: platform-qrmi
+  annotations:
+    quantum.qrmi.io/resource: ab-emu-1q-lescanne-2020
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: felis-example
+          image: felis-qrmi-example:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: qrc-job-alice-bob-felis-example

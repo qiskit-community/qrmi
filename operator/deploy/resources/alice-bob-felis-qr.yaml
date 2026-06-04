@@ -1,0 +1,21 @@
+# QuantumResource for Alice & Bob Felis
+#
+# Prerequisites:
+#   kubectl create secret generic alice-bob-felis-credentials \
+#     --from-literal=api-key=<your-api-key> \
+#     -n qrmi-system
+#
+# The operator resolves secretRefs from its own namespace (qrmi-system).
+apiVersion: quantum.qrmi.io/v1alpha1
+kind: QuantumResource
+metadata:
+  name: ab-emu-1q-lescanne-2020
+spec:
+  resourceType: alice-bob-felis
+  resourceId: ab_emu_1q_lescanne_2020
+  envVars:
+    QRMI_AB_FELIS_BASE_ENDPOINT: "https://api-staging.alice-bob.com"
+  secretRefs:
+    - secretName: alice-bob-felis-credentials
+      secretKey: api-key
+      envVarName: QRMI_AB_FELIS_API_KEY

@@ -8,3 +8,4 @@ components = [
   "rustc",
   "rustfmt",
 ]
+targets = ["x86_64-unknown-linux-musl"]
