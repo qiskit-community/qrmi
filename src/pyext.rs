@@ -11,13 +11,12 @@
 // that they have been altered from the originals.
 
 use crate::alice_bob::AliceBobFelis;
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
-use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
@@ -243,62 +242,76 @@ impl PyQuantumResource {
 // ResourceProvider Python bindings
 // ---------------------------------------------------------------------------
 
-/// Python wrapper for `IBMQiskitRuntimeServiceProvider`.
+/// Python wrapper for `ResourceProvider`.
 ///
 /// Reads connection parameters from `QRMI_RESOURCE_PROVIDER_CONFIG_FILE`
-/// on construction and exposes `backends(filters)` to Python.
+/// on construction and exposes `resources(filters)` and `least_busy(filters)` to Python.
 ///
 /// # Example (Python)
 ///
 /// ```python
 /// import os
-/// from qrmi import IBMQiskitRuntimeServiceProvider
+/// from qrmi import ResourceProvider, ResourceType
 ///
 /// os.environ["QRMI_RESOURCE_PROVIDER_CONFIG_FILE"] = "/path/to/qrmi_config.json"
 ///
-/// provider = IBMQiskitRuntimeServiceProvider()
+/// provider = ResourceProvider(ResourceType.IBMQiskitRuntimeService)
 ///
-/// # List all non-simulator backends, sorted by queue length
-/// resources = provider.backends("")
+/// # List all non-simulator resources, sorted by queue length
+/// resources = provider.resources()
 ///
 /// # With filters
-/// resources = provider.backends("num_qubits=127&name=ibm_*&status=online")
+/// resources = provider.resources("num_qubits=127&name=ibm_*&status=online")
+///
+/// # Least busy
+/// resource = provider.least_busy()
 ///
 /// for r in resources:
 ///     print(r.resource_id())
 /// ```
 #[gen_stub_pyclass]
 #[pyclass]
-#[pyo3(name = "IBMQiskitRuntimeServiceProvider")]
-pub struct PyIBMQiskitRuntimeServiceProvider {
-    inner: IBMQiskitRuntimeServiceProvider,
+#[pyo3(name = "ResourceProvider")]
+pub struct PyResourceProvider {
+    inner: Box<dyn crate::ResourceProvider>,
     rt: Runtime,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyIBMQiskitRuntimeServiceProvider {
-    /// Constructs a new provider.
+impl PyResourceProvider {
+    /// Constructs a new provider for the given resource type.
     ///
-    /// Reads `QRMI_RESOURCE_PROVIDER_CONFIG_FILE` and locates the
-    /// `"qiskit-runtime-service"` block in the config file.
+    /// Reads `QRMI_RESOURCE_PROVIDER_CONFIG_FILE` and locates the matching
+    /// provider block in the config file.
+    ///
+    /// Currently supported resource types:
+    /// - `ResourceType.IBMQiskitRuntimeService`
     #[new]
-    pub fn new() -> PyResult<Self> {
+    pub fn new(resource_type: ResourceType) -> PyResult<Self> {
         crate::common::initialize();
-        match IBMQiskitRuntimeServiceProvider::new() {
-            Ok(inner) => Ok(Self {
-                inner,
-                rt: Runtime::new().unwrap(),
-            }),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-        }
+        let inner: Box<dyn crate::ResourceProvider> = match resource_type {
+            ResourceType::IBMQiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new() {
+                Ok(p) => Box::new(p),
+                Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            },
+            _ => {
+                return Err(pyo3::exceptions::PyRuntimeError::new_err(
+                    "Unsupported resource type",
+                ))
+            }
+        };
+        Ok(Self {
+            inner,
+            rt: Runtime::new().unwrap(),
+        })
     }
 
-    /// Returns available backends, optionally filtered.
+    /// Returns available quantum resources, optionally filtered.
     ///
     /// # Arguments
     ///
-    /// * `filters` - Filter string of the form `key=value&key=value`.
+    /// * `filters` - Filter string of the form `key=value&key=value`, or `None`.
     ///
     /// Supported keys:
     /// - `num_qubits=<N>`      — only backends with `qubits >= N`
@@ -307,16 +320,46 @@ impl PyIBMQiskitRuntimeServiceProvider {
     /// - `status=online`       — only online backends
     ///
     /// Results are sorted by `queue_length` ascending (least busy first).
-    pub fn backends(&self, filters: &str) -> PyResult<Vec<PyQuantumResource>> {
+    ///
+    /// # Example (Python)
+    ///
+    /// ```python
+    /// resources = provider.resources()
+    /// resources = provider.resources("num_qubits=127&name=ibm_*")
+    /// ```
+    #[pyo3(signature = (filters=None))]
+    pub fn resources(&self, filters: Option<&str>) -> PyResult<Vec<PyQuantumResource>> {
         crate::common::initialize();
         let result = self
             .rt
-            .block_on(async { self.inner.backends(filters.to_string()).await });
+            .block_on(async { self.inner.resources(filters.map(str::to_string)).await });
         match result {
             Ok(resources) => Ok(resources
                 .into_iter()
                 .map(PyQuantumResource::from_inner)
                 .collect()),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
+    /// Returns the least busy available quantum resource, optionally filtered.
+    ///
+    /// Equivalent to `resources(filters)[0]` but returns `None` if no resources match.
+    ///
+    /// # Example (Python)
+    ///
+    /// ```python
+    /// resource = provider.least_busy()
+    /// resource = provider.least_busy("num_qubits=127&status=online")
+    /// ```
+    #[pyo3(signature = (filters=None))]
+    pub fn least_busy(&self, filters: Option<&str>) -> PyResult<Option<PyQuantumResource>> {
+        crate::common::initialize();
+        let result = self
+            .rt
+            .block_on(async { self.inner.least_busy(filters.map(str::to_string)).await });
+        match result {
+            Ok(resource) => Ok(resource.map(PyQuantumResource::from_inner)),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
@@ -331,7 +374,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<crate::models::Payload>()?;
     m.add_class::<crate::models::Target>()?;
     m.add_class::<crate::models::TaskResult>()?;
-    m.add_class::<PyIBMQiskitRuntimeServiceProvider>()?;
+    m.add_class::<PyResourceProvider>()?;
     Ok(())
 }
 define_stub_info_gatherer!(stub_info);

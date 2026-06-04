@@ -30,9 +30,16 @@ use async_trait::async_trait;
 ///     use qrmi::resource_provider::ResourceProvider;
 ///
 ///     let provider = IBMQiskitRuntimeServiceProvider::new()?;
-///     let resources = provider.backends("".to_string()).await?;
+///
+///     // List all resources
+///     let resources = provider.resources(None).await?;
 ///     for mut r in resources {
 ///         println!("{}", r.resource_id().await?);
+///     }
+///
+///     // Get the least busy resource
+///     if let Some(mut r) = provider.least_busy(None).await? {
+///         println!("least busy: {}", r.resource_id().await?);
 ///     }
 ///     Ok(())
 /// }
@@ -41,9 +48,30 @@ use async_trait::async_trait;
 pub trait ResourceProvider: Send + Sync {
     /// Returns a list of available quantum resources, optionally filtered.
     ///
+    /// Results are sorted by `queue_length` ascending (least busy first).
+    ///
     /// # Arguments
     ///
-    /// * `filters` - A vendor-specific filter string. Pass an empty string for no filtering.
+    /// * `filters` - A vendor-specific filter string, or `None` for no filtering.
     ///   The format and supported filter keys are vendor-defined.
-    async fn backends(&self, filters: String) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>>;
+    ///   Example: `Some("num_qubits=127&name=ibm_*&status=online")`
+    async fn resources(
+        &self,
+        filters: Option<String>,
+    ) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>>;
+
+    /// Returns the least busy available quantum resource, optionally filtered.
+    ///
+    /// This is equivalent to calling [`resources`] and taking the first element.
+    /// Returns `None` if no resources match the given filters.
+    ///
+    /// # Arguments
+    ///
+    /// * `filters` - Same filter string as [`resources`], or `None` for no filtering.
+    async fn least_busy(
+        &self,
+        filters: Option<String>,
+    ) -> Result<Option<Box<dyn QuantumResource + Send + Sync>>> {
+        Ok(self.resources(filters).await?.into_iter().next())
+    }
 }

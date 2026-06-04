@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Example: list available IBM Qiskit Runtime Service backends via `ResourceProvider`.
+//! Example: list available IBM Qiskit Runtime Service resources via `ResourceProvider`.
 //!
 //! # Setup
 //!
@@ -39,7 +39,7 @@
 //! export QRMI_RESOURCE_PROVIDER_CONFIG_FILE=/path/to/qrmi_config.json
 //! ```
 //!
-//! 3. Run (no filter — list all backends):
+//! 3. Run (no filter — list all resources):
 //!
 //! ```bash
 //! cargo run --example qrmi-example-qiskit-runtime-service-provider
@@ -48,10 +48,10 @@
 //! 4. Run with filters:
 //!
 //! ```bash
-//! # 127+ qubit backends starting with "ibm_"
+//! # 127+ qubit resources starting with "ibm_"
 //! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "num_qubits=127&name=ibm_*"
 //!
-//! # Online backends only (calls get_backend_status per backend in parallel)
+//! # Online resources only (calls get_backend_status per resource in parallel)
 //! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "status=online"
 //!
 //! # Include simulators (default excludes them)
@@ -59,7 +59,7 @@
 //! ```
 
 use qrmi::ibm::IBMQiskitRuntimeServiceProvider;
-use qrmi::resource_provider::ResourceProvider;
+use qrmi::ResourceProvider;
 use std::env;
 
 #[tokio::main]
@@ -68,35 +68,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Optional filter string from the first CLI argument.
     // Example: "num_qubits=127&name=ibm_*"
-    let filters = env::args().nth(1).unwrap_or_default();
+    let filters: Option<String> = env::args().nth(1);
 
-    if filters.is_empty() {
-        println!("No filters specified — listing all backends.");
-    } else {
-        println!("Filters: {filters}");
+    match &filters {
+        Some(f) => println!("Filters: {f}"),
+        None => println!("No filters specified — listing all resources."),
     }
 
     let provider = IBMQiskitRuntimeServiceProvider::new()?;
-    let resources = provider.backends(filters).await?;
+
+    // --- resources() ---
+    let resources = provider.resources(filters.clone()).await?;
 
     if resources.is_empty() {
-        println!("No backends found matching the given filters.");
+        println!("No resources found matching the given filters.");
         return Ok(());
     }
 
-    println!("\nAvailable backends ({} found):", resources.len());
+    println!("\nAvailable resources ({} found):", resources.len());
     println!("{:-<40}", "");
 
-    for mut resource in resources {
-        let id = resource.resource_id().await?;
-        let resource_type = resource.resource_type().await?;
-        let accessible = resource.is_accessible().await.unwrap_or(false);
+    for mut r in resources {
+        let id = r.resource_id().await?;
+        let resource_type = r.resource_type().await?;
+        let accessible = r.is_accessible().await.unwrap_or(false);
         println!(
             "  {:<30} type={:<25} accessible={}",
             id,
             resource_type.as_str(),
             accessible,
         );
+    }
+
+    // --- least_busy() ---
+    println!("\nLeast busy resource:");
+    match provider.least_busy(filters).await? {
+        Some(mut r) => println!("  {}", r.resource_id().await?),
+        None => println!("  (none)"),
     }
 
     Ok(())

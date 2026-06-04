@@ -132,10 +132,7 @@ impl IBMQiskitRuntimeServiceProvider {
 
     /// Checks whether a backend is online by calling `get_backend_status()`.
     /// Returns `true` if the status is "active" or "online".
-    async fn is_backend_online(
-        config: &configuration::Configuration,
-        name: &str,
-    ) -> bool {
+    async fn is_backend_online(config: &configuration::Configuration, name: &str) -> bool {
         match backends_api::get_backend_status(config, name, None).await {
             Ok(resp) => resp
                 .status
@@ -170,9 +167,12 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
     /// # Sorting
     ///
     /// Results are sorted by `queue_length` ascending (least busy first).
-    async fn backends(&self, filters: String) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>> {
+    async fn resources(
+        &self,
+        filters: Option<String>,
+    ) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>> {
         // Parse filter string upfront so we fail fast on bad input.
-        let filter = BackendFilter::parse(&filters)?;
+        let filter = BackendFilter::parse(filters.as_deref().unwrap_or(""))?;
 
         // Clone config so we can mutate the bearer token locally for this call.
         let mut config = self.config.clone();

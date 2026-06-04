@@ -12,8 +12,8 @@
 
 //! Config file model for `ResourceProvider` (version 2 format).
 
-use std::collections::HashMap;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 /// A single provider block inside `qrmi_config.json`.
 ///

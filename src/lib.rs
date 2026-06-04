@@ -17,6 +17,7 @@ pub mod ibm;
 pub mod iqm;
 pub mod pasqal;
 pub mod resource_provider;
+pub use resource_provider::ResourceProvider;
 
 mod cext;
 pub mod models;
