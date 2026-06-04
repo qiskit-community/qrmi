@@ -11,8 +11,9 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::alice_bob::AliceBobFelis;
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::IBMQuantumSystemProvider;
+use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
@@ -1524,9 +1525,7 @@ pub struct ResourceProvider {
 ///         Must call qrmi_provider_free() to free if no longer used.
 /// @version 0.15.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_provider_new(
-    resource_type: ResourceType,
-) -> *mut ResourceProvider {
+pub unsafe extern "C" fn qrmi_provider_new(resource_type: ResourceType) -> *mut ResourceProvider {
     crate::common::initialize();
     let provider: Box<dyn crate::ResourceProvider> = match resource_type {
         ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new() {
@@ -1536,8 +1535,15 @@ pub unsafe extern "C" fn qrmi_provider_new(
                 return std::ptr::null_mut();
             }
         },
+        ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new() {
+            Ok(inner) => Box::new(inner),
+            Err(err) => {
+                _set_last_error(format!("{:?}", err));
+                return std::ptr::null_mut();
+            }
+        },
         _ => {
-            _set_last_error(format!("Unsupported resource type"));
+            _set_last_error("Unsupported resource type".to_string());
             return std::ptr::null_mut();
         }
     };

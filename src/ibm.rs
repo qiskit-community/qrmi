@@ -28,8 +28,10 @@ mod direct_access;
 mod qiskit_runtime_service;
 mod qiskit_runtime_service_provider;
 mod quantum_system;
+mod quantum_system_provider;
 
 pub use self::direct_access::IBMDirectAccess;
 pub use self::qiskit_runtime_service::IBMQiskitRuntimeService;
 pub use self::qiskit_runtime_service_provider::IBMQiskitRuntimeServiceProvider;
 pub use self::quantum_system::IBMQuantumSystem;
+pub use self::quantum_system_provider::IBMQuantumSystemProvider;

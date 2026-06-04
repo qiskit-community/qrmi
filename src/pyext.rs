@@ -12,11 +12,13 @@
 
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::IBMQuantumSystemProvider;
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Payload, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
+use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
@@ -292,6 +294,10 @@ impl PyResourceProvider {
         crate::common::initialize();
         let inner: Box<dyn crate::ResourceProvider> = match resource_type {
             ResourceType::IBMQiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new() {
+                Ok(p) => Box::new(p),
+                Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            },
+            ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new() {
                 Ok(p) => Box::new(p),
                 Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
             },
