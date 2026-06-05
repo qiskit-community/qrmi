@@ -1,4 +1,4 @@
-# Qiskit Runtime Service QRMI Provider - Examples in C
+# QRMI Provider for Qiskit Runtime Service - Examples in C
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ $ make
 ```
 For example,
 ```shell-session
-export QRMI_RESOURCE_PROVIDER_CONFIG_FILE=/shared/qrmi/examples/qrmi/c/qiskit_runtime_service_provider/qrmi_config.json
+export QRMI_RESOURCE_PROVIDER_CONFIG_FILE=/shared/qrmi_config.json
 
 ./build/qiskit_runtime_service_provider
 ```

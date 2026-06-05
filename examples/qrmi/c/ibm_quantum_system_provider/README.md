@@ -1,4 +1,4 @@
-# Quantum System QRMI Provider - Examples in C
+# QRMI Provider for IBM Quantum System - Examples in C
 
 ## Prerequisites
 
