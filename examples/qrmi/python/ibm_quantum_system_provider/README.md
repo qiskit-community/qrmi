@@ -1,4 +1,4 @@
-# IBM Qiskit Runtime Service QRMI Provider - Examples in Python
+# IBM Quantum System QRMI Provider - Examples in Python
 
 ## Prerequisites
 

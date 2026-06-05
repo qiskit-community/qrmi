@@ -2,7 +2,7 @@
 
 # This code is part of Qiskit.
 #
-# Copyright (C) 2025 UKRI-STFC (Hartree Centre), IBM
+# Copyright (C) 2026 IBM
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -22,15 +22,15 @@ from dotenv import load_dotenv
 from qrmi import ResourceProvider, ResourceType
 
 parser = argparse.ArgumentParser(
-    description="An example of IBM Qiskit Runtime Service QRMI"
+    description="An example of IBM Quantum System QRMI Provider"
 )
 args = parser.parse_args()
 
 load_dotenv()
 
 
-provider = ResourceProvider(ResourceType.IBMQiskitRuntimeService)
-resources = provider.resources("num_qubits=27&name=ibm*")
+provider = ResourceProvider(ResourceType.IBMQuantumSystem)
+resources = provider.resources("num_qubits=27&name=test_*")
 for qrmi in resources:
     print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
     print(qrmi.is_accessible())
