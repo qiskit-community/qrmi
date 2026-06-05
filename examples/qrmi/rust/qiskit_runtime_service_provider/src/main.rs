@@ -49,18 +49,28 @@
 //!
 //! ```bash
 //! # 127+ qubit resources starting with "ibm_"
-//! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "num_qubits=127&name=ibm_*"
+//! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "-f num_qubits=127&name=ibm_*"
 //!
 //! # Online resources only (calls get_backend_status per resource in parallel)
-//! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "status=online"
+//! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "-f status=online"
 //!
 //! # Include simulators (default excludes them)
-//! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "is_simulator=true"
+//! cargo run --example qrmi-example-qiskit-runtime-service-provider -- "-f is_simulator=true"
 //! ```
 
+use clap::Parser;
 use qrmi::ibm::IBMQiskitRuntimeServiceProvider;
 use qrmi::ResourceProvider;
 use std::env;
+
+#[derive(Parser, Debug)]
+#[command(version = "0.1.0")]
+#[command(about = "QRMI Provider for IBM Quantum System - Example")]
+struct Args {
+    /// A filter specification using comma-separated key-value pairs
+    #[arg(short, long)]
+    filters: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -68,9 +78,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Optional filter string from the first CLI argument.
     // Example: "num_qubits=127&name=ibm_*"
-    let filters: Option<String> = env::args().nth(1);
+    let args = Args::parse();
 
-    match &filters {
+    match &args.filters {
         Some(f) => println!("Filters: {f}"),
         None => println!("No filters specified — listing all resources."),
     }
@@ -78,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = IBMQiskitRuntimeServiceProvider::new()?;
 
     // --- resources() ---
-    let resources = provider.resources(filters.clone()).await?;
+    let resources = provider.resources(args.filters.clone()).await?;
 
     if resources.is_empty() {
         println!("No resources found matching the given filters.");
@@ -102,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // --- least_busy() ---
     println!("\nLeast busy resource:");
-    match provider.least_busy(filters).await? {
+    match provider.least_busy(args.filters).await? {
         Some(mut r) => println!("  {}", r.resource_id().await?),
         None => println!("  (none)"),
     }

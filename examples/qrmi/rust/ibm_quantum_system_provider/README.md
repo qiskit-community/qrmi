@@ -1,4 +1,4 @@
-# Qiskit Runtime Service QRMI - Examples in Rust
+# IBM Quantum System QRMI Provider - Examples in Rust
 
 ## Prerequisites
 
@@ -11,49 +11,31 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
-| {resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
-| {resource_name}_QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Qiskit Runtime Service instance, starting with `crn:v1:`. |
-| {resource_name}_QRMI_IBM_QRS_SESSION_MODE | Execution mode to run the session in, `default='dedicated'`, `batch` or `dedicated`. |
-| {resource_name}_QRMI_IBM_QRS_SESSION_MAX_TTL | The maximum time (in seconds) for the session to run, subject to plan limits, default: `28800`. |
-| {resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS | (Optional) Cost of the job as the estimated time it should take to complete (in seconds). Should not exceed the cost of the program, default: `None`. |
-| {resource_name}_QRMI_IBM_QRS_SESSION_ID | (Optional) Session ID, can be obtanied by acquire function. If exists, used in the target functions. |
+| QRMI_RESOURCE_PROVIDER_CONFIG_FILE | qrmi config v2 file |
 
-## Create Qiskit Primitive input file as input
-
-Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can customize quantum circuits by editing the code.
-
-> [!NOTE]
-> Use the file with name ending with `_params_only.json`, e.g. `sampler_input_ibm_torino_params_only.json`.
 
 ## How to build this example
 
 ```shell-session
 $ cargo clean
-$ cargo build --example qrmi-example-qiskit-runtime-service --release
+$ cargo build --release
 ```
 
 ## How to run this example
 ```shell-session
 $ ../target/release/qrmi-example-qiskit-runtime-service --help
-QRMI for IBM Qiskit Runtime Service - Example
+QRMI Provider for IBM Quantum System - Example
 
-Usage: qrmi-example-qiskit_runtime_service --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
+Usage: qrmi-example-ibm-quantum-system-provider [OPTIONS]
 
 Options:
-  -b, --backend <BACKEND>        backend name
-  -i, --input <INPUT>            primitive input file
-  -p, --program-id <PROGRAM_ID>  program id
-  -h, --help                     Print help
-  -V, --version                  Print version
+  -f, --filters <FILTERS>  A filter specification using comma-separated key-value pairs
+  -h, --help               Print help
+  -V, --version            Print version
 ```
 For example,
 ```shell-session
-export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-export ibm_torino_QRMI_IBM_QRS_IAM_APIKEY=your_apikey
-export ibm_torino_QRMI_IBM_QRS_SERVICE_CRN=your_instance
+export QRMI_RESOURCE_PROVIDER_CONFIG_FILE=/shared/qrmi_config_v2.json
 
-../target/release/qrmi-example-qiskit-runtime-service  -b ibm_torino -i sampler_input.json -p sampler
+../target/release/qrmi-example-ibm-quantum-system-provider  -f "num_qubits=127&name=ibm_*&max_shots=10000"
 ```

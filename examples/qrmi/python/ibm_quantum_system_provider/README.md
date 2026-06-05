@@ -1,4 +1,4 @@
-# IBM Quantum System QRMI Provider - Examples in Python
+# QRMI Provider for IBM Quantum System - Examples in Python
 
 ## Prerequisites
 
