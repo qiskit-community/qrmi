@@ -22,6 +22,19 @@ fn empty_string_array() -> Vec<String> {
     Vec::new()
 }
 
+fn deserialize_string_or_number<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde_json::Value;
+    let v = Value::deserialize(deserializer)?;
+    match v {
+        Value::String(s) => Ok(s),
+        Value::Number(n) => Ok(n.to_string()),
+        _ => Err(serde::de::Error::custom("expected string or number")),
+    }
+}
+
 /// Gate configuration
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
@@ -30,19 +43,21 @@ pub struct GateConfig {
     pub name: String,
 
     /// variable names for the gate parameters (if any)
-    pub parameters: Vec<String>,
+    pub parameters: Option<Vec<String>>,
 
     /// List of qubit groupings which are coupled by this gate
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coupling_map: Option<Vec<Vec<u64>>>,
 
     /// Definition of this gate in terms of QASM primitives U and CX
-    pub qasm_def: String,
+    pub qasm_def: Option<String>,
 
     /// This specified gate supports conditional operations (true/false). If this is not specified, then the gate inherits the conditional property of the backend.
+    #[serde(default = "default_false")]
     pub conditional: bool,
 
     /// An array of dimension len(coupling_map) X n_registers that specifies (1 - fast, 0 - slow) the register latency conditional operations on the gate
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub latency_map: Option<Vec<Vec<u64>>>,
 
     /// Description of the gate operation
@@ -57,6 +72,8 @@ pub struct ProcessorType {
     pub family: String,
 
     /// Revision number reflects design variants within a given processor family. Is typically a semantic versioning value without the patch value, eg., \"1.0\".
+    /// Note: \"revision\" is defined as string in openapi doc, however this field value sometimes comes with integer from server - might be a bug.
+    #[serde(deserialize_with = "deserialize_string_or_number")]
     pub revision: String,
 
     /// Segment, if indicated, is used to distinguish different subsets of the qubit fabric/chip
@@ -129,9 +146,11 @@ pub struct BackendConfiguration {
     pub simulator: bool,
 
     /// Backend supports conditional operations (true/false)
+    #[serde(default = "default_false")]
     pub conditional: bool,
 
     /// Backend supports memory (true/false)
+    #[serde(default = "default_false")]
     pub memory: bool,
 
     /// Maximum number of shots supported
@@ -150,6 +169,7 @@ pub struct BackendConfiguration {
     pub n_registers: u64,
 
     /// An array of dimension n_qubits X n_registers that specifies whether a qubit can store a measurement in a certain register slot
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub register_map: Option<Vec<Vec<u64>>>,
 
     /// Backend is configurable, if the backend is a simulator (true/false)
@@ -173,7 +193,7 @@ pub struct BackendConfiguration {
     pub tags: Option<Vec<String>>,
 
     /// Range of delay times between programs (microseconds) allowed by backend.
-    pub rep_delay_range: Option<Vec<Vec<f64>>>,
+    pub rep_delay_range: Option<Vec<f64>>,
 
     /// Default rep delay.
     pub default_rep_delay: Option<f64>,
@@ -201,9 +221,11 @@ pub struct BackendConfiguration {
     pub processor_type: Option<ProcessorType>,
 
     /// Frequency range for the qubit LO
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub qubit_lo_range: Option<Vec<Vec<f64>>>,
 
     /// Frequency range for the measurement LO
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub meas_lo_range: Option<Vec<Vec<f64>>>,
 
     pub timing_constraints: Option<TimingConstraints>,
