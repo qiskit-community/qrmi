@@ -37,7 +37,7 @@ from pulser.result import SampledResult
 from qrmi import Payload, QuantumResource, TaskStatus, ResourceType  # type: ignore
 from qrmi.pulser.service import QRMIService
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("qrmi")
 
 _QRMI_TASK_STATUS_MAP: dict[TaskStatus, JobStatus] = {
     TaskStatus.Queued: JobStatus.PENDING,
@@ -74,6 +74,7 @@ class PulserQRMIConnection(RemoteConnection):
     def __init__(self, qrmi: QuantumResource | None = None) -> None:
         self._qrmi = qrmi or self._resolve_single_resource()
         self._task_sequences: dict[str, pulser.Sequence] = {}
+        self._current_batch_id = None
 
         _type: ResourceType = self._qrmi.resource_type()
         if _type not in _COMPATIBLE_RESOURCE_TYPES:
@@ -127,6 +128,21 @@ class PulserQRMIConnection(RemoteConnection):
                 continue
             devices[name] = dev
         return devices
+
+    def get_batch_logs(self, batch_id: str | None = None) -> Sequence[str]:
+        """Get the logs from the current batch through the `task_logs` interface."""
+        if batch_id is None:
+            batch_id = self._current_batch_id
+        
+        job_ids = self._get_job_ids(batch_id)
+        logs = []
+        for job_id in job_ids:
+            try:
+                job_logs = self._qrmi.task_logs(job_id)
+            except Exception:
+                print('rerg')
+            logs.append(job_logs)
+        return tuple(logs)
 
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
@@ -259,6 +275,7 @@ class PulserQRMIConnection(RemoteConnection):
             new_job_ids.append(task_id)
 
         batch_id = self._batch_id_from_job_ids(new_job_ids)
+        self._current_batch_id = batch_id
 
         if wait:
             for job_id in new_job_ids:
