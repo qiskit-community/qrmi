@@ -27,6 +27,10 @@ from typing import Any
 from uuid import UUID
 
 import numpy as np
+from qiskit import QuantumCircuit
+from qiskit.providers import JobStatus, JobV1, Options
+from qiskit.result import Counts, Result
+
 from iqm.iqm_client import CircuitCompilationOptions, CircuitValidationError
 from iqm.iqm_client.util import to_json_dict
 from iqm.iqm_server_client.models import CalibrationSet, QualityMetricSet
@@ -40,9 +44,6 @@ from iqm.station_control.interface.models import (
     DynamicQuantumArchitecture,
     RunRequest,
 )
-from qiskit import QuantumCircuit
-from qiskit.providers import JobStatus, JobV1, Options
-from qiskit.result import Counts, Result
 
 from qrmi import (
     Payload,
