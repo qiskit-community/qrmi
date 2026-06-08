@@ -103,8 +103,8 @@ You can run `task_runner` on your host locally for your development or testing b
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Quantum backend name |
-| SLURM_JOB_QPU_TYPES | Should be `ibm-quantum-system` |
+| QRMI_JOB_QPU_RESOURCES | Quantum backend name |
+| QRMI_JOB_QPU_TYPES | Should be `ibm-quantum-system` |
 | {backend_name}_QRMI_IBM_QS_ENDPOINT | Quantum System API endpoint URL |
 | {backend_name}_QRMI_IBM_QS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | {backend_name}_QRMI_IBM_QS_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -121,8 +121,8 @@ Example:
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
 
-export SLURM_JOB_QPU_RESOURCES=test_heron
-export SLURM_JOB_QPU_TYPES=ibm-quantum-system
+export QRMI_JOB_QPU_RESOURCES=test_heron
+export QRMI_JOB_QPU_TYPES=ibm-quantum-system
 export test_heron_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
 export test_heron_QRMI_IBM_QS_IAM_ENDPOINT=https://iam.cloud.ibm.com
 export test_heron_QRMI_IBM_QS_IAM_APIKEY=<your API key>
@@ -141,8 +141,8 @@ task_runner test_heron /shared/input/estimator_input.json
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Quantum backend name |
-| SLURM_JOB_QPU_TYPES | Should be `qiskit-runtime-service` |
+| QRMI_JOB_QPU_RESOURCES | Quantum backend name |
+| QRMI_JOB_QPU_TYPES | Should be `qiskit-runtime-service` |
 | {backend_name}_QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api/v1`) |
 | {backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | {backend_name}_QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
@@ -154,8 +154,8 @@ Example:
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
 
-export SLURM_JOB_QPU_RESOURCES=ibm_marrakesh
-export SLURM_JOB_QPU_TYPES=qiskit-runtime-service
+export QRMI_JOB_QPU_RESOURCES=ibm_marrakesh
+export QRMI_JOB_QPU_TYPES=qiskit-runtime-service
 export test_heron_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
 export test_heron_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
 export test_heron_QRMI_IBM_QRS_IAM_APIKEY=<your API key>
@@ -168,8 +168,8 @@ task_runner ibm_marrakesh /shared/input/estimator_input.json
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Backend name |
-| SLURM_JOB_QPU_TYPES | Should be `pasqal-cloud` |
+| QRMI_JOB_QPU_RESOURCES | Backend name |
+| QRMI_JOB_QPU_TYPES | Should be `pasqal-cloud` |
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID |  Pasqal Cloud Project ID to access the QPU |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
@@ -191,8 +191,8 @@ Example:
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
 
-export SLURM_JOB_QPU_RESOURCES=FRESNEL
-export SLURM_JOB_QPU_TYPES=pasqal-cloud
+export QRMI_JOB_QPU_RESOURCES=FRESNEL
+export QRMI_JOB_QPU_TYPES=pasqal-cloud
 export FRESNEL_QRMI_PASQAL_CLOUD_PROJECT_ID=<your project ID>
 export FRESNEL_QRMI_PASQAL_CLOUD_AUTH_TOKEN=<your auth token>
 
@@ -203,8 +203,8 @@ task_runner FRESNEL /shared/input/sequence_input_FRESNEL.json
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Backend name |
-| SLURM_JOB_QPU_TYPES | Should be `alice-bob-felis` |
+| QRMI_JOB_QPU_RESOURCES | Backend name |
+| QRMI_JOB_QPU_TYPES | Should be `alice-bob-felis` |
 | <backend_name>_QRMI_AB_FELIS_BASE_ENDPOINT | Felis URL |
 | <backend_name>_QRMI_AB_FELIS_API_KEY | Felis API Key |
 
@@ -213,8 +213,8 @@ Example:
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
 
-export SLURM_JOB_QPU_RESOURCES=ab_emu_1q_lescanne_2020
-export SLURM_JOB_QPU_TYPES=alice-bob-felis
+export QRMI_JOB_QPU_RESOURCES=ab_emu_1q_lescanne_2020
+export QRMI_JOB_QPU_TYPES=alice-bob-felis
 export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_BASE_ENDPOINT=<Felis URL>
 export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_API_KEY=<Felis API Key>
 

@@ -6,7 +6,12 @@ import pulser
 import pytest
 from pulser.backend.remote import RemoteResultsError
 from pulser.result import SampledResult
-from qrmi import ResourceType, TaskStatus
+from qrmi import (
+    ResourceType,
+    TaskStatus,
+    _get_job_env_list,
+    get_job_qpu_resources_and_types,
+)
 from qrmi.pulser.connection import PulserQRMIConnection
 
 
@@ -68,6 +73,58 @@ def _build_sequence() -> pulser.Sequence:
     sequence.add(pulser.Pulse.ConstantPulse(100, 1.0, 0.0, 0.0), "rydberg")
     sequence.measure("ground-rydberg")
     return sequence
+
+
+def _clear_job_qpu_env(monkeypatch) -> None:
+    for name in (
+        "QRMI_JOB_QPU_RESOURCES",
+        "QRMI_JOB_QPU_TYPES",
+        "SLURM_JOB_QPU_RESOURCES",
+        "SLURM_JOB_QPU_TYPES",
+        "QRMI_LIST_DELIMITER",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_job_qpu_env_uses_qrmi_names_first(monkeypatch) -> None:
+    """Prefer QRMI job QPU env names over Slurm aliases."""
+    _clear_job_qpu_env(monkeypatch)
+    monkeypatch.setenv("QRMI_JOB_QPU_RESOURCES", "new_qpu")
+    monkeypatch.setenv("QRMI_JOB_QPU_TYPES", "pasqal-local")
+    monkeypatch.setenv("SLURM_JOB_QPU_RESOURCES", "old_qpu")
+    monkeypatch.setenv("SLURM_JOB_QPU_TYPES", "pasqal-cloud")
+
+    assert get_job_qpu_resources_and_types() == (["new_qpu"], ["pasqal-local"])
+
+
+def test_job_qpu_env_uses_slurm_aliases(monkeypatch) -> None:
+    """Use Slurm aliases when QRMI job QPU env names are absent."""
+    _clear_job_qpu_env(monkeypatch)
+    monkeypatch.setenv("SLURM_JOB_QPU_RESOURCES", "old_qpu")
+    monkeypatch.setenv("SLURM_JOB_QPU_TYPES", "pasqal-cloud")
+
+    assert get_job_qpu_resources_and_types() == (["old_qpu"], ["pasqal-cloud"])
+
+
+def test_job_qpu_env_honors_delimiter(monkeypatch) -> None:
+    """Split QRMI job QPU env values with QRMI_LIST_DELIMITER."""
+    _clear_job_qpu_env(monkeypatch)
+    monkeypatch.setenv("QRMI_LIST_DELIMITER", ":")
+    monkeypatch.setenv("QRMI_JOB_QPU_RESOURCES", "qpu1:qpu2")
+    monkeypatch.setenv("QRMI_JOB_QPU_TYPES", "pasqal-local:pasqal-cloud")
+
+    assert get_job_qpu_resources_and_types() == (
+        ["qpu1", "qpu2"],
+        ["pasqal-local", "pasqal-cloud"],
+    )
+
+
+def test_job_qpu_env_raises_when_missing(monkeypatch) -> None:
+    """Raise when both QRMI job env and Slurm alias are missing."""
+    _clear_job_qpu_env(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="QRMI_JOB_QPU_RESOURCES"):
+        _get_job_env_list("QRMI_JOB_QPU_RESOURCES", "SLURM_JOB_QPU_RESOURCES")
 
 
 def test_supports_open_batch_is_false() -> None:

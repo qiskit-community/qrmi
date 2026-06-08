@@ -1,4 +1,5 @@
 """generating IQM JSON from Qiskit QuantumCircuit"""
+
 # (C) Copyright IBM 2026
 # SPDX-License-Identifier: Apache-2.0
 import argparse
@@ -7,6 +8,7 @@ from pathlib import Path
 from iqm.qiskit_iqm import IQMProvider
 from qiskit import transpile, QuantumCircuit
 from qiskit.providers import BackendV2
+
 
 def dump_run_request(
     backend: BackendV2,
@@ -129,6 +131,7 @@ def main():
     print(f"circuits:  {len(payload['iqmjson']['circuits'])}")
     print(f"shots:     {payload['iqmjson']['shots']}")
     print(f"calset_id: {payload['iqmjson']['calibration_set_id']}")
+
 
 if __name__ == "__main__":
     main()

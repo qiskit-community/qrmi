@@ -16,37 +16,40 @@
 from __future__ import annotations
 
 import dataclasses
-import os
+import json
 import time
+import warnings
 from collections import Counter
 from collections.abc import Callable
 from datetime import date
+from logging import getLogger
 from typing import Any
 from uuid import UUID
-import warnings
-from logging import getLogger
-import json
 
 import numpy as np
-
-from qiskit import QuantumCircuit
-from qiskit.providers import JobStatus, JobV1, Options
-from qiskit.result import Counts, Result
-
-from qrmi import QuantumResource, Payload, TaskStatus, ResourceType
-
 from iqm.iqm_client import CircuitCompilationOptions, CircuitValidationError
 from iqm.iqm_client.util import to_json_dict
+from iqm.iqm_server_client.models import CalibrationSet, QualityMetricSet
 from iqm.pulse import Circuit
 from iqm.qiskit_iqm.iqm_backend import IQMBackendBase
 from iqm.qiskit_iqm.qiskit_to_iqm import MeasurementKey, serialize_instructions
 from iqm.station_control.client.qon import ObservationFinder
-from iqm.iqm_server_client.models import CalibrationSet, QualityMetricSet
 from iqm.station_control.interface.models import (
     CircuitBatch,
     CircuitMeasurementResultsBatch,
     DynamicQuantumArchitecture,
     RunRequest,
+)
+from qiskit import QuantumCircuit
+from qiskit.providers import JobStatus, JobV1, Options
+from qiskit.result import Counts, Result
+
+from qrmi import (
+    Payload,
+    QuantumResource,
+    ResourceType,
+    TaskStatus,
+    get_job_qpu_resources_and_types,
 )
 
 logger = getLogger("qrmi")
@@ -443,23 +446,9 @@ class IQMProvider:
         self,
         **_args,
     ):
-        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
-        qpus = os.environ["SLURM_JOB_QPU_RESOURCES"]
+        qpus, qpu_types = get_job_qpu_resources_and_types()
         logger.debug("qpus: %s", qpus)
-        if len(qpus) == 0:
-            qpus = []
-        else:
-            qpus = qpus.split(sep)
-
-        qpu_types = os.environ["SLURM_JOB_QPU_TYPES"]
         logger.debug("qpu types: %s", qpu_types)
-        if len(qpu_types) == 0:
-            qpu_types = []
-        else:
-            qpu_types = qpu_types.split(sep)
-
-        if len(qpus) != len(qpu_types):
-            raise ValueError("Inconsistent specifications of QPU resources and types")
 
         self._iqm_resources = []
         for i, qpu in enumerate(qpus):

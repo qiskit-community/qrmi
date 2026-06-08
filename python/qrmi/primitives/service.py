@@ -16,7 +16,7 @@ import os
 from logging import getLogger
 from typing import List
 
-from qrmi import QuantumResource, ResourceType
+from qrmi import QuantumResource, ResourceType, get_job_qpu_resources_and_types
 
 logger = getLogger("qrmi")
 
@@ -31,23 +31,9 @@ class QRMIService:
         if plugin_error is not None:
             raise RuntimeError(plugin_error)
 
-        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
-        qpus = os.environ["SLURM_JOB_QPU_RESOURCES"]
+        qpus, qpu_types = get_job_qpu_resources_and_types()
         logger.debug("qpus: %s", qpus)
-        if len(qpus) == 0:
-            qpus = []
-        else:
-            qpus = qpus.split(sep)
-
-        qpu_types = os.environ["SLURM_JOB_QPU_TYPES"]
         logger.debug("qpu types: %s", qpu_types)
-        if len(qpu_types) == 0:
-            qpu_types = []
-        else:
-            qpu_types = qpu_types.split(sep)
-
-        if len(qpus) != len(qpu_types):
-            raise ValueError("Inconsistent specifications of QPU resources and types")
 
         self._qrmi_resources = {}
         for i, qpu in enumerate(qpus):

@@ -17,16 +17,19 @@ def main():
     omega_max = 1.0e6
     delta_start = 0.0
     delta_end = 1.0e6
-    omega = ScalarOperator(lambda t: omega_max if time_ramp < t.real < time_max else 0.0)
+    omega = ScalarOperator(
+        lambda t: omega_max if time_ramp < t.real < time_max else 0.0
+    )
     phi = ScalarOperator.const(0.0)
-    delta = ScalarOperator(lambda t: delta_end if time_ramp < t.real < time_max else delta_start)
+    delta = ScalarOperator(
+        lambda t: delta_end if time_ramp < t.real < time_max else delta_start
+    )
 
     # Wait for cloud completion and print counts in both repr and dump formats.
     result = cudaq.evolve_async(
-        RydbergHamiltonian(atom_sites=register,
-                           amplitude=omega,
-                           phase=phi,
-                           delta_global=delta),
+        RydbergHamiltonian(
+            atom_sites=register, amplitude=omega, phase=phi, delta_global=delta
+        ),
         schedule=schedule,
         shots_count=100,
     ).get()

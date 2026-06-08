@@ -1,4 +1,5 @@
 """A tool to generate input for Alice & Bob example"""
+
 # This code is part of Qiskit.
 #
 # (C) Copyright 2026 Alice and Bob. All Rights Reserved.
@@ -17,7 +18,9 @@ from qiskit import QuantumCircuit
 
 # Define Circuit
 circuit = QuantumCircuit(1, 1)
-circuit.delay(100, unit="us") # Seems to not be taken into account by the QIR conversion
+circuit.delay(
+    100, unit="us"
+)  # Seems to not be taken into account by the QIR conversion
 circuit.measure(0, 0)
 
 backend = QSharpBackend()

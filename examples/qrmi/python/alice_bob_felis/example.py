@@ -33,16 +33,15 @@ target_json = json.loads(qrmi.target().value)
 print(qrmi.metadata())
 
 # Prepare submission
-input_params = {
-    "nbShots": 50,
-    "averageNbPhotons": 4
-}
+input_params = {"nbShots": 50, "averageNbPhotons": 4}
 
 print(json.dumps(input_params))
 
 with open(args.qir_file, encoding="utf-8") as f:
     qir = f.read()
-    payload = Payload.AliceBobFelis(human_qir=qir, input_params=json.dumps(input_params))
+    payload = Payload.AliceBobFelis(
+        human_qir=qir, input_params=json.dumps(input_params)
+    )
     job_id = qrmi.task_start(payload)
 
     print(f"Task started {job_id}")

@@ -38,8 +38,8 @@ qc.barrier()
 qc.measure_all()
 
 qc_transpiled = transpile(qc, backend)
-print(qc_transpiled.draw(output='text'))
+print(qc_transpiled.draw(output="text"))
 
 job = backend.run(qc_transpiled, shots=SHOTS)
-counts=job.result().get_counts()
+counts = job.result().get_counts()
 print(counts)
