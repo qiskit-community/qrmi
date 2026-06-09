@@ -39,6 +39,17 @@ static IS_RUNNING: AtomicBool = AtomicBool::new(true);
 
 const POLLING_INTERVAL: u64 = 1000;
 
+fn qrmi_job_env(name: &str, legacy_name: &str) -> Result<String, eyre::Report> {
+    env::var(name).or_else(|_| env::var(legacy_name)).map_err(|err| {
+        eyre!(
+            "The environment variable `{}` or legacy `{}` is not set and as such configuration could not be loaded. reason = {}",
+            name,
+            legacy_name,
+            err
+        )
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[allow(dead_code)]
@@ -390,30 +401,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| ",".to_string());
 
-    let envvar_qpu_names = match env::var("SLURM_JOB_QPU_RESOURCES") {
-        Ok(v) => v,
-        Err(err) => {
-            return Err(
-                eyre!(
-                    "The environment variable `SLURM_JOB_QPU_RESOURCES` is not set and as such configuration could not be loaded. reason = {}",
-                    err)
-                .into()
-            );
-        }
-    };
+    let envvar_qpu_names = qrmi_job_env("QRMI_JOB_QPU_RESOURCES", "SLURM_JOB_QPU_RESOURCES")?;
     let qpu_names: Vec<&str> = envvar_qpu_names.split(&delimiter).collect();
 
-    let envvar_qpu_types = match env::var("SLURM_JOB_QPU_TYPES") {
-        Ok(v) => v,
-        Err(err) => {
-            return Err(
-                eyre!(
-                    "The environment variable `SLURM_JOB_QPU_TYPES` is not set and as such configuration could not be loaded. reason = {}",
-                    err)
-                .into()
-            );
-        }
-    };
+    let envvar_qpu_types = qrmi_job_env("QRMI_JOB_QPU_TYPES", "SLURM_JOB_QPU_TYPES")?;
     let qpu_types: Vec<&str> = envvar_qpu_types.split(&delimiter).collect();
 
     let qpu_name = args.qpu_name.clone();
