@@ -108,10 +108,12 @@ impl BackendFilter {
                     f.is_simulator = match value.trim() {
                         "true" => true,
                         "false" => false,
-                        _ => return Err(anyhow!(
+                        _ => {
+                            return Err(anyhow!(
                             "Invalid value for 'is_simulator': {:?} (expected 'true' or 'false')",
                             value
-                        )),
+                        ))
+                        }
                     };
                 }
                 "status" => {
