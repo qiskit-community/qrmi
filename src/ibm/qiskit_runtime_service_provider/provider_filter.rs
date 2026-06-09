@@ -23,8 +23,8 @@
 //!
 //! Example: `num_qubits=127&name=ibm_*&status=online`
 
-use anyhow::{anyhow, Result};
 use crate::ibm::models::BackendConfiguration;
+use anyhow::{anyhow, Result};
 use glob::Pattern;
 use qiskit_runtime_client::models::BackendsResponseV2DevicesInner;
 
@@ -106,10 +106,12 @@ impl BackendFilter {
                     f.is_simulator = match value.trim() {
                         "true" => true,
                         "false" => false,
-                        _ => return Err(anyhow!(
+                        _ => {
+                            return Err(anyhow!(
                             "Invalid value for 'is_simulator': {:?} (expected 'true' or 'false')",
                             value
-                        )),
+                        ))
+                        }
                     };
                 }
                 "status" => {
@@ -190,10 +192,7 @@ mod tests {
         BackendsResponseV2DevicesInner, BackendsResponseV2DevicesInnerStatus,
     };
 
-    fn make_device(
-        name: &str,
-        is_simulator: Option<bool>,
-    ) -> BackendsResponseV2DevicesInner {
+    fn make_device(name: &str, is_simulator: Option<bool>) -> BackendsResponseV2DevicesInner {
         BackendsResponseV2DevicesInner {
             name: name.to_string(),
             status: Box::new(BackendsResponseV2DevicesInnerStatus::default()),

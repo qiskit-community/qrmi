@@ -68,9 +68,10 @@ impl IBMQiskitRuntimeServiceProvider {
     /// - `QRMI_IBM_QRS_SERVICE_CRN`
     pub fn new(environment: &HashMap<String, String>) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
-            environment.get(key).cloned().ok_or_else(|| {
-                anyhow!("Missing '{}' in environment map", key)
-            })
+            environment
+                .get(key)
+                .cloned()
+                .ok_or_else(|| anyhow!("Missing '{}' in environment map", key))
         };
 
         let qrs_endpoint = get("QRMI_IBM_QRS_ENDPOINT")?;
@@ -190,10 +191,7 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
         let configs = join_all(config_futures).await;
 
         // Sort by queue_length ascending before constructing resources.
-        let mut candidates_with_config: Vec<_> = candidates
-            .into_iter()
-            .zip(configs)
-            .collect();
+        let mut candidates_with_config: Vec<_> = candidates.into_iter().zip(configs).collect();
 
         candidates_with_config.sort_by_key(|(d, _)| d.queue_length);
 

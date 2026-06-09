@@ -16,14 +16,14 @@ mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQuantumSystem;
-use crate::ResourceProvider;
 use crate::QuantumResource;
+use crate::ResourceProvider;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
 use provider_filter::BackendFilter;
-use quantum_system_api::{AuthMethod, ClientBuilder, models::Backends};
+use quantum_system_api::{models::Backends, AuthMethod, ClientBuilder};
 use std::collections::HashMap;
 use std::env;
 
@@ -66,9 +66,10 @@ impl IBMQuantumSystemProvider {
     /// - `QRMI_IBM_QS_SERVICE_CRN`
     pub fn new(environment: &HashMap<String, String>) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
-            environment.get(key).cloned().ok_or_else(|| {
-                anyhow!("Missing '{}' in environment map", key)
-            })
+            environment
+                .get(key)
+                .cloned()
+                .ok_or_else(|| anyhow!("Missing '{}' in environment map", key))
         };
 
         let endpoint = get("QRMI_IBM_QS_ENDPOINT")?;
@@ -140,7 +141,10 @@ impl ResourceProvider for IBMQuantumSystemProvider {
 
         let config_futures: Vec<_> = candidates
             .iter()
-            .map(|name| self.client.get_backend_configuration::<serde_json::Value>(name))
+            .map(|name| {
+                self.client
+                    .get_backend_configuration::<serde_json::Value>(name)
+            })
             .collect();
 
         let configs = join_all(config_futures).await;

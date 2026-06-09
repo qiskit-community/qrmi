@@ -24,8 +24,8 @@
 //!
 //! Example: `num_qubits=127&name=ibm_*&status=online`
 
-use anyhow::{anyhow, Result};
 use crate::ibm::models::BackendConfiguration;
+use anyhow::{anyhow, Result};
 use glob::Pattern;
 use quantum_system_api::models::{Backend, BackendStatus};
 
@@ -108,12 +108,10 @@ impl BackendFilter {
                     f.is_simulator = match value.trim() {
                         "true" => true,
                         "false" => false,
-                        _ => {
-                            return Err(anyhow!(
-                                "Invalid value for 'is_simulator': {:?} (expected 'true' or 'false')",
-                                value
-                            ))
-                        }
+                        _ => return Err(anyhow!(
+                            "Invalid value for 'is_simulator': {:?} (expected 'true' or 'false')",
+                            value
+                        )),
                     };
                 }
                 "status" => {

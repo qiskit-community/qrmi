@@ -332,12 +332,10 @@ impl PyResourceProvider {
                     Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
                 }
             }
-            ResourceType::IBMQuantumSystem => {
-                match IBMQuantumSystemProvider::new(&environment) {
-                    Ok(p) => Box::new(p),
-                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-                }
-            }
+            ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&environment) {
+                Ok(p) => Box::new(p),
+                Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            },
             _ => {
                 return Err(pyo3::exceptions::PyRuntimeError::new_err(
                     "Unsupported resource type for dynamic resource discovery",

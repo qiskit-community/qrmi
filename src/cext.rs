@@ -131,9 +131,7 @@ unsafe fn envvars_to_hashmap(
 }
 
 /// Rebuilds a Rust `models::ResourceDef` from a C `ResourceDef` struct.
-unsafe fn rebuild_resource_def(
-    def: &ResourceDef,
-) -> anyhow::Result<crate::models::ResourceDef> {
+unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::models::ResourceDef> {
     let name = if def.name.is_null() {
         String::new()
     } else {
@@ -1598,13 +1596,15 @@ pub unsafe extern "C" fn qrmi_provider_new(
     };
 
     let provider: Box<dyn crate::ResourceProvider> = match resource_type {
-        ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new(&env_map) {
-            Ok(inner) => Box::new(inner),
-            Err(err) => {
-                _set_last_error(format!("{:?}", err));
-                return std::ptr::null_mut();
+        ResourceType::QiskitRuntimeService => {
+            match IBMQiskitRuntimeServiceProvider::new(&env_map) {
+                Ok(inner) => Box::new(inner),
+                Err(err) => {
+                    _set_last_error(format!("{:?}", err));
+                    return std::ptr::null_mut();
+                }
             }
-        },
+        }
         ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&env_map) {
             Ok(inner) => Box::new(inner),
             Err(err) => {
