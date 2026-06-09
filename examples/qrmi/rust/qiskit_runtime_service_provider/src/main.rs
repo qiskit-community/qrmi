@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get(&args.resource_name)
         .ok_or_else(|| format!("Resource '{}' not found in config", args.resource_name))?;
 
-    let provider = IBMQiskitRuntimeServiceProvider::new(resource_def)?;
+    let provider = IBMQiskitRuntimeServiceProvider::new(&resource_def.environment)?;
 
     let resources = provider.resources(args.filters.clone()).await?;
 

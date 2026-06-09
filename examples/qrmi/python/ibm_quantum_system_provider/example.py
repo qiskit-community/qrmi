@@ -14,7 +14,7 @@
 
 import argparse
 from dotenv import load_dotenv
-from qrmi import Config, ResourceProvider
+from qrmi import Config, ResourceProvider, ResourceType
 
 parser = argparse.ArgumentParser(
     description="An example of QRMI Provider for IBM Quantum System"
@@ -29,7 +29,7 @@ load_dotenv()
 config = Config.load(args.config_file)
 resource_def = config.resource_map[args.resource_name]
 
-provider = ResourceProvider(resource_def)
+provider = ResourceProvider(ResourceType.IBMQuantumSystem, resource_def.environment)
 resources = provider.resources(args.filters)
 for qrmi in resources:
     print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")

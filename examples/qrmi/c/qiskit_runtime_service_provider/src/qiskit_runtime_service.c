@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  QrmiResourceProvider *provider = qrmi_provider_new(def);
+  QrmiResourceProvider *provider = qrmi_provider_new(QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE, &def->environments);
   qrmi_config_resource_def_free(def);
   qrmi_config_free(config);
 

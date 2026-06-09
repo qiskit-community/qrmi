@@ -287,17 +287,15 @@ impl PyResourceDef {
 
 /// Python wrapper for `ResourceProvider`.
 ///
-/// Constructed from a [`PyResourceDef`] with `is_dynamic=True`.
-///
 /// # Example (Python)
 ///
 /// ```python
-/// from qrmi import Config, ResourceProvider
+/// from qrmi import Config, ResourceProvider, ResourceType
 ///
 /// config = Config.load("/path/to/qrmi_config.json")
 /// resource_def = config.resource_map["ibm_inst1"]
 ///
-/// provider = ResourceProvider(resource_def)
+/// provider = ResourceProvider(ResourceType.IBMQiskitRuntimeService, resource_def.environment)
 /// resources = provider.resources()
 /// resources = provider.resources("num_qubits=127&name=ibm_*&status=online")
 /// resource  = provider.least_busy()
@@ -316,30 +314,26 @@ pub struct PyResourceProvider {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyResourceProvider {
-    /// Constructs a new provider from a ResourceDef.
-    ///
-    /// The ResourceDef must have `is_dynamic=True`.
+    /// Constructs a new provider from a resource type and environment variable map.
     ///
     /// Currently supported resource types:
     /// - `ResourceType.IBMQiskitRuntimeService`
     /// - `ResourceType.IBMQuantumSystem`
     #[new]
-    pub fn new(resource_def: PyResourceDef) -> PyResult<Self> {
+    pub fn new(
+        resource_type: ResourceType,
+        environment: std::collections::HashMap<String, String>,
+    ) -> PyResult<Self> {
         crate::common::initialize();
-        if !resource_def.inner.is_dynamic() {
-            return Err(pyo3::exceptions::PyRuntimeError::new_err(
-                "ResourceDef must have is_dynamic=True to construct a ResourceProvider",
-            ));
-        }
-        let inner: Box<dyn crate::ResourceProvider> = match resource_def.inner.r#type {
-            crate::models::ResourceType::QiskitRuntimeService => {
-                match IBMQiskitRuntimeServiceProvider::new(&resource_def.inner) {
+        let inner: Box<dyn crate::ResourceProvider> = match resource_type {
+            ResourceType::IBMQiskitRuntimeService => {
+                match IBMQiskitRuntimeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),
                     Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
                 }
             }
-            crate::models::ResourceType::IBMQuantumSystem => {
-                match IBMQuantumSystemProvider::new(&resource_def.inner) {
+            ResourceType::IBMQuantumSystem => {
+                match IBMQuantumSystemProvider::new(&environment) {
                     Ok(p) => Box::new(p),
                     Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
                 }

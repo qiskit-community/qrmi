@@ -16,7 +16,6 @@ mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQiskitRuntimeService;
-use crate::models::ResourceDef;
 use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use anyhow::{anyhow, Result};
@@ -59,15 +58,18 @@ pub struct IBMQiskitRuntimeServiceProvider {
 }
 
 impl IBMQiskitRuntimeServiceProvider {
-    /// Constructs a new provider from a [`ResourceDef`].
-    pub fn new(resource_def: &ResourceDef) -> Result<Self> {
+    /// Constructs a new provider from an environment variable map.
+    ///
+    /// # Required keys
+    ///
+    /// - `QRMI_IBM_QRS_ENDPOINT`
+    /// - `QRMI_IBM_QRS_IAM_ENDPOINT`
+    /// - `QRMI_IBM_QRS_IAM_APIKEY`
+    /// - `QRMI_IBM_QRS_SERVICE_CRN`
+    pub fn new(environment: &HashMap<String, String>) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
-            resource_def.environment.get(key).cloned().ok_or_else(|| {
-                anyhow!(
-                    "Missing '{}' in ResourceDef '{}' environment",
-                    key,
-                    resource_def.name
-                )
+            environment.get(key).cloned().ok_or_else(|| {
+                anyhow!("Missing '{}' in environment map", key)
             })
         };
 
@@ -85,7 +87,7 @@ impl IBMQiskitRuntimeServiceProvider {
             config,
             api_key,
             iam_endpoint,
-            provider_env: resource_def.environment.clone(),
+            provider_env: environment.clone(),
         })
     }
 

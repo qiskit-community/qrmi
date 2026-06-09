@@ -1,7 +1,7 @@
 /*
  * This code is part of Qiskit.
  *
- * Copyright (C) IBM 2026
+ * Copyright (C) 2026 IBM, UKRI-STFC (Hartree Centre)
  *
  * This code is licensed under the Apache License, Version 2.0. You may
  * obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  QrmiResourceProvider *provider = qrmi_provider_new(def);
+  QrmiResourceProvider *provider = qrmi_provider_new(QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM, &def->environments);
   qrmi_config_resource_def_free(def);
   qrmi_config_free(config);
 

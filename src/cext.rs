@@ -108,20 +108,13 @@ pub struct ResourceDef {
 /// Type alias for the C ResourceDef struct (used in qrmi_provider_new).
 type CResourceDef = ResourceDef;
 
-/// Rebuilds a Rust `models::ResourceDef` from a C `ResourceDef` struct.
-unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::models::ResourceDef> {
-    let name = if def.name.is_null() {
-        String::new()
-    } else {
-        CStr::from_ptr(def.name)
-            .to_str()
-            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in resource name: {}", e))?
-            .to_string()
-    };
-
-    let mut environment = std::collections::HashMap::new();
-    for i in 0..def.environments.length {
-        let kv = &*def.environments.variables.add(i);
+/// Converts a C `EnvironmentVariables` struct to a Rust `HashMap<String, String>`.
+unsafe fn envvars_to_hashmap(
+    envvars: &EnvironmentVariables,
+) -> anyhow::Result<std::collections::HashMap<String, String>> {
+    let mut map = std::collections::HashMap::new();
+    for i in 0..envvars.length {
+        let kv = &*envvars.variables.add(i);
         if !kv.key.is_null() && !kv.value.is_null() {
             let key = CStr::from_ptr(kv.key)
                 .to_str()
@@ -131,9 +124,26 @@ unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::model
                 .to_str()
                 .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in env value: {}", e))?
                 .to_string();
-            environment.insert(key, value);
+            map.insert(key, value);
         }
     }
+    Ok(map)
+}
+
+/// Rebuilds a Rust `models::ResourceDef` from a C `ResourceDef` struct.
+unsafe fn rebuild_resource_def(
+    def: &ResourceDef,
+) -> anyhow::Result<crate::models::ResourceDef> {
+    let name = if def.name.is_null() {
+        String::new()
+    } else {
+        CStr::from_ptr(def.name)
+            .to_str()
+            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in resource name: {}", e))?
+            .to_string()
+    };
+
+    let environment = envvars_to_hashmap(&def.environments)?;
 
     Ok(crate::models::ResourceDef {
         name,
@@ -1536,9 +1546,8 @@ pub struct ResourceProvider {
 }
 
 /// @ingroup QrmiResourceProvider
-/// Returns a QrmiResourceProvider handle constructed from a QrmiResourceDef.
+/// Returns a QrmiResourceProvider handle for the specified resource type and environment.
 ///
-/// The QrmiResourceDef must have `is_dynamic` set to true.
 /// Created handle must be released with qrmi_provider_free() when no longer needed.
 ///
 /// Currently supported resource types:
@@ -1547,14 +1556,15 @@ pub struct ResourceProvider {
 ///
 /// # Safety
 ///
-/// * `resource_def` must have been returned by a previous call to qrmi_config_resource_def_get().
+/// * `environments` must be a valid pointer to a QrmiEnvironmentVariables struct.
 ///
 /// # Example
 ///
 /// @code
 ///   QrmiConfig *config = qrmi_config_load("/path/to/qrmi_config.json");
 ///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
-///   QrmiResourceProvider *provider = qrmi_provider_new(def);
+///   QrmiResourceProvider *provider = qrmi_provider_new(
+///       QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE, &def->environments);
 ///   if (provider == NULL) {
 ///     const char *err = qrmi_get_last_error();
 ///     printf("error: %s\n", err);
@@ -1562,48 +1572,40 @@ pub struct ResourceProvider {
 ///   }
 /// @endcode
 ///
-/// @param (resource_def) [in] A QrmiResourceDef handle with is_dynamic=true
+/// @param (resource_type) [in] QrmiResourceType variant
+/// @param (environments)  [in] Pointer to QrmiEnvironmentVariables
 /// @return A QrmiResourceProvider handle if succeeded, otherwise NULL.
 ///         Must call qrmi_provider_free() to free if no longer used.
 /// @version 0.15.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_provider_new(
-    resource_def: *const CResourceDef,
+    resource_type: ResourceType,
+    environments: *const EnvironmentVariables,
 ) -> *mut ResourceProvider {
     crate::common::initialize();
-    if resource_def.is_null() {
-        _set_last_error("resource_def is NULL".to_string());
+    if environments.is_null() {
+        _set_last_error("environments is NULL".to_string());
         return std::ptr::null_mut();
     }
 
-    let def = &*resource_def;
-
-    if !def.is_dynamic {
-        _set_last_error(
-            "ResourceDef must have is_dynamic=true to construct a ResourceProvider".to_string(),
-        );
-        return std::ptr::null_mut();
-    }
-
-    // Rebuild a models::ResourceDef from the C struct so we can pass it to the provider.
-    let rust_def = match rebuild_resource_def(def) {
-        Ok(d) => d,
+    // Convert EnvironmentVariables to HashMap<String, String>
+    let env_map = match envvars_to_hashmap(&*environments) {
+        Ok(m) => m,
         Err(e) => {
             _set_last_error(format!("{:?}", e));
             return std::ptr::null_mut();
         }
     };
 
-    let provider: Box<dyn crate::ResourceProvider> = match def.r#type {
-        ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new(&rust_def)
-        {
+    let provider: Box<dyn crate::ResourceProvider> = match resource_type {
+        ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new(&env_map) {
             Ok(inner) => Box::new(inner),
             Err(err) => {
                 _set_last_error(format!("{:?}", err));
                 return std::ptr::null_mut();
             }
         },
-        ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&rust_def) {
+        ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&env_map) {
             Ok(inner) => Box::new(inner),
             Err(err) => {
                 _set_last_error(format!("{:?}", err));

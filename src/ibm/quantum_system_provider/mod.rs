@@ -16,7 +16,6 @@ mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQuantumSystem;
-use crate::models::ResourceDef;
 use crate::ResourceProvider;
 use crate::QuantumResource;
 use anyhow::{anyhow, Result};
@@ -57,22 +56,18 @@ pub struct IBMQuantumSystemProvider {
 }
 
 impl IBMQuantumSystemProvider {
-    /// Constructs a new provider from a [`ResourceDef`].
+    /// Constructs a new provider from an environment variable map.
     ///
-    /// # Required environment keys
+    /// # Required keys
     ///
     /// - `QRMI_IBM_QS_ENDPOINT`
     /// - `QRMI_IBM_QS_IAM_ENDPOINT`
     /// - `QRMI_IBM_QS_IAM_APIKEY`
     /// - `QRMI_IBM_QS_SERVICE_CRN`
-    pub fn new(resource_def: &ResourceDef) -> Result<Self> {
+    pub fn new(environment: &HashMap<String, String>) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
-            resource_def.environment.get(key).cloned().ok_or_else(|| {
-                anyhow!(
-                    "Missing '{}' in ResourceDef '{}' environment",
-                    key,
-                    resource_def.name
-                )
+            environment.get(key).cloned().ok_or_else(|| {
+                anyhow!("Missing '{}' in environment map", key)
             })
         };
 
@@ -92,7 +87,7 @@ impl IBMQuantumSystemProvider {
 
         Ok(Self {
             client,
-            provider_env: resource_def.environment.clone(),
+            provider_env: environment.clone(),
         })
     }
 
