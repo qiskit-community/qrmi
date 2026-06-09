@@ -182,7 +182,8 @@ impl BackendFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quantum_system_api::models::{Backend, BackendConfiguration, BackendStatus, GateConfig};
+    use crate::ibm::models::BackendConfiguration;
+    use quantum_system_api::models::{Backend, BackendStatus};
 
     fn make_backend(name: &str, status: BackendStatus) -> Backend {
         Backend {
@@ -268,9 +269,14 @@ mod tests {
     #[test]
     fn combined_filter() {
         let f = BackendFilter::parse("num_qubits=127&name=ibm_*&max_shots=8192").unwrap();
+        // passes both name and config filters
+        assert!(f.matches_name("ibm_torino"));
         assert!(f.matches_config(&make_config("ibm_torino", 133, 10000, false)));
+        // fails num_qubits
         assert!(!f.matches_config(&make_config("ibm_small", 5, 10000, false)));
-        assert!(!f.matches_config(&make_config("other_127q", 127, 10000, false)));
+        // fails name filter (checked by matches_name, not matches_config)
+        assert!(!f.matches_name("other_127q"));
+        // fails max_shots
         assert!(!f.matches_config(&make_config("ibm_lowshots", 127, 1024, false)));
     }
 
