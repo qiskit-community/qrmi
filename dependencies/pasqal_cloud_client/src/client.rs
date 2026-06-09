@@ -192,7 +192,7 @@ impl Client {
     }
 
     // Pasqal Cloud gets devices during `is_accessible` call.
-    // We we the public api endpoint with no auth token required
+    // We get the public api endpoint with no auth token required
     // so that the Spank plugin does not need any authentication setup.
     pub async fn get_device(&mut self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
         let url = format!(
