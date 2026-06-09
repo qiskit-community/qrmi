@@ -24,8 +24,8 @@ When run as a job in a Slurm cluster, these environment variables are set by the
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| SLURM_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `garnet,emerald` |
-| SLURM_JOB_QPU_TYPES | Quantum resource types. Specify `iqm-server` for this example |
+| QRMI_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated values, e.g. `garnet,emerald` |
+| QRMI_JOB_QPU_TYPES | Quantum resource types. Specify `iqm-server` for this example |
 
 ### IQM Server specific
 
@@ -41,8 +41,8 @@ When run as a job in a Slurm cluster, these environment variables are set by use
 
 #### Example
 ```shell-session
-export SLURM_JOB_QPU_RESOURCES=garnet_mock
-export SLURM_JOB_QPU_TYPES=iqm-server
+export QRMI_JOB_QPU_RESOURCES=garnet_mock
+export QRMI_JOB_QPU_TYPES=iqm-server
 export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
 export garnet_mock_QRMI_IQM_ISA_TOKEN=your token
 ```

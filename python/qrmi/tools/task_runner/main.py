@@ -14,19 +14,25 @@
 
 """qrmi_task_runner - Command to run a QRMI task"""
 
+import argparse
+import atexit
+import json
+import logging
 import os
+import signal
 import sys
 import time
-import json
-import argparse
-import signal
-import atexit
-from typing import List
-import logging
-from logging import getLogger, ERROR, INFO, DEBUG
+from logging import DEBUG, ERROR, INFO, getLogger
 from pathlib import Path
+
 from dotenv import load_dotenv
-from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
+from qrmi import (
+    Payload,
+    QuantumResource,
+    ResourceType,
+    TaskStatus,
+    get_job_qpu_resources_and_types,
+)
 
 load_dotenv()
 
@@ -114,8 +120,7 @@ class App:
         Returns:
             ResourceType: ResourceType of `qpu_name`
         """
-        qpu_resources = self._get_list_envvars("SLURM_JOB_QPU_RESOURCES")
-        qpu_types = self._get_list_envvars("SLURM_JOB_QPU_TYPES")
+        qpu_resources, qpu_types = get_job_qpu_resources_and_types()
         for index, qpu_resource in enumerate(qpu_resources):
             if qpu_resource == qpu_name:
                 return self.RESOURCE_TYPE_MAP[qpu_types[index]]
@@ -140,17 +145,6 @@ class App:
         # cleanup quantum task
         if self._task_id is not None:
             self._qrmi.task_stop(self._task_id)
-
-    @staticmethod
-    def _get_list_envvars(envvar_name: str) -> List[str]:
-        values = os.environ.get(envvar_name)
-        if values is None:
-            raise RuntimeError(
-                f"The environment variable `{envvar_name}` is not set "
-                "and as such configuration could not be loaded."
-            )
-        sep = os.environ.get("QRMI_LIST_DELIMITER", ",")
-        return values.split(sep)
 
     @property
     def is_running(self) -> bool:

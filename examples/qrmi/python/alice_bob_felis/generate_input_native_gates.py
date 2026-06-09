@@ -1,4 +1,5 @@
 """A tool to generate input for Alice & Bob example"""
+
 # This code is part of Qiskit.
 #
 # (C) Copyright 2026 Alice and Bob. All Rights Reserved.
@@ -28,8 +29,8 @@ args = parser.parse_args()
 
 # Define Circuit
 circuit = QuantumCircuit(1, 1)
-circuit.initialize('+')
-circuit.measure_x(0, 0) # pylint: disable=no-member
+circuit.initialize("+")
+circuit.measure_x(0, 0)  # pylint: disable=no-member
 
 transpiler = FelisQIRTranspiler(args.target)
 qir_circuit = transpiler.transpile(circuit)  # pylint: disable=invalid-name

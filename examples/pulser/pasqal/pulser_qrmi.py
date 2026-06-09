@@ -48,7 +48,9 @@ try:
     print(f"Chose device specs: '{name}' from the QRMI connection.")
 except RuntimeError:
     device = pulser.DigitalAnalogDevice
-    print("Could not find device from the QRMI connection. Defaulted to 'DigitalAnaloDevice'")
+    print(
+        "Could not find device from the QRMI connection. Defaulted to 'DigitalAnaloDevice'"
+    )
 
 reg = Register(
     {
