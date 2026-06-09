@@ -25,8 +25,9 @@
 //! Example: `num_qubits=127&name=ibm_*&status=online`
 
 use anyhow::{anyhow, Result};
+use crate::ibm::models::BackendConfiguration;
 use glob::Pattern;
-use quantum_system_api::models::{Backend, BackendConfiguration, BackendStatus};
+use quantum_system_api::models::{Backend, BackendStatus};
 
 /// Whether to filter by online status.
 #[derive(Debug, Default, PartialEq)]

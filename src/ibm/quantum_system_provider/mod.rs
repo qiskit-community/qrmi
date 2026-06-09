@@ -14,8 +14,9 @@
 
 mod provider_filter;
 
+use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQuantumSystem;
-use crate::models::{ProviderConfig, ProviderDef};
+use crate::models::ResourceDef;
 use crate::ResourceProvider;
 use crate::QuantumResource;
 use anyhow::{anyhow, Result};
@@ -23,30 +24,23 @@ use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
 use provider_filter::BackendFilter;
-use quantum_system_api::{AuthMethod, ClientBuilder, models::Backends, models::BackendConfiguration};
+use quantum_system_api::{AuthMethod, ClientBuilder, models::Backends};
 use std::collections::HashMap;
 use std::env;
 
-/// Provider type string used in `qrmi_config.json`.
-const PROVIDER_TYPE: &str = "ibm-quantum-system";
-
-/// Env var that holds the path to the provider config file.
-const CONFIG_FILE_ENV: &str = "QRMI_RESOURCE_PROVIDER_CONFIG_FILE";
-
 /// A [`ResourceProvider`] that discovers backends available through IBM Quantum System.
 ///
-/// On construction, reads `QRMI_RESOURCE_PROVIDER_CONFIG_FILE` to locate
-/// `qrmi_config.json`, then finds the `"quantum-system"` provider block
-/// and uses its `environment` map for all API calls.
+/// Constructed from a [`ResourceDef`] with `is_dynamic: true`.
 ///
 /// # Config file example
 ///
 /// ```json
 /// {
-///     "version": 2,
-///     "providers": [
+///     "resources": [
 ///         {
+///             "name": "ibm_qs_prod",
 ///             "type": "ibm-quantum-system",
+///             "is_dynamic": true,
 ///             "environment": {
 ///                 "QRMI_IBM_QS_ENDPOINT":     "https://your-quantum-system-endpoint",
 ///                 "QRMI_IBM_QS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
@@ -63,31 +57,21 @@ pub struct IBMQuantumSystemProvider {
 }
 
 impl IBMQuantumSystemProvider {
-    /// Constructs a new provider from `QRMI_RESOURCE_PROVIDER_CONFIG_FILE`.
-    pub fn new() -> Result<Self> {
-        let config_path = env::var(CONFIG_FILE_ENV)
-            .map_err(|_| anyhow!("{CONFIG_FILE_ENV} environment variable is not set"))?;
-
-        let cfg = ProviderConfig::load(&config_path)?;
-
-        let provider_def: &ProviderDef = cfg.find(PROVIDER_TYPE).ok_or_else(|| {
-            anyhow!(
-                "No '{}' provider block found in {:?}",
-                PROVIDER_TYPE,
-                config_path
-            )
-        })?;
-
-        Self::from_provider_def(provider_def)
-    }
-
-    fn from_provider_def(def: &ProviderDef) -> Result<Self> {
+    /// Constructs a new provider from a [`ResourceDef`].
+    ///
+    /// # Required environment keys
+    ///
+    /// - `QRMI_IBM_QS_ENDPOINT`
+    /// - `QRMI_IBM_QS_IAM_ENDPOINT`
+    /// - `QRMI_IBM_QS_IAM_APIKEY`
+    /// - `QRMI_IBM_QS_SERVICE_CRN`
+    pub fn new(resource_def: &ResourceDef) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
-            def.environment.get(key).cloned().ok_or_else(|| {
+            resource_def.environment.get(key).cloned().ok_or_else(|| {
                 anyhow!(
-                    "Missing '{}' in '{}' provider environment block",
+                    "Missing '{}' in ResourceDef '{}' environment",
                     key,
-                    PROVIDER_TYPE
+                    resource_def.name
                 )
             })
         };
@@ -108,7 +92,7 @@ impl IBMQuantumSystemProvider {
 
         Ok(Self {
             client,
-            provider_env: def.environment.clone(),
+            provider_env: resource_def.environment.clone(),
         })
     }
 
@@ -145,7 +129,6 @@ impl ResourceProvider for IBMQuantumSystemProvider {
     ) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>> {
         let filter = BackendFilter::parse(filters.as_deref().unwrap_or(""))?;
 
-        // 1. list_backends() and apply status and name filters.
         let backends = self
             .client
             .list_backends::<Backends>()
@@ -160,8 +143,6 @@ impl ResourceProvider for IBMQuantumSystemProvider {
             .map(|b| b.name)
             .collect();
 
-        // 2. Fetch BackendConfiguration for each candidate in parallel.
-        // Fetch as raw JSON first so we can log the response on deserialization failure.
         let config_futures: Vec<_> = candidates
             .iter()
             .map(|name| self.client.get_backend_configuration::<serde_json::Value>(name))
@@ -169,7 +150,6 @@ impl ResourceProvider for IBMQuantumSystemProvider {
 
         let configs = join_all(config_futures).await;
 
-        // 3. Apply config-level filters and construct QuantumResource instances.
         let resources: Vec<Box<dyn QuantumResource + Send + Sync>> = candidates
             .into_iter()
             .zip(configs)

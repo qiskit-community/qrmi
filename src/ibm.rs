@@ -25,6 +25,7 @@
 //! QRMI implementations for IBM Quantum services
 
 mod direct_access;
+pub mod models;
 mod qiskit_runtime_service;
 mod qiskit_runtime_service_provider;
 mod quantum_system;

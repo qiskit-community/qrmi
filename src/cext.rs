@@ -99,8 +99,48 @@ pub struct ResourceDef {
     name: *mut c_char,
     /// Resource Type
     r#type: ResourceType,
+    /// Whether this is a dynamic resource (used with ResourceProvider)
+    is_dynamic: bool,
     /// environment variables for this resource
     environments: EnvironmentVariables,
+}
+
+/// Type alias for the C ResourceDef struct (used in qrmi_provider_new).
+type CResourceDef = ResourceDef;
+
+/// Rebuilds a Rust `models::ResourceDef` from a C `ResourceDef` struct.
+unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::models::ResourceDef> {
+    let name = if def.name.is_null() {
+        String::new()
+    } else {
+        CStr::from_ptr(def.name)
+            .to_str()
+            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in resource name: {}", e))?
+            .to_string()
+    };
+
+    let mut environment = std::collections::HashMap::new();
+    for i in 0..def.environments.length {
+        let kv = &*def.environments.variables.add(i);
+        if !kv.key.is_null() && !kv.value.is_null() {
+            let key = CStr::from_ptr(kv.key)
+                .to_str()
+                .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in env key: {}", e))?
+                .to_string();
+            let value = CStr::from_ptr(kv.value)
+                .to_str()
+                .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in env value: {}", e))?
+                .to_string();
+            environment.insert(key, value);
+        }
+    }
+
+    Ok(crate::models::ResourceDef {
+        name,
+        r#type: def.r#type.clone(),
+        is_dynamic: def.is_dynamic,
+        environment,
+    })
 }
 
 /// Quantum resource metadata
@@ -332,6 +372,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
             let boxed_res = Box::new(ResourceDef {
                 name: CString::new(resource.name.clone()).unwrap().into_raw(),
                 r#type: resource.r#type.clone(),
+                is_dynamic: resource.is_dynamic,
                 environments: EnvironmentVariables {
                     variables: c_envvars.as_mut_ptr(),
                     length: c_envvars.len(),
@@ -1495,24 +1536,25 @@ pub struct ResourceProvider {
 }
 
 /// @ingroup QrmiResourceProvider
-/// Returns a QrmiResourceProvider handle for the specified resource type.
+/// Returns a QrmiResourceProvider handle constructed from a QrmiResourceDef.
 ///
-/// Reads connection parameters from the config file pointed to by
-/// `QRMI_RESOURCE_PROVIDER_CONFIG_FILE` environment variable.
-///
+/// The QrmiResourceDef must have `is_dynamic` set to true.
 /// Created handle must be released with qrmi_provider_free() when no longer needed.
 ///
 /// Currently supported resource types:
 /// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE
+/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM
 ///
 /// # Safety
 ///
-/// * `resource_type` must be a valid QrmiResourceType value.
+/// * `resource_def` must have been returned by a previous call to qrmi_config_resource_def_get().
 ///
 /// # Example
 ///
 /// @code
-///   QrmiResourceProvider *provider = qrmi_provider_new(QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE);
+///   QrmiConfig *config = qrmi_config_load("/path/to/qrmi_config.json");
+///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
+///   QrmiResourceProvider *provider = qrmi_provider_new(def);
 ///   if (provider == NULL) {
 ///     const char *err = qrmi_get_last_error();
 ///     printf("error: %s\n", err);
@@ -1520,22 +1562,48 @@ pub struct ResourceProvider {
 ///   }
 /// @endcode
 ///
-/// @param (resource_type) [in] QrmiResourceType variant
+/// @param (resource_def) [in] A QrmiResourceDef handle with is_dynamic=true
 /// @return A QrmiResourceProvider handle if succeeded, otherwise NULL.
 ///         Must call qrmi_provider_free() to free if no longer used.
 /// @version 0.15.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_provider_new(resource_type: ResourceType) -> *mut ResourceProvider {
+pub unsafe extern "C" fn qrmi_provider_new(
+    resource_def: *const CResourceDef,
+) -> *mut ResourceProvider {
     crate::common::initialize();
-    let provider: Box<dyn crate::ResourceProvider> = match resource_type {
-        ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new() {
+    if resource_def.is_null() {
+        _set_last_error("resource_def is NULL".to_string());
+        return std::ptr::null_mut();
+    }
+
+    let def = &*resource_def;
+
+    if !def.is_dynamic {
+        _set_last_error(
+            "ResourceDef must have is_dynamic=true to construct a ResourceProvider".to_string(),
+        );
+        return std::ptr::null_mut();
+    }
+
+    // Rebuild a models::ResourceDef from the C struct so we can pass it to the provider.
+    let rust_def = match rebuild_resource_def(def) {
+        Ok(d) => d,
+        Err(e) => {
+            _set_last_error(format!("{:?}", e));
+            return std::ptr::null_mut();
+        }
+    };
+
+    let provider: Box<dyn crate::ResourceProvider> = match def.r#type {
+        ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeServiceProvider::new(&rust_def)
+        {
             Ok(inner) => Box::new(inner),
             Err(err) => {
                 _set_last_error(format!("{:?}", err));
                 return std::ptr::null_mut();
             }
         },
-        ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new() {
+        ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&rust_def) {
             Ok(inner) => Box::new(inner),
             Err(err) => {
                 _set_last_error(format!("{:?}", err));
@@ -1543,7 +1611,7 @@ pub unsafe extern "C" fn qrmi_provider_new(resource_type: ResourceType) -> *mut 
             }
         },
         _ => {
-            _set_last_error("Unsupported resource type".to_string());
+            _set_last_error("Unsupported resource type for dynamic resource discovery".to_string());
             return std::ptr::null_mut();
         }
     };

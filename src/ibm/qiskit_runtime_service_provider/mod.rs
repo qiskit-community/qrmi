@@ -14,8 +14,9 @@
 
 mod provider_filter;
 
+use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQiskitRuntimeService;
-use crate::models::{ProviderConfig, ProviderDef};
+use crate::models::ResourceDef;
 use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use anyhow::{anyhow, Result};
@@ -24,30 +25,22 @@ use futures::future::join_all;
 use log::warn;
 use provider_filter::BackendFilter;
 use qiskit_runtime_client::apis::{auth, backends_api, configuration};
-use qiskit_runtime_client::models::BackendsResponseV2DevicesInner;
 use std::collections::HashMap;
 use std::env;
 
-/// Provider type string used in `qrmi_config.json`.
-const PROVIDER_TYPE: &str = "qiskit-runtime-service";
-
-/// Env var that holds the path to the provider config file.
-const CONFIG_FILE_ENV: &str = "QRMI_RESOURCE_PROVIDER_CONFIG_FILE";
-
 /// A [`ResourceProvider`] that discovers backends available through IBM Qiskit Runtime Service.
 ///
-/// On construction, reads `QRMI_RESOURCE_PROVIDER_CONFIG_FILE` to locate
-/// `qrmi_config.json`, then finds the `"qiskit-runtime-service"` provider block
-/// and uses its `environment` map for all API calls.
+/// Constructed from a [`ResourceDef`] with `is_dynamic: true`.
 ///
 /// # Config file example
 ///
 /// ```json
 /// {
-///     "version": 2,
-///     "providers": [
+///     "resources": [
 ///         {
+///             "name": "ibm_inst1",
 ///             "type": "qiskit-runtime-service",
+///             "is_dynamic": true,
 ///             "environment": {
 ///                 "QRMI_IBM_QRS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
 ///                 "QRMI_IBM_QRS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
@@ -59,47 +52,21 @@ const CONFIG_FILE_ENV: &str = "QRMI_RESOURCE_PROVIDER_CONFIG_FILE";
 /// }
 /// ```
 pub struct IBMQiskitRuntimeServiceProvider {
-    /// Pre-built reqwest configuration pointing at the QRS endpoint.
     config: configuration::Configuration,
-    /// IAM API key used for token refresh.
     api_key: String,
-    /// IAM endpoint URL used for token refresh.
     iam_endpoint: String,
-    /// Raw environment values from the provider block, kept so we can inject
-    /// `{backend_name}_*` variables before constructing each `IBMQiskitRuntimeService`.
     provider_env: HashMap<String, String>,
 }
 
 impl IBMQiskitRuntimeServiceProvider {
-    /// Constructs a new provider.
-    ///
-    /// Reads `QRMI_RESOURCE_PROVIDER_CONFIG_FILE`, parses the JSON, and finds the
-    /// `"qiskit-runtime-service"` provider block. All required connection parameters
-    /// are taken from that block's `environment` map.
-    pub fn new() -> Result<Self> {
-        let config_path = env::var(CONFIG_FILE_ENV)
-            .map_err(|_| anyhow!("{CONFIG_FILE_ENV} environment variable is not set"))?;
-
-        let cfg = ProviderConfig::load(&config_path)?;
-
-        let provider_def: &ProviderDef = cfg.find(PROVIDER_TYPE).ok_or_else(|| {
-            anyhow!(
-                "No '{}' provider block found in {:?}",
-                PROVIDER_TYPE,
-                config_path
-            )
-        })?;
-
-        Self::from_provider_def(provider_def)
-    }
-
-    fn from_provider_def(def: &ProviderDef) -> Result<Self> {
+    /// Constructs a new provider from a [`ResourceDef`].
+    pub fn new(resource_def: &ResourceDef) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
-            def.environment.get(key).cloned().ok_or_else(|| {
+            resource_def.environment.get(key).cloned().ok_or_else(|| {
                 anyhow!(
-                    "Missing '{}' in '{}' provider environment block",
+                    "Missing '{}' in ResourceDef '{}' environment",
                     key,
-                    PROVIDER_TYPE
+                    resource_def.name
                 )
             })
         };
@@ -118,20 +85,16 @@ impl IBMQiskitRuntimeServiceProvider {
             config,
             api_key,
             iam_endpoint,
-            provider_env: def.environment.clone(),
+            provider_env: resource_def.environment.clone(),
         })
     }
 
-    /// Injects `{backend_name}_KEY=VALUE` environment variables so that
-    /// `IBMQiskitRuntimeService::new(backend_name)` can find the connection parameters.
     fn inject_backend_env(&self, backend_name: &str) {
         for (key, value) in &self.provider_env {
             env::set_var(format!("{backend_name}_{key}"), value);
         }
     }
 
-    /// Checks whether a backend is online by calling `get_backend_status()`.
-    /// Returns `true` if the status is "active" or "online".
     async fn is_backend_online(config: &configuration::Configuration, name: &str) -> bool {
         match backends_api::get_backend_status(config, name, None).await {
             Ok(resp) => resp
@@ -156,13 +119,13 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
     ///
     /// `key=value` pairs joined by `&`. Supported keys:
     ///
-    /// - `num_qubits=<N>`      — only backends with `qubits >= N`
+    /// - `num_qubits=<N>`      — only backends with `n_qubits >= N`
+    /// - `max_shots=<N>`       — only backends with `max_shots >= N`
     /// - `name=<glob>`         — only backends whose name matches the glob pattern
     /// - `is_simulator=<bool>` — include/exclude simulators (default: `false`)
-    /// - `status=online`       — only backends that are online (calls `get_backend_status()`
-    ///                           per backend in parallel)
+    /// - `status=online`       — only online backends
     ///
-    /// Example: `"num_qubits=127&name=ibm_*&status=online"`
+    /// Example: `Some("num_qubits=127&name=ibm_*&status=online")`
     ///
     /// # Sorting
     ///
@@ -171,10 +134,8 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
         &self,
         filters: Option<String>,
     ) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>> {
-        // Parse filter string upfront so we fail fast on bad input.
         let filter = BackendFilter::parse(filters.as_deref().unwrap_or(""))?;
 
-        // Clone config so we can mutate the bearer token locally for this call.
         let mut config = self.config.clone();
         let mut token_expiration: u64 = 0;
         let mut token_lifetime: u64 = 0;
@@ -193,45 +154,82 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
             .await
             .map_err(|e| anyhow!("Failed to list backends: {:?}", e))?;
 
-        // Apply synchronous filters (is_simulator, num_qubits, name).
-        let mut devices: Vec<BackendsResponseV2DevicesInner> = response
+        // Apply name and is_simulator filters at list stage, keep queue_length for sorting.
+        let candidates: Vec<_> = response
             .devices
             .unwrap_or_default()
             .into_iter()
-            .filter(|d| filter.matches(d))
+            .filter(|d| filter.matches_device(d))
+            .filter(|d| filter.matches_name(&d.name))
             .collect();
 
-        // Apply async status filter if requested — check all backends in parallel.
-        if filter.needs_status_check() {
-            let checks: Vec<_> = devices
+        // Apply async status filter if requested.
+        let candidates = if filter.needs_status_check() {
+            let checks: Vec<_> = candidates
                 .iter()
                 .map(|d| Self::is_backend_online(&config, &d.name))
                 .collect();
-
             let results = join_all(checks).await;
-
-            devices = devices
+            candidates
                 .into_iter()
                 .zip(results)
                 .filter_map(|(d, online)| if online { Some(d) } else { None })
-                .collect();
-        }
+                .collect::<Vec<_>>()
+        } else {
+            candidates
+        };
 
-        // Sort by queue_length ascending (least busy first).
-        devices.sort_by_key(|d| d.queue_length);
+        // Fetch BackendConfiguration for each candidate in parallel.
+        let config_futures: Vec<_> = candidates
+            .iter()
+            .map(|d| backends_api::get_backend_configuration(&config, &d.name, Some("2025-01-01")))
+            .collect();
 
-        // Construct a QuantumResource for each backend that passed the filter.
-        let resources: Vec<Box<dyn QuantumResource + Send + Sync>> = devices
+        let configs = join_all(config_futures).await;
+
+        // Sort by queue_length ascending before constructing resources.
+        let mut candidates_with_config: Vec<_> = candidates
             .into_iter()
-            .filter_map(|device| {
+            .zip(configs)
+            .collect();
+
+        candidates_with_config.sort_by_key(|(d, _)| d.queue_length);
+
+        let resources: Vec<Box<dyn QuantumResource + Send + Sync>> = candidates_with_config
+            .into_iter()
+            .filter_map(|(device, config_result)| {
+                let raw = match config_result {
+                    Ok(v) => v,
+                    Err(e) => {
+                        warn!("Skipping backend {:?}: get_backend_configuration failed: {:?}", device.name, e);
+                        return None;
+                    }
+                };
+
+                let backend_config: BackendConfiguration = match serde_json::from_value(
+                    serde_json::to_value(&raw).unwrap_or_default()
+                ) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        warn!(
+                            "Skipping backend {:?}: failed to deserialize BackendConfiguration: {:?}\nRaw: {:?}",
+                            device.name, e, raw
+                        );
+                        return None;
+                    }
+                };
+
+                if !filter.matches_config(&backend_config) {
+                    return None;
+                }
+
                 self.inject_backend_env(&device.name);
 
                 match IBMQiskitRuntimeService::new(&device.name) {
                     Ok(r) => Some(Box::new(r) as Box<dyn QuantumResource + Send + Sync>),
                     Err(e) => {
                         warn!(
-                            "Skipping backend {:?}: failed to construct \
-                             IBMQiskitRuntimeService: {:?}",
+                            "Skipping backend {:?}: failed to construct IBMQiskitRuntimeService: {:?}",
                             device.name, e
                         );
                         None

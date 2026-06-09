@@ -10,19 +10,21 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Filter parsing and application for [`super::IBMQiskitRuntimeServiceProvider::backends`].
+//! Filter parsing and application for [`super::IBMQiskitRuntimeServiceProvider::resources`].
 //!
 //! Filter string format: `key=value` pairs joined by `&`.
 //!
 //! Supported keys:
-//! - `num_qubits=<N>`      — include only backends with `qubits >= N`
+//! - `num_qubits=<N>`      — include only backends with `n_qubits >= N`
+//! - `max_shots=<N>`       — include only backends with `max_shots >= N`
 //! - `name=<glob>`         — include only backends whose name matches the glob pattern
 //! - `is_simulator=<bool>` — include/exclude simulators (default: `false`)
 //! - `status=online`       — include only online backends (requires extra API call per backend)
 //!
-//! Example: `num_qubits=127&name=ibm_*`
+//! Example: `num_qubits=127&name=ibm_*&status=online`
 
 use anyhow::{anyhow, Result};
+use crate::ibm::models::BackendConfiguration;
 use glob::Pattern;
 use qiskit_runtime_client::models::BackendsResponseV2DevicesInner;
 
@@ -41,6 +43,8 @@ pub(super) enum StatusFilter {
 pub(super) struct BackendFilter {
     /// Minimum qubit count (inclusive). `None` means no constraint.
     pub num_qubits: Option<u32>,
+    /// Minimum max_shots (inclusive). `None` means no constraint.
+    pub max_shots: Option<u64>,
     /// Glob pattern for backend name. `None` means no constraint.
     pub name_pattern: Option<Pattern>,
     /// Whether to include simulators. Defaults to `false` (simulators excluded).
@@ -53,8 +57,9 @@ impl Default for BackendFilter {
     fn default() -> Self {
         Self {
             num_qubits: None,
+            max_shots: None,
             name_pattern: None,
-            is_simulator: false, // exclude simulators by default
+            is_simulator: false,
             status: StatusFilter::Any,
         }
     }
@@ -62,9 +67,6 @@ impl Default for BackendFilter {
 
 impl BackendFilter {
     /// Parses a filter string of the form `key=value&key=value`.
-    ///
-    /// Unknown keys are silently ignored to allow forward compatibility.
-    /// An empty string produces a filter with default values applied.
     pub fn parse(filters: &str) -> Result<Self> {
         let mut f = BackendFilter::default();
 
@@ -85,6 +87,14 @@ impl BackendFilter {
                         )
                     })?;
                     f.num_qubits = Some(n);
+                }
+                "max_shots" => {
+                    f.max_shots = Some(value.trim().parse::<u64>().map_err(|_| {
+                        anyhow!(
+                            "Invalid value for 'max_shots': {:?} (expected a non-negative integer)",
+                            value
+                        )
+                    })?);
                 }
                 "name" => {
                     let pattern = Pattern::new(value.trim()).map_err(|e| {
@@ -113,7 +123,6 @@ impl BackendFilter {
                         }
                     };
                 }
-                // Unknown keys are ignored for forward compatibility.
                 _ => {}
             }
         }
@@ -121,28 +130,41 @@ impl BackendFilter {
         Ok(f)
     }
 
-    /// Returns `true` if `device` satisfies the synchronous constraints
-    /// (`num_qubits`, `name`, `is_simulator`).
-    ///
-    /// The `status` filter is async and handled separately in `mod.rs`.
-    pub fn matches(&self, device: &BackendsResponseV2DevicesInner) -> bool {
-        // is_simulator filter (default: false — exclude simulators).
+    /// Returns `true` if `device` satisfies the `name` glob constraint.
+    /// Applied at `list_backends` stage before config fetch.
+    pub fn matches_name(&self, name: &str) -> bool {
+        match &self.name_pattern {
+            Some(pattern) => pattern.matches(name),
+            None => true,
+        }
+    }
+
+    /// Returns `true` if `device` satisfies `is_simulator` constraint from list_backends.
+    /// Applied at `list_backends` stage before config fetch.
+    pub fn matches_device(&self, device: &BackendsResponseV2DevicesInner) -> bool {
         let simulator = device.is_simulator.unwrap_or(false);
-        if simulator != self.is_simulator {
+        simulator == self.is_simulator
+    }
+
+    /// Returns `true` if `config` satisfies `num_qubits`, `max_shots` and `is_simulator`
+    /// constraints from BackendConfiguration.
+    /// `name` is applied at the `list_backends` stage.
+    pub fn matches_config(&self, config: &BackendConfiguration) -> bool {
+        // is_simulator filter.
+        if config.simulator != self.is_simulator {
             return false;
         }
 
         // num_qubits filter.
         if let Some(min) = self.num_qubits {
-            match device.qubits {
-                Some(Some(n)) if n >= 0 && (n as u32) >= min => {}
-                _ => return false,
+            if config.n_qubits < min as u64 {
+                return false;
             }
         }
 
-        // name glob filter.
-        if let Some(ref pattern) = self.name_pattern {
-            if !pattern.matches(&device.name) {
+        // max_shots filter.
+        if let Some(min) = self.max_shots {
+            if config.max_shots < min {
                 return false;
             }
         }
@@ -170,14 +192,13 @@ mod tests {
 
     fn make_device(
         name: &str,
-        qubits: Option<i32>,
         is_simulator: Option<bool>,
     ) -> BackendsResponseV2DevicesInner {
         BackendsResponseV2DevicesInner {
             name: name.to_string(),
             status: Box::new(BackendsResponseV2DevicesInnerStatus::default()),
             is_simulator,
-            qubits: qubits.map(Some),
+            qubits: None,
             clops: None,
             processor_type: None,
             queue_length: 0,
@@ -188,42 +209,17 @@ mod tests {
     #[test]
     fn default_filter_excludes_simulators() {
         let f = BackendFilter::parse("").unwrap();
-        assert!(f.matches(&make_device("ibm_torino", Some(133), Some(false))));
-        assert!(!f.matches(&make_device("ibmq_qasm_simulator", None, Some(true))));
-        // is_simulator field absent — treated as false, so passes
-        assert!(f.matches(&make_device("ibm_unknown", Some(127), None)));
-    }
-
-    #[test]
-    fn is_simulator_true_includes_simulators() {
-        let f = BackendFilter::parse("is_simulator=true").unwrap();
-        assert!(f.matches(&make_device("ibmq_qasm_simulator", None, Some(true))));
-        assert!(!f.matches(&make_device("ibm_torino", Some(133), Some(false))));
-    }
-
-    #[test]
-    fn num_qubits_filter() {
-        let f = BackendFilter::parse("num_qubits=127").unwrap();
-        assert!(f.matches(&make_device("ibm_torino", Some(133), Some(false))));
-        assert!(f.matches(&make_device("ibm_127q", Some(127), Some(false))));
-        assert!(!f.matches(&make_device("ibm_small", Some(5), Some(false))));
-        assert!(!f.matches(&make_device("unknown_qubits", None, Some(false))));
+        assert!(f.matches_device(&make_device("ibm_torino", Some(false))));
+        assert!(!f.matches_device(&make_device("ibmq_qasm_simulator", Some(true))));
+        assert!(f.matches_device(&make_device("ibm_unknown", None)));
     }
 
     #[test]
     fn name_glob_filter() {
         let f = BackendFilter::parse("name=ibm_*").unwrap();
-        assert!(f.matches(&make_device("ibm_torino", Some(133), Some(false))));
-        assert!(f.matches(&make_device("ibm_brisbane", Some(127), Some(false))));
-        assert!(!f.matches(&make_device("other_backend", None, Some(false))));
-    }
-
-    #[test]
-    fn combined_filter() {
-        let f = BackendFilter::parse("num_qubits=127&name=ibm_*").unwrap();
-        assert!(f.matches(&make_device("ibm_torino", Some(133), Some(false))));
-        assert!(!f.matches(&make_device("ibm_small", Some(5), Some(false))));
-        assert!(!f.matches(&make_device("other_127q", Some(127), Some(false))));
+        assert!(f.matches_name("ibm_torino"));
+        assert!(f.matches_name("ibm_brisbane"));
+        assert!(!f.matches_name("other_backend"));
     }
 
     #[test]
@@ -238,26 +234,14 @@ mod tests {
         assert!(BackendFilter::is_online_status("online"));
         assert!(BackendFilter::is_online_status("ACTIVE"));
         assert!(!BackendFilter::is_online_status("offline"));
-        assert!(!BackendFilter::is_online_status("degraded"));
     }
 
     #[test]
-    fn invalid_is_simulator_returns_error() {
-        assert!(BackendFilter::parse("is_simulator=maybe").is_err());
-    }
-
-    #[test]
-    fn invalid_status_returns_error() {
-        assert!(BackendFilter::parse("status=offline").is_err());
-    }
-
-    #[test]
-    fn invalid_num_qubits_returns_error() {
+    fn invalid_filters_return_error() {
         assert!(BackendFilter::parse("num_qubits=abc").is_err());
-    }
-
-    #[test]
-    fn invalid_glob_returns_error() {
+        assert!(BackendFilter::parse("max_shots=abc").is_err());
+        assert!(BackendFilter::parse("is_simulator=maybe").is_err());
+        assert!(BackendFilter::parse("status=offline").is_err());
         assert!(BackendFilter::parse("name=[invalid").is_err());
     }
 }

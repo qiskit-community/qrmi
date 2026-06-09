@@ -18,60 +18,52 @@
 //!
 //! ```json
 //! {
-//!     "version": 2,
-//!     "providers": [
+//!     "resources": [
 //!         {
+//!             "name": "ibm_qs_prod",
 //!             "type": "ibm-quantum-system",
+//!             "is_dynamic": true,
 //!             "environment": {
-//!                 "QRMI_IBM_QS_ENDPOINT": "http://localhost:8080",
-//!                 "QRMI_IBM_QS_IAM_ENDPOINT": "https://iam.test.cloud.ibm.com",
-//!                 "QRMI_IBM_QS_IAM_APIKEY": "<YOUR IAM APIKEY FOR THIS BACKEND>",
-//!                 "QRMI_IBM_QS_SERVICE_CRN": "<YOUR DIRECT ACCESS INSTANCE CRN>",
-//!                 "QRMI_IBM_QS_AWS_ACCESS_KEY_ID": "<YOUR AWS ACCESS KEY TO ACCESS S3 BUCKET>",
-//!                 "QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY": "<YOUR AWS SECRET ACCESS KEY TO ACCESS S3 BUCKET>",
-//!                 "QRMI_IBM_QS_S3_ENDPOINT": "https://s3.us-east.cloud-object-storage.appdomain.cloud",
-//!                 "QRMI_IBM_QS_S3_BUCKET": "<YOUR S3 BUCKET NAME>",
-//!                 "QRMI_IBM_QS_S3_REGION": "us-east"
+//!                 "QRMI_IBM_QS_ENDPOINT":     "http://localhost:8080",
+//!                 "QRMI_IBM_QS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
+//!                 "QRMI_IBM_QS_IAM_APIKEY":   "<your_api_key>",
+//!                 "QRMI_IBM_QS_SERVICE_CRN":  "<your_service_crn>"
 //!             }
 //!         }
 //!     ]
 //! }
 //! ```
 //!
-//! 2. Set the config file path:
+//! 2. Run (no filter — list all resources):
 //!
 //! ```bash
-//! export QRMI_RESOURCE_PROVIDER_CONFIG_FILE=/path/to/qrmi_config.json
+//! cargo run --example qrmi-example-ibm-quantum-system-provider -- \
+//!     /path/to/qrmi_config.json ibm_qs_prod
 //! ```
 //!
-//! 3. Run (no filter — list all resources):
+//! 3. Run with filters:
 //!
 //! ```bash
-//! cargo run --example qrmi-example-ibm-quantum-system-provider
-//! ```
-//!
-//! 4. Run with filters:
-//!
-//! ```bash
-//! # 127+ qubit resources starting with "ibm_"
-//! cargo run --example qrmi-example-ibm-quantum-system-provider -- "-f num_qubits=127&name=ibm_*"
-//!
-//! # Online resources only (calls get_backend_status per resource in parallel)
-//! cargo run --example qrmi-example-ibm-quantum-system-provider -- "-f status=online"
-//!
-//! # Include simulators (default excludes them)
-//! cargo run --example qrmi-example-ibm-quantum-system-provider -- "-f is_simulator=true"
+//! cargo run --example qrmi-example-ibm-quantum-system-provider -- \
+//!     /path/to/qrmi_config.json ibm_qs_prod -f "num_qubits=127&name=test_*"
 //! ```
 
 use clap::Parser;
 use qrmi::ibm::IBMQuantumSystemProvider;
+use qrmi::models::Config;
 use qrmi::ResourceProvider;
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]
 #[command(about = "QRMI Provider for IBM Quantum System - Example")]
 struct Args {
-    /// A filter specification using comma-separated key-value pairs
+    /// Path to qrmi_config.json
+    config_file: String,
+
+    /// Name of the dynamic resource definition
+    resource_name: String,
+
+    /// Optional filter string e.g. "num_qubits=127&name=test_*"
     #[arg(short, long)]
     filters: Option<String>,
 }
@@ -80,8 +72,6 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
-    // Optional filter string from the first CLI argument.
-    // Example: "num_qubits=127&name=ibm_*"
     let args = Args::parse();
 
     match &args.filters {
@@ -89,9 +79,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => println!("No filters specified — listing all resources."),
     }
 
-    let provider = IBMQuantumSystemProvider::new()?;
+    let config = Config::load(&args.config_file)?;
+    let resource_def = config
+        .resource_map
+        .get(&args.resource_name)
+        .ok_or_else(|| format!("Resource '{}' not found in config", args.resource_name))?;
 
-    // --- resources() ---
+    let provider = IBMQuantumSystemProvider::new(resource_def)?;
+
     let resources = provider.resources(args.filters.clone()).await?;
 
     if resources.is_empty() {
@@ -114,7 +109,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    // --- least_busy() ---
     println!("\nLeast busy resource:");
     match provider.least_busy(args.filters).await? {
         Some(mut r) => println!("  {}", r.resource_id().await?),

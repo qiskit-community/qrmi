@@ -12,23 +12,24 @@
 
 """An example of QRMI provider for Qiskit Runtime Service python-bindings"""
 
-import os
-import time
-import json
 import argparse
 from dotenv import load_dotenv
-from qrmi import ResourceProvider, ResourceType
+from qrmi import Config, ResourceProvider
 
 parser = argparse.ArgumentParser(
     description="An example of QRMI Provider for Qiskit Runtime Service"
 )
+parser.add_argument("config_file", help="Path to qrmi_config.json")
+parser.add_argument("resource_name", help="Name of the dynamic resource definition")
+parser.add_argument("--filters", default=None, help="Optional filter string e.g. 'num_qubits=27&name=ibm*'")
 args = parser.parse_args()
 
 load_dotenv()
 
+config = Config.load(args.config_file)
+resource_def = config.resource_map[args.resource_name]
 
-provider = ResourceProvider(ResourceType.IBMQiskitRuntimeService)
-resources = provider.resources("num_qubits=27&name=ibm*")
+provider = ResourceProvider(resource_def)
+resources = provider.resources(args.filters)
 for qrmi in resources:
     print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
-    print(qrmi.is_accessible())

@@ -94,8 +94,21 @@ pub struct ResourceDef {
     /// resource type
     pub r#type: ResourceType,
 
+    /// If true, backends are discovered dynamically via ResourceProvider.
+    /// If false (default), this is a static resource definition.
+    #[serde(default)]
+    pub is_dynamic: bool,
+
     /// environment variables
     pub environment: HashMap<String, String>,
+}
+
+impl ResourceDef {
+    /// Returns true if this resource definition is dynamic (i.e. backends are
+    /// discovered via ResourceProvider::resources()).
+    pub fn is_dynamic(&self) -> bool {
+        self.is_dynamic
+    }
 }
 
 /// A set of QRMI resource definitions
