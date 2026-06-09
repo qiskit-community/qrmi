@@ -26,10 +26,14 @@ use async_trait::async_trait;
 /// ```no_run
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     use std::collections::HashMap;
 ///     use qrmi::ibm::IBMQiskitRuntimeServiceProvider;
 ///     use qrmi::resource_provider::ResourceProvider;
+///     use qrmi::models::Config;
 ///
-///     let provider = IBMQiskitRuntimeServiceProvider::new()?;
+///     let config = Config::load("/path/to/qrmi_config.json")?;
+///     let env = &config.resource_map["ibm_inst1"].environment;
+///     let provider = IBMQiskitRuntimeServiceProvider::new(env)?;
 ///
 ///     // List all resources
 ///     let resources = provider.resources(None).await?;
