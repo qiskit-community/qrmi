@@ -191,12 +191,15 @@ impl Client {
         Ok(())
     }
 
+    // Pasqal Cloud gets devices during `is_accessible` call.
+    // We we the public api endpoint with no auth token required
+    // so that the Spank plugin does not need any authentication setup.
     pub async fn get_device(&mut self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
         );
-        let resp: Response<Vec<GetDeviceResponseData>> = self.get(&url).await?;
+        let resp: Response<Vec<GetDeviceResponseData>> = self.get_raw(&url).await?;
 
         resp.data
             .into_iter()
@@ -321,6 +324,12 @@ impl Client {
             .await?
             .send()
             .await?;
+        self.handle_request(resp).await
+    }
+
+    // Unauthenticated GET request for public endpoints
+    pub(crate) async fn get_raw<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
+        let resp = self.client.get(url).send().await?;
         self.handle_request(resp).await
     }
 
