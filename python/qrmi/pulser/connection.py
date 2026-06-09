@@ -124,7 +124,7 @@ class PulserQRMIConnection(RemoteConnection):
             try:
                 dev = deserialize_device(specs["specs"])
             except DeserializeDeviceError:
-                logger.exception("Failed to deserialize device: %s", {name})
+                logger.exception("Failed to deserialize device: %s", name)
                 continue
             devices[name] = dev
         return devices
@@ -132,15 +132,17 @@ class PulserQRMIConnection(RemoteConnection):
     def get_batch_logs(self, batch_id: str | None = None) -> Sequence[str]:
         """Get the logs from the current batch through the `task_logs` interface."""
         if batch_id is None:
+            logger.debug("No batch ID provided, fetching logs from last batch")
             batch_id = self._current_batch_id
-        
+
         job_ids = self._get_job_ids(batch_id)
         logs = []
         for job_id in job_ids:
             try:
                 job_logs = self._qrmi.task_logs(job_id)
-            except Exception:
-                print('rerg')
+            except RuntimeError:
+                logger.exception("Failed to fetch logs for job %s", job_id)
+                raise
             logs.append(job_logs)
         return tuple(logs)
 
