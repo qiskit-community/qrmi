@@ -13,38 +13,25 @@
 
 use anyhow::{bail, Result};
 
-use crate::models::batch::JobStatus;
-use crate::models::device::DeviceType;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine as _;
+use crate::models::{
+    Batch, CancelBatchResponseData, CreateBatchResponseData, CreateCudaqJobResponseData,
+    DeviceType, GetBatchResponseData, GetCudaqJobResponseData, GetDeviceResponseData,
+    GetDeviceSpecsResponseData, GetJobResponseData, Job, JobResult, Response,
+};
 use log::debug;
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
-use thiserror::Error;
 
 pub const DEFAULT_BASE_URL: &str = "https://apis.pasqal.cloud";
-const AUTH_TOKEN_EXPIRY_GRACE_SECONDS: i64 = 10;
-const AUTH_GRANT_TYPE: &str = "http://auth0.com/oauth/grant-type/password-realm";
-const AUTH_REALM: &str = "pcs-users";
-const AUTH_CLIENT_ID: &str = "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB";
-const AUTH_AUDIENCE: &str = "https://apis.pasqal.cloud/account/api/v1";
-
-fn now_unix_seconds() -> Result<i64> {
-    Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64)
-}
-
-#[derive(Debug, Error)]
-pub enum AuthError {
-    #[error("auth token is missing or expired and username/password are not configured")]
-    MissingCredentialsForRefresh,
-}
 
 /// An asynchronous `Client` to make Requests with.
+/// The `Client` handles authentication and provides methods for all Pasqal Cloud API endpoints.
+/// The authentication logic is implemented in the `auth` module,
+/// but the main `Client` logic is implemented below.
 #[derive(Debug, Clone)]
 pub struct Client {
     /// The base URL this client sends requests to
@@ -53,147 +40,15 @@ pub struct Client {
     pub(crate) client: reqwest_middleware::ClientWithMiddleware,
     pub(crate) project_id: String,
     pub(crate) auth_token: String,
-    auth_header: Option<header::HeaderValue>,
+    pub(crate) auth_header: Option<header::HeaderValue>,
     pub(crate) auth_endpoint: String,
     pub(crate) username: Option<String>,
     pub(crate) password: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Response<T> {
-    pub data: T,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct GetDeviceResponseData {
-    pub status: String,
-    pub availability: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct GetDeviceSpecsResponseData {
-    pub device_type: String,
-    pub specs: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateBatchResponseData {
-    pub id: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateCudaqJobResponseData {
-    pub id: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct GetBatchResponseData {
-    pub status: JobStatus,
-    pub job_ids: Vec<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct GetCudaqJobResponseData {
-    pub status: String,
-    #[serde(default)]
-    pub result: Value,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct GetJobResponseData {
-    pub status: JobStatus,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CancelBatchResponseData {}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Job {
-    pub runs: i32,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct JobResult {
-    counter: HashMap<String, u64>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Batch {
-    pub sequence_builder: String,
-    pub jobs: Vec<Job>,
-    pub device_type: String,
-    pub project_id: String,
+    pub(crate) client_id: Option<String>,
+    pub(crate) client_secret: Option<String>,
 }
 
 impl Client {
-    fn build_http_client() -> Result<reqwest_middleware::ClientWithMiddleware> {
-        let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
-        Ok(reqwest_builder.build())
-    }
-
-    fn make_auth_header(token: &str) -> Result<Option<header::HeaderValue>> {
-        if token.trim().is_empty() {
-            return Ok(None);
-        }
-        Ok(Some(header::HeaderValue::from_str(&format!(
-            "Bearer {token}"
-        ))?))
-    }
-
-    fn attach_headers(
-        &self,
-        req: reqwest_middleware::RequestBuilder,
-    ) -> Result<reqwest_middleware::RequestBuilder> {
-        let req = req.header(reqwest::header::CONTENT_TYPE, "application/json");
-        match &self.auth_header {
-            Some(auth) => Ok(req.header(reqwest::header::AUTHORIZATION, auth.clone())),
-            None => bail!("authorization header is not available"),
-        }
-    }
-
-    async fn authenticated(
-        &mut self,
-        req: reqwest_middleware::RequestBuilder,
-    ) -> Result<reqwest_middleware::RequestBuilder> {
-        self.ensure_authenticated().await?;
-        self.attach_headers(req)
-    }
-
-    async fn ensure_authenticated(&mut self) -> Result<()> {
-        // Ensure the client has a usable auth token, refreshing it in-place if necessary.
-        // If the client is missing credentials to refresh the token, this will return an error instead.
-
-        let now = now_unix_seconds()?;
-        if Self::is_auth_token_usable(&self.auth_token, now) {
-            return Ok(());
-        }
-
-        if let Some(exp) = Self::jwt_expiry_unix_seconds(&self.auth_token)? {
-            debug!(
-                "Auth token is expired or near expiry (exp {}, now {}), will attempt to refresh",
-                exp, now
-            );
-        }
-
-        let (Some(username), Some(password)) = (self.username.as_deref(), self.password.as_deref())
-        else {
-            return Err(AuthError::MissingCredentialsForRefresh.into());
-        };
-
-        debug!("Requesting new auth token from Pasqal Cloud");
-
-        // Request a new token and update auth state.
-        let token = Self::request_access_token(&self.auth_endpoint, username, password).await?;
-        self.auth_token = token;
-        self.auth_header = Self::make_auth_header(&self.auth_token)?;
-        Ok(())
-    }
-
-    // Pasqal Cloud gets devices during `is_accessible` call.
-    // We get the public api endpoint with no auth token required
-    // so that the Spank plugin does not need any authentication setup.
     pub async fn get_device(&mut self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
@@ -226,6 +81,8 @@ impl Client {
         self.post(&url, batch).await
     }
 
+    // CUDA-Q jobs are created with a separate endpoint from normal batches,
+    // and the payload is different as well.
     pub async fn create_cudaq_job(
         &mut self,
         sequence: Value,
@@ -303,7 +160,8 @@ impl Client {
         // according to current cloud specs
         if device_type.to_string().starts_with("EMU") {
             let url = format!("{}/core-fast/api/v1/devices/public-specs", self.base_url);
-            let raw_response: Response<Vec<GetDeviceSpecsResponseData>> = self.get(&url).await?;
+            let raw_response: Response<Vec<GetDeviceSpecsResponseData>> =
+                self.get_unauthenticated(&url).await?;
             let specs_string = serde_json::to_string(&raw_response.data)?;
             Ok(specs_string)
         } else {
@@ -316,6 +174,15 @@ impl Client {
             let specs_string = serde_json::to_string(&vec![raw_response.data])?;
             Ok(specs_string)
         }
+    }
+}
+
+impl Client {
+    fn build_http_client() -> Result<reqwest_middleware::ClientWithMiddleware> {
+        let mut reqwest_client_builder = reqwest::Client::builder();
+        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        Ok(reqwest_builder.build())
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
@@ -371,116 +238,6 @@ impl Client {
             bail!("Status: {}, Fail {}", status, json_text);
         }
     }
-
-    /// Request a Pasqal Cloud access token using username/password.
-    ///
-    /// This uses the same Auth0 password-realm flow currently documented for Pasqal Cloud.
-    pub async fn request_access_token(
-        auth_endpoint: &str,
-        username: &str,
-        password: &str,
-    ) -> Result<String> {
-        let auth_endpoint = if auth_endpoint.trim().is_empty() {
-            bail!("auth endpoint must be configured when using username/password authentication");
-        } else if auth_endpoint.contains("://") {
-            auth_endpoint.trim().to_string()
-        } else {
-            format!("https://{}", auth_endpoint.trim())
-        };
-
-        let client_params = [
-            ("grant_type", AUTH_GRANT_TYPE),
-            ("realm", AUTH_REALM),
-            ("client_id", AUTH_CLIENT_ID),
-            ("audience", AUTH_AUDIENCE),
-            ("username", username),
-            ("password", password),
-        ];
-
-        let resp = reqwest::Client::new()
-            .post(auth_endpoint)
-            .header(
-                reqwest::header::CONTENT_TYPE,
-                "application/x-www-form-urlencoded",
-            )
-            .form(&client_params)
-            .send()
-            .await?;
-
-        if resp.status().is_success() {
-            let token: AuthTokenResponse = resp.json().await?;
-            Ok(token.access_token)
-        } else {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            bail!("Token request failed: {} {}", status, body);
-        }
-    }
-
-    /// Read `exp` from a JWT payload without validating the JWT signature.
-    ///
-    /// This helper is only used for local token-expiry checks to decide whether to refresh.
-    /// Token authenticity is still enforced by the Pasqal Cloud API when requests are sent.
-    pub fn jwt_expiry_unix_seconds(token: &str) -> Result<Option<i64>> {
-        let token = token.trim();
-        if token.is_empty() {
-            return Ok(None);
-        }
-
-        let mut parts = token.split('.');
-        let _header = match parts.next() {
-            Some(p) if !p.is_empty() => p,
-            _ => return Ok(None),
-        };
-        let payload = match parts.next() {
-            Some(p) if !p.is_empty() => p,
-            _ => return Ok(None),
-        };
-        if parts.next().is_none() {
-            return Ok(None);
-        }
-
-        let payload_bytes = URL_SAFE_NO_PAD.decode(payload)?;
-        let v: Value = serde_json::from_slice(&payload_bytes)?;
-        let Some(exp) = v.get("exp") else {
-            return Ok(None);
-        };
-
-        if let Some(n) = exp.as_i64() {
-            Ok(Some(n))
-        } else if let Some(s) = exp.as_str() {
-            Ok(Some(s.parse::<i64>()?))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Check whether a cached auth token is usable at `now_unix_seconds`.
-    ///
-    /// Non-empty tokens without JWT expiry are treated as usable.
-    /// JWT tokens are treated as expired if they are within the grace period of their expiry.
-    pub fn is_auth_token_usable(token: &str, now_unix_seconds: i64) -> bool {
-        if token.trim().is_empty() {
-            return false;
-        }
-
-        match Self::jwt_expiry_unix_seconds(token) {
-            Ok(Some(exp)) => exp > now_unix_seconds + AUTH_TOKEN_EXPIRY_GRACE_SECONDS,
-            Ok(None) => {
-                debug!(
-                    "Auth token has no parseable JWT expiry; treating token as usable until rejected by API"
-                );
-                true
-            }
-            Err(err) => {
-                debug!(
-                    "Failed to parse auth token expiry from JWT payload; treating token as unusable: {}",
-                    err
-                );
-                false
-            }
-        }
-    }
 }
 
 /// A [`ClientBuilder`] can be used to create a [`Client`] with custom configuration.
@@ -494,6 +251,8 @@ pub struct ClientBuilder {
     auth_endpoint: String,
     username: Option<String>,
     password: Option<String>,
+    client_id: Option<String>,
+    client_secret: Option<String>,
 }
 
 impl ClientBuilder {
@@ -514,6 +273,8 @@ impl ClientBuilder {
             auth_endpoint: String::new(),
             username: None,
             password: None,
+            client_id: None,
+            client_secret: None,
         }
     }
 
@@ -538,6 +299,16 @@ impl ClientBuilder {
         self
     }
 
+    pub fn with_service_account_credentials(
+        &mut self,
+        client_id: String,
+        client_secret: String,
+    ) -> &mut Self {
+        self.client_id = Some(client_id);
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
     ///
     /// # Example
@@ -551,11 +322,13 @@ impl ClientBuilder {
     /// ```
     pub fn build(&mut self) -> Result<Client> {
         debug!(
-            "Initialize Client (project_id set: {}, auth_token set: {}, username/password set: {}/{})",
+            "Initialize Client (project_id set: {}, auth_token set: {}, username/password set: {}/{}, client_id/client_secret set: {}/{})",
             !self.project_id.trim().is_empty(),
             !self.token.trim().is_empty(),
             self.username.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
             self.password.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
+            self.client_id.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
+            self.client_secret.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
         );
         Ok(Client {
             base_url: self.base_url.clone(),
@@ -566,11 +339,8 @@ impl ClientBuilder {
             auth_endpoint: self.auth_endpoint.clone(),
             username: self.username.clone(),
             password: self.password.clone(),
+            client_id: self.client_id.clone(),
+            client_secret: self.client_secret.clone(),
         })
     }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct AuthTokenResponse {
-    access_token: String,
 }

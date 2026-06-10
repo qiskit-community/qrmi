@@ -13,6 +13,7 @@
 //! QRMI implementations for Pasqal Cloud Services and Pasqal Local
 
 mod cloud;
+mod cloud_config;
 mod local;
 
 pub use self::cloud::PasqalCloud;

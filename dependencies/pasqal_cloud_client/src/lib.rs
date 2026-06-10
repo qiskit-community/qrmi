@@ -14,9 +14,12 @@
 //! This is a Rust client to interact with Pasqal Cloud Services using the API.
 //!
 
+#[path = "auth/auth.rs"]
+mod auth;
 mod client;
 mod models;
 
-pub use client::{AuthError, Client, ClientBuilder};
+pub use client::{Client, ClientBuilder};
+pub use models::AuthError;
 pub use models::DeviceType;
 pub use models::JobStatus;

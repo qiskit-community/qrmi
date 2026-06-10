@@ -1,13 +1,25 @@
-use super::{
-    read_pasqal_config, read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
-    PasqalCloud, PasqalConfig,
-};
+use super::PasqalCloud;
 use crate::models::ResourceType;
+use crate::pasqal::cloud_config::{
+    pasqal_config_path_from_root, read_pasqal_config, read_qrmi_config_env_value_from_content,
+    resolve_pasqal_credentials, resolve_pasqal_service_account_credentials, PasqalConfig,
+};
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
+use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
+use std::time::{Duration, Instant};
+
+// Ensure that tests that manipulate environment variables are not run in parallel to avoid interference between them.
+fn env_lock() -> &'static Mutex<()> {
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    ENV_LOCK.get_or_init(|| Mutex::new(()))
+}
 
 #[tokio::test]
 async fn is_accessible_no_authentication() {
@@ -20,26 +32,28 @@ async fn is_accessible_no_authentication() {
     let addr = listener.local_addr().expect("local_addr should succeed");
     // Setup Mock server with mocked responses.
     let mock_server = thread::spawn(move || {
-        for _ in 0..1 {
-            if let Ok((mut stream, _)) = listener.accept() {
-                // Read the request
-                let mut buf = [0_u8; 4096];
-                let n = stream.read(&mut buf).unwrap_or(0);
-                let req = String::from_utf8_lossy(&buf[..n]);
-                assert!(req.contains("/core-fast/api/v1/devices"));
+        if let Ok((mut stream, _)) = listener.accept() {
+            let mut buf = [0_u8; 4096];
+            // Read the request
+            let n = stream.read(&mut buf).unwrap_or(0);
+            let req = String::from_utf8_lossy(&buf[..n]);
+            let req_lower = req.to_ascii_lowercase();
 
-                // Hardcode response
-                let body = r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#;
+            // Verify endpoint and no authentication
+            assert!(req.contains("/core-fast/api/v1/devices"));
+            assert!(!req_lower.contains("authorization: bearer"));
 
-                // Write the response
-                let response = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
-                    body.len(),
-                    body
-                );
-                let _ = stream.write_all(response.as_bytes());
-                let _ = stream.flush();
-            }
+            // Hardcode response
+            let body = r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#;
+
+            // Write the response
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = stream.write_all(response.as_bytes());
+            let _ = stream.flush();
         }
     });
 
@@ -60,18 +74,21 @@ async fn is_accessible_no_authentication() {
         .expect("is_accessible should succeed");
     mock_server.join().expect("server thread should join");
 
-    // Verify that `is_accessible()` returns true and that the obtained token is used.
+    // Verify that `is_accessible()` returns true
     assert!(accessible);
 }
 
 #[test]
 fn resolve_pasqal_credentials_prefers_environment_variables() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
     std::env::set_var("PASQAL_USERNAME", "env-user");
     std::env::set_var("PASQAL_PASSWORD", "env-pass");
 
     let cfg = PasqalConfig {
         username: Some("config-user".to_string()),
         password: Some("config-pass".to_string()),
+        client_id: None,
+        client_secret: None,
         token: None,
         project_id: None,
         auth_endpoint: None,
@@ -83,6 +100,33 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
 
     std::env::remove_var("PASQAL_USERNAME");
     std::env::remove_var("PASQAL_PASSWORD");
+}
+
+#[test]
+fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    std::env::set_var("EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_ID", "env-client-id");
+    std::env::set_var(
+        "EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_SECRET",
+        "env-client-secret",
+    );
+
+    let cfg = PasqalConfig {
+        username: None,
+        password: None,
+        client_id: Some("config-client-id".to_string()),
+        client_secret: Some("config-client-secret".to_string()),
+        token: None,
+        project_id: None,
+        auth_endpoint: None,
+    };
+    let (client_id, client_secret) = resolve_pasqal_service_account_credentials("EMU_FREE", &cfg);
+
+    assert_eq!(client_id.as_deref(), Some("env-client-id"));
+    assert_eq!(client_secret.as_deref(), Some("env-client-secret"));
+
+    std::env::remove_var("EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_ID");
+    std::env::remove_var("EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_SECRET");
 }
 
 #[test]
@@ -102,8 +146,78 @@ fn read_qrmi_config_env_value_handles_empty_environment_key() {
     assert!(value.is_none());
 }
 
+fn write_pasqal_config(root: &Path, content: &str) {
+    let config_dir = root.join(".pasqal");
+    fs::create_dir_all(&config_dir).expect("config dir should be created");
+    fs::write(config_dir.join("config"), content).expect("config should be written");
+}
+
+#[test]
+fn pasqal_config_path_from_root_expands_home_and_environment_variables() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    let old_home = std::env::var("HOME").ok();
+    let old_user = std::env::var("USER").ok();
+    std::env::set_var("HOME", "/home/aleks");
+    std::env::set_var("USER", "aleks");
+
+    assert_eq!(
+        pasqal_config_path_from_root("~/configs").as_deref(),
+        Some(Path::new("/home/aleks/configs/.pasqal/config"))
+    );
+    assert_eq!(
+        pasqal_config_path_from_root("/work/$USER/configs").as_deref(),
+        Some(Path::new("/work/aleks/configs/.pasqal/config"))
+    );
+    assert_eq!(
+        pasqal_config_path_from_root("/work/${USER}/configs").as_deref(),
+        Some(Path::new("/work/aleks/configs/.pasqal/config"))
+    );
+
+    match old_home {
+        Some(home) => std::env::set_var("HOME", home),
+        None => std::env::remove_var("HOME"),
+    }
+    match old_user {
+        Some(user) => std::env::set_var("USER", user),
+        None => std::env::remove_var("USER"),
+    }
+}
+
+#[test]
+fn read_pasqal_config_uses_backend_config_root_env() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    let root = std::env::temp_dir().join(format!(
+        "qrmi_pasqal_cfg_{}_backend_root",
+        std::process::id()
+    ));
+    let home = std::env::temp_dir().join(format!("qrmi_pasqal_cfg_{}_home", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&home);
+    write_pasqal_config(
+        &root,
+        "token=from-backend-root\nproject_id=project\nclient_id=client\nclient_secret=secret\n",
+    );
+
+    std::env::remove_var("PASQAL_CONFIG_ROOT");
+    std::env::set_var("EMU_FREE_PASQAL_CONFIG_ROOT", &root);
+    std::env::set_var("HOME", &home);
+
+    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+
+    assert_eq!(cfg.token.as_deref(), Some("from-backend-root"));
+    assert_eq!(cfg.project_id.as_deref(), Some("project"));
+    assert_eq!(cfg.client_id.as_deref(), Some("client"));
+    assert_eq!(cfg.client_secret.as_deref(), Some("secret"));
+
+    std::env::remove_var("EMU_FREE_PASQAL_CONFIG_ROOT");
+    std::env::remove_var("HOME");
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&home);
+}
+
 #[test]
 fn read_pasqal_config_returns_default_when_config_root_file_missing() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
     let tmp_dir = std::env::temp_dir();
     let missing_root = tmp_dir.join("qrmi_missing_pasqal_cfg");
     let missing_home = tmp_dir.join("qrmi_home_without_cfg");
@@ -114,6 +228,8 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     // All config should be None since the config file is missing: the default
     assert!(cfg.username.is_none());
     assert!(cfg.password.is_none());
+    assert!(cfg.client_id.is_none());
+    assert!(cfg.client_secret.is_none());
     assert!(cfg.project_id.is_none());
     assert!(cfg.token.is_none());
     assert!(cfg.auth_endpoint.is_none());
