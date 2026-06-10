@@ -12,9 +12,11 @@
 
 //! Trait for vendor-level quantum resource providers.
 
+use crate::models::ResourceType;
 use crate::QuantumResource;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use std::collections::HashMap;
 
 /// Defines an interface for vendors that can enumerate available quantum resources.
 ///
@@ -26,14 +28,12 @@ use async_trait::async_trait;
 /// ```no_run
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     use std::collections::HashMap;
-///     use qrmi::ibm::IBMQiskitRuntimeServiceProvider;
-///     use qrmi::resource_provider::ResourceProvider;
 ///     use qrmi::models::Config;
+///     use qrmi::resource_provider::{ResourceProvider, create_provider};
 ///
 ///     let config = Config::load("/path/to/qrmi_config.json")?;
-///     let env = &config.resource_map["ibm_inst1"].environment;
-///     let provider = IBMQiskitRuntimeServiceProvider::new(env)?;
+///     let resource_def = &config.resource_map["ibm_inst1"];
+///     let provider = create_provider(&resource_def.r#type, &resource_def.environment)?;
 ///
 ///     // List all resources
 ///     let resources = provider.resources(None).await?;
@@ -77,5 +77,41 @@ pub trait ResourceProvider: Send + Sync {
         filters: Option<String>,
     ) -> Result<Option<Box<dyn QuantumResource + Send + Sync>>> {
         Ok(self.resources(filters).await?.into_iter().next())
+    }
+}
+
+/// Creates a [`ResourceProvider`] from a [`ResourceType`] and environment variable map.
+///
+/// This factory function allows creating a provider without knowing the concrete type
+/// at compile time, which is useful when the type is read from a config file.
+///
+/// # Example
+///
+/// ```no_run
+/// use qrmi::models::Config;
+/// use qrmi::resource_provider::create_provider;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let config = Config::load("/path/to/qrmi_config.json")?;
+/// let resource_def = &config.resource_map["ibm_inst1"];
+/// let provider = create_provider(&resource_def.r#type, &resource_def.environment)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn create_provider(
+    resource_type: &ResourceType,
+    environment: &HashMap<String, String>,
+) -> Result<Box<dyn ResourceProvider>> {
+    match resource_type {
+        ResourceType::QiskitRuntimeService => {
+            Ok(Box::new(crate::ibm::IBMQiskitRuntimeServiceProvider::new(environment)?))
+        }
+        ResourceType::IBMQuantumSystem => {
+            Ok(Box::new(crate::ibm::IBMQuantumSystemProvider::new(environment)?))
+        }
+        _ => Err(anyhow!(
+            "Unsupported resource type for dynamic resource discovery: {}",
+            resource_type.as_str()
+        )),
     }
 }

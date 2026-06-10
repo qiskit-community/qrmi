@@ -18,6 +18,7 @@ pub mod iqm;
 pub mod pasqal;
 pub mod resource_provider;
 pub use resource_provider::ResourceProvider;
+pub use resource_provider::create_provider;
 
 mod cext;
 pub mod models;

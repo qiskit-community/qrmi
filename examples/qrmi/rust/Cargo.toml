@@ -1,14 +1,13 @@
 [workspace]
 members = [
     "ibm_quantum_system",
-    "ibm_quantum_system_provider",
     "qiskit_runtime_service",
-    "qiskit_runtime_service_provider",
     "pasqal_cloud",
     "pasqal_local",
     "qrmi_config",
     "alice_bob_felis",
     "iqm_server",
+    "providers",
 ]
 resolver = "2"
 

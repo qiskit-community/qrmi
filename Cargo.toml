@@ -95,9 +95,5 @@ name = "qrmi-example-pasqal-cloud"
 path = "examples/qrmi/rust/pasqal_cloud/src/main.rs"
 
 [[example]]
-name = "qrmi-example-qiskit-runtime-service-provider"
-path = "examples/qrmi/rust/qiskit_runtime_service_provider/src/main.rs"
-
-[[example]]
-name = "qrmi-example-ibm-quantum-system-provider"
-path = "examples/qrmi/rust/ibm_quantum_system_provider/src/main.rs"
+name = "qrmi-example-providers"
+path = "examples/qrmi/rust/providers/src/main.rs"
