@@ -1678,7 +1678,7 @@ impl Default for QuantumResources {
 /// @ingroup QrmiResourceProvider
 /// Returns a list of available quantum resources, optionally filtered.
 ///
-/// Results are sorted by queue_length ascending (least busy first).
+/// Results are expected to be sorted in least-busy order.
 ///
 /// The caller is responsible for freeing the returned struct with
 /// qrmi_provider_resources_free(). Individual handles inside the struct
@@ -1692,11 +1692,7 @@ impl Default for QuantumResources {
 ///
 /// # Filter string format
 ///
-/// `key=value` pairs joined by `&`. Supported keys:
-/// - `num_qubits=<N>`      — only backends with qubits >= N
-/// - `name=<glob>`         — glob pattern match on backend name
-/// - `is_simulator=<bool>` — include/exclude simulators (default: false)
-/// - `status=online`       — only online backends
+/// `key=value` pairs joined by `&`. Supported filters(constraints) are defined by each resource provider's implementation.
 ///
 /// # Example
 ///
