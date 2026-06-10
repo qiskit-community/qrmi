@@ -328,7 +328,10 @@ impl Client {
     }
 
     // Unauthenticated GET request for public endpoints
-    pub(crate) async fn get_unauthenticated<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
+    pub(crate) async fn get_unauthenticated<T: DeserializeOwned>(
+        &mut self,
+        url: &str,
+    ) -> Result<T> {
         let resp = self.client.get(url).send().await?;
         self.handle_request(resp).await
     }
