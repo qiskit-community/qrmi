@@ -1,7 +1,7 @@
 /*
  * This code is part of Qiskit.
  *
- * Copyright (C) 2026 IBM, UKRI-STFC (Hartree Centre)
+ * Copyright (C) IBM 2026
  *
  * This code is licensed under the Apache License, Version 2.0. You may
  * obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -17,8 +17,6 @@
 
 #include "qrmi.h"
 
-extern void load_dotenv();
-
 /*
  * Usage: ibm_quantum_system_provider <config_file> <resource_name> [filter]
  *
@@ -27,8 +25,6 @@ extern void load_dotenv();
  * filter         - optional filter string e.g. "num_qubits=127&name=test_*"
  */
 int main(int argc, char *argv[]) {
-
-  load_dotenv();
 
   if (argc < 3) {
     fprintf(stderr, "Usage: %s <config_file> <resource_name> [filter]\n", argv[0]);

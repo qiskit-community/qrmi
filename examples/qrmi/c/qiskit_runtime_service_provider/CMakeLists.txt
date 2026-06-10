@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# Copyright (C) 2025 IBM, UKRI-STFC (Hartree Centre)
+# Copyright (C) IBM 2026
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -28,7 +28,6 @@ function(add_example TARGET_NAME C_FILE)
   # source files for the client app
   set(SRC_FILE
           ${CMAKE_CURRENT_SOURCE_DIR}/${C_FILE}
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
   )
 
   add_executable(${TARGET_NAME} ${SRC_FILE})

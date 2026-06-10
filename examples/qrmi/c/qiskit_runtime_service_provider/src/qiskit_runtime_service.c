@@ -17,8 +17,6 @@
 
 #include "qrmi.h"
 
-extern void load_dotenv();
-
 /*
  * Usage: qiskit_runtime_service_provider <config_file> <resource_name> [filter]
  *
@@ -27,8 +25,6 @@ extern void load_dotenv();
  * filter         - optional filter string e.g. "num_qubits=127"
  */
 int main(int argc, char *argv[]) {
-
-  load_dotenv();
 
   if (argc < 3) {
     fprintf(stderr, "Usage: %s <config_file> <resource_name> [filter]\n", argv[0]);
