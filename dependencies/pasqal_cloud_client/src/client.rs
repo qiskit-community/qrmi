@@ -199,7 +199,7 @@ impl Client {
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
         );
-        let resp: Response<Vec<GetDeviceResponseData>> = self.get_raw(&url).await?;
+        let resp: Response<Vec<GetDeviceResponseData>> = self.get_unauthenticated(&url).await?;
 
         resp.data
             .into_iter()
@@ -328,7 +328,7 @@ impl Client {
     }
 
     // Unauthenticated GET request for public endpoints
-    pub(crate) async fn get_raw<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
+    pub(crate) async fn get_unauthenticated<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
         let resp = self.client.get(url).send().await?;
         self.handle_request(resp).await
     }
