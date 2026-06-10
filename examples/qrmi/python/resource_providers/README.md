@@ -30,5 +30,5 @@ options:
 ```
 For example,
 ```shell-session
-python example.py /etc/slurm/qrmi_config.json ibm_inst1 --filter "num_qubits=127&max_shots=10000"
+python example.py /etc/slurm/qrmi_config.json ibm_inst1 --filters "num_qubits=127&max_shots=10000"
 ```
