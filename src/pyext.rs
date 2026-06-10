@@ -18,6 +18,7 @@ use crate::iqm::IQMServer;
 use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
+use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
@@ -261,10 +262,18 @@ impl PyResourceDef {
         &self.inner.name
     }
 
-    /// Resource type string (e.g. "qiskit-runtime-service").
+    /// Resource type.
     #[getter]
-    pub fn resource_type(&self) -> &str {
-        self.inner.r#type.as_str()
+    pub fn resource_type(&self) -> ResourceType {
+        match self.inner.r#type {
+            crate::models::ResourceType::IBMDirectAccess => ResourceType::IBMDirectAccess,
+            crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
+            crate::models::ResourceType::QiskitRuntimeService => ResourceType::IBMQiskitRuntimeService,
+            crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
+            crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+            crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
+            crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+        }
     }
 
     /// Whether this resource definition is dynamic.
@@ -331,10 +340,12 @@ impl PyResourceProvider {
                     Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
                 }
             }
-            ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&environment) {
-                Ok(p) => Box::new(p),
-                Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
-            },
+            ResourceType::IBMQuantumSystem => {
+                match IBMQuantumSystemProvider::new(&environment) {
+                    Ok(p) => Box::new(p),
+                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                }
+            }
             _ => {
                 return Err(pyo3::exceptions::PyRuntimeError::new_err(
                     "Unsupported resource type for dynamic resource discovery",
