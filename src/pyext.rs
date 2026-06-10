@@ -427,7 +427,7 @@ impl PyResourceProvider {
 /// for name, resource_def in config.resource_map.items():
 ///     print(f"{name}: is_dynamic={resource_def.is_dynamic}")
 ///     if resource_def.is_dynamic:
-///         provider = ResourceProvider(resource_def)
+///         provider = ResourceProvider(resource_def.resource_type, resource_def.environment)
 ///         resources = provider.resources()
 /// ```
 #[gen_stub_pyclass]
