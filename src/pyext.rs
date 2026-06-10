@@ -363,13 +363,8 @@ impl PyResourceProvider {
     ///
     /// * `filters` - Filter string of the form `key=value&key=value`, or `None`.
     ///
-    /// Supported keys:
-    /// - `num_qubits=<N>`      — only backends with `qubits >= N`
-    /// - `name=<glob>`         — only backends whose name matches the glob pattern
-    /// - `is_simulator=<bool>` — include/exclude simulators (default: `false`)
-    /// - `status=online`       — only online backends
-    ///
-    /// Results are sorted by `queue_length` ascending (least busy first).
+    /// Filter specifications (constraints) are defined by each resource provider's implementation.
+    /// Results are expected to be sorted in least-busy order.
     ///
     /// # Example (Python)
     ///
