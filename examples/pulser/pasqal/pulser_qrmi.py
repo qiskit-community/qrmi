@@ -71,4 +71,6 @@ seq.measure("ground-rydberg")
 
 backend = pulser.QPUBackend(seq, qrmi_conn)
 remote_results = backend.run([JobParams(runs=500, variables=[])], wait=True)
+
+print(f"Logs: ", qrmi_conn.get_batch_logs(batch_id=remote_results.batch_id))
 print(f"Results: {remote_results.results}")

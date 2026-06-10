@@ -7,6 +7,7 @@ members = [
     "qrmi_config",
     "alice_bob_felis",
     "iqm_server",
+    "resource_providers",
 ]
 resolver = "2"
 

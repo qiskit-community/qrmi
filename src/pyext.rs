@@ -11,9 +11,11 @@
 // that they have been altered from the originals.
 
 use crate::alice_bob::AliceBobFelis;
+use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::IBMQuantumSystemProvider;
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
-use crate::models::{Payload, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
 use crate::QuantumResource;
@@ -41,6 +43,17 @@ pub struct PyQuantumResource {
     qrmi: Box<dyn QuantumResource + Send + Sync>,
     rt: Runtime,
 }
+
+impl PyQuantumResource {
+    /// Internal constructor used by `PyResourceProvider::backends()`.
+    pub(crate) fn from_inner(qrmi: Box<dyn QuantumResource + Send + Sync>) -> Self {
+        Self {
+            qrmi,
+            rt: Runtime::new().unwrap(),
+        }
+    }
+}
+
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyQuantumResource {
@@ -226,6 +239,227 @@ impl PyQuantumResource {
     }
 }
 
+// ---------------------------------------------------------------------------
+// ResourceDef Python bindings
+// ---------------------------------------------------------------------------
+
+/// Python wrapper for a QRMI resource definition.
+#[gen_stub_pyclass]
+#[pyclass]
+#[pyo3(name = "ResourceDef")]
+#[derive(Clone)]
+pub struct PyResourceDef {
+    pub(crate) inner: ResourceDef,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyResourceDef {
+    /// Resource name.
+    #[getter]
+    pub fn name(&self) -> &str {
+        &self.inner.name
+    }
+
+    /// Resource type.
+    #[getter]
+    pub fn resource_type(&self) -> ResourceType {
+        match self.inner.r#type {
+            crate::models::ResourceType::IBMDirectAccess => ResourceType::IBMDirectAccess,
+            crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
+            crate::models::ResourceType::QiskitRuntimeService => {
+                ResourceType::IBMQiskitRuntimeService
+            }
+            crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
+            crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+            crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
+            crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+        }
+    }
+
+    /// Whether this resource definition is dynamic.
+    #[getter]
+    pub fn is_dynamic(&self) -> bool {
+        self.inner.is_dynamic()
+    }
+
+    /// Environment variables for this resource.
+    #[getter]
+    pub fn environment(&self) -> std::collections::HashMap<String, String> {
+        self.inner.environment.clone()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ResourceProvider Python bindings
+// ---------------------------------------------------------------------------
+
+/// Python wrapper for `ResourceProvider`.
+///
+/// # Example (Python)
+///
+/// ```python
+/// from qrmi import Config, ResourceProvider, ResourceType
+///
+/// config = Config.load("/path/to/qrmi_config.json")
+/// resource_def = config.resource_map["ibm_inst1"]
+///
+/// provider = ResourceProvider(ResourceType.IBMQiskitRuntimeService, resource_def.environment)
+/// resources = provider.resources()
+/// resources = provider.resources("num_qubits=127&name=ibm_*&status=online")
+/// resource  = provider.least_busy()
+///
+/// for r in resources:
+///     print(r.resource_id())
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[pyo3(name = "ResourceProvider")]
+pub struct PyResourceProvider {
+    inner: Box<dyn crate::ResourceProvider>,
+    rt: Runtime,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyResourceProvider {
+    /// Constructs a new provider from a resource type and environment variable map.
+    ///
+    /// Currently supported resource types:
+    /// - `ResourceType.IBMQiskitRuntimeService`
+    /// - `ResourceType.IBMQuantumSystem`
+    #[new]
+    pub fn new(
+        resource_type: ResourceType,
+        environment: std::collections::HashMap<String, String>,
+    ) -> PyResult<Self> {
+        crate::common::initialize();
+        let inner: Box<dyn crate::ResourceProvider> = match resource_type {
+            ResourceType::IBMQiskitRuntimeService => {
+                match IBMQiskitRuntimeServiceProvider::new(&environment) {
+                    Ok(p) => Box::new(p),
+                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                }
+            }
+            ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&environment) {
+                Ok(p) => Box::new(p),
+                Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            },
+            _ => {
+                return Err(pyo3::exceptions::PyRuntimeError::new_err(
+                    "Unsupported resource type for dynamic resource discovery",
+                ))
+            }
+        };
+        Ok(Self {
+            inner,
+            rt: Runtime::new().unwrap(),
+        })
+    }
+
+    /// Returns available quantum resources, optionally filtered.
+    ///
+    /// # Arguments
+    ///
+    /// * `filters` - Filter string of the form `key=value&key=value`, or `None`.
+    ///
+    /// Filter specifications (constraints) are defined by each resource provider's implementation.
+    /// Results are expected to be sorted in least-busy order.
+    ///
+    /// # Example (Python)
+    ///
+    /// ```python
+    /// resources = provider.resources()
+    /// resources = provider.resources("num_qubits=127&name=ibm_*")
+    /// ```
+    #[pyo3(signature = (filters=None))]
+    pub fn resources(&self, filters: Option<&str>) -> PyResult<Vec<PyQuantumResource>> {
+        crate::common::initialize();
+        let result = self
+            .rt
+            .block_on(async { self.inner.resources(filters.map(str::to_string)).await });
+        match result {
+            Ok(resources) => Ok(resources
+                .into_iter()
+                .map(PyQuantumResource::from_inner)
+                .collect()),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
+    /// Returns the least busy available quantum resource, optionally filtered.
+    ///
+    /// Equivalent to `resources(filters)[0]` but returns `None` if no resources match.
+    ///
+    /// # Example (Python)
+    ///
+    /// ```python
+    /// resource = provider.least_busy()
+    /// resource = provider.least_busy("num_qubits=127&status=online")
+    /// ```
+    #[pyo3(signature = (filters=None))]
+    pub fn least_busy(&self, filters: Option<&str>) -> PyResult<Option<PyQuantumResource>> {
+        crate::common::initialize();
+        let result = self
+            .rt
+            .block_on(async { self.inner.least_busy(filters.map(str::to_string)).await });
+        match result {
+            Ok(resource) => Ok(resource.map(PyQuantumResource::from_inner)),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Config Python bindings
+// ---------------------------------------------------------------------------
+
+/// Python wrapper for QRMI configuration.
+///
+/// # Example (Python)
+///
+/// ```python
+/// from qrmi import Config, ResourceProvider
+///
+/// config = Config.load("/path/to/qrmi_config.json")
+///
+/// # Iterate over all resource definitions
+/// for name, resource_def in config.resource_map.items():
+///     print(f"{name}: is_dynamic={resource_def.is_dynamic}")
+///     if resource_def.is_dynamic:
+///         provider = ResourceProvider(resource_def.resource_type, resource_def.environment)
+///         resources = provider.resources()
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[pyo3(name = "Config")]
+pub struct PyConfig {
+    inner: crate::models::Config,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyConfig {
+    /// Loads a QRMI config file.
+    #[staticmethod]
+    pub fn load(path: &str) -> PyResult<Self> {
+        match crate::models::Config::load(path) {
+            Ok(inner) => Ok(Self { inner }),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
+    /// Returns a dict mapping resource name to ResourceDef.
+    #[getter]
+    pub fn resource_map(&self) -> std::collections::HashMap<String, PyResourceDef> {
+        self.inner
+            .resource_map
+            .iter()
+            .map(|(k, v)| (k.clone(), PyResourceDef { inner: v.clone() }))
+            .collect()
+    }
+}
+
 /// A Python module implemented in Rust.
 #[pymodule(name = "_core")]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -235,6 +469,9 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<crate::models::Payload>()?;
     m.add_class::<crate::models::Target>()?;
     m.add_class::<crate::models::TaskResult>()?;
+    m.add_class::<PyResourceDef>()?;
+    m.add_class::<PyResourceProvider>()?;
+    m.add_class::<PyConfig>()?;
     Ok(())
 }
 define_stub_info_gatherer!(stub_info);

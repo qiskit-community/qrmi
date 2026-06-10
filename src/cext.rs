@@ -11,6 +11,8 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::alice_bob::AliceBobFelis;
+use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::IBMQuantumSystemProvider;
 use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
@@ -97,8 +99,56 @@ pub struct ResourceDef {
     name: *mut c_char,
     /// Resource Type
     r#type: ResourceType,
+    /// Whether this is a dynamic resource (used with ResourceProvider)
+    is_dynamic: bool,
     /// environment variables for this resource
     environments: EnvironmentVariables,
+}
+
+/// Type alias for the C ResourceDef struct (used in qrmi_provider_new).
+type CResourceDef = ResourceDef;
+
+/// Converts a C `EnvironmentVariables` struct to a Rust `HashMap<String, String>`.
+unsafe fn envvars_to_hashmap(
+    envvars: &EnvironmentVariables,
+) -> anyhow::Result<std::collections::HashMap<String, String>> {
+    let mut map = std::collections::HashMap::new();
+    for i in 0..envvars.length {
+        let kv = &*envvars.variables.add(i);
+        if !kv.key.is_null() && !kv.value.is_null() {
+            let key = CStr::from_ptr(kv.key)
+                .to_str()
+                .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in env key: {}", e))?
+                .to_string();
+            let value = CStr::from_ptr(kv.value)
+                .to_str()
+                .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in env value: {}", e))?
+                .to_string();
+            map.insert(key, value);
+        }
+    }
+    Ok(map)
+}
+
+/// Rebuilds a Rust `models::ResourceDef` from a C `ResourceDef` struct.
+unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::models::ResourceDef> {
+    let name = if def.name.is_null() {
+        String::new()
+    } else {
+        CStr::from_ptr(def.name)
+            .to_str()
+            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in resource name: {}", e))?
+            .to_string()
+    };
+
+    let environment = envvars_to_hashmap(&def.environments)?;
+
+    Ok(crate::models::ResourceDef {
+        name,
+        r#type: def.r#type.clone(),
+        is_dynamic: def.is_dynamic,
+        environment,
+    })
 }
 
 /// Quantum resource metadata
@@ -330,6 +380,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
             let boxed_res = Box::new(ResourceDef {
                 name: CString::new(resource.name.clone()).unwrap().into_raw(),
                 r#type: resource.r#type.clone(),
+                is_dynamic: resource.is_dynamic,
                 environments: EnvironmentVariables {
                     variables: c_envvars.as_mut_ptr(),
                     length: c_envvars.len(),
@@ -1480,4 +1531,366 @@ pub unsafe extern "C" fn qrmi_resource_metadata_keys(
         *key_names = raw;
     }
     ReturnCode::Success
+}
+
+// ---------------------------------------------------------------------------
+// ResourceProvider C bindings
+// ---------------------------------------------------------------------------
+
+/// Resource provider handle.
+pub struct ResourceProvider {
+    inner: Box<dyn crate::ResourceProvider>,
+    runtime: Arc<tokio::runtime::Runtime>,
+}
+
+/// @ingroup QrmiResourceProvider
+/// Returns a QrmiResourceProvider handle for the specified resource type and environment.
+///
+/// Created handle must be released with qrmi_provider_free() when no longer needed.
+///
+/// Currently supported resource types:
+/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE
+/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM
+///
+/// # Safety
+///
+/// * `environments` must be a valid pointer to a QrmiEnvironmentVariables struct.
+///
+/// # Example
+///
+/// @code
+///   QrmiConfig *config = qrmi_config_load("/path/to/qrmi_config.json");
+///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
+///   QrmiResourceProvider *provider = qrmi_provider_new(def->type, &def->environments);
+///   if (provider == NULL) {
+///     const char *err = qrmi_get_last_error();
+///     printf("error: %s\n", err);
+///     qrmi_string_free((char *)err);
+///   }
+/// @endcode
+///
+/// @param (resource_type) [in] QrmiResourceType variant
+/// @param (environments)  [in] Pointer to QrmiEnvironmentVariables
+/// @return A QrmiResourceProvider handle if succeeded, otherwise NULL.
+///         Must call qrmi_provider_free() to free if no longer used.
+/// @version 0.15.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_provider_new(
+    resource_type: ResourceType,
+    environments: *const EnvironmentVariables,
+) -> *mut ResourceProvider {
+    crate::common::initialize();
+    if environments.is_null() {
+        _set_last_error("environments is NULL".to_string());
+        return std::ptr::null_mut();
+    }
+
+    // Convert EnvironmentVariables to HashMap<String, String>
+    let env_map = match envvars_to_hashmap(&*environments) {
+        Ok(m) => m,
+        Err(e) => {
+            _set_last_error(format!("{:?}", e));
+            return std::ptr::null_mut();
+        }
+    };
+
+    let provider: Box<dyn crate::ResourceProvider> = match resource_type {
+        ResourceType::QiskitRuntimeService => {
+            match IBMQiskitRuntimeServiceProvider::new(&env_map) {
+                Ok(inner) => Box::new(inner),
+                Err(err) => {
+                    _set_last_error(format!("{:?}", err));
+                    return std::ptr::null_mut();
+                }
+            }
+        }
+        ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&env_map) {
+            Ok(inner) => Box::new(inner),
+            Err(err) => {
+                _set_last_error(format!("{:?}", err));
+                return std::ptr::null_mut();
+            }
+        },
+        _ => {
+            _set_last_error("Unsupported resource type for dynamic resource discovery".to_string());
+            return std::ptr::null_mut();
+        }
+    };
+    Box::into_raw(Box::new(ResourceProvider {
+        inner: provider,
+        runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+    }))
+}
+
+/// @ingroup QrmiResourceProvider
+/// Frees the memory space pointed to by `ptr`, which must have been returned by
+/// a previous call to qrmi_provider_new(). If `ptr` is NULL, returns NullPointerError.
+///
+/// # Safety
+///
+/// * `ptr` must have been returned by a previous call to qrmi_provider_new().
+///
+/// # Example
+///
+/// @code
+///   QrmiConfig *config = qrmi_config_load("/path/to/qrmi_config.json");
+///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
+///   QrmiResourceProvider *provider = qrmi_provider_new(def->type, &def->environments);
+///   if (provider != NULL) {
+///     qrmi_provider_free(provider);
+///   }
+/// @endcode
+///
+/// @param (ptr) [in] A QrmiResourceProvider handle to be freed
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.15.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_provider_free(ptr: *mut ResourceProvider) -> ReturnCode {
+    crate::common::initialize();
+    if ptr.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    unsafe {
+        let _ = Box::from_raw(ptr);
+    }
+    ReturnCode::Success
+}
+
+/// A list of [`QuantumResource`] handles returned by [`qrmi_provider_resources`].
+///
+/// Must be freed with [`qrmi_provider_resources_free`] when no longer needed.
+#[repr(C)]
+pub struct QuantumResources {
+    /// Pointer to the first element in the contiguous array of `QrmiQuantumResource` handles.
+    pub resources: *mut *mut QuantumResource,
+    /// Number of handles in the array.
+    pub length: usize,
+}
+
+impl Default for QuantumResources {
+    fn default() -> Self {
+        Self {
+            resources: std::ptr::null_mut(),
+            length: 0,
+        }
+    }
+}
+
+/// @ingroup QrmiResourceProvider
+/// Returns a list of available quantum resources, optionally filtered.
+///
+/// Results are expected to be sorted in least-busy order.
+///
+/// The caller is responsible for freeing the returned struct with
+/// qrmi_provider_resources_free(). Individual handles inside the struct
+/// must NOT be freed separately.
+///
+/// # Safety
+///
+/// * `provider` must have been returned by a previous call to qrmi_provider_new().
+/// * `filters` may be NULL (no filtering) or a valid nul-terminated C string.
+/// * `resources_out` must be non-null and point to a zero-initialized QrmiQuantumResources.
+///
+/// # Filter string format
+///
+/// `key=value` pairs joined by `&`. Supported filters(constraints) are defined by each resource provider's implementation.
+///
+/// # Example
+///
+/// @code
+///   QrmiQuantumResources resources = {0};
+///   QrmiReturnCode rc = qrmi_provider_resources(provider, "num_qubits=127", &resources);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     for (size_t i = 0; i < resources.length; i++) {
+///       char *id = NULL;
+///       qrmi_resource_id(resources.resources[i], &id);
+///       printf("resource: %s\n", id);
+///       qrmi_string_free(id);
+///     }
+///     qrmi_provider_resources_free(&resources);
+///   }
+/// @endcode
+///
+/// @param (provider)      [in]  A QrmiResourceProvider handle
+/// @param (filters)       [in]  Filter string, or NULL for no filtering
+/// @param (resources_out) [out] Pointer to a QrmiQuantumResources struct to populate
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.15.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_provider_resources(
+    provider: *mut ResourceProvider,
+    filters: *const c_char,
+    resources_out: *mut QuantumResources,
+) -> ReturnCode {
+    crate::common::initialize();
+    if provider.is_null() || resources_out.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    let filters_opt: Option<String> = if filters.is_null() {
+        None
+    } else {
+        match CStr::from_ptr(filters).to_str() {
+            Ok(s) => Some(s.to_string()),
+            Err(_) => {
+                _set_last_error("filters: invalid UTF-8 string".to_string());
+                return ReturnCode::Error;
+            }
+        }
+    };
+
+    let result = (*provider)
+        .runtime
+        .block_on(async { (*provider).inner.resources(filters_opt).await });
+
+    match result {
+        Ok(resource_list) => {
+            let count = resource_list.len();
+            let mut raw_ptrs: Vec<*mut QuantumResource> = resource_list
+                .into_iter()
+                .map(|r| {
+                    Box::into_raw(Box::new(QuantumResource {
+                        inner: r,
+                        runtime: (*provider).runtime.clone(),
+                    }))
+                })
+                .collect();
+
+            let ptr = raw_ptrs.as_mut_ptr();
+            std::mem::forget(raw_ptrs);
+
+            (*resources_out).resources = ptr;
+            (*resources_out).length = count;
+            ReturnCode::Success
+        }
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            ReturnCode::Error
+        }
+    }
+}
+
+/// @ingroup QrmiResourceProvider
+/// Frees a QrmiQuantumResources struct populated by qrmi_provider_resources().
+///
+/// This frees both the individual QrmiQuantumResource handles and the internal
+/// array. After calling this, the struct's fields are zeroed.
+/// Do NOT call qrmi_resource_free() on individual elements after calling this.
+///
+/// # Safety
+///
+/// * `resources` must have been populated by a previous call to qrmi_provider_resources().
+///
+/// # Example
+///
+/// @code
+///   qrmi_provider_resources_free(&resources);
+/// @endcode
+///
+/// @param (resources) [in] Pointer to a QrmiQuantumResources struct to free
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.15.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_provider_resources_free(
+    resources: *mut QuantumResources,
+) -> ReturnCode {
+    crate::common::initialize();
+    if resources.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    let length = (*resources).length;
+    let ptr = (*resources).resources;
+    if !ptr.is_null() {
+        for i in 0..length {
+            let p = *ptr.add(i);
+            if !p.is_null() {
+                let _ = Box::from_raw(p);
+            }
+        }
+        let _ = Vec::from_raw_parts(ptr, length, length);
+    }
+    (*resources).resources = std::ptr::null_mut();
+    (*resources).length = 0;
+    ReturnCode::Success
+}
+
+/// @ingroup QrmiResourceProvider
+/// Returns the least busy available quantum resource, optionally filtered.
+///
+/// Equivalent to calling qrmi_provider_resources() and taking the first element.
+/// If no resources match the filter, `*resource_out` is set to NULL and the
+/// function returns QRMI_RETURN_CODE_SUCCESS.
+///
+/// The returned QrmiQuantumResource handle must be freed with qrmi_resource_free()
+/// when no longer needed.
+///
+/// # Safety
+///
+/// * `provider` must have been returned by a previous call to qrmi_provider_new().
+/// * `filters` may be NULL (no filtering) or a valid nul-terminated C string.
+/// * `resource_out` must be non-null.
+///
+/// # Example
+///
+/// @code
+///   QrmiQuantumResource *resource = NULL;
+///   QrmiReturnCode rc = qrmi_provider_least_busy(provider, NULL, &resource);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS && resource != NULL) {
+///     char *id = NULL;
+///     qrmi_resource_id(resource, &id);
+///     printf("least busy: %s\n", id);
+///     qrmi_string_free(id);
+///     qrmi_resource_free(resource);
+///   }
+/// @endcode
+///
+/// @param (provider)     [in]  A QrmiResourceProvider handle
+/// @param (filters)      [in]  Filter string, or NULL for no filtering
+/// @param (resource_out) [out] Least busy QrmiQuantumResource handle, or NULL if none found
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.15.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_provider_least_busy(
+    provider: *mut ResourceProvider,
+    filters: *const c_char,
+    resource_out: *mut *mut QuantumResource,
+) -> ReturnCode {
+    crate::common::initialize();
+    if provider.is_null() || resource_out.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    let filters_opt: Option<String> = if filters.is_null() {
+        None
+    } else {
+        match CStr::from_ptr(filters).to_str() {
+            Ok(s) => Some(s.to_string()),
+            Err(_) => {
+                _set_last_error("filters: invalid UTF-8 string".to_string());
+                return ReturnCode::Error;
+            }
+        }
+    };
+
+    let result = (*provider)
+        .runtime
+        .block_on(async { (*provider).inner.least_busy(filters_opt).await });
+
+    match result {
+        Ok(Some(r)) => {
+            *resource_out = Box::into_raw(Box::new(QuantumResource {
+                inner: r,
+                runtime: (*provider).runtime.clone(),
+            }));
+            ReturnCode::Success
+        }
+        Ok(None) => {
+            *resource_out = std::ptr::null_mut();
+            ReturnCode::Success
+        }
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            ReturnCode::Error
+        }
+    }
 }
