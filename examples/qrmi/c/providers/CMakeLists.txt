@@ -25,14 +25,12 @@ endif()
 set(PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../..)
 
 function(add_example TARGET_NAME C_FILE)
-  # source files for the client app
   set(SRC_FILE
           ${CMAKE_CURRENT_SOURCE_DIR}/${C_FILE}
   )
 
   add_executable(${TARGET_NAME} ${SRC_FILE})
 
-  # add libraries
   target_link_libraries(${TARGET_NAME}
           PUBLIC
           "-L${PROJECT_ROOT}/target/${LIB_PATH} -Wl,-rpath ${PROJECT_ROOT}/target/${LIB_PATH}" qrmi
@@ -48,7 +46,6 @@ function(add_example TARGET_NAME C_FILE)
     target_link_libraries(${TARGET_NAME} PUBLIC "-lm")
   endif()
 
-  # path to headerfile
   target_include_directories(${TARGET_NAME}
           PRIVATE
           ${CMAKE_CURRENT_SOURCE_DIR}/../../../..
@@ -57,4 +54,4 @@ function(add_example TARGET_NAME C_FILE)
   install (TARGETS ${TARGET_NAME} DESTINATION .)
 endfunction()
 
-add_example(qiskit_runtime_service_provider src/qiskit_runtime_service.c)
+add_example(providers src/providers.c)

@@ -18,11 +18,14 @@
 #include "qrmi.h"
 
 /*
- * Usage: ibm_quantum_system_provider <config_file> <resource_name> [filter]
+ * Usage: providers <config_file> <resource_name> [filter]
  *
  * config_file    - path to qrmi_config.json
  * resource_name  - name of the dynamic resource definition (is_dynamic=true)
- * filter         - optional filter string e.g. "num_qubits=127&name=test_*"
+ * filter         - optional filter string e.g. "num_qubits=127&name=ibm_*"
+ *
+ * The resource type is read from the config file (def->type), so this example
+ * works with any supported provider type without modification.
  */
 int main(int argc, char *argv[]) {
 
@@ -50,7 +53,8 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  QrmiResourceProvider *provider = qrmi_provider_new(QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM, &def->environments);
+  // Use def->type directly so this example works for any supported provider.
+  QrmiResourceProvider *provider = qrmi_provider_new(def->type, &def->environments);
   qrmi_config_resource_def_free(def);
   qrmi_config_free(config);
 
