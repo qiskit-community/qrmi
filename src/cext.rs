@@ -1537,7 +1537,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata_keys(
 // ResourceProvider C bindings
 // ---------------------------------------------------------------------------
 
-/// IBM Qiskit Runtime Service resource provider handle.
+/// Resource provider handle.
 pub struct ResourceProvider {
     inner: Box<dyn crate::ResourceProvider>,
     runtime: Arc<tokio::runtime::Runtime>,
