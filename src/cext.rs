@@ -1561,8 +1561,7 @@ pub struct ResourceProvider {
 /// @code
 ///   QrmiConfig *config = qrmi_config_load("/path/to/qrmi_config.json");
 ///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
-///   QrmiResourceProvider *provider = qrmi_provider_new(
-///       QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE, &def->environments);
+///   QrmiResourceProvider *provider = qrmi_provider_new(def->type, &def->environments);
 ///   if (provider == NULL) {
 ///     const char *err = qrmi_get_last_error();
 ///     printf("error: %s\n", err);
@@ -1634,7 +1633,9 @@ pub unsafe extern "C" fn qrmi_provider_new(
 /// # Example
 ///
 /// @code
-///   QrmiResourceProvider *provider = qrmi_provider_new();
+///   QrmiConfig *config = qrmi_config_load("/path/to/qrmi_config.json");
+///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
+///   QrmiResourceProvider *provider = qrmi_provider_new(def->type, &def->environments);
 ///   if (provider != NULL) {
 ///     qrmi_provider_free(provider);
 ///   }
