@@ -103,12 +103,12 @@ pub fn create_provider(
     environment: &HashMap<String, String>,
 ) -> Result<Box<dyn ResourceProvider>> {
     match resource_type {
-        ResourceType::QiskitRuntimeService => {
-            Ok(Box::new(crate::ibm::IBMQiskitRuntimeServiceProvider::new(environment)?))
-        }
-        ResourceType::IBMQuantumSystem => {
-            Ok(Box::new(crate::ibm::IBMQuantumSystemProvider::new(environment)?))
-        }
+        ResourceType::QiskitRuntimeService => Ok(Box::new(
+            crate::ibm::IBMQiskitRuntimeServiceProvider::new(environment)?,
+        )),
+        ResourceType::IBMQuantumSystem => Ok(Box::new(crate::ibm::IBMQuantumSystemProvider::new(
+            environment,
+        )?)),
         _ => Err(anyhow!(
             "Unsupported resource type for dynamic resource discovery: {}",
             resource_type.as_str()
