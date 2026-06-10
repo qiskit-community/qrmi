@@ -96,4 +96,4 @@ path = "examples/qrmi/rust/pasqal_cloud/src/main.rs"
 
 [[example]]
 name = "qrmi-example-providers"
-path = "examples/qrmi/rust/providers/src/main.rs"
+path = "examples/qrmi/rust/resource_providers/src/main.rs"
