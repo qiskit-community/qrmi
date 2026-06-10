@@ -10,34 +10,26 @@ use std::net::TcpListener;
 use std::thread;
 
 #[tokio::test]
-async fn is_accessible_attempts_authentication() {
-    // This test verifies that `is_accessible()` attempts to authenticate and uses the obtained token.
-    // We set up a mock server that simulates the authentication endpoint and the devices endpoint.
-    // The server will respond with a fixed token for the authentication request and will check that this token is used in the subsequent request to the devices endpoint.
-    // We also verify that `is_accessible()` returns true, indicating that the backend is accessible with the obtained token.
+async fn is_accessible_no_authentication() {
+    // This test verifies that `is_accessible()` does not need to authenticate.
+    // We set up a mock server that simulates the devices endpoint.
+    // We also verify that `is_accessible()` returns true, indicating that the backend is accessible.
 
     // Ask for any free port.
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind should succeed");
     let addr = listener.local_addr().expect("local_addr should succeed");
     // Setup Mock server with mocked responses.
     let mock_server = thread::spawn(move || {
-        for _ in 0..2 {
+        for _ in 0..1 {
             if let Ok((mut stream, _)) = listener.accept() {
                 // Read the request
                 let mut buf = [0_u8; 4096];
                 let n = stream.read(&mut buf).unwrap_or(0);
                 let req = String::from_utf8_lossy(&buf[..n]);
-                let req_lower = req.to_ascii_lowercase();
+                assert!(req.contains("/core-fast/api/v1/devices"));
 
-                // hardcode responses based on the request path
-                let body = if req.contains("/oauth/token") {
-                    r#"{"access_token":"opaque_token"}"#
-                } else if req.contains("/core-fast/api/v1/devices") {
-                    assert!(req_lower.contains("authorization: bearer opaque_token"));
-                    r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#
-                } else {
-                    r#"{}"#
-                };
+                // Hardcode response
+                let body = r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#;
 
                 // Write the response
                 let response = format!(
@@ -53,8 +45,6 @@ async fn is_accessible_attempts_authentication() {
 
     let mut builder = ClientBuilder::new("project-id".to_string());
     builder.with_base_url(format!("http://{}", addr));
-    builder.with_auth_endpoint(format!("http://{}/oauth/token", addr));
-    builder.with_credentials("usr".to_string(), "pass".to_string());
     let api_client = builder.build().expect("client build should succeed");
 
     // Create a PasqalCloud instance pointing to the mock server

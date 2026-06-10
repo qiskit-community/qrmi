@@ -13,7 +13,7 @@
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
-use log::{debug, error, warn};
+use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 use std::env;
@@ -251,7 +251,7 @@ impl PasqalCloud {
         } else if let Some(token) = auth_token {
             builder.with_token(token);
         } else {
-            error!(
+            debug!(
                 "No Pasqal Cloud auth details configured for backend '{}': expected PASQAL_USERNAME/PASQAL_PASSWORD, ~/.pasqal/config credentials, or token",
                 backend_name
             );
