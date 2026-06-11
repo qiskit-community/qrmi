@@ -1,8 +1,9 @@
 use super::PasqalCloud;
 use crate::models::ResourceType;
 use crate::pasqal::cloud_config::{
-    pasqal_config_path_from_root, read_pasqal_config, read_qrmi_config_env_value_from_content,
-    resolve_pasqal_credentials, resolve_pasqal_service_account_credentials, PasqalConfig,
+    expand_env_vars, pasqal_config_path_from_root, read_pasqal_config,
+    read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
+    resolve_pasqal_service_account_credentials, PasqalConfig,
 };
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
@@ -10,10 +11,8 @@ use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
-use std::time::{Duration, Instant};
 
 // Ensure that tests that manipulate environment variables are not run in parallel to avoid interference between them.
 fn env_lock() -> &'static Mutex<()> {
@@ -153,6 +152,48 @@ fn write_pasqal_config(root: &Path, content: &str) {
 }
 
 #[test]
+fn expand_env_vars_handles_path_expansion_cases() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    std::env::set_var("USER", "<user>");
+    std::env::set_var("PROJECT_DIR", "PROJ_123");
+    std::env::remove_var("UNKNOWN");
+
+    assert_eq!(
+        expand_env_vars("$USER").expect("$USER should expand"),
+        "<user>"
+    );
+    assert_eq!(
+        expand_env_vars("${USER}").expect("${USER} should expand"),
+        "<user>"
+    );
+    assert_eq!(
+        expand_env_vars("$UNKNOWN").expect("unset $UNKNOWN should expand"),
+        ""
+    );
+    assert_eq!(
+        expand_env_vars("${UNKNOWN}").expect("unset ${UNKNOWN} should expand"),
+        ""
+    );
+    assert_eq!(
+        expand_env_vars("$$USER").expect("$$ should escape $"),
+        "$USER"
+    );
+    assert_eq!(
+        expand_env_vars("/work/$PROJECT_DIR/$USER/config").expect("mixed value should expand"),
+        "/work/PROJ_123/<user>/config"
+    );
+
+    assert!(expand_env_vars("${USER").is_err());
+    assert!(expand_env_vars("${}").is_err());
+    assert!(expand_env_vars("${USER-NAME}").is_err());
+    assert_eq!(
+        expand_env_vars("$").expect("bare $ should be preserved"),
+        "$"
+    );
+    assert_eq!(expand_env_vars("$-").expect("$- should be preserved"), "$-");
+}
+
+#[test]
 fn pasqal_config_path_from_root_expands_home_and_environment_variables() {
     let _guard = env_lock().lock().expect("env lock should not be poisoned");
     let old_home = std::env::var("HOME").ok();
@@ -161,17 +202,24 @@ fn pasqal_config_path_from_root_expands_home_and_environment_variables() {
     std::env::set_var("USER", "aleks");
 
     assert_eq!(
-        pasqal_config_path_from_root("~/configs").as_deref(),
+        pasqal_config_path_from_root("~/configs")
+            .expect("path should expand")
+            .as_deref(),
         Some(Path::new("/home/aleks/configs/.pasqal/config"))
     );
     assert_eq!(
-        pasqal_config_path_from_root("/work/$USER/configs").as_deref(),
+        pasqal_config_path_from_root("/work/$USER/configs")
+            .expect("path should expand")
+            .as_deref(),
         Some(Path::new("/work/aleks/configs/.pasqal/config"))
     );
     assert_eq!(
-        pasqal_config_path_from_root("/work/${USER}/configs").as_deref(),
+        pasqal_config_path_from_root("/work/${USER}/configs")
+            .expect("path should expand")
+            .as_deref(),
         Some(Path::new("/work/aleks/configs/.pasqal/config"))
     );
+    assert!(pasqal_config_path_from_root("/work/${USER/configs").is_err());
 
     match old_home {
         Some(home) => std::env::set_var("HOME", home),

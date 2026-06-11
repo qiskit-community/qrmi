@@ -87,19 +87,20 @@ fn strip_quotes(s: &str) -> &str {
     }
 }
 
-pub(crate) fn pasqal_config_path_from_root(config_root: &str) -> Option<PathBuf> {
+pub(crate) fn pasqal_config_path_from_root(config_root: &str) -> Result<Option<PathBuf>> {
     let config_root = config_root.trim();
     if config_root.is_empty() {
-        return None;
+        return Ok(None);
     }
-    let expanded_config_root = expand_config_root(config_root);
+    let expanded_config_root = expand_config_root(config_root)?;
     let mut path = PathBuf::from(expanded_config_root);
     path.push(".pasqal");
     path.push("config");
-    Some(path)
+    Ok(Some(path))
 }
 
-fn expand_config_root(config_root: &str) -> String {
+// Expands ~ to the user's home directory and also expands environment variables in the config root path.
+fn expand_config_root(config_root: &str) -> Result<String> {
     let home_expanded = match config_root {
         "~" => env::var("HOME").unwrap_or_else(|_| config_root.to_string()),
         root if root.starts_with("~/") => env::var("HOME")
@@ -111,32 +112,58 @@ fn expand_config_root(config_root: &str) -> String {
     expand_env_vars(&home_expanded)
 }
 
-fn expand_env_vars(value: &str) -> String {
+// Expand environment variables in path strings. Supports $VAR, ${VAR}, and $$.
+pub(crate) fn expand_env_vars(value: &str) -> Result<String> {
     let mut expanded = String::new();
     let mut chars = value.chars().peekable();
 
     while let Some(ch) = chars.next() {
+        // If it's not a $, just add it to the result.
         if ch != '$' {
             expanded.push(ch);
             continue;
         }
 
+        // Handle $$ -> literal $
+        if chars.peek() == Some(&'$') {
+            chars.next();
+            expanded.push('$');
+            continue;
+        }
+
+        // Support {VAR} syntax. Verify that closing brace exists.
         if chars.peek() == Some(&'{') {
             chars.next();
             let mut key = String::new();
+            let mut closed = false;
             for var_ch in chars.by_ref() {
                 if var_ch == '}' {
+                    closed = true;
                     break;
                 }
                 key.push(var_ch);
             }
-            match env::var(&key) {
-                Ok(var_value) => expanded.push_str(&var_value),
-                Err(_) => expanded.push_str(&format!("${{{key}}}")),
+
+            if !closed {
+                return Err(anyhow!("malformed environment variable in path: missing closing brace after ${{{key}}}"));
+            }
+            if key.is_empty()
+                || !key
+                    .chars()
+                    .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+            {
+                return Err(anyhow!(
+                    "malformed environment variable in path: ${{{key}}}"
+                ));
+            }
+
+            if let Ok(var_value) = env::var(&key) {
+                expanded.push_str(&var_value);
             }
             continue;
-        }
+        } // end support for ${VAR} syntax
 
+        // Support $VAR syntax. Read until non-alphanumeric and non-underscore character.
         let mut key = String::new();
         while let Some(var_ch) = chars.peek().copied() {
             if var_ch == '_' || var_ch.is_ascii_alphanumeric() {
@@ -146,17 +173,15 @@ fn expand_env_vars(value: &str) -> String {
                 break;
             }
         }
+
         if key.is_empty() {
             expanded.push('$');
-        } else {
-            match env::var(&key) {
-                Ok(var_value) => expanded.push_str(&var_value),
-                Err(_) => expanded.push_str(&format!("${key}")),
-            }
+        } else if let Ok(var_value) = env::var(&key) {
+            expanded.push_str(&var_value);
         }
     }
 
-    expanded
+    Ok(expanded)
 }
 
 pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
@@ -164,7 +189,7 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
     let mut configured_config_root_paths: Vec<PathBuf> = Vec::new();
 
     if let Ok(config_root) = env::var("PASQAL_CONFIG_ROOT") {
-        if let Some(path) = pasqal_config_path_from_root(&config_root) {
+        if let Some(path) = pasqal_config_path_from_root(&config_root)? {
             configured_config_root_paths.push(path.clone());
             config_path_candidates.push(path);
         }
@@ -175,7 +200,7 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         format!("{backend_name}_PASQAL_CONFIG_ROOT"),
     ] {
         if let Ok(config_root) = env::var(&backend_config_root_var) {
-            if let Some(path) = pasqal_config_path_from_root(&config_root) {
+            if let Some(path) = pasqal_config_path_from_root(&config_root)? {
                 configured_config_root_paths.push(path.clone());
                 config_path_candidates.push(path);
             }
@@ -185,7 +210,7 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
     if let Some(config_root) = read_qrmi_config_env_value(backend_name, "QRMI_PASQAL_CONFIG_ROOT")
         .or_else(|| read_qrmi_config_env_value(backend_name, "PASQAL_CONFIG_ROOT"))
     {
-        if let Some(path) = pasqal_config_path_from_root(&config_root) {
+        if let Some(path) = pasqal_config_path_from_root(&config_root)? {
             configured_config_root_paths.push(path.clone());
             config_path_candidates.push(path);
         }
