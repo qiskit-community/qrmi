@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/github/license/qiskit-community/qrmi.svg?)](https://opensource.org/licenses/Apache-2.0) <!--- long-description-skip-begin -->
 [![Current Release](https://img.shields.io/github/release/qiskit-community/qrmi.svg?)](https://github.com/qiskit-community/qrmi/releases)
+![CI](https://img.shields.io/github/actions/workflow/status/qiskit-community/qrmi/on-schedule.yml?branch=main)
 [![Downloads](https://img.shields.io/pypi/dm/qrmi.svg)](https://pypi.org/project/qrmi/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi)
 [![Minimum rustc 1.91](https://img.shields.io/badge/rustc-1.91+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
