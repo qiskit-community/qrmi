@@ -1,5 +1,14 @@
 # Quantum resource management interface (QRMI)
 
+[![License](https://img.shields.io/github/license/qiskit-community/qrmi.svg?)](https://opensource.org/licenses/Apache-2.0) <!--- long-description-skip-begin -->
+[![Current Release](https://img.shields.io/github/release/qiskit-community/qrmi.svg?)](https://github.com/qiskit-community/qrmi/releases)
+![CI](https://img.shields.io/github/actions/workflow/status/qiskit-community/qrmi/on-schedule.yml?branch=main)
+[![Downloads](https://img.shields.io/pypi/dm/qrmi.svg)](https://pypi.org/project/qrmi/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi)
+[![Minimum rustc 1.91](https://img.shields.io/badge/rustc-1.91+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![Downloads](https://static.pepy.tech/badge/qrmi)](https://pepy.tech/project/qrmi)<!--- long-description-skip-end -->
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20650771.svg)](https://doi.org/10.5281/zenodo.20650771)
+
 The Quantum resource management interface (QRMI) is a vendor-agnostic library for high-performance compute (HPC) systems to access, control, and monitor the behavior of quantum computational resources. It acts as a thin middleware layer that abstracts away the complexities associated with controlling quantum resources through a set of simple APIs. Written in Rust, this interface also exposes Python and C APIs for ease of integration into nearly any computational environment.
 
 Find the source code to build and deploy QRMI in this [GitHub repository](https://github.com/qiskit-community/qrmi).
