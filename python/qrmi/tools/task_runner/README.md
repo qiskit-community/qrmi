@@ -172,14 +172,21 @@ task_runner ibm_marrakesh /shared/input/estimator_input.json
 | QRMI_JOB_QPU_TYPES | Should be `pasqal-cloud` |
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID |  Pasqal Cloud Project ID to access the QPU |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token |
+| <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID | Pasqal Cloud service account client ID (optional) |
+| <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account client secret (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
 
-Pasqal Cloud auth can also be provided via `~/.pasqal/config` (token or username/password), for example:
+Pasqal Cloud auth can also be provided via `~/.pasqal/config` (token or username/password). `PASQAL_CONFIG_ROOT` may point elsewhere; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`.
+
+Example:
 ```
 username=<your username>
 password=<your password>
 # or:
 # token=<your token>
+# or:
+# client_id=<your client id>
+# client_secret=<your client secret>
 #
 # optional override:
 # project_id=<your project id>

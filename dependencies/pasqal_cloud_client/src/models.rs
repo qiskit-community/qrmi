@@ -9,8 +9,15 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+pub mod api;
 pub mod batch;
 pub mod device;
 
+pub use self::api::{
+    AuthError, Batch, CancelBatchResponseData, CreateBatchResponseData, CreateCudaqJobResponseData,
+    GetBatchResponseData, GetCudaqJobResponseData, GetDeviceResponseData,
+    GetDeviceSpecsResponseData, GetJobResponseData, Job, Response,
+};
+pub(crate) use self::api::{AuthTokenResponse, JobResult};
 pub use self::batch::JobStatus;
 pub use self::device::DeviceType;

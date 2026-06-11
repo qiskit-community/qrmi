@@ -102,3 +102,41 @@ fn auth_token_usable_malformed_jwt() {
     let now = now_unix_seconds();
     assert!(!Client::is_auth_token_usable("a.@@@.c", now));
 }
+
+#[tokio::test]
+async fn request_service_account_access_token_uses_client_credentials() {
+    let mut server = mockito::Server::new_async().await;
+    let token = make_jwt(json!({"sub":"service-account","exp":now_unix_seconds() + 3600}));
+    let access_token_response = json!({
+        "access_token": token,
+        "expires_in": 3600,
+        "token_type": "Bearer",
+    });
+
+    server
+        .mock("POST", "/oauth/token")
+        .with_status(200)
+        .match_body(mockito::Matcher::AllOf(vec![
+            mockito::Matcher::UrlEncoded(
+                "grant_type".to_string(),
+                "client_credentials".to_string(),
+            ),
+            mockito::Matcher::UrlEncoded("client_id".to_string(), "client-id".to_string()),
+            mockito::Matcher::UrlEncoded("client_secret".to_string(), "client-secret".to_string()),
+            mockito::Matcher::UrlEncoded(
+                "audience".to_string(),
+                "https://apis.pasqal.cloud/account/api/v1".to_string(),
+            ),
+        ]))
+        .with_body(access_token_response.to_string())
+        .create_async()
+        .await;
+
+    let auth_endpoint = format!("{}/oauth/token", server.url());
+    let actual =
+        Client::request_service_account_access_token(&auth_endpoint, "client-id", "client-secret")
+            .await
+            .expect("service account token request should succeed");
+
+    assert_eq!(actual, token);
+}
