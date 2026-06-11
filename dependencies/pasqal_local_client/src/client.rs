@@ -142,9 +142,9 @@ impl Client {
     }
 
     pub async fn cancel_job(&self, job_id: &str) -> Result<JobResponse> {
-        let url = format!("{}/jobs/{}", self.base_url, job_id);
+        let url = format!("{}/jobs/{}/cancel", self.base_url, job_id);
         let headers = self.create_headers().await?;
-        let resp = self.client.delete(url).headers(headers).send().await?;
+        let resp = self.client.post(url).headers(headers).send().await?;
 
         self.handle_request(resp).await
     }
