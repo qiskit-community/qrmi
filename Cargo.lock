@@ -2504,7 +2504,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
