@@ -114,8 +114,11 @@ impl QuantumResource for PasqalLocal {
         }
     }
 
-    async fn task_stop(&mut self, _task_id: &str) -> Result<()> {
-        Ok(())
+    async fn task_stop(&mut self, task_id: &str) -> Result<()> {
+        match self.api_client.cancel_job(task_id).await {
+            Ok(_) => Ok(()),
+            Err(err) => Err(err),
+        }
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
