@@ -1,14 +1,20 @@
-# FAQ
+# Frequently Asked Questions
+
+## Table of Contents
+
+1. [General Question](#general-questions)
+2. [Job Execution Errors](#job-execution-errors)
+    1. [I get an error `spank_qrmi_c, failed to acquire resource: ibm_brisbane`](i-get-an-error-spank_qrmi_c-failed-to-acquire-resource-ibm_brisbane)
 
 ## Job Execution Errors
 
-### Q: I get an error `spank_qrmi_c, failed to acquire resource: ibm_brisbane`
+### I get an error `spank_qrmi_c, failed to acquire resource: ibm_brisbane`
 
 **Cause:** This error occurs when accessing IBM Quantum backends using an Open Plan account on IBM Quantum Platform.
 
 **What to check:**
 
-#### Setup
+1. Setup
 
 ```bash
 python3.11 -m venv ~/{your_pyenv}
@@ -16,7 +22,7 @@ source ~/{your_pyenv}/bin/activate
 pip install qiskit-ibm-runtime
 ```
 
-#### Create `test.py`
+2. Create `test.py`
 
 Replace SERVICE_CRN and API_KEY values with your credentials, <your backend name> with your backend name.
 
@@ -39,7 +45,7 @@ with Session(backend=backend, max_time=1) as session:
     print("Succeeded in obtaining a Qiskit Session")
 ```
 
-#### Run this testcase
+3. Run this testcase
 
 ```bash
 python test.py
