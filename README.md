@@ -82,6 +82,10 @@ If you'd like to contribute to QRMI, please take a look at our
 We use [GitHub issues](https://github.com/qiskit-community/qrmi/issues) for tracking requests and bugs. Please
 [join the Qiskit Slack community](https://qisk.it/join-slack) for discussion, comments, and questions.
 
+## Frequently Asked Questions
+
+Refer [this document](https://github.com/qiskit-community/qrmi/blob/main/FAQ.md).
+
 
 ## References and Acknowledgements
 1. Quantum spank plugins for Slurm https://github.com/qiskit-community/spank-plugins
