@@ -8,7 +8,7 @@
 
 **What to check:**
 
-- Setup
+1) Setup
 
 ```bash
 python3.11 -m venv ~/{your_pyenv}
@@ -16,7 +16,7 @@ source ~/{your_pyenv}/bin/activate
 pip install qiskit-ibm-runtime
 ```
 
-- Create `test.py`
+2) Create `test.py`
 
 Replace SERVICE_CRN and API_KEY values with your credentials, <your backend name> with your backend name.
 
@@ -39,7 +39,7 @@ with Session(backend=backend, max_time=1) as session:
     print("Succeeded in obtaining a Qiskit Session")
 ```
 
-- Run this testcase
+3) Run this testcase
 
 ```bash
 python test.py
