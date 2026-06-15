@@ -60,7 +60,7 @@ You are not authorized to run a session when using the open plan.
 **How to resolve:**
 
 - Use a Premium Plan account, or
-- Use 'Batch' execution mode
+- Use [Batch](https://quantum.cloud.ibm.com/docs/en/guides/execution-modes#batch-mode) execution mode
   - Add `QRMI_IBM_QRS_SESSION_MODE` environment variable with "batch" in your qrmi_config.json
 
 ```json
