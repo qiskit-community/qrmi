@@ -95,6 +95,16 @@ it applies the `spec.suspend: true` to the job which tells the k8s job controlle
 
 So in terms of this operator, kubernetes jobs are first-class citizens. Other workload types can manually create their claims for now, but the reality is that quantum workloads are overwhelmingly likely to be jobs.
 
+The following annotations customize the other `QuantumResourceClaim` parameters.
+
+```
+annotations:
+  quantum.qrmi.io/ttl: 500
+  quantum.qrmi.io/secret-name: xxx
+```
+
+The secret name defaults to `qrc-<job-name>` if not specified. This be referenced explicitly in the job.
+
 ### Cleaning up 
 
 Quantum Resources are freed when a `QuantumResourceClaim` is deleted. The way this behaviour is implemented is through finalizers. The controller adds a finalizer like this:
@@ -142,3 +152,4 @@ Lastly, the controller will delete claims when they exceed their `ttl` field.
     - A related object changes — e.g. kube-rs watches() configuration lets you trigger reconciliation of a parent when a child changes
     - Explicit Action::requeue() timer fires
     - Periodic full resync
+- Bug: currently can only execute from operator namespace as operator searches for qr secret in the tenant namespace
