@@ -4,11 +4,11 @@
 
 1. [General Question](#general-questions)
 2. [Job Execution Errors](#job-execution-errors)
-    1. [I get an error `spank_qrmi_c, failed to acquire resource: ibm_brisbane`](i-get-an-error-spank_qrmi_c-failed-to-acquire-resource-ibm_brisbane)
+    1. [I get an error `error: spank_qrmi_c, failed to acquire resource: ibm_brisbane`](#i-get-an-error-error-spank_qrmi_c-failed-to-acquire-resource-ibm_brisbane)
 
 ## Job Execution Errors
 
-### I get an error `spank_qrmi_c, failed to acquire resource: ibm_brisbane`
+### I get an error `error: spank_qrmi_c, failed to acquire resource: ibm_brisbane`
 
 **Cause:** This error occurs when accessing IBM Quantum backends using an Open Plan account on IBM Quantum Platform.
 
