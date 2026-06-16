@@ -103,7 +103,7 @@ annotations:
   quantum.qrmi.io/secret-name: xxx
 ```
 
-The secret name defaults to `qrc-<job-name>` if not specified. This be referenced explicitly in the job.
+The secret name defaults to `qrc-job-<job-name>` if not specified. This needs to be referenced explicitly in the job.
 
 ### Cleaning up 
 
@@ -153,3 +153,6 @@ Lastly, the controller will delete claims when they exceed their `ttl` field.
     - Explicit Action::requeue() timer fires
     - Periodic full resync
 - Bug: currently can only execute from operator namespace as operator searches for qr secret in the tenant namespace
+- Question of RBAC and access
+  - Right now anyone can create a quantum resource as its not namespaced. Maybe it should be be namespaced and only those in the admin namespace are considered?
+  - there's a sense in which this operator is just a glorified secret distributor. Anyone who can create a claim gets a secret. Is this ok? how does this compare to Slurm risk model?
