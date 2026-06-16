@@ -1,6 +1,6 @@
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
-use pasqal_cloud_api::Client;
+use pasqal_cloud_api::{AccessTokenRequest, Client, ClientBuilder};
 use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -104,7 +104,46 @@ fn auth_token_usable_malformed_jwt() {
 }
 
 #[tokio::test]
-async fn request_service_account_access_token_uses_client_credentials() {
+async fn request_access_token_uses_username_password() {
+    let mut server = mockito::Server::new_async().await;
+    let token = make_jwt(json!({"sub":"user","exp":now_unix_seconds() + 3600}));
+    let access_token_response = json!({
+        "access_token": token,
+        "expires_in": 3600,
+        "token_type": "Bearer",
+    });
+
+    server
+        .mock("POST", "/oauth/token")
+        .with_status(200)
+        .match_body(mockito::Matcher::AllOf(vec![
+            mockito::Matcher::UrlEncoded(
+                "grant_type".to_string(),
+                "http://auth0.com/oauth/grant-type/password-realm".to_string(),
+            ),
+            mockito::Matcher::UrlEncoded("username".to_string(), "mock-user".to_string()),
+            mockito::Matcher::UrlEncoded("password".to_string(), "mock-password".to_string()),
+        ]))
+        .with_body(access_token_response.to_string())
+        .create_async()
+        .await;
+
+    let auth_endpoint = format!("{}/oauth/token", server.url());
+    let actual = Client::request_access_token(
+        &auth_endpoint,
+        AccessTokenRequest::UsernamePassword {
+            username: "mock-user",
+            password: "mock-password",
+        },
+    )
+    .await
+    .expect("username/password token request should succeed");
+
+    assert_eq!(actual, token);
+}
+
+#[tokio::test]
+async fn request_access_token_uses_service_account_credentials() {
     let mut server = mockito::Server::new_async().await;
     let token = make_jwt(json!({"sub":"service-account","exp":now_unix_seconds() + 3600}));
     let access_token_response = json!({
@@ -121,11 +160,10 @@ async fn request_service_account_access_token_uses_client_credentials() {
                 "grant_type".to_string(),
                 "client_credentials".to_string(),
             ),
-            mockito::Matcher::UrlEncoded("client_id".to_string(), "client-id".to_string()),
-            mockito::Matcher::UrlEncoded("client_secret".to_string(), "client-secret".to_string()),
+            mockito::Matcher::UrlEncoded("client_id".to_string(), "mock-client-id".to_string()),
             mockito::Matcher::UrlEncoded(
-                "audience".to_string(),
-                "https://apis.pasqal.cloud/account/api/v1".to_string(),
+                "client_secret".to_string(),
+                "mock-client-secret".to_string(),
             ),
         ]))
         .with_body(access_token_response.to_string())
@@ -133,10 +171,68 @@ async fn request_service_account_access_token_uses_client_credentials() {
         .await;
 
     let auth_endpoint = format!("{}/oauth/token", server.url());
-    let actual =
-        Client::request_service_account_access_token(&auth_endpoint, "client-id", "client-secret")
-            .await
-            .expect("service account token request should succeed");
+    let actual = Client::request_access_token(
+        &auth_endpoint,
+        AccessTokenRequest::ServiceAccount {
+            client_id: "mock-client-id",
+            client_secret: "mock-client-secret",
+        },
+    )
+    .await
+    .expect("service account token request should succeed");
 
     assert_eq!(actual, token);
+}
+
+#[tokio::test]
+async fn client_builder_service_account_credentials_refreshes_token_for_authenticated_request() {
+    let mut server = mockito::Server::new_async().await;
+    let token = make_jwt(json!({"sub":"service-account","exp":now_unix_seconds() + 3600}));
+    let access_token_response = json!({
+        "access_token": token,
+        "expires_in": 3600,
+        "token_type": "Bearer",
+    });
+
+    server
+        .mock("POST", "/oauth/token")
+        .with_status(200)
+        .match_body(mockito::Matcher::AllOf(vec![
+            mockito::Matcher::UrlEncoded(
+                "grant_type".to_string(),
+                "client_credentials".to_string(),
+            ),
+            mockito::Matcher::UrlEncoded("client_id".to_string(), "mock-client-id".to_string()),
+            mockito::Matcher::UrlEncoded(
+                "client_secret".to_string(),
+                "mock-client-secret".to_string(),
+            ),
+        ]))
+        .with_body(access_token_response.to_string())
+        .create_async()
+        .await;
+
+    server
+        .mock("GET", "/core-fast/api/v2/batches/batch-id")
+        .with_status(200)
+        .match_header("authorization", format!("Bearer {token}").as_str())
+        .with_body(json!({"data":{"status":"DONE","job_ids":["job-id"]}}).to_string())
+        .create_async()
+        .await;
+
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_auth_endpoint(format!("{}/oauth/token", server.url()));
+    builder.with_base_url(server.url());
+    builder.with_service_account_credentials(
+        "mock-client-id".to_string(),
+        "mock-client-secret".to_string(),
+    );
+    let mut client = builder.build().expect("client should build");
+
+    let batch = client
+        .get_batch("batch-id")
+        .await
+        .expect("authenticated request should succeed");
+
+    assert_eq!(batch.data.job_ids, vec!["job-id".to_string()]);
 }

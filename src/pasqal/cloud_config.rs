@@ -11,7 +11,7 @@
 // that they have been altered from the originals.
 
 use anyhow::{anyhow, Result};
-use log::warn;
+use log::{debug, warn};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -34,47 +34,47 @@ impl PasqalConfig {
         read_pasqal_config(backend_name)
     }
 
-    pub(crate) fn project_id(&self, backend_name: &str) -> Result<String> {
-        let project_id_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID");
-        env::var(&project_id_var)
-            .ok()
-            .filter(|v| !v.trim().is_empty())
+    pub(crate) fn project_id(&self, backend_name: &str) -> Option<String> {
+        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID")
             .or(self.project_id.clone().filter(|v| !v.trim().is_empty()))
-            .or(read_qrmi_config_env_value(
-                backend_name,
-                "QRMI_PASQAL_CLOUD_PROJECT_ID",
-            ))
-            .ok_or_else(|| {
-                anyhow!(
-                    "{project_id_var} is not set and no project_id was found in ~/.pasqal/config or /etc/slurm/qrmi_config.json"
-                )
-            })
     }
 
     pub(crate) fn auth_token(&self, backend_name: &str) -> Option<String> {
         env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_TOKEN")
             .or(self.token.clone().filter(|v| !v.trim().is_empty()))
-            .or(read_qrmi_config_env_value(
-                backend_name,
-                "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
-            ))
     }
 
     pub(crate) fn auth_endpoint(&self, backend_name: &str) -> String {
         env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT")
             .or(self.auth_endpoint.clone().filter(|v| !v.trim().is_empty()))
-            .or(read_qrmi_config_env_value(
-                backend_name,
-                "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT",
-            ))
             .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string())
     }
 
     pub(crate) fn base_url(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_BASE_URL").or(read_qrmi_config_env_value(
-            backend_name,
-            "QRMI_PASQAL_CLOUD_BASE_URL",
-        ))
+        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_BASE_URL")
+    }
+
+    pub(crate) fn credentials(&self) -> (Option<String>, Option<String>) {
+        let username = env::var("PASQAL_USERNAME")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or(self.username.clone().filter(|v| !v.trim().is_empty()));
+        let password = env::var("PASQAL_PASSWORD")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or(self.password.clone().filter(|v| !v.trim().is_empty()));
+        (username, password)
+    }
+
+    pub(crate) fn service_account_credentials(
+        &self,
+        backend_name: &str,
+    ) -> (Option<String>, Option<String>) {
+        let client_id = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_ID")
+            .or(self.client_id.clone().filter(|v| !v.trim().is_empty()));
+        let client_secret = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_SECRET")
+            .or(self.client_secret.clone().filter(|v| !v.trim().is_empty()));
+        (client_id, client_secret)
     }
 }
 
@@ -207,15 +207,6 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         }
     }
 
-    if let Some(config_root) = read_qrmi_config_env_value(backend_name, "QRMI_PASQAL_CONFIG_ROOT")
-        .or_else(|| read_qrmi_config_env_value(backend_name, "PASQAL_CONFIG_ROOT"))
-    {
-        if let Some(path) = pasqal_config_path_from_root(&config_root)? {
-            configured_config_root_paths.push(path.clone());
-            config_path_candidates.push(path);
-        }
-    }
-
     if let Ok(home) = env::var("HOME") {
         if !home.trim().is_empty() {
             let mut path = PathBuf::from(home);
@@ -227,15 +218,20 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
 
     let content = match config_path_candidates
         .iter()
-        .find_map(|path| fs::read_to_string(path).ok())
+        .find_map(|path| fs::read_to_string(path).ok().map(|content| (path, content)))
     {
-        Some(content) => content,
+        Some((path, content)) => {
+            debug!("Reading Pasqal config file: {}", path.display());
+            content
+        }
         None => {
-            for path in configured_config_root_paths {
-                warn!(
-                    "Pasqal config root is set but config file was not found: {}",
-                    path.display()
-                );
+            if !configured_config_root_paths.is_empty() {
+                let paths = configured_config_root_paths
+                    .iter()
+                    .map(|path| path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                warn!("Pasqal config root is set but no config file was found. Checked: {paths}");
             }
             return Ok(PasqalConfig::default());
         }
@@ -271,69 +267,8 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
     Ok(config)
 }
 
-pub(crate) fn read_qrmi_config_env_value(backend_name: &str, key: &str) -> Option<String> {
-    let content = fs::read_to_string("/etc/slurm/qrmi_config.json").ok()?;
-    read_qrmi_config_env_value_from_content(&content, backend_name, key)
-}
-
-pub(crate) fn read_qrmi_config_env_value_from_content(
-    content: &str,
-    backend_name: &str,
-    key: &str,
-) -> Option<String> {
-    let root: serde_json::Value = serde_json::from_str(content).ok()?;
-    let resources = root.get("resources")?.as_array()?;
-
-    for r in resources {
-        let Some(name) = r.get("name").and_then(|name| name.as_str()) else {
-            continue;
-        };
-        if name != backend_name {
-            continue;
-        }
-        let env = r.get("environment")?.as_object()?;
-        let v = env.get(key)?.as_str()?.trim();
-        if v.is_empty() {
-            return None;
-        }
-        return Some(v.to_string());
-    }
-    None
-}
-
 fn env_config_value(backend_name: &str, key: &str) -> Option<String> {
     env::var(format!("{backend_name}_{key}"))
         .ok()
         .filter(|v| !v.trim().is_empty())
-}
-
-pub(crate) fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<String>) {
-    let username = env::var("PASQAL_USERNAME")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .or(cfg.username.clone().filter(|v| !v.trim().is_empty()));
-    let password = env::var("PASQAL_PASSWORD")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .or(cfg.password.clone().filter(|v| !v.trim().is_empty()));
-    (username, password)
-}
-
-pub(crate) fn resolve_pasqal_service_account_credentials(
-    backend_name: &str,
-    cfg: &PasqalConfig,
-) -> (Option<String>, Option<String>) {
-    let client_id = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_ID")
-        .or(cfg.client_id.clone().filter(|v| !v.trim().is_empty()))
-        .or(read_qrmi_config_env_value(
-            backend_name,
-            "QRMI_PASQAL_CLOUD_CLIENT_ID",
-        ));
-    let client_secret = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_SECRET")
-        .or(cfg.client_secret.clone().filter(|v| !v.trim().is_empty()))
-        .or(read_qrmi_config_env_value(
-            backend_name,
-            "QRMI_PASQAL_CLOUD_CLIENT_SECRET",
-        ));
-    (client_id, client_secret)
 }

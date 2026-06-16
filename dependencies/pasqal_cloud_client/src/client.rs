@@ -13,11 +13,7 @@
 
 use anyhow::{bail, Result};
 
-use crate::models::{
-    Batch, CancelBatchResponseData, CreateBatchResponseData, CreateCudaqJobResponseData,
-    DeviceType, GetBatchResponseData, GetCudaqJobResponseData, GetDeviceResponseData,
-    GetDeviceSpecsResponseData, GetJobResponseData, Job, JobResult, Response,
-};
+use crate::models;
 use log::debug;
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
@@ -49,12 +45,16 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn get_device(&mut self, device_type: DeviceType) -> Result<GetDeviceResponseData> {
+    pub async fn get_device(
+        &mut self,
+        device_type: models::DeviceType,
+    ) -> Result<models::GetDeviceResponseData> {
         let url = format!(
             "{}/core-fast/api/v1/devices?device_type={}",
             self.base_url, device_type,
         );
-        let resp: Response<Vec<GetDeviceResponseData>> = self.get_unauthenticated(&url).await?;
+        let resp: models::Response<Vec<models::GetDeviceResponseData>> =
+            self.get_unauthenticated(&url).await?;
 
         resp.data
             .into_iter()
@@ -69,12 +69,12 @@ impl Client {
         &mut self,
         sequence: String,
         job_runs: i32,
-        device_type: DeviceType,
-    ) -> Result<Response<CreateBatchResponseData>> {
+        device_type: models::DeviceType,
+    ) -> Result<models::Response<models::CreateBatchResponseData>> {
         let url = format!("{}/core-fast/api/v1/batches", self.base_url);
-        let batch = Batch {
+        let batch = models::Batch {
             sequence_builder: sequence,
-            jobs: Vec::from([Job { runs: job_runs }]),
+            jobs: Vec::from([models::Job { runs: job_runs }]),
             device_type: device_type.to_string(),
             project_id: self.project_id.clone(),
         };
@@ -87,8 +87,8 @@ impl Client {
         &mut self,
         sequence: Value,
         shots: i32,
-        device_type: DeviceType,
-    ) -> Result<Response<CreateCudaqJobResponseData>> {
+        device_type: models::DeviceType,
+    ) -> Result<models::Response<models::CreateCudaqJobResponseData>> {
         let url = format!("{}/core-fast/api/v1/cudaq/job", self.base_url);
         let payload = serde_json::json!({
             "machine": device_type.to_string(),
@@ -102,7 +102,7 @@ impl Client {
     pub async fn cancel_batch(
         &mut self,
         batch_id: &str,
-    ) -> Result<Response<CancelBatchResponseData>> {
+    ) -> Result<models::Response<models::CancelBatchResponseData>> {
         let url = format!(
             "{}/core-fast/api/v2/batches/{}/cancel",
             self.base_url, batch_id
@@ -110,7 +110,10 @@ impl Client {
         self.patch(&url).await
     }
 
-    pub async fn get_batch(&mut self, batch_id: &str) -> Result<Response<GetBatchResponseData>> {
+    pub async fn get_batch(
+        &mut self,
+        batch_id: &str,
+    ) -> Result<models::Response<models::GetBatchResponseData>> {
         let url = format!("{}/core-fast/api/v2/batches/{}", self.base_url, batch_id);
         self.get(&url).await
     }
@@ -123,12 +126,15 @@ impl Client {
     pub async fn get_cudaq_job(
         &mut self,
         job_id: &str,
-    ) -> Result<Response<GetCudaqJobResponseData>> {
+    ) -> Result<models::Response<models::GetCudaqJobResponseData>> {
         let url = format!("{}/core-fast/api/v1/cudaq/job/{}", self.base_url, job_id);
         self.get(&url).await
     }
 
-    pub async fn get_job(&mut self, job_id: &str) -> Result<Response<GetJobResponseData>> {
+    pub async fn get_job(
+        &mut self,
+        job_id: &str,
+    ) -> Result<models::Response<models::GetJobResponseData>> {
         let url = format!("{}/core-fast/api/v2/jobs/{}", self.base_url, job_id);
         self.get(&url).await
     }
@@ -139,7 +145,7 @@ impl Client {
             self.base_url, batch_id
         );
 
-        let resp: Response<HashMap<String, JobResult>> = self.get(&url).await?;
+        let resp: models::Response<HashMap<String, models::JobResult>> = self.get(&url).await?;
 
         let data = resp.data;
 
@@ -155,12 +161,12 @@ impl Client {
         }
     }
 
-    pub async fn get_device_specs(&mut self, device_type: DeviceType) -> Result<String> {
+    pub async fn get_device_specs(&mut self, device_type: models::DeviceType) -> Result<String> {
         // In case of emulator devices, we return public specs to enable users to build sequences
         // according to current cloud specs
         if device_type.to_string().starts_with("EMU") {
             let url = format!("{}/core-fast/api/v1/devices/public-specs", self.base_url);
-            let raw_response: Response<Vec<GetDeviceSpecsResponseData>> =
+            let raw_response: models::Response<Vec<models::GetDeviceSpecsResponseData>> =
                 self.get_unauthenticated(&url).await?;
             let specs_string = serde_json::to_string(&raw_response.data)?;
             Ok(specs_string)
@@ -169,7 +175,8 @@ impl Client {
                 "{}/core-fast/api/v1/devices/specs/{}",
                 self.base_url, device_type
             );
-            let raw_response: Response<GetDeviceSpecsResponseData> = self.get(&url).await?;
+            let raw_response: models::Response<models::GetDeviceSpecsResponseData> =
+                self.get(&url).await?;
             // Matching the data structure from the /public-specs endpoint
             let specs_string = serde_json::to_string(&vec![raw_response.data])?;
             Ok(specs_string)

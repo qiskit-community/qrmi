@@ -19,6 +19,7 @@ mod auth;
 mod client;
 mod models;
 
+pub use auth::AccessTokenRequest;
 pub use client::{Client, ClientBuilder};
 pub use models::AuthError;
 pub use models::DeviceType;

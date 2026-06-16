@@ -27,6 +27,44 @@ const AUTH_REALM: &str = "pcs-users";
 const AUTH_CLIENT_ID: &str = "PeZvo7Atx7IVv3iel59asJSb4Ig7vuSB";
 const AUTH_AUDIENCE: &str = "https://apis.pasqal.cloud/account/api/v1";
 
+/// Credentials used to request a Pasqal Cloud access token.
+pub enum AccessTokenRequest<'a> {
+    /// Username/password authentication for regular users.
+    UsernamePassword {
+        username: &'a str,
+        password: &'a str,
+    },
+    /// Client credentials authentication for service accounts.
+    ServiceAccount {
+        client_id: &'a str,
+        client_secret: &'a str,
+    },
+}
+
+impl AccessTokenRequest<'_> {
+    fn form_params(&self) -> Vec<(&'static str, &str)> {
+        match self {
+            Self::UsernamePassword { username, password } => vec![
+                ("grant_type", AUTH_GRANT_TYPE),
+                ("realm", AUTH_REALM),
+                ("client_id", AUTH_CLIENT_ID),
+                ("audience", AUTH_AUDIENCE),
+                ("username", username),
+                ("password", password),
+            ],
+            Self::ServiceAccount {
+                client_id,
+                client_secret,
+            } => vec![
+                ("grant_type", AUTH_SERVICE_ACCOUNT_GRANT_TYPE),
+                ("client_id", client_id),
+                ("client_secret", client_secret),
+                ("audience", AUTH_AUDIENCE),
+            ],
+        }
+    }
+}
+
 fn now_unix_seconds() -> Result<i64> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64)
 }
@@ -78,15 +116,21 @@ impl Client {
             (self.username.as_deref(), self.password.as_deref())
         {
             debug!("Requesting new user auth token from Pasqal Cloud");
-            Self::request_access_token(&self.auth_endpoint, username, password).await?
+            Self::request_access_token(
+                &self.auth_endpoint,
+                AccessTokenRequest::UsernamePassword { username, password },
+            )
+            .await?
         } else if let (Some(client_id), Some(client_secret)) =
             (self.client_id.as_deref(), self.client_secret.as_deref())
         {
             debug!("Requesting new service account auth token from Pasqal Cloud");
-            Self::request_service_account_access_token(
+            Self::request_access_token(
                 &self.auth_endpoint,
-                client_id,
-                client_secret,
+                AccessTokenRequest::ServiceAccount {
+                    client_id,
+                    client_secret,
+                },
             )
             .await?
         } else {
@@ -97,22 +141,13 @@ impl Client {
         Ok(())
     }
 
-    /// Request a Pasqal Cloud access token using username/password.
+    /// Request a Pasqal Cloud access token.
     pub async fn request_access_token(
         auth_endpoint: &str,
-        username: &str,
-        password: &str,
+        request: AccessTokenRequest<'_>,
     ) -> Result<String> {
-        let auth_endpoint = Self::normalize_auth_endpoint(auth_endpoint, "username/password")?;
-
-        let client_params = [
-            ("grant_type", AUTH_GRANT_TYPE),
-            ("realm", AUTH_REALM),
-            ("client_id", AUTH_CLIENT_ID),
-            ("audience", AUTH_AUDIENCE),
-            ("username", username),
-            ("password", password),
-        ];
+        let auth_endpoint = Self::normalize_auth_endpoint(auth_endpoint)?;
+        let client_params = request.form_params();
 
         let resp = reqwest::Client::new()
             .post(auth_endpoint)
@@ -134,44 +169,9 @@ impl Client {
         }
     }
 
-    /// Request a Pasqal Cloud access token using service account credentials.
-    pub async fn request_service_account_access_token(
-        auth_endpoint: &str,
-        client_id: &str,
-        client_secret: &str,
-    ) -> Result<String> {
-        let auth_endpoint = Self::normalize_auth_endpoint(auth_endpoint, "service account")?;
-
-        let client_params = [
-            ("grant_type", AUTH_SERVICE_ACCOUNT_GRANT_TYPE),
-            ("client_id", client_id),
-            ("client_secret", client_secret),
-            ("audience", AUTH_AUDIENCE),
-        ];
-
-        let resp = reqwest::Client::new()
-            .post(auth_endpoint)
-            .header(
-                reqwest::header::CONTENT_TYPE,
-                "application/x-www-form-urlencoded",
-            )
-            .form(&client_params)
-            .send()
-            .await?;
-
-        if resp.status().is_success() {
-            let token: AuthTokenResponse = resp.json().await?;
-            Ok(token.access_token)
-        } else {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            bail!("Token request failed: {} {}", status, body);
-        }
-    }
-
-    fn normalize_auth_endpoint(auth_endpoint: &str, auth_method: &str) -> Result<String> {
+    fn normalize_auth_endpoint(auth_endpoint: &str) -> Result<String> {
         if auth_endpoint.trim().is_empty() {
-            bail!("auth endpoint must be configured when using {auth_method} authentication");
+            bail!("auth endpoint must be configured when requesting an access token");
         } else if auth_endpoint.contains("://") {
             Ok(auth_endpoint.trim().to_string())
         } else {

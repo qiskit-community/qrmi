@@ -1,9 +1,7 @@
 use super::PasqalCloud;
 use crate::models::ResourceType;
 use crate::pasqal::cloud_config::{
-    expand_env_vars, pasqal_config_path_from_root, read_pasqal_config,
-    read_qrmi_config_env_value_from_content, resolve_pasqal_credentials,
-    resolve_pasqal_service_account_credentials, PasqalConfig,
+    expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalConfig,
 };
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
@@ -92,7 +90,7 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
         project_id: None,
         auth_endpoint: None,
     };
-    let (username, password) = resolve_pasqal_credentials(&cfg);
+    let (username, password) = cfg.credentials();
 
     assert_eq!(username.as_deref(), Some("env-user"));
     assert_eq!(password.as_deref(), Some("env-pass"));
@@ -119,7 +117,7 @@ fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
         project_id: None,
         auth_endpoint: None,
     };
-    let (client_id, client_secret) = resolve_pasqal_service_account_credentials("EMU_FREE", &cfg);
+    let (client_id, client_secret) = cfg.service_account_credentials("EMU_FREE");
 
     assert_eq!(client_id.as_deref(), Some("env-client-id"));
     assert_eq!(client_secret.as_deref(), Some("env-client-secret"));
@@ -129,20 +127,45 @@ fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
 }
 
 #[test]
-fn read_qrmi_config_env_value_handles_empty_environment_key() {
-    // This test verifies that `read_qrmi_config_env_value_from_content()` correctly
-    // handles cases where the "environment" key is empty for a resource.
-    let content = r#"{
-        "resources": [
-            {"name":"EMU_FREE","type":"pasqal-cloud","environment":{}},        ]
-    }"#;
+fn pasqal_cloud_new_allows_missing_project_id_and_auth() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    let vars = [
+        "PASQAL_USERNAME",
+        "PASQAL_PASSWORD",
+        "PASQAL_CONFIG_ROOT",
+        "EMU_FREE_QRMI_PASQAL_CONFIG_ROOT",
+        "EMU_FREE_PASQAL_CONFIG_ROOT",
+        "EMU_FREE_QRMI_PASQAL_CLOUD_PROJECT_ID",
+        "EMU_FREE_QRMI_PASQAL_CLOUD_AUTH_TOKEN",
+        "EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_ID",
+        "EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_SECRET",
+    ];
+    let old_vars = vars.map(|key| (key, std::env::var(key).ok()));
+    let old_home = std::env::var("HOME").ok();
+    let home =
+        std::env::temp_dir().join(format!("qrmi_pasqal_no_auth_home_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&home);
+    fs::create_dir_all(&home).expect("home dir should be created");
 
-    let value = read_qrmi_config_env_value_from_content(
-        content,
-        "EMU_FREE",     //existing resource
-        "nonsense-key", // non-existing key in environment
-    );
-    assert!(value.is_none());
+    for key in vars {
+        std::env::remove_var(key);
+    }
+    std::env::set_var("HOME", &home);
+
+    let qrmi = PasqalCloud::new("EMU_FREE").expect("PasqalCloud should build without auth");
+    assert_eq!(qrmi.backend_name, "EMU_FREE");
+
+    for (key, value) in old_vars {
+        match value {
+            Some(value) => std::env::set_var(key, value),
+            None => std::env::remove_var(key),
+        }
+    }
+    match old_home {
+        Some(home) => std::env::set_var("HOME", home),
+        None => std::env::remove_var("HOME"),
+    }
+    let _ = fs::remove_dir_all(&home);
 }
 
 fn write_pasqal_config(root: &Path, content: &str) {

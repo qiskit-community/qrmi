@@ -18,9 +18,7 @@ use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::cloud_config::{
-    resolve_pasqal_credentials, resolve_pasqal_service_account_credentials, PasqalConfig,
-};
+use super::cloud_config::PasqalConfig;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,7 +60,7 @@ impl PasqalCloud {
         );
 
         let cfg = PasqalConfig::read(backend_name)?;
-        let project_id = cfg.project_id(backend_name)?;
+        let project_id = cfg.project_id(backend_name).unwrap_or_default();
         let auth_token = cfg.auth_token(backend_name);
         let auth_endpoint = cfg.auth_endpoint(backend_name);
         let base_url = cfg.base_url(backend_name);
@@ -75,17 +73,27 @@ impl PasqalCloud {
             builder.with_base_url(base_url);
         }
 
-        // Preference order: username/password > service account credentials > direct token.
-        let (username, password) = resolve_pasqal_credentials(&cfg);
-        let (client_id, client_secret) =
-            resolve_pasqal_service_account_credentials(backend_name, &cfg);
+        let (username, password) = cfg.credentials();
+        let (client_id, client_secret) = cfg.service_account_credentials(backend_name);
+        let has_user_credentials = username.is_some() && password.is_some();
+        let has_service_account_credentials = client_id.is_some() && client_secret.is_some();
+        let has_auth_token = auth_token.is_some();
         if let (Some(username), Some(password)) = (username, password) {
             builder.with_credentials(username, password);
-        } else if let (Some(client_id), Some(client_secret)) = (client_id, client_secret) {
+        }
+        if let (Some(client_id), Some(client_secret)) = (client_id, client_secret) {
             builder.with_service_account_credentials(client_id, client_secret);
-        } else if let Some(token) = auth_token {
+        }
+        if let Some(token) = auth_token {
             builder.with_token(token);
-        } else {
+        }
+        if project_id.is_empty() {
+            debug!(
+                "No Pasqal Cloud project_id configured for backend '{}'; unauthenticated operations can still be used",
+                backend_name
+            );
+        }
+        if !has_user_credentials && !has_service_account_credentials && !has_auth_token {
             debug!(
                 "No Pasqal Cloud auth details configured for backend '{}': expected PASQAL_USERNAME/PASQAL_PASSWORD, ~/.pasqal/config credentials, client_id/client_secret, or token",
                 backend_name
