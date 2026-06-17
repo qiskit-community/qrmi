@@ -18,7 +18,11 @@ use {
 
 /// Task result
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "pyo3", pyclass(eq, get_all, skip_from_py_object), gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "pyo3",
+    pyclass(eq, get_all, skip_from_py_object),
+    gen_stub_pyclass
+)]
 pub struct TaskResult {
     /// Serialized data of result
     pub value: String,

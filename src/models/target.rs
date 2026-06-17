@@ -18,7 +18,11 @@ use {
 
 /// A Target that contains the constraints(supported instructions, properties etc.) of a particular quantum device
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "pyo3", pyclass(get_all, skip_from_py_object), gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "pyo3",
+    pyclass(get_all, skip_from_py_object),
+    gen_stub_pyclass
+)]
 pub struct Target {
     /// Serialized data
     pub value: String,
