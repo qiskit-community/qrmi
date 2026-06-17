@@ -18,7 +18,7 @@ use {
 
 /// Task Payload
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "pyo3", pyclass, gen_stub_pyclass_enum)]
+#[cfg_attr(feature = "pyo3", pyclass(from_py_object), gen_stub_pyclass_enum)]
 pub enum Payload {
     /// Payload that contains Qiskit Primitive input.
     QiskitPrimitive { input: String, program_id: String },

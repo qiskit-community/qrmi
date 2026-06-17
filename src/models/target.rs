@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -18,7 +18,7 @@ use {
 
 /// A Target that contains the constraints(supported instructions, properties etc.) of a particular quantum device
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "pyo3", pyclass(get_all), gen_stub_pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass(get_all, skip_from_py_object), gen_stub_pyclass)]
 pub struct Target {
     /// Serialized data
     pub value: String,

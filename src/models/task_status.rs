@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -20,7 +20,7 @@ use {
 #[repr(C)]
 #[cfg_attr(
     feature = "pyo3",
-    pyclass(eq, eq_int, hash, frozen),
+    pyclass(eq, eq_int, hash, frozen, skip_from_py_object),
     gen_stub_pyclass_enum
 )]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
