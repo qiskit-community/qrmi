@@ -30,8 +30,8 @@ pub(crate) struct PasqalConfig {
 }
 
 impl PasqalConfig {
-    pub(crate) fn read(backend_name: &str) -> Result<Self> {
-        read_pasqal_config(backend_name)
+    pub(crate) fn read() -> Result<Self> {
+        read_pasqal_config()
     }
 
     pub(crate) fn project_id(&self, backend_name: &str) -> Option<String> {
@@ -184,36 +184,22 @@ pub(crate) fn expand_env_vars(value: &str) -> Result<String> {
     Ok(expanded)
 }
 
-pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
-    let mut config_path_candidates: Vec<PathBuf> = Vec::new();
-    let mut configured_config_root_paths: Vec<PathBuf> = Vec::new();
+pub(crate) fn read_pasqal_config() -> Result<PasqalConfig> {
+    let config_root_path = match env::var("PASQAL_CONFIG_ROOT").ok() {
+        Some(config_root) => pasqal_config_path_from_root(&config_root)?,
+        None => None,
+    };
+    let home_config_path = env::var("HOME")
+        .ok()
+        .filter(|home| !home.trim().is_empty())
+        .map(|home| PathBuf::from(home).join(".pasqal").join("config"));
 
-    if let Ok(config_root) = env::var("PASQAL_CONFIG_ROOT") {
-        if let Some(path) = pasqal_config_path_from_root(&config_root)? {
-            configured_config_root_paths.push(path.clone());
-            config_path_candidates.push(path);
-        }
+    let mut config_path_candidates = Vec::new();
+    if let Some(path) = config_root_path.clone() {
+        config_path_candidates.push(path);
     }
-
-    for backend_config_root_var in [
-        format!("{backend_name}_QRMI_PASQAL_CONFIG_ROOT"),
-        format!("{backend_name}_PASQAL_CONFIG_ROOT"),
-    ] {
-        if let Ok(config_root) = env::var(&backend_config_root_var) {
-            if let Some(path) = pasqal_config_path_from_root(&config_root)? {
-                configured_config_root_paths.push(path.clone());
-                config_path_candidates.push(path);
-            }
-        }
-    }
-
-    if let Ok(home) = env::var("HOME") {
-        if !home.trim().is_empty() {
-            let mut path = PathBuf::from(home);
-            path.push(".pasqal");
-            path.push("config");
-            config_path_candidates.push(path);
-        }
+    if let Some(path) = home_config_path {
+        config_path_candidates.push(path);
     }
 
     let content = match config_path_candidates
@@ -225,13 +211,11 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
             content
         }
         None => {
-            if !configured_config_root_paths.is_empty() {
-                let paths = configured_config_root_paths
-                    .iter()
-                    .map(|path| path.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                warn!("Pasqal config root is set but no config file was found. Checked: {paths}");
+            if let Some(path) = config_root_path {
+                warn!(
+                    "Pasqal config root is set but no config file was found. Checked: {}",
+                    path.display()
+                );
             }
             return Ok(PasqalConfig::default());
         }

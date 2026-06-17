@@ -45,8 +45,7 @@ impl PasqalCloud {
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET`: Pasqal Cloud service account client secret
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_BASE_URL`: Optional Pasqal Cloud API base URL. Default: `https://apis.pasqal.cloud`
-    /// * `<backend_name>_QRMI_PASQAL_CONFIG_ROOT`: Optional root containing `.pasqal/config`
-    /// * `<backend_name>_PASQAL_CONFIG_ROOT`: Optional root containing `.pasqal/config`
+    /// * `PASQAL_CONFIG_ROOT`: Optional root containing `.pasqal/config`
     /// * `PASQAL_USERNAME`: Pasqal Cloud username
     /// * `PASQAL_PASSWORD`: Pasqal Cloud password
     ///
@@ -59,7 +58,7 @@ impl PasqalCloud {
             backend_name
         );
 
-        let cfg = PasqalConfig::read(backend_name)?;
+        let cfg = PasqalConfig::read()?;
         let project_id = cfg.project_id(backend_name).unwrap_or_default();
         let auth_token = cfg.auth_token(backend_name);
         let auth_endpoint = cfg.auth_endpoint(backend_name);
