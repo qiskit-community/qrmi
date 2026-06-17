@@ -68,7 +68,7 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/qiskit-community/spank-plugins"
+repository = "https://github.com/qiskit-community/qrmi"
 rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
 
 [workspace.dependencies]
