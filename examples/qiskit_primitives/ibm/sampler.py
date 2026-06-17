@@ -66,11 +66,14 @@ sampler = SamplerV2(qrmi, options=options)
 job = sampler.run([(isa_circuit, param_values)])
 print(f">>> Job ID: {job.job_id()}")
 print(f">>> Job Status: {job.status()}")
-result = job.result()
+try:
+    result = job.result()
 
-# Get results for the first (and only) PUB
-pub_result = result[0]
-print(f"Counts for the 'meas' output register: {pub_result.data.meas.get_counts()}")
+    # Get results for the first (and only) PUB
+    pub_result = result[0]
+    print(f"Counts for the 'meas' output register: {pub_result.data.meas.get_counts()}")
+except RuntimeError as err:
+    print(err)
 
 if job.errored():
     print(qrmi.task_logs(job.job_id()))
