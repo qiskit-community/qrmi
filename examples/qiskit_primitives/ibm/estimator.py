@@ -75,10 +75,13 @@ job = estimator.run([(isa_circuit, isa_observable, param_values)])
 print(f">>> Job ID: {job.job_id()}")
 print(f">>> Job Status: {job.status()}")
 
-result = job.result()
-print(f">>> {result}")
-print(f"  > Expectation value: {result[0].data.evs}")
-print(f"  > Metadata: {result[0].metadata}")
+try:
+    result = job.result()
+    print(f">>> {result}")
+    print(f"  > Expectation value: {result[0].data.evs}")
+    print(f"  > Metadata: {result[0].metadata}")
+except RuntimeError as err:
+    print(err)
 
 if job.errored():
     print(qrmi.task_logs(job.job_id()))
