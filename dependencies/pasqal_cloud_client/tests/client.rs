@@ -133,7 +133,7 @@ async fn request_access_token_uses_username_password() {
         &auth_endpoint,
         AccessTokenRequest::UsernamePassword {
             username: "mock-user",
-            password: "mock-password",
+            password: "mock-password", // pragma: allowlist secret
         },
     )
     .await
@@ -175,7 +175,7 @@ async fn request_access_token_uses_service_account_credentials() {
         &auth_endpoint,
         AccessTokenRequest::ServiceAccount {
             client_id: "mock-client-id",
-            client_secret: "mock-client-secret",
+            client_secret: "mock-client-secret", // pragma: allowlist secret
         },
     )
     .await
