@@ -23,7 +23,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
 use tokio::runtime::Runtime;
 
-#[pyclass(eq, eq_int, hash, frozen)]
+#[pyclass(eq, eq_int, hash, frozen, from_py_object)]
 #[gen_stub_pyclass_enum]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
@@ -245,7 +245,7 @@ impl PyQuantumResource {
 
 /// Python wrapper for a QRMI resource definition.
 #[gen_stub_pyclass]
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[pyo3(name = "ResourceDef")]
 #[derive(Clone)]
 pub struct PyResourceDef {
