@@ -41,7 +41,7 @@ password=<your password>
 # token=<your token>
 # or:
 # client_id=<your client id>
-# client_secret=<your client secret>
+# client_secret=<your client secret>  # pragma: allowlist secret
 
 # optional override:
 # project_id=<your project id>
