@@ -30,8 +30,8 @@ pub(crate) struct PasqalConfig {
 }
 
 impl PasqalConfig {
-    pub(crate) fn read() -> Result<Self> {
-        read_pasqal_config()
+    pub(crate) fn read(backend_name: &str) -> Result<Self> {
+        read_pasqal_config(backend_name)
     }
 
     pub(crate) fn project_id(&self, backend_name: &str) -> Option<String> {
@@ -184,11 +184,17 @@ pub(crate) fn expand_env_vars(value: &str) -> Result<String> {
     Ok(expanded)
 }
 
-pub(crate) fn read_pasqal_config() -> Result<PasqalConfig> {
-    let config_root_path = match env::var("PASQAL_CONFIG_ROOT").ok() {
+pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
+    let mut config_root_path = match env::var("PASQAL_CONFIG_ROOT").ok() {
         Some(config_root) => pasqal_config_path_from_root(&config_root)?,
         None => None,
     };
+    if config_root_path.is_none() {
+        config_root_path = match env::var(format!("{backend_name}_PASQAL_CONFIG_ROOT")).ok() {
+            Some(config_root) => pasqal_config_path_from_root(&config_root)?,
+            None => None,
+        };
+    }
     let home_config_path = match env::var("HOME").ok() {
         Some(home) => pasqal_config_path_from_root(&home)?,
         None => None,

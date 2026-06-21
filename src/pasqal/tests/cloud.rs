@@ -133,6 +133,7 @@ fn pasqal_cloud_new_allows_missing_project_id_and_auth() {
         "PASQAL_USERNAME",
         "PASQAL_PASSWORD",
         "PASQAL_CONFIG_ROOT",
+        "EMU_FREE_PASQAL_CONFIG_ROOT",
         "EMU_FREE_QRMI_PASQAL_CLOUD_PROJECT_ID",
         "EMU_FREE_QRMI_PASQAL_CLOUD_AUTH_TOKEN",
         "EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_ID",
@@ -273,7 +274,7 @@ fn read_pasqal_config_uses_pasqal_config_root_env() {
     std::env::set_var("PASQAL_CONFIG_ROOT", &root);
     std::env::set_var("HOME", &home);
 
-    let cfg = read_pasqal_config().expect("read_pasqal_config should not fail");
+    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
 
     assert_eq!(cfg.token.as_deref(), Some("from-root"));
     assert_eq!(cfg.project_id.as_deref(), Some("project"));
@@ -281,8 +282,80 @@ fn read_pasqal_config_uses_pasqal_config_root_env() {
     assert_eq!(cfg.client_secret.as_deref(), Some("secret"));
 
     std::env::remove_var("PASQAL_CONFIG_ROOT");
+    std::env::remove_var("EMU_FREE_PASQAL_CONFIG_ROOT");
     std::env::remove_var("HOME");
     let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&home);
+}
+
+#[test]
+fn read_pasqal_config_uses_backend_pasqal_config_root_env() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    let root = std::env::temp_dir().join(format!(
+        "qrmi_pasqal_backend_cfg_{}_root",
+        std::process::id()
+    ));
+    let home = std::env::temp_dir().join(format!(
+        "qrmi_pasqal_backend_cfg_{}_home",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&home);
+    write_pasqal_config(
+        &root,
+        "token=from-backend-root\nproject_id=project\nclient_id=client\nclient_secret=secret\n",
+    );
+
+    std::env::set_var("PASQAL_CONFIG_ROOT", "");
+    std::env::set_var("EMU_FREE_PASQAL_CONFIG_ROOT", &root);
+    std::env::set_var("HOME", &home);
+
+    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+
+    assert_eq!(cfg.token.as_deref(), Some("from-backend-root"));
+    assert_eq!(cfg.project_id.as_deref(), Some("project"));
+    assert_eq!(cfg.client_id.as_deref(), Some("client"));
+    assert_eq!(cfg.client_secret.as_deref(), Some("secret"));
+
+    std::env::remove_var("PASQAL_CONFIG_ROOT");
+    std::env::remove_var("EMU_FREE_PASQAL_CONFIG_ROOT");
+    std::env::remove_var("HOME");
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&home);
+}
+
+#[test]
+fn read_pasqal_config_prefers_pasqal_config_root_env() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    let raw_root =
+        std::env::temp_dir().join(format!("qrmi_pasqal_raw_cfg_{}_root", std::process::id()));
+    let backend_root = std::env::temp_dir().join(format!(
+        "qrmi_pasqal_prefixed_cfg_{}_root",
+        std::process::id()
+    ));
+    let home = std::env::temp_dir().join(format!(
+        "qrmi_pasqal_precedence_cfg_{}_home",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&raw_root);
+    let _ = fs::remove_dir_all(&backend_root);
+    let _ = fs::remove_dir_all(&home);
+    write_pasqal_config(&raw_root, "token=from-raw-root\n");
+    write_pasqal_config(&backend_root, "token=from-backend-root\n");
+
+    std::env::set_var("PASQAL_CONFIG_ROOT", &raw_root);
+    std::env::set_var("EMU_FREE_PASQAL_CONFIG_ROOT", &backend_root);
+    std::env::set_var("HOME", &home);
+
+    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+
+    assert_eq!(cfg.token.as_deref(), Some("from-raw-root"));
+
+    std::env::remove_var("PASQAL_CONFIG_ROOT");
+    std::env::remove_var("EMU_FREE_PASQAL_CONFIG_ROOT");
+    std::env::remove_var("HOME");
+    let _ = fs::remove_dir_all(&raw_root);
+    let _ = fs::remove_dir_all(&backend_root);
     let _ = fs::remove_dir_all(&home);
 }
 
@@ -295,7 +368,7 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     std::env::set_var("PASQAL_CONFIG_ROOT", &missing_root);
     std::env::set_var("HOME", &missing_home);
 
-    let cfg = read_pasqal_config().expect("read_pasqal_config should not fail");
+    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
     // All config should be None since the config file is missing: the default
     assert!(cfg.username.is_none());
     assert!(cfg.password.is_none());
@@ -306,6 +379,7 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     assert!(cfg.auth_endpoint.is_none());
 
     std::env::remove_var("PASQAL_CONFIG_ROOT");
+    std::env::remove_var("EMU_FREE_PASQAL_CONFIG_ROOT");
     std::env::remove_var("HOME");
 }
 
