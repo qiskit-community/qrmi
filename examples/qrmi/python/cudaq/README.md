@@ -19,7 +19,7 @@ $ pip install cudaq
 
 QRMI supports Pasqal Cloud configuration via environment variables.
 For Pasqal Cloud auth, QRMI also supports reading `~/.pasqal/config` (token or username/password).
-`PASQAL_CONFIG_ROOT` may point elsewhere; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`. When using the Slurm spank plugin, set this as a raw plugin environment argument, for example `--env:PASQAL_CONFIG_ROOT=/some/root`; entries in a resource `environment` section are prefixed with the resource name.
+`PASQAL_CONFIG_ROOT` may point elsewhere; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`.
 
 The required environment variables are listed below. They are populated automatically by the spank plugin.
 

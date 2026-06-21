@@ -176,7 +176,7 @@ task_runner ibm_marrakesh /shared/input/estimator_input.json
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account client secret (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
 
-Pasqal Cloud auth can also be provided via `~/.pasqal/config` (token or username/password). `PASQAL_CONFIG_ROOT` may point elsewhere; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`. When using the Slurm spank plugin, set this as a raw plugin environment argument, for example `--env:PASQAL_CONFIG_ROOT=/some/root`; entries in a resource `environment` section are prefixed with the resource name.
+Pasqal Cloud auth can also be provided via `~/.pasqal/config` (token or username/password). `PASQAL_CONFIG_ROOT` may point elsewhere; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`.
 
 Example:
 ```
