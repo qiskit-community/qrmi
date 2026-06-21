@@ -189,10 +189,10 @@ pub(crate) fn read_pasqal_config() -> Result<PasqalConfig> {
         Some(config_root) => pasqal_config_path_from_root(&config_root)?,
         None => None,
     };
-    let home_config_path = env::var("HOME")
-        .ok()
-        .filter(|home| !home.trim().is_empty())
-        .map(|home| PathBuf::from(home).join(".pasqal").join("config"));
+    let home_config_path = match env::var("HOME").ok() {
+        Some(home) => pasqal_config_path_from_root(&home)?,
+        None => None,
+    };
 
     let mut config_path_candidates = Vec::new();
     if let Some(path) = config_root_path.clone() {
