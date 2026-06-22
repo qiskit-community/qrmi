@@ -37,7 +37,7 @@ from pulser.result import SampledResult
 from qrmi import Payload, QuantumResource, TaskStatus, ResourceType  # type: ignore
 from qrmi.pulser.service import QRMIService
 
-logger = logging.getLogger("qrmi")
+logger = logging.getLogger(__name__)
 
 _QRMI_TASK_STATUS_MAP: dict[TaskStatus, JobStatus] = {
     TaskStatus.Queued: JobStatus.PENDING,
@@ -79,7 +79,8 @@ class PulserQRMIConnection(RemoteConnection):
         _type: ResourceType = self._qrmi.resource_type()
         if _type not in _COMPATIBLE_RESOURCE_TYPES:
             raise ValueError(
-                "PulserQRMIConnection can only be used with 'PasqalLocal' or 'PasqalCloud' QRMI resources,"
+                "PulserQRMIConnection can only be used with 'PasqalLocal' "
+                "or 'PasqalCloud' QRMI resources,"
                 f" got: '{_type}'"
             )
 
@@ -130,9 +131,9 @@ class PulserQRMIConnection(RemoteConnection):
         return devices
 
     def get_batch_logs(self, batch_id: str | None = None) -> Sequence[str]:
-        """Get the logs from the current batch through the `task_logs` interface."""
+        """Get the logs from the batch through the `qrmi.task_logs` interface."""
         if batch_id is None:
-            logger.debug("No batch ID provided, fetching logs from last batch")
+            logger.info("No batch ID provided, fetching logs from last batch")
             batch_id = self._current_batch_id
 
         job_ids = self._get_job_ids(batch_id)
@@ -140,11 +141,23 @@ class PulserQRMIConnection(RemoteConnection):
         for job_id in job_ids:
             try:
                 job_logs = self._qrmi.task_logs(job_id)
-            except RuntimeError:
-                logger.exception("Failed to fetch logs for job %s", job_id)
-                raise
+            except RuntimeError as e:
+                logger.warning("Failed to fetch logs for job %s: %s", job_id, e)
             logs.append(job_logs)
         return tuple(logs)
+
+    def cancel_batch_jobs(self, batch_id: str | None = None) -> None:
+        """Cancel all jobs in the batch through the `qrmi.task_stop` interface."""
+        if batch_id is None:
+            logger.info("No batch ID provided, stopping logs from last batch")
+            batch_id = self._current_batch_id
+
+        job_ids = self._get_job_ids(batch_id)
+        for job_id in job_ids:
+            try:
+                self._qrmi.task_stop(job_id)
+            except RuntimeError as e:
+                logger.warning("Failed to stop job %s: %s", job_id, e)
 
     def _fetch_result(
         self, batch_id: str, job_ids: list[str] | None
@@ -307,8 +320,10 @@ class PulserQRMIConnection(RemoteConnection):
         return batch_id.split("|")
 
     def _close_batch(self, batch_id: str) -> None:
-        for job_id in self._get_job_ids(batch_id):
-            self._qrmi.task_stop(job_id)
+        """Closes a batch using its ID."""
+        raise NotImplementedError(  # pragma: no cover
+            "Unable to close batch through this remote connection"
+        )
 
     @staticmethod
     def _to_job_status(status: TaskStatus) -> JobStatus:
