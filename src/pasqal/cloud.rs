@@ -16,141 +16,10 @@ use anyhow::{anyhow, bail, Result};
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::path::PathBuf;
 use uuid::Uuid;
 
+use super::cloud_config::PasqalConfig;
 use async_trait::async_trait;
-
-#[derive(Debug, Clone, Default)]
-struct PasqalConfig {
-    username: Option<String>,
-    password: Option<String>,
-    token: Option<String>,
-    project_id: Option<String>,
-    auth_endpoint: Option<String>,
-}
-
-const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
-
-fn strip_quotes(s: &str) -> &str {
-    let s = s.trim();
-    if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
-        &s[1..s.len() - 1]
-    } else {
-        s
-    }
-}
-
-fn read_pasqal_config(_backend_name: &str) -> Result<PasqalConfig> {
-    let mut config_path_candidates: Vec<PathBuf> = Vec::new();
-    let mut pasqal_config_root_path: Option<PathBuf> = None;
-
-    if let Ok(config_root) = env::var("PASQAL_CONFIG_ROOT") {
-        if !config_root.trim().is_empty() {
-            let mut path = PathBuf::from(config_root);
-            path.push(".pasqal");
-            path.push("config");
-            pasqal_config_root_path = Some(path.clone());
-            config_path_candidates.push(path);
-        }
-    }
-
-    if let Ok(home) = env::var("HOME") {
-        if !home.trim().is_empty() {
-            let mut path = PathBuf::from(home);
-            path.push(".pasqal");
-            path.push("config");
-            config_path_candidates.push(path);
-        }
-    }
-
-    let content = match config_path_candidates
-        .iter()
-        .find_map(|path| fs::read_to_string(path).ok())
-    {
-        Some(content) => content,
-        None => {
-            if let Some(path) = pasqal_config_root_path {
-                warn!(
-                    "PASQAL_CONFIG_ROOT is set but config file was not found: {}",
-                    path.display()
-                );
-            }
-            return Ok(PasqalConfig::default());
-        }
-    };
-
-    let mut config = PasqalConfig::default();
-
-    for line in content.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
-            continue;
-        }
-        let (k, v) = match line.split_once('=') {
-            Some((k, v)) => (k.trim(), strip_quotes(v).trim()),
-            None => continue,
-        };
-        if k.is_empty() {
-            continue;
-        }
-
-        match k.to_ascii_lowercase().as_str() {
-            "username" => config.username = Some(v.to_string()),
-            "password" => config.password = Some(v.to_string()),
-            "token" => config.token = Some(v.to_string()),
-            "project_id" => config.project_id = Some(v.to_string()),
-            "auth_endpoint" => config.auth_endpoint = Some(v.to_string()),
-            _ => {}
-        }
-    }
-
-    Ok(config)
-}
-
-fn read_qrmi_config_env_value(backend_name: &str, key: &str) -> Option<String> {
-    let content = fs::read_to_string("/etc/slurm/qrmi_config.json").ok()?;
-    read_qrmi_config_env_value_from_content(&content, backend_name, key)
-}
-
-fn read_qrmi_config_env_value_from_content(
-    content: &str,
-    backend_name: &str,
-    key: &str,
-) -> Option<String> {
-    let root: serde_json::Value = serde_json::from_str(content).ok()?;
-    let resources = root.get("resources")?.as_array()?;
-
-    for r in resources {
-        // TODO: we can make this let Some(name) = ... to be more robust I think?
-        let name = r.get("name")?.as_str()?;
-        if name != backend_name {
-            continue;
-        }
-        let env = r.get("environment")?.as_object()?;
-        let v = env.get(key)?.as_str()?.trim();
-        if v.is_empty() {
-            return None;
-        }
-        return Some(v.to_string());
-    }
-    None
-}
-
-fn resolve_pasqal_credentials(cfg: &PasqalConfig) -> (Option<String>, Option<String>) {
-    // Get credentials from environment variables or config, with preference to environment variables.
-    let username = env::var("PASQAL_USERNAME")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .or(cfg.username.clone().filter(|v| !v.trim().is_empty()));
-    let password = env::var("PASQAL_PASSWORD")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .or(cfg.password.clone().filter(|v| !v.trim().is_empty()));
-    (username, password)
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PasqalTaskKind {
@@ -172,69 +41,29 @@ impl PasqalCloud {
     ///
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID`: Pasqal Cloud Project ID to access the QPU
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN`: Pasqal Cloud Auth Token
+    /// * `<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID`: Pasqal Cloud service account client ID
+    /// * `<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET`: Pasqal Cloud service account client secret
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`: Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
     /// * `<backend_name>_QRMI_PASQAL_CLOUD_BASE_URL`: Optional Pasqal Cloud API base URL. Default: `https://apis.pasqal.cloud`
+    /// * `PASQAL_CONFIG_ROOT`: Optional root containing `.pasqal/config`
+    /// * `<backend_name>_PASQAL_CONFIG_ROOT`: Optional backend-specific root containing `.pasqal/config`
     /// * `PASQAL_USERNAME`: Pasqal Cloud username
     /// * `PASQAL_PASSWORD`: Pasqal Cloud password
     ///
     /// # Config file fallback
     ///
-    /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `token`, `project_id`, `auth_endpoint`
+    /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `client_id`, `client_secret`, `token`, `project_id`, `auth_endpoint`
     pub fn new(backend_name: &str) -> Result<Self> {
         debug!(
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
 
-        let cfg = read_pasqal_config(backend_name)?;
-
-        // Project ID
-        let project_id_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID");
-        let env_project_id = env::var(&project_id_var)
-            .ok()
-            .filter(|v| !v.trim().is_empty());
-        // Preference order: explicit env var > user ~/.pasqal/config > cluster wide qrmi_config.json provides default.
-        let project_id = env_project_id
-            .or(cfg.project_id.clone().filter(|v| !v.trim().is_empty()))
-            .or(read_qrmi_config_env_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID"))
-            .ok_or_else(|| {
-                anyhow!(
-                    "{project_id_var} is not set and no project_id was found in ~/.pasqal/config or /etc/slurm/qrmi_config.json"
-                )
-            })?;
-
-        // Auth token
-        let var_name = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN");
-        let env_token = env::var(&var_name).ok().filter(|v| !v.trim().is_empty());
-        let auth_token = env_token // Token or None
-            .or(cfg.token.clone().filter(|v| !v.trim().is_empty()))
-            .or(read_qrmi_config_env_value(
-                backend_name,
-                "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
-            ));
-
-        // Auth endpoint
-        let auth_endpoint_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT");
-        let env_auth_endpoint = env::var(&auth_endpoint_var)
-            .ok()
-            .filter(|v| !v.trim().is_empty());
-        let auth_endpoint = env_auth_endpoint
-            .or(cfg.auth_endpoint.clone().filter(|v| !v.trim().is_empty()))
-            .or(read_qrmi_config_env_value(
-                backend_name,
-                "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT",
-            ))
-            .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string());
-
-        // Base URL
-        let base_url_var = format!("{backend_name}_QRMI_PASQAL_CLOUD_BASE_URL");
-        let base_url = env::var(&base_url_var)
-            .ok()
-            .filter(|v| !v.trim().is_empty())
-            .or(read_qrmi_config_env_value(
-                backend_name,
-                "QRMI_PASQAL_CLOUD_BASE_URL",
-            ));
+        let cfg = PasqalConfig::read(backend_name)?;
+        let project_id = cfg.project_id(backend_name).unwrap_or_default();
+        let auth_token = cfg.auth_token(backend_name);
+        let auth_endpoint = cfg.auth_endpoint(backend_name);
+        let base_url = cfg.base_url(backend_name);
 
         // Build Pasqal Cloud API client
         debug!("Build PasqalCloud client for backend '{}'", backend_name);
@@ -244,15 +73,29 @@ impl PasqalCloud {
             builder.with_base_url(base_url);
         }
 
-        // Preference order for credentials: explicit username/password in env > config > direct token.
-        let (username, password) = resolve_pasqal_credentials(&cfg);
+        let (username, password) = cfg.credentials();
+        let (client_id, client_secret) = cfg.service_account_credentials(backend_name);
+        let has_user_credentials = username.is_some() && password.is_some();
+        let has_service_account_credentials = client_id.is_some() && client_secret.is_some();
+        let has_auth_token = auth_token.is_some();
         if let (Some(username), Some(password)) = (username, password) {
             builder.with_credentials(username, password);
-        } else if let Some(token) = auth_token {
+        }
+        if let (Some(client_id), Some(client_secret)) = (client_id, client_secret) {
+            builder.with_service_account_credentials(client_id, client_secret);
+        }
+        if let Some(token) = auth_token {
             builder.with_token(token);
-        } else {
+        }
+        if project_id.is_empty() {
             debug!(
-                "No Pasqal Cloud auth details configured for backend '{}': expected PASQAL_USERNAME/PASQAL_PASSWORD, ~/.pasqal/config credentials, or token",
+                "No Pasqal Cloud project_id configured for backend '{}'; unauthenticated operations can still be used",
+                backend_name
+            );
+        }
+        if !has_user_credentials && !has_service_account_credentials && !has_auth_token {
+            debug!(
+                "No Pasqal Cloud auth details configured for backend '{}': expected PASQAL_USERNAME/PASQAL_PASSWORD, ~/.pasqal/config credentials, client_id/client_secret, or token",
                 backend_name
             );
         }
@@ -371,8 +214,8 @@ impl QuantumResource for PasqalCloud {
         let device_type = self.parse_device_type()?;
 
         // The device may be down temporarily but jobs can still
-        // be submitted and queued through the cloud
-        // Thus we only check that the device is not retired
+        // be submitted and queued through the cloud.
+        // Thus we only check that the device is not retired.
         match self.api_client.get_device(device_type).await {
             Ok(device) => Ok(device.availability == "ACTIVE"),
             Err(err) => bail!("Failed to get device: {}", err),

@@ -19,6 +19,7 @@ $ pip install cudaq
 
 QRMI supports Pasqal Cloud configuration via environment variables.
 For Pasqal Cloud auth, QRMI also supports reading `~/.pasqal/config` (token or username/password).
+`PASQAL_CONFIG_ROOT` may point elsewhere and takes priority over `<backend_name>_PASQAL_CONFIG_ROOT`; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`.
 
 The required environment variables are listed below. They are populated automatically by the spank plugin.
 
@@ -26,6 +27,8 @@ The required environment variables are listed below. They are populated automati
 | ---- | ---- |
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID | Pasqal Cloud Project ID to access the QPU |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token |
+| <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID | Pasqal Cloud service account client ID (optional) |
+| <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account client secret (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
 
 ### ~/.pasqal/config (optional)
@@ -36,6 +39,9 @@ username=<your username>
 password=<your password>
 # or:
 # token=<your token>
+# or:
+# client_id=<your client id>
+# client_secret=<your client secret>  # pragma: allowlist secret
 
 # optional override:
 # project_id=<your project id>

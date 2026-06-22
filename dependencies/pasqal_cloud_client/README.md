@@ -87,12 +87,14 @@ let mut client = builder.build()?;
 If username/password auth is used, `request_access_token` can be used to obtain a token.
 
 ```rust
-use pasqal_cloud_api::Client;
+use pasqal_cloud_api::{AccessTokenRequest, Client};
 
 let token = Client::request_access_token(
     "authenticate.pasqal.cloud/oauth/token",
-    "<username>",
-    "<password>",
+    AccessTokenRequest::UsernamePassword {
+        username: "<username>",
+        password: "<password>",
+    },
 ).await?;
 ```
 

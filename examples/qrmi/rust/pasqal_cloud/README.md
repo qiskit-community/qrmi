@@ -7,7 +7,7 @@
 
 ## Set environment variables
 
-QRMI supports Pasqal Cloud configuration via environment variables. For Pasqal Cloud auth, QRMI also supports reading `~/.pasqal/config` (token or username/password).
+QRMI supports Pasqal Cloud configuration via environment variables. For Pasqal Cloud auth, QRMI also supports reading `~/.pasqal/config` (token or username/password). `PASQAL_CONFIG_ROOT` may point elsewhere and takes priority over `<backend_name>_PASQAL_CONFIG_ROOT`; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`.  # pragma: allowlist secret
 
 The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
 
@@ -27,6 +27,9 @@ username=<your username>
 password=<your password>
 # or:
 # token=<your token>
+# or:
+# client_id=<your client id>
+# client_secret=<your client secret>  # pragma: allowlist secret
 
 # optional override:
 # project_id=<your project id>
