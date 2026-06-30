@@ -30,7 +30,7 @@ use clap::builder::TypedValueParser as _;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
-use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use qrmi::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use qrmi::pasqal::PasqalCloud;
 use qrmi::pasqal::PasqalLocal;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
@@ -76,14 +76,14 @@ pub struct QrmiInput {
     /// type.
     job_runs: Option<i32>,
 
-    /// Parameters to inject into the primitive. Required for direct-access and
+    /// Parameters to inject into the primitive. Required for ibm-quantum-system and
     /// qiskit-runtime-service QPU resources. Estimator schema:
     /// https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json,
     /// Sampler schema:
     /// https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json
     parameters: Option<serde_json::Value>,
 
-    /// ID of the primitive to be executed. Required for direct-access and qiskit-runtime-service
+    /// ID of the primitive to be executed. Required for ibm-quantum-system and qiskit-runtime-service
     /// QPU resources.
     program_id: Option<PrimitiveType>,
 
@@ -96,13 +96,6 @@ pub struct QrmiInput {
 #[allow(dead_code)]
 /// QRMI resource types
 pub enum ResourceType {
-    /// IBM Direct Access(deprecated)
-    IBMDirectAccess {
-        /// Qiskit primitive input
-        input: String,
-        /// Qiskit primitive type
-        program_id: PrimitiveType,
-    },
     /// IBM Quantum System
     IBMQuantumSystem {
         /// Qiskit primitive input
@@ -141,21 +134,7 @@ impl ResourceType {
             }
         };
         let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
-        if qpu_type == "direct-access" {
-            let input = match &deserialized.parameters {
-                Some(v) => v.to_string(),
-                None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "parameters").into());
-                }
-            };
-            let program_id = match &deserialized.program_id {
-                Some(v) => v.clone(),
-                None => {
-                    return Err(eyre!("Missing property: {} in the payload.", "program_id").into());
-                }
-            };
-            Ok(Self::IBMDirectAccess { input, program_id })
-        } else if qpu_type == "ibm-quantum-system" {
+        if qpu_type == "ibm-quantum-system" {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
                 None => {
@@ -220,7 +199,7 @@ impl ResourceType {
         } else {
             Err(
                 eyre!(
-                    "Resource type {} is not supported. [supported types: direct-access, qiskit-runtime-service, pasqal-cloud]",
+                    "Resource type {} is not supported. [supported types: ibm-quantum-system, qiskit-runtime-service, pasqal-cloud]",
                     qpu_type,
                 ).into()
             )
@@ -229,7 +208,6 @@ impl ResourceType {
     #[allow(dead_code)]
     fn as_str(&self) -> &str {
         match self {
-            ResourceType::IBMDirectAccess { .. } => "direct-access",
             ResourceType::IBMQuantumSystem { .. } => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
             ResourceType::PasqalCloud { .. } => "pasqal-cloud",
@@ -238,8 +216,7 @@ impl ResourceType {
     }
     fn to_payload(&self) -> Option<Payload> {
         match self {
-            ResourceType::IBMDirectAccess { input, program_id }
-            | ResourceType::IBMQuantumSystem { input, program_id }
+            ResourceType::IBMQuantumSystem { input, program_id }
             | ResourceType::QiskitRuntimeService { input, program_id } => {
                 Some(Payload::QiskitPrimitive {
                     input: input.to_string(),
@@ -261,9 +238,6 @@ impl ResourceType {
         qpu_name: &str,
     ) -> Result<Box<dyn QuantumResource>, Box<dyn std::error::Error>> {
         match self {
-            ResourceType::IBMDirectAccess { .. } => {
-                Ok(Box::new(IBMDirectAccess::new(qpu_name)?) as Box<dyn QuantumResource>)
-            }
             ResourceType::IBMQuantumSystem { .. } => {
                 Ok(Box::new(IBMQuantumSystem::new(qpu_name)?) as Box<dyn QuantumResource>)
             }

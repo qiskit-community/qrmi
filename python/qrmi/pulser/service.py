@@ -39,9 +39,7 @@ class QRMIService:
         for i, qpu in enumerate(qpus):
             qpu = qpu.strip()
             resource = None
-            if qpu_types[i] == "direct-access":
-                resource = QuantumResource(qpu, ResourceType.IBMDirectAccess)
-            elif qpu_types[i] == "qiskit-runtime-service":
+            if qpu_types[i] == "qiskit-runtime-service":
                 resource = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
             elif qpu_types[i] == "pasqal-cloud":
                 resource = QuantumResource(qpu, ResourceType.PasqalCloud)
