@@ -72,6 +72,10 @@ impl PasqalCloud {
         if let Some(base_url) = base_url {
             builder.with_base_url(base_url);
         }
+        if super::retries_disabled() {
+            debug!("HTTP retries disabled for backend '{}'", backend_name);
+            builder.with_retry_disabled();
+        }
 
         let (username, password) = cfg.credentials();
         let (client_id, client_secret) = cfg.service_account_credentials(backend_name);

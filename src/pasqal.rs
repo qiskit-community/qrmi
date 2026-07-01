@@ -18,3 +18,26 @@ mod local;
 
 pub use self::cloud::PasqalCloud;
 pub use self::local::PasqalLocal;
+
+use std::env;
+
+/// Env var that, when set to a truthy value, disables HTTP retries for all
+/// Pasqal clients. This is a global toggle; it is not scoped per backend.
+const RETRIES_DISABLED_ENV: &str = "QRMI_PASQAL_RETRIES_DISABLED";
+
+/// Returns `true` if HTTP retries should be disabled for the Pasqal clients.
+///
+/// Reads the `QRMI_PASQAL_RETRIES_DISABLED` env var: a value of `1`, `true`,
+/// `yes`, or `on` (case-insensitive) disables retries; anything else (or unset)
+/// leaves the default retry policy in place.
+fn retries_disabled() -> bool {
+    let is_truthy = |v: String| {
+        matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    };
+    env::var(RETRIES_DISABLED_ENV)
+        .map(is_truthy)
+        .unwrap_or(false)
+}

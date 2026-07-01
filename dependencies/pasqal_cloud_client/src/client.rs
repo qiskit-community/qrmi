@@ -42,6 +42,8 @@ pub struct Client {
     pub(crate) password: Option<String>,
     pub(crate) client_id: Option<String>,
     pub(crate) client_secret: Option<String>,
+    /// Whether HTTP requests (including token refresh) are retried.
+    pub(crate) retries_enabled: bool,
 }
 
 impl Client {
@@ -185,10 +187,15 @@ impl Client {
 }
 
 impl Client {
-    fn build_http_client() -> Result<reqwest_middleware::ClientWithMiddleware> {
+    fn build_http_client(
+        retries_enabled: bool,
+    ) -> Result<reqwest_middleware::ClientWithMiddleware> {
         let mut reqwest_client_builder = reqwest::Client::builder();
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        let mut reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        if retries_enabled {
+            reqwest_builder = pasqal_common::with_retry(reqwest_builder);
+        }
         Ok(reqwest_builder.build())
     }
 
@@ -260,6 +267,9 @@ pub struct ClientBuilder {
     password: Option<String>,
     client_id: Option<String>,
     client_secret: Option<String>,
+    /// Whether HTTP requests are retried. Enabled by default; toggled off with
+    /// [`Self::with_retry_disabled`].
+    retries_enabled: bool,
 }
 
 impl ClientBuilder {
@@ -282,7 +292,16 @@ impl ClientBuilder {
             password: None,
             client_id: None,
             client_secret: None,
+            retries_enabled: true,
         }
+    }
+
+    /// Disable HTTP request retries entirely.
+    ///
+    /// Retries are enabled by default.
+    pub fn with_retry_disabled(&mut self) -> &mut Self {
+        self.retries_enabled = false;
+        self
     }
 
     pub fn with_base_url(&mut self, base_url: String) -> &mut Self {
@@ -339,7 +358,7 @@ impl ClientBuilder {
         );
         Ok(Client {
             base_url: self.base_url.clone(),
-            client: Client::build_http_client()?,
+            client: Client::build_http_client(self.retries_enabled)?,
             project_id: self.project_id.clone(),
             auth_token: self.token.clone(),
             auth_header: Client::make_auth_header(&self.token)?,
@@ -348,6 +367,7 @@ impl ClientBuilder {
             password: self.password.clone(),
             client_id: self.client_id.clone(),
             client_secret: self.client_secret.clone(),
+            retries_enabled: self.retries_enabled,
         })
     }
 }

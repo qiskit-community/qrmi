@@ -30,6 +30,7 @@ The required environment variables are listed below. They are populated automati
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID | Pasqal Cloud service account client ID (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account client secret (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
+| QRMI_PASQAL_RETRIES_DISABLED | (Optional) Disable automatic HTTP request retries for all Pasqal backends. Set to `1`, `true`, `yes`, or `on`; retries are enabled by default. |
 
 ### ~/.pasqal/config (optional)
 

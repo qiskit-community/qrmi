@@ -1,0 +1,24 @@
+[package]
+name = "pasqal-common"
+keywords = ["http-client", "retry"]
+description = "Shared HTTP utilities for the Pasqal client libraries"
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+reqwest = { version = "0.12.14", default-features = false }
+reqwest-middleware = { version = "0.4.2", features = ["json"] }
+reqwest-retry = "0.7.0"
+async-trait = "0.1.83"
+http = "1.1.0"
+httpdate = "1.0.3"
+log = "0.4.22"
+tokio = { version = "1.40.0", features = ["time"] }
+
+[dev-dependencies]
+tokio = { version = "1.40.0", features = ["macros", "rt", "time"] }
+mockito = "1.5.0"
+reqwest = { version = "0.12.14", default-features = false, features = ["json", "rustls-tls"] }

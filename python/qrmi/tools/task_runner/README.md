@@ -175,6 +175,7 @@ task_runner ibm_marrakesh /shared/input/estimator_input.json
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID | Pasqal Cloud service account client ID (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account client secret (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
+| QRMI_PASQAL_RETRIES_DISABLED | (Optional) Disable automatic HTTP request retries for all Pasqal backends. Set to `1`, `true`, `yes`, or `on`; retries are enabled by default. |
 
 Pasqal Cloud auth can also be provided via `~/.pasqal/config` (token or username/password). `PASQAL_CONFIG_ROOT` may point elsewhere and takes priority over `<backend_name>_PASQAL_CONFIG_ROOT`; QRMI expands `~`, `$VAR`, and `${VAR}` before appending `.pasqal/config`.  # pragma: allowlist secret
 

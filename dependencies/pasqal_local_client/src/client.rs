@@ -237,6 +237,9 @@ impl Client {
 pub struct ClientBuilder {
     /// The base URL this client sends requests to
     base_url: String,
+    /// Whether HTTP requests are retried. Enabled by default; toggled off with
+    /// [`Self::with_retry_disabled`].
+    retries_enabled: bool,
 }
 
 impl ClientBuilder {
@@ -251,7 +254,18 @@ impl ClientBuilder {
     /// ```
     pub fn new(base_url: impl Into<String>) -> Self {
         let base_url: String = base_url.into();
-        Self { base_url }
+        Self {
+            base_url,
+            retries_enabled: true,
+        }
+    }
+
+    /// Disable HTTP request retries entirely.
+    ///
+    /// Retries are enabled by default.
+    pub fn with_retry_disabled(&mut self) -> &mut Self {
+        self.retries_enabled = false;
+        self
     }
 
     /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
@@ -267,7 +281,10 @@ impl ClientBuilder {
         let mut reqwest_client_builder = reqwest::Client::builder();
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
 
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        let mut reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        if self.retries_enabled {
+            reqwest_builder = pasqal_common::with_retry(reqwest_builder);
+        }
 
         Ok(Client {
             base_url: self.base_url.clone(),
