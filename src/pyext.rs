@@ -13,7 +13,7 @@
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
@@ -27,7 +27,6 @@ use tokio::runtime::Runtime;
 #[gen_stub_pyclass_enum]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
-    IBMDirectAccess,
     IBMQuantumSystem,
     IBMQiskitRuntimeService,
     PasqalCloud,
@@ -61,12 +60,6 @@ impl PyQuantumResource {
     pub fn new(resource_id: &str, resource_type: ResourceType) -> PyResult<Self> {
         crate::common::initialize();
         let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
-            ResourceType::IBMDirectAccess => match IBMDirectAccess::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                }
-            },
             ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
@@ -136,7 +129,6 @@ impl PyQuantumResource {
         let result = self.rt.block_on(async { self.qrmi.resource_type().await });
         match result {
             Ok(v) => Ok(match v {
-                crate::models::ResourceType::IBMDirectAccess => ResourceType::IBMDirectAccess,
                 crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
                 crate::models::ResourceType::QiskitRuntimeService => {
                     ResourceType::IBMQiskitRuntimeService
@@ -265,7 +257,6 @@ impl PyResourceDef {
     #[getter]
     pub fn resource_type(&self) -> ResourceType {
         match self.inner.r#type {
-            crate::models::ResourceType::IBMDirectAccess => ResourceType::IBMDirectAccess,
             crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
             crate::models::ResourceType::QiskitRuntimeService => {
                 ResourceType::IBMQiskitRuntimeService

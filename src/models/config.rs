@@ -27,8 +27,6 @@ use std::io::BufReader;
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
-    /// IBM Direct Access(deprecated)
-    IBMDirectAccess,
     /// IBM Quantum System
     IBMQuantumSystem,
     /// Qiskit Runtime Service
@@ -49,7 +47,6 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
     {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
-            "direct-access" => Ok(ResourceType::IBMDirectAccess),
             "ibm-quantum-system" => Ok(ResourceType::IBMQuantumSystem),
             "qiskit-runtime-service" => Ok(ResourceType::QiskitRuntimeService),
             "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
@@ -60,7 +57,6 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
                 &s,
                 &[
                     "ibm-quantum-system",
-                    "direct-access",
                     "qiskit-runtime-service",
                     "pasqal-cloud",
                     "pasqal-local",
@@ -74,7 +70,6 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
 impl ResourceType {
     pub fn as_str(&self) -> &str {
         match self {
-            ResourceType::IBMDirectAccess => "direct-access",
             ResourceType::IBMQuantumSystem => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
             ResourceType::PasqalCloud => "pasqal-cloud",
