@@ -20,6 +20,10 @@ Find the source code to build and deploy QRMI in this [GitHub repository](https:
 
 An optional task_runner command line tool to execute quantum payloads against quantum hardware is included in the Python package. Find the [full documentation](https://github.com/qiskit-community/qrmi/blob/main/python/qrmi/tools/task_runner/README.md) in the GitHub repository.
 
+## Features
+
+TBD
+
 ## Installation
 
 ### Python
@@ -62,7 +66,6 @@ Prebuilt binaries for Linux(glibc 2.28 compatible) on x86_64, ppc64le, and aarch
 
 To install from source, follow the instructions in the [documentation](https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md).
 
-
 ## Getting Started
 
 This GitHub repository contains [a variety of example code](https://github.com/qiskit-community/qrmi/blob/main/examples). See the README in each directory for details.
@@ -76,8 +79,7 @@ to the project at different levels. If you use QRMI, please consider citing the 
 
 Note we expect multiple versions of the overview paper to be released as the project evolves.
 
-
-## Contribution Guidelines
+## Contributing
 
 For information on how to contribute to this project, please take a look at our [contribution guidelines](https://github.com/qiskit-community/qrmi/blob/main/CONTRIBUTING.md).
 
@@ -87,12 +89,14 @@ If you'd like to contribute to QRMI, please take a look at our
 We use [GitHub issues](https://github.com/qiskit-community/qrmi/issues) for tracking requests and bugs. Please
 [join the Qiskit Slack community](https://qisk.it/join-slack) for discussion, comments, and questions.
 
-## Frequently Asked Questions
+## Support & Frequently Asked Questions
+
+TBD
 
 Refer [this document](https://github.com/qiskit-community/qrmi/blob/main/FAQ.md).
 
-
 ## References and Acknowledgements
+
 1. Quantum spank plugins for Slurm https://github.com/qiskit-community/spank-plugins
 2. Slurm documentation https://slurm.schedmd.com/
 3. Qiskit https://www.ibm.com/quantum/qiskit
@@ -101,3 +105,7 @@ Refer [this document](https://github.com/qiskit-community/qrmi/blob/main/FAQ.md)
 6. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
 7. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
 8. Alice & Bob https://alice-bob.com/
+
+## License
+
+This project is licensed under [Apache-2.0](https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt).
