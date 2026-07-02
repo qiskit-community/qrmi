@@ -1,0 +1,95 @@
+Qiskit Primitives with Pasqal Cloud QRMI - Python Example
+=========================================================
+
+Prerequisites
+-------------
+
+-  Python 3.11 or 3.12
+-  `Installation of QRMI primitives python
+   package(``qiskit-qrmi-primitives``) <../../README.md>`__
+
+Install dependencies
+--------------------
+
+Assuming your python virtual environment is located at
+``~/py311venv_qrmi_primitives/bin/activate``,
+
+.. code:: shell-session
+
+   $ source ~/py311venv_qrmi_primitives/bin/activate
+   $ pip install -r requirements.txt
+
+Set environment variables
+-------------------------
+
+Because QRMI is an environment variable driven software library, all
+configuration parameters must be specified in environment variables. The
+required environment variables are listed below. This example assumes
+that a ``.env`` file is available under the current directory.
+
+Common
+~~~~~~
+
+When run as a job in a Slurm cluster, these environment variables are
+set by the SPANK plugin.
+
++------------------------+-------------------------------------------+
+| Environment variables  | Descriptions                              |
++========================+===========================================+
+| QRMI_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated   |
+|                        | values, e.g. ``FRESNEL``                  |
++------------------------+-------------------------------------------+
+| QRMI_JOB_QPU_TYPES     | Quantum resource types. Comma-separated   |
+|                        | values corresponding to each Quantum      |
+|                        | resource name specified by                |
+|                        | ``QRMI_JOB_QPU_RESOURCES``.Supported      |
+|                        | types:                                    |
++------------------------+-------------------------------------------+
+
+How to run
+----------
+
+SamplerV2
+~~~~~~~~~
+
+Use the Qiskit Pasqal Provider ``SamplerV2``.
+
+This example wraps a QRMI backend with the Qiskit Pasqal Provider
+``SamplerV2``.
+
+Execution returns a job object and Qiskit-style result object:
+
+.. code:: python
+
+   job = sampler.run([qc], shots=100)
+   result = job.result()
+   print(result[0].data.counts)
+
+QRMI run options can be passed through backend options: -
+``poll_interval_seconds`` - ``timeout_seconds`` - ``delete_job``
+
+Example:
+
+.. code:: python
+
+   backend = QRMIPasqalBackend(
+       qrmi=qrmi,
+       options={"run_options": {"poll_interval_seconds": 1.0}},
+   )
+   sampler = SamplerV2(backend)
+
+For emulator resources where device specs are not exposed, QRMI falls
+back to Pulser ``DigitalAnalogDevice``.
+
+.. code:: shell-session
+
+   $ python sampler.py
+
+Target -> Pulser device
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Example to show how to get the Pulser device via the QRMI.
+
+.. code:: shell-session
+
+   $ python target.py
