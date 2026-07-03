@@ -1,3 +1,5 @@
+.. _code_of_conduct:
+
 .. raw:: html
 
    <!-- Copyright Contributors to the Qiskit project. -->

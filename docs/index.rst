@@ -3,6 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+:layout: landing
+
 Quantum Resource Management Interface (QRMI)
 ============================================
 
@@ -27,13 +29,40 @@ more information, read the documentation available
 
 .. toctree::
    :maxdepth: 2
-   :numbered:
-   :caption: Table of Contents:
+   :caption: User Documentation
+   
+   user_docs/GETTING_STARTED
+   user_docs/INSTALLATION
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Documentation
+   
+   developer_docs/CONTRIBUTING
+   developer_docs/TESTING
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Examples
+   
+   examples/bindings/index
+   examples/pulser/index
+   examples/qiskit_primitives/index
+   examples/task_runner/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Additional Resources
    
    Code of Conduct <CODE_OF_CONDUCT>
+   Troubleshooting <TROUBLESHOOTING>
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Indexes
+   
    user_docs/index
    developer_docs/index
-   Troubleshooting <TROUBLESHOOTING>
    examples/index
 
 .. |License| image:: https://img.shields.io/github/license/qiskit-community/qrmi.svg?
