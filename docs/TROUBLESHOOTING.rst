@@ -1,6 +1,10 @@
 Troubleshooting
 ===============
 
+.. contents::
+   :local:
+   :depth: 2
+
 Job Execution Errors
 --------------------
 
@@ -43,7 +47,7 @@ backend name.
    with Session(backend=backend, max_time=1) as session:
        print("Succeeded in obtaining a Qiskit Session")
 
-1. Run this testcase
+3. Run this testcase
 
 .. code:: bash
 

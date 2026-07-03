@@ -1,4 +1,4 @@
-Tools to generate input for task runner from Pulser
+Tools to Generate Input for Task Runner from Pulser
 ===================================================
 
 Prerequisites

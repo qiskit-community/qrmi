@@ -1,4 +1,4 @@
-Tools to generate IQM JSON from Qiskit QuantumCircuit
+Tools to Generate IQM JSON from Qiskit QuantumCircuit
 =====================================================
 
 The tools demonstrate the generation of IQM JSON input from a quantum

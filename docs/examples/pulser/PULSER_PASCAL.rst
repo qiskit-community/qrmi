@@ -1,5 +1,5 @@
-Python examples for Pulser connection with Pasqal Cloud QRMI
-============================================================
+Pulser Connection with Pasqal Cloud QRMI - Python Example
+=========================================================
 
 Prerequisites
 -------------

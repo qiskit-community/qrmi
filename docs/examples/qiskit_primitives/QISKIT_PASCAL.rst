@@ -1,5 +1,5 @@
-Python examples for Python Qiskit Primitives with Pasqal Cloud QRMI
-===================================================================
+Qiskit Primitives with Pasqal Cloud QRMI - Python Example
+=========================================================
 
 Prerequisites
 -------------

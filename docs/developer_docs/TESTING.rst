@@ -1,5 +1,9 @@
-Python Tests in QRMI
-====================
+Testing in QRMI
+===============
+
+.. contents::
+   :local:
+   :depth: 2
 
 Directory Structure
 -------------------

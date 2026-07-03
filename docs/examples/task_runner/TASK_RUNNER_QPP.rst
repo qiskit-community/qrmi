@@ -1,4 +1,4 @@
-Tools to generate input for task runner from Qiskit Pasqal Provider
+Tools to Generate Input for Task Runner from Qiskit Pasqal Provider
 ===================================================================
 
 Prerequisites
