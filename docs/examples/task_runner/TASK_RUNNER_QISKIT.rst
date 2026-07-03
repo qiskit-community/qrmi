@@ -1,4 +1,4 @@
-Tools to generate EstimatorV2/SamplerV2 primitive input
+Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 =======================================================
 
 The tools demonstrate the generation of EstimatorV2/SamplerV2 inputs

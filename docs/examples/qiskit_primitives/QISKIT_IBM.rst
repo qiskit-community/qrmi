@@ -1,5 +1,5 @@
-Python examples for Sampler/Estimator primitives with IBM Quantum System QRMI
-=============================================================================
+Sampler/Estimator Primitives with IBM Quantum System QRMI - Python Example
+==========================================================================
 
 Prerequisites
 -------------
