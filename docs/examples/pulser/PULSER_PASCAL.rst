@@ -1,6 +1,10 @@
 Pulser Connection with Pasqal Cloud QRMI - Python Example
 =========================================================
 
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/pulser/pasqal
+
 Prerequisites
 -------------
 

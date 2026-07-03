@@ -1,5 +1,7 @@
-Installation for Quantum Resource Management Interface (QRMI)
-=============================================================
+.. _install:
+
+Installing QRMI
+===============
 
 .. contents::
    :local:

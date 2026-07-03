@@ -3,8 +3,52 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+:layout: landing
+
 Quantum Resource Management Interface (QRMI)
 ============================================
+
+.. rst-class:: lead
+
+    A thin and vendor agnostic layer to access, control and monitor underlying on-prem or cloud quantum computers.
+
+.. container:: buttons
+
+    :doc:`Docs <getting_started/INSTALLATION>`
+    `GitHub <https://github.com/qiskit-community/qrmi>`_
+
+.. rubric:: Supported Vendors
+   :class: centered
+
+.. grid:: 1 2 4 4
+
+    .. grid-item::
+
+        .. image:: /_static/images/ibm-quantum-logo.png
+           :width: 90%
+           :target: https://www.ibm.com/quantum
+           :align: center
+
+    .. grid-item::
+
+        .. image:: /_static/images/pasqal-logo.png
+           :width: 70%
+           :target: https://www.pasqal.com/
+           :align: center
+
+    .. grid-item::
+
+        .. image:: /_static/images/alice-and-bob-logo.png
+           :width: 100%
+           :target: https://alice-bob.com/
+           :align: center
+
+    .. grid-item::
+
+        .. image:: /_static/images/iqm-logo.png
+           :width: 50%
+           :target: https://iqm.tech/
+           :align: center
 
 |License| |Current Release| |Platform| |PyPI - Python Version| |Minimum
 rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
@@ -22,18 +66,73 @@ The source code to build and deploy QRMI is available
 
 An optional ``task_runner`` command line tool to execute quantum
 payloads against quantum hardware is included in the Python package. For
-more information, read the documentation available
-`here <https://github.com/qiskit-community/qrmi/blob/main/python/qrmi/tools/task_runner/README.md>`__.
+more information, read the documentation available :ref:`here <task_runner>`.
+
+.. grid:: 1 1 2 3
+   :gutter: 2
+   :padding: 0
+   :class-row: surface
+
+   .. grid-item-card:: :octicon:`mortar-board` Getting Started
+      :link: getting_started/INSTALLATION
+      :link-type: doc
+
+      The user documentation provides information on how to install and
+      use QRMI.
+
+   .. grid-item-card:: :octicon:`tools` Development
+      :link: development/CONTRIBUTING
+      :link-type: doc
+
+      The developer documentation provides information on how to contribute
+      to QRMI and how to run tests.
+
+   .. grid-item-card:: :octicon:`file-code` Examples
+      :link: examples/index
+      :link-type: doc
+
+      The examples provide information on how to use QRMI with different
+      vendor frameworks.
+
+Contributors
+------------
+
+.. container:: rounded-image
+
+   .. contributors:: qiskit-community/qrmi
+      :avatars:
+      :exclude: dependabot[bot], pre-commit-ci[bot]
 
 .. toctree::
    :maxdepth: 2
-   :numbered:
-   :caption: Table of Contents:
+   :caption: Getting Started
+   :hidden:
    
-   Code of Conduct <CODE_OF_CONDUCT>
-   user_docs/index
-   developer_docs/index
-   Troubleshooting <TROUBLESHOOTING>
+   getting_started/INSTALLATION
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Additional Resources
+   :hidden:
+   
+   additional_resources/CODE_OF_CONDUCT
+   additional_resources/TROUBLESHOOTING
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Development
+   :hidden:
+   
+   development/CONTRIBUTING
+   development/TESTING
+   development/DOCUMENTATION
+   development/PYTHON_API
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Examples
+   :hidden:
+   
    examples/index
 
 .. |License| image:: https://img.shields.io/github/license/qiskit-community/qrmi.svg?

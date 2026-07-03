@@ -1,5 +1,11 @@
+.. _troubleshooting:
+
 Troubleshooting
 ===============
+
+.. rst-class:: lead
+
+    Guidance on how to troubleshoot common issues when using QRMI.
 
 .. contents::
    :local:
@@ -8,15 +14,15 @@ Troubleshooting
 Job Execution Errors
 --------------------
 
-I get an error ``error: spank_qrmi_c, failed to acquire resource: ibm_brisbane``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``error: spank_qrmi_c, failed to acquire resource: ibm_brisbane``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Cause:** This error occurs when accessing IBM Quantum backends using
 an Open Plan account on IBM Quantum Platform.
 
-**What to check:**
+**Check:**
 
-1. Setup
+#. Setup virtual environment:
 
 .. code:: bash
 
@@ -24,9 +30,9 @@ an Open Plan account on IBM Quantum Platform.
    source ~/{your_pyenv}/bin/activate
    pip install qiskit-ibm-runtime
 
-2. Create ``test.py``
+#. Create ``test.py``:
 
-Replace SERVICE_CRN and API_KEY values with your credentials, with your
+Replace ``SERVICE_CRN`` and ``API_KEY`` values with your credentials and with your
 backend name.
 
 .. code:: python
@@ -47,27 +53,27 @@ backend name.
    with Session(backend=backend, max_time=1) as session:
        print("Succeeded in obtaining a Qiskit Session")
 
-3. Run this testcase
+#. Run the test case:
 
 .. code:: bash
 
    python test.py
 
-This will fail due to the error like:
+This will fail due to the error:
 
 .. code:: bash
 
    You are not authorized to run a session when using the open plan.
 
-**How to resolve:**
+**Solution:**
 
 -  Use a Premium Plan account, or
--  Use
-   `Batch <https://quantum.cloud.ibm.com/docs/en/guides/execution-modes#batch-mode>`__
-   execution mode
+-  Use `Batch`_ execution mode
+
+.. _Batch: https://quantum.cloud.ibm.com/docs/en/guides/execution-modes#batch-mode
 
    -  Add ``QRMI_IBM_QRS_SESSION_MODE`` environment variable with
-      “batch” in your qrmi_config.json
+      “batch” in your ``qrmi_config.json``
 
 .. code:: json
 

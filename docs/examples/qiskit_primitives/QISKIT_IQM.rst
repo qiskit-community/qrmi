@@ -1,6 +1,10 @@
 IQM Qiskit - Python Example
 ===========================
 
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qiskit_primitives/iqm
+
 Prerequisites
 -------------
 

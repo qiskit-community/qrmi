@@ -1,6 +1,10 @@
 Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 =======================================================
 
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/qiskit
+
 The tools demonstrate the generation of EstimatorV2/SamplerV2 inputs
 from a quantum circuit example.
 
