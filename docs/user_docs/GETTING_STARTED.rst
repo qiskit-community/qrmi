@@ -1,3 +1,5 @@
+.. _getting_started:
+
 Getting Started
 ===============
 
@@ -5,3 +7,4 @@ Getting Started
    :local:
    :depth: 2
 
+TBD

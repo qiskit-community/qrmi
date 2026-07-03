@@ -11,6 +11,9 @@ copyright = "2026, Bacher, Utz and Birmingham, Mark and Carothers, Christopher D
 author = "Bacher, Utz and Birmingham, Mark and Carothers, Christopher D and Damin, Andrew and Calaza, Carlos D Gonzalez and Karnad, Ashwin Kumar and Mensa, Stefano and Moreau, Matthieu and Nober, Aurelien and Ohtani, Munetaka and others"
 release = "2025"
 
+# version = qrmi.__version__
+
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -22,5 +25,25 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
+html_theme = "shibuya"
 html_static_path = ["_static"]
+
+html_theme_options = {
+    # "light_logo": "logo-light.svg",
+    # "dark_logo": "logo-dark.svg",
+    # "og_image_url": "https://example.com/icon.png",
+    "discussion_url": "https://github.com/qiskit-community",
+    "github_url": "https://github.com/qiskit-community/qrmi",
+    "nav_links": [
+        {
+            "title": "Qiskit Community",
+            "url": "https://github.com/qiskit-community",
+            "external": True,
+        },
+        {
+            "title": "SPANK Plugins",
+            "url": "https://github.com/qiskit-community/spank-plugins",
+            "external": True,
+        },
+    ],
+}

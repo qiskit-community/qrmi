@@ -1,3 +1,5 @@
+sphinx==9.1.0
+shibuya==2026.5.19
 maturin[patchelf]==1.12.2
 pylint==4.0.5
 black[jupyter]==26.3.1

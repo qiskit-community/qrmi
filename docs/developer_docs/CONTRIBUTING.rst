@@ -1,13 +1,19 @@
+.. _contributing:
+
 Contributing
 ============
 
-.. contents::
-   :local:
-   :depth: 2
+.. rst-class:: lead
 
 QRMI is an open-source project committed to bringing quantum computing
 to people of all backgrounds. This page describes how you can join the
 QRMI community in this goal.
+
+----------------
+
+.. contents::
+   :local:
+   :depth: 2
 
 Before you start
 ----------------
