@@ -5,6 +5,8 @@
 
 :layout: landing
 
+:layout: landing
+
 Quantum Resource Management Interface (QRMI)
 ============================================
 
