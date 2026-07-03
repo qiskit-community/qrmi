@@ -1,77 +1,56 @@
-Installation for Quantum Resource Management Interface(QRMI)
-============================================================
+Installation for Quantum Resource Management Interface (QRMI)
+=============================================================
+
+.. contents::
+   :local:
+   :depth: 2
 
 Prerequisites
 -------------
 
 -  Compilation requires the following tools:
 
-   -  Rust compiler 1.91 or above
-      `Link <https://www.rust-lang.org/tools/install>`__
-   -  A C compiler: for example, GCC(gcc) on Linux and
-      Clang(clang-tools-extra) for Rust unknown targets/cross
-      compilations. QRMI is compatible with a compiler conforming to the
-      C11 standard.
+   -  `Rust compiler 1.91 or
+      above <https://www.rust-lang.org/tools/install>`__
+   -  A C compiler
+
+      -  For example, GCC (gcc) on Linux and Clang (clang-tools-extra)
+         for Rust unknown targets/cross compilations. QRMI is compatible
+         with a compiler conforming to the C11 standard.
+
    -  make/cmake (make/cmake RPM for RHEL compatible OS)
    -  Python 3.11, 3.12 or 3.13 (For Python API)
 
       -  Libraries and header files needed for Python
          development(python3.1x-devel RPM for RHEL compatible OS)
 
-         -  /usr/include/python3.1x
-         -  /usr/lib64/libpython3.1x.so
+         -  ``/usr/include/python3.1x``
+         -  ``/usr/lib64/libpython3.1x.so``
 
 -  Runtime requires the following tools:
 
    -  gcc (libgcc RPM for RHEL compatible OS)
-   -  Python 3.11, 3.12 or 3.13 (For Python API)
+   -  Python 3.11, 3.12 or 3.13 (for Python API)
 
-      -  Libraries and header files needed for Python
-         development(python3.1x-devel RPM for RHEL compatible OS)
+      -  Libraries and header files needed for Python development
+         (python3.1x-devel RPM for RHEL compatible OS)
 
 -  Doxygen (for generating C API document)
 
    -  ``dnf install doxygen`` for Linux(RHEL/CentOS/Rocky Linux etc)
    -  ``apt install doxygen`` for Linux(Ubuntu etc.)
-   -  ``brew install doxygen``\ for MacOS
+   -  ``brew install doxygen`` for MacOS
 
-📋 Content
-----------
-
--  `🔶 Building core QRMI library <#building-core-qrmi-libraries>`__
-
-   -  `🦀/©️ Rust and C <#how-to-build-rustc-api-library>`__
-   -  `🐍 Python <#how-to-build--install-qrmi-python-package>`__
-
--  `🔸 Building optional libraries <#building-optional-libraries>`__
-
-   -  `🏃 Building task runner
-      CLI <#how-to-build-task_runner-for-rust-version>`__
-   -  `🏃 Building task runner for
-      Python <#how-to-run-task_runner-for-python-version>`__
-
--  `🔹 Other <#other>`__
-
-   -  `📋 Examples <#examples>`__
-   -  `📃 Logging <#logging>`__
-   -  `📄 Generate API docs <#api-docs>`__
-
-      -  `🦀 Rust API docs <#how-to-generate-rust-api-document>`__
-      -  `🐍 Pythoni API docs <#how-to-generate-python-api-document>`__
-      -  `©️ C API docs <#how-to-generate-c-api-document>`__
-
-   -  `Contributing <#contributing>`__
-
-Building core QRMI libraries
+Building Core QRMI Libraries
 ----------------------------
 
-Core QRMI is a set of libraries to control state of quantum resources.
-Written in Rust with C and Python API exposed for ease of integration to
-any compute infrastructure.
+Core QRMI is a set of libraries to control the state of quantum
+resources. It is written in Rust with C and Python APIs exposed for ease
+of integration into any compute infrastructure.
 
 This section shows how to build QRMI for C and Python.
 
-How to build Rust/C API library
+How to Build Rust/C API Library
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: shell-session
@@ -80,7 +59,7 @@ How to build Rust/C API library
    cargo clean
    cargo build --locked --release
 
-How to build & install QRMI Python package
+How to Build & Install QRMI Python Package
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Setup Python virtual environment

@@ -1,5 +1,5 @@
-Quantum Resource Management Interface(QRMI) - Examples in C
-===========================================================
+QRMI Examples in C
+==================
 
 -  `IBM Quantum System QRMI <./ibm_quantum_system>`__
 -  `IBM Qiskit Runtime Service QRMI <./qiskit_runtime_service>`__

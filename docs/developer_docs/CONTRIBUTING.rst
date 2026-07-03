@@ -1,28 +1,13 @@
 Contributing
 ============
 
+.. contents::
+   :local:
+   :depth: 2
+
 QRMI is an open-source project committed to bringing quantum computing
 to people of all backgrounds. This page describes how you can join the
 QRMI community in this goal.
-
-Contents
---------
-
--  `Before you start <#before-you-start>`__
--  `Set up Python virtual development
-   environment <#set-up-python-virtual-development-environment>`__
--  `Installing QRMI from source <#installing-qrmi-from-source>`__
--  `Issues and pull requests <#issues-and-pull-requests>`__
--  `Contributor Licensing
-   Agreement <#contributor-licensing-agreement>`__
--  `Testing <#testing>`__
-
-   -  `Testing Python modules <#testing-python-modules>`__
-   -  `Testing Rust components <#testing-rust-components>`__
-
--  `Style and Lint <#style-and-lint>`__
--  `Building API docs locally <#building-api-docs-locally>`__
--  `Updating files for new release <#updating-files-for-new-release>`__
 
 Before you start
 ----------------
@@ -62,7 +47,7 @@ installation. It can be placed anywhere. For more detail, see the
 official Python documentation, `Creation of virtual
 environments <https://docs.python.org/3/library/venv.html>`__.
 
-::
+.. code:: bash
 
    python3 -m venv ~/.venvs/qrmi-dev
 
@@ -70,7 +55,7 @@ Activate the environment by invoking the appropriate activation script
 for your system, which can be found within the environment folder. For
 example, for bash/zsh:
 
-::
+.. code:: bash
 
    source ~/.venvs/qrmi-dev/bin/activate
 
@@ -79,14 +64,14 @@ in the subsequent sections can be located for your system. You need
 ``pip>=25.1`` to use the ``--group`` feature used to manage developer
 dependency groups.
 
-::
+.. code:: bash
 
    pip install -U pip
 
 You can easily install all the standard developer dependencies for
 in-place testing, documentation-building, and linting using:
 
-::
+.. code:: bash
 
    pip install -r requirements-dev.txt
 
@@ -95,12 +80,12 @@ Set up a Conda environment
 
 For Conda users, a new environment can be created as follows.
 
-::
+.. code:: bash
 
    conda create -y -n QRMIDevenv python=3
    conda activate QRMIDevenv
 
-::
+.. code:: bash
 
    pip install -e .
 
@@ -182,7 +167,7 @@ workflow using the following instructions.
    environment (venv) active. You will need to install pre-commit, which
    manages the hooks that run detect-secrets automatically.
 
-::
+.. code:: bash
 
    pip install pre-commit
    pre-commit install
@@ -191,7 +176,7 @@ Please find ``.pre-commit-config.yaml`` for the initial setup. Following
 command was used to generate ``.secrets.baseline`` and to maximize the
 detection coverage.
 
-::
+.. code:: bash
 
    detect-secrets scan --force-use-all-plugins > .secrets.baseline
 
@@ -201,7 +186,7 @@ the following command to audit and update the baseline file. Once
 updated, include the modified .secrets.baseline in your Pull Request to
 ensure the pre-commit passes in the future.
 
-::
+.. code:: bash
 
    pip install detect-secrets
    detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
@@ -211,7 +196,7 @@ ensure the pre-commit passes in the future.
 files in the repository for a local sanity check, execute the following
 command:
 
-::
+.. code:: bash
 
    pre-commit run --all-files
 
@@ -219,7 +204,7 @@ command:
 must force a commit without running the pre-commit checks (e.g., during
 an emergency fix), you may use the ``--no-verify`` flag:
 
-::
+.. code:: bash
 
    git commit -m "Your message" --no-verify
 
@@ -281,9 +266,9 @@ The easiest way to run QRMI’s Python test suite is to use
 `pytest <https://docs.pytest.org/en/stable/>`__. You can install pytest
 with pip: ``pip install -U pytest``.
 
-to run QRMI’s Python test suite:
+To run QRMI’s Python test suite:
 
-::
+.. code:: bash
 
    pip install "$(ls ./target/wheels/qrmi-*.whl)[ibm,pasqal]"
    pytest .
@@ -349,12 +334,12 @@ temporarily apply as well.
 Testing the C API
 ~~~~~~~~~~~~~~~~~
 
-T.B.D
+TBD
 
 Writing C API tests
 ^^^^^^^^^^^^^^^^^^^
 
-T.B.D
+TBD
 
 Style and lint
 --------------

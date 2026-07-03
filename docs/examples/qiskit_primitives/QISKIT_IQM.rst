@@ -1,5 +1,5 @@
-IQM Qiskit example
-==================
+IQM Qiskit - Python Example
+===========================
 
 Prerequisites
 -------------
