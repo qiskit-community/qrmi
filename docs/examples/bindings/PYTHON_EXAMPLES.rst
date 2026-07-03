@@ -1,10 +1,14 @@
 QRMI Examples in Python
 ========================
 
--  `IBM Quantum System QRMI <./ibm_quantum_system>`__
--  `IBM Qiskit Runtime Service QRMI <./qiskit_runtime_service>`__
--  `IQM Server QRMI <./iqm_server>`__
--  `Pasqal Cloud QRMI <./pasqal_cloud>`__
--  `Pasqal Cloud QRMI - CUDA-Q Examples <./cudaq>`__
--  `Pasqal Local QRMI <./pasqal_local>`__
--  `Alice and Bob Felis <./alice_bob_felis>`__
+.. toctree::
+    :maxdepth: 2
+
+    IBM Quantum System <python/IBM_QUANTUM>
+    Qiskit Runtime Service <python/QISKIT_RUNTIME>
+    IQM Server <python/IQM_SERVER>
+    Pasqal Cloud <python/PASQAL_CLOUD>
+    Pasqal Cloud - CUDA-Q <python/PASQAL_CLOUD_CUDAQ>
+    Pasqal Local <python/PASQAL_LOCAL>
+    Alice and Bob Felis <python/ALICE_AND_BOB>
+    QRMI Provider <python/PROVIDER>

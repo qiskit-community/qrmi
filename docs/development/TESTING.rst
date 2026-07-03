@@ -1,5 +1,7 @@
-Testing in QRMI
-===============
+.. _testing:
+
+Testing QRMI
+============
 
 .. contents::
    :local:

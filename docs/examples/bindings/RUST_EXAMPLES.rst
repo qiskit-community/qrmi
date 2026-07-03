@@ -1,9 +1,14 @@
 QRMI Examples in Rust
 =====================
 
--  `IBM Quantum System QRMI <./ibm_quantum_system>`__
--  `IBM Qiskit Runtime Service QRMI <./qiskit_runtime_service>`__
--  `IQM Server QRMI <./iqm_server>`__
--  `Pasqal Cloud QRMI <./pasqal_cloud>`__
--  `Pasqal Local QRMI <./pasqal_local>`__
--  `Alice and Bob Felis <./alice_bob_felis>`__
+.. toctree::
+    :maxdepth: 2
+
+    Parsing QRMI Config File <rust/CONFIG>
+    IBM Quantum System <rust/IBM_QUANTUM>
+    Qiskit Runtime Service <rust/QISKIT_RUNTIME>
+    IQM Server <rust/IQM_SERVER>
+    Pasqal Cloud <rust/PASQAL_CLOUD>
+    Pasqal Local <rust/PASQAL_LOCAL>
+    Alice and Bob Felis <rust/ALICE_AND_BOB>
+    QRMI Provider <rust/PROVIDER>

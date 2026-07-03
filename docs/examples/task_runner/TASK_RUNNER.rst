@@ -1,5 +1,11 @@
+.. _task_runner:
+
 QRMI Task Runner
 ================
+
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/python/qrmi/tools/task_runner
 
 QRMI Task Runner is an executable to run a quantum workload on the
 specified QPU resource. This is designed to be used in a Slurm job,
