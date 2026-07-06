@@ -27,6 +27,23 @@ cargo clean
 cargo build --release
 ```
 
+## HTTPS / TLS trust
+
+For `https://` endpoints, this client is built with reqwest's
+`rustls-tls-native-roots` feature, so it trusts the **OS trust store** and the
+`SSL_CERT_FILE` / `SSL_CERT_DIR` environment variables.
+
+To trust a self-signed / private CA, do one of:
+
+* install it into the OS trust store, e.g. on RHEL/Rocky:
+  ```shell-session
+  sudo cp rootCA.crt /etc/pki/ca-trust/source/anchors/
+  sudo update-ca-trust extract
+  ```
+* or point `SSL_CERT_FILE` at a bundle that contains it.
+
+The endpoint hostname must match a SAN in the server certificate.
+
 ## Examples
 
 TODO
