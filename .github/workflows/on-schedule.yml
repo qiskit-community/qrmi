@@ -14,6 +14,10 @@ concurrency:
 
 jobs:
 
+  check-broken-links:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/broken-links.yml
+
   # Select all supported architectures for libqrmi in this worflow.
   # All tasks are performed in the selected architectures
   libqrmi:
