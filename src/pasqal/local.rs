@@ -59,7 +59,7 @@ impl PasqalLocal {
             .unwrap();
         let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
         let mut builder = ClientBuilder::new(url);
-        if super::retries_disabled() {
+        if super::retries_disabled(backend_name) {
             builder.with_retry_disabled();
         }
         Ok(Self {

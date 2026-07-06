@@ -72,7 +72,7 @@ impl PasqalCloud {
         if let Some(base_url) = base_url {
             builder.with_base_url(base_url);
         }
-        if super::retries_disabled() {
+        if super::retries_disabled(backend_name) {
             debug!("HTTP retries disabled for backend '{}'", backend_name);
             builder.with_retry_disabled();
         }
