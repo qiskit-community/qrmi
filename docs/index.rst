@@ -8,6 +8,16 @@
 Quantum Resource Management Interface (QRMI)
 ============================================
 
+.. rst-class:: lead
+
+    A thin and vendor agnostic layer to access, control and monitor underlying on-prem or cloud quantum computers.
+
+.. container:: buttons
+
+    :doc:`Docs <user_docs/GETTING_STARTED>`
+    `GitHub <https://github.com/qiskit-community/qrmi>`_
+
+
 |License| |Current Release| |Platform| |PyPI - Python Version| |Minimum
 rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
 
@@ -27,9 +37,37 @@ payloads against quantum hardware is included in the Python package. For
 more information, read the documentation available
 `here <https://github.com/qiskit-community/qrmi/blob/main/python/qrmi/tools/task_runner/README.md>`__.
 
+.. grid:: 1 1 2 3
+   :gutter: 2
+   :padding: 0
+   :class-row: surface
+
+   .. grid-item-card:: :octicon:`mortar-board` User Documentation
+      :link: user_docs/index
+      :link-type: doc
+
+      The user documentation provides information on how to install and
+      use QRMI.
+
+   .. grid-item-card:: :octicon:`tools` Developer Documentation
+      :link: developer_docs/index
+      :link-type: doc
+
+      The developer documentation provides information on how to contribute
+      to QRMI and how to run tests.
+
+   .. grid-item-card:: :octicon:`file-code` Examples
+      :link: examples/index
+      :link-type: doc
+
+      The examples provide information on how to use QRMI with different
+      vendor frameworks.
+
+
 .. toctree::
    :maxdepth: 2
    :caption: User Documentation
+   :hidden:
    
    user_docs/GETTING_STARTED
    user_docs/INSTALLATION
@@ -37,6 +75,7 @@ more information, read the documentation available
 .. toctree::
    :maxdepth: 2
    :caption: Developer Documentation
+   :hidden:
    
    developer_docs/CONTRIBUTING
    developer_docs/TESTING
@@ -44,6 +83,7 @@ more information, read the documentation available
 .. toctree::
    :maxdepth: 2
    :caption: Examples
+   :hidden:
    
    examples/bindings/index
    examples/pulser/index
@@ -53,6 +93,7 @@ more information, read the documentation available
 .. toctree::
    :maxdepth: 2
    :caption: Additional Resources
+   :hidden:
    
    Code of Conduct <CODE_OF_CONDUCT>
    Troubleshooting <TROUBLESHOOTING>
@@ -60,6 +101,7 @@ more information, read the documentation available
 .. toctree::
    :maxdepth: 2
    :caption: Indexes
+   :hidden:
    
    user_docs/index
    developer_docs/index
