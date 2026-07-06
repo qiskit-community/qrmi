@@ -16,7 +16,7 @@
 //! * ordinary transient failures (5xx, timeouts, connection errors), handled by
 //!   the stock [`RetryTransientMiddleware`] with an exponential backoff, and
 //! * rate-limit / locked responses (HTTP 429 and 423), handled by
-//!   `RetryAfterMiddleware`, which honors the server's `Retry-After` header
+//!   [`RetryAfterMiddleware`], which honors the server's `Retry-After` header
 //!   when present and otherwise falls back to the same exponential backoff.
 //!
 //! Both tiers are bounded by wall-clock time rather than a retry count, so a
