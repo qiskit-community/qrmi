@@ -1,7 +1,7 @@
 .. _contributing:
 
-Contributing
-============
+Contributing to QRMI
+====================
 
 .. rst-class:: lead
 

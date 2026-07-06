@@ -14,7 +14,7 @@ Quantum Resource Management Interface (QRMI)
 
 .. container:: buttons
 
-    :doc:`Docs <user_docs/GETTING_STARTED>`
+    :doc:`Docs <getting_started/INSTALLATION>`
     `GitHub <https://github.com/qiskit-community/qrmi>`_
 
 
@@ -42,15 +42,15 @@ more information, read the documentation available
    :padding: 0
    :class-row: surface
 
-   .. grid-item-card:: :octicon:`mortar-board` User Documentation
-      :link: user_docs/index
+   .. grid-item-card:: :octicon:`mortar-board` Getting Started
+      :link: getting_started/INSTALLATION
       :link-type: doc
 
       The user documentation provides information on how to install and
       use QRMI.
 
-   .. grid-item-card:: :octicon:`tools` Developer Documentation
-      :link: developer_docs/index
+   .. grid-item-card:: :octicon:`tools` Development
+      :link: development/CONTRIBUTING
       :link-type: doc
 
       The developer documentation provides information on how to contribute
@@ -66,45 +66,33 @@ more information, read the documentation available
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Documentation
+   :caption: Getting Started
    :hidden:
    
-   user_docs/GETTING_STARTED
-   user_docs/INSTALLATION
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer Documentation
-   :hidden:
-   
-   developer_docs/CONTRIBUTING
-   developer_docs/TESTING
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Examples
-   :hidden:
-   
-   examples/bindings/index
-   examples/pulser/index
-   examples/qiskit_primitives/index
-   examples/task_runner/index
+   getting_started/INSTALLATION
 
 .. toctree::
    :maxdepth: 2
    :caption: Additional Resources
    :hidden:
    
-   Code of Conduct <CODE_OF_CONDUCT>
-   Troubleshooting <TROUBLESHOOTING>
+   additional_resources/CODE_OF_CONDUCT
+   additional_resources/TROUBLESHOOTING
 
 .. toctree::
    :maxdepth: 2
-   :caption: Indexes
+   :caption: Development
    :hidden:
    
-   user_docs/index
-   developer_docs/index
+   development/CONTRIBUTING
+   development/TESTING
+   development/DOCUMENTATION
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Examples
+   :hidden:
+   
    examples/index
 
 .. |License| image:: https://img.shields.io/github/license/qiskit-community/qrmi.svg?

@@ -1,5 +1,5 @@
-Examples
-========
+QRMI Examples
+=============
 
 .. toctree::
     :maxdepth: 2
