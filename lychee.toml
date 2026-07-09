@@ -18,4 +18,12 @@ extensions = ["md","txt","html", "rst"]
 # Exclude URLs and mail addresses from checking. The values are treated as regular expressions
 exclude = [
     '^http://localhost*',
+    'dependencies/alice_bob_felis_client/felis_generated/docs/*',
+    'dependencies/alice_bob_felis_client/felis_generated/src/*',
+    'dependencies/alice_bob_felis_client/felis_generated/.openapi-generator/*',
+    'dependencies/iqm_client/src/*',
+    'dependencies/iqm_client/docs/*',
+    'dependencies/qiskit_runtime_client/src/*',
+    'dependencies/qiskit_runtime_client/docs/*',
+    'dependencies/qiskit_runtime_client/.openapi-generator/*',
 ]

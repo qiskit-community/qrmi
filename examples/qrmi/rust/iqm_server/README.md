@@ -19,7 +19,7 @@ Because QRMI is an environment variable driven software library, all configurati
 
 ## Create IQM JSON input file as input
 
-Refer [this tool](../../../../bin/task_runner/examples/iqm) to generate. You can customize quantum circuits by editting the code.
+Refer [this tool](../../../task_runner/iqm) to generate. You can customize quantum circuits by editting the code.
 
 > [!NOTE]
 > Use the file with name ending with `_params_only.json`, e.g. `iqm_json_sirius_params_only.json`.

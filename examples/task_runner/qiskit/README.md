@@ -16,7 +16,7 @@ pip install -f requirements.txt
 
 ### gen_estimator_input.py
 
-Generates EstimatorV2 input for the circuit introduced in [Getting started doc](https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-estimator).
+Generates EstimatorV2 input for the circuit introduced in [Getting started doc](https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-estimator).
 
 
 Usage:
@@ -45,12 +45,12 @@ Output:
 
 | Files | Descriptions |
 | ---- | ---- |
-| estimator_input_{backend_name}_params_only.json | EstimatorV2 input parameters([EstimatorV2 schema](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json)).
+| estimator_input_{backend_name}_params_only.json | EstimatorV2 input parameters([EstimatorV2 schema](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs)).
 | estimator_input_{backend_name}.json | An input for QRMI task runner, which contains 2 properties - `program_id`(=`estimator`) and `parameters`(EstimatorV2 input parameters). |
 
 ### gen_sampler_input.py
 
-Generates SamplerV2 input for the circuit introduced in [Getting started doc](https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-sampler).
+Generates SamplerV2 input for the circuit introduced in [Getting started doc](https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-sampler).
 
 Usage:
 ```shell-session
@@ -78,5 +78,5 @@ Output:
 
 | Files | Descriptions |
 | ---- | ---- |
-| sampler_input_{backend_name}_params_only.json | SamplerV2 input parameters([SamplerV2 schema](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json)).
+| sampler_input_{backend_name}_params_only.json | SamplerV2 input parameters([SamplerV2 schema](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs)).
 | sampler_input_{backend_name}.json | An input for QRMI task runner, which contains 2 properties - `program_id`(=`sampler`) and `parameters`(SamplerV2 input parameters). |
