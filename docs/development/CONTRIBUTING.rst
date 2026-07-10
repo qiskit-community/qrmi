@@ -15,128 +15,136 @@ QRMI community in this goal.
    :local:
    :depth: 2
 
-Before you start
-----------------
+Prerequisites
+-------------
 
-If you are new to Qiskit contributing we recommend you do the following
+If you are new to contributing to Qiskit, we recommend you do the following
 before diving into the code:
 
--  Read the `Code of
-   Conduct <https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md>`__
--  Familiarize yourself with the Qiskit community (via
-   `Slack <https://qisk.it/join-slack>`__,
-   `GitHub <https://github.com/qiskit-community/feedback/discussions>`__
-   etc.)
+-  Read the `Code of Conduct`_
 
-Set up Python virtual development environment
----------------------------------------------
+.. _Code of Conduct: https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md
+
+-  Familiarize yourself with the Qiskit community (via
+   `Slack`_, `GitHub`_, etc.)
+
+.. _Slack: https://qisk.it/join-slack
+.. _GitHub: https://github.com/qiskit-community/feedback/discussions
+
+Set up a virtual development environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Virtual environments are used for QRMI development to isolate the
 development environment from system-wide packages. This way, we avoid
 inadvertently becoming dependent on a particular system configuration.
 For developers, this also makes it easy to maintain multiple
-environments (e.g. one per supported Python version, for older versions
+environments (e.g. one per supported Python version, for older versions
 of QRMI, etc.).
 
-Set up a Python venv
-~~~~~~~~~~~~~~~~~~~~
+.. tabs::
 
-All Python versions supported by Qiskit include built-in virtual
-environment module
-`venv <https://docs.python.org/3/tutorial/venv.html>`__.
+   .. tab:: Python
 
-Start by creating a new virtual environment with ``venv``. The resulting
-environment will use the same version of Python that created it and will
-not inherit installed system-wide packages by default. The specified
-folder will be created and is used to hold the environment’s
-installation. It can be placed anywhere. For more detail, see the
-official Python documentation, `Creation of virtual
-environments <https://docs.python.org/3/library/venv.html>`__.
+      All Python versions supported by Qiskit include a built-in virtual
+      environment module, `venv`_.
 
-.. code:: bash
+      .. _venv: https://docs.python.org/3/tutorial/venv.html
 
-   python3 -m venv ~/.venvs/qrmi-dev
+      Start by creating a new virtual environment with ``venv``. The resulting
+      environment will use the same version of Python that created it and will
+      not inherit installed system-wide packages by default. The specified
+      folder will be created and is used to hold the environment's
+      installation. It can be placed anywhere. For more details, see the
+      official Python documentation, `Creation of virtual environments`_.
 
-Activate the environment by invoking the appropriate activation script
-for your system, which can be found within the environment folder. For
-example, for bash/zsh:
+      .. _Creation of virtual environments: https://docs.python.org/3/library/venv.html
 
-.. code:: bash
+      .. code:: bash
 
-   source ~/.venvs/qrmi-dev/bin/activate
+         python3 -m venv ~/.venvs/qrmi-dev
 
-Upgrade pip within the environment to ensure QRMI dependencies installed
-in the subsequent sections can be located for your system. You need
-``pip>=25.1`` to use the ``--group`` feature used to manage developer
-dependency groups.
+      Activate the environment by invoking the appropriate activation script
+      for your system, which can be found within the environment folder. For
+      example, for bash/zsh:
 
-.. code:: bash
+      .. code:: bash
 
-   pip install -U pip
+         source ~/.venvs/qrmi-dev/bin/activate
 
-You can easily install all the standard developer dependencies for
-in-place testing, documentation-building, and linting using:
+      Upgrade ``pip`` within the environment to ensure QRMI dependencies installed
+      in the subsequent sections can be located for your system. You need
+      ``pip>=25.1`` to use the ``--group`` feature, used to manage developer
+      dependency groups:
 
-.. code:: bash
+      .. code:: bash
 
-   pip install -r requirements-dev.txt
+         pip install -U pip
 
-Set up a Conda environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+      You can easily install all the standard developer dependencies for
+      in-place testing, documentation-building, and linting using:
 
-For Conda users, a new environment can be created as follows.
+      .. code:: bash
 
-.. code:: bash
+         pip install -r requirements-dev.txt
 
-   conda create -y -n QRMIDevenv python=3
-   conda activate QRMIDevenv
+   .. tab:: Conda
 
-.. code:: bash
+      For Conda users, a new environment can be created as follows:
 
-   pip install -e .
+      .. code:: bash
 
-Installing QRMI from source
----------------------------
+         conda create -y -n QRMIDevenv python=3
+         conda activate QRMIDevenv
 
-Refer `this
-document <https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md>`__.
+      Install the QRMI dependencies:
+
+      .. code:: bash
+
+         pip install -e .
+
+Install QRMI from source
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Refer to :ref:`install`.
 
 Issues and pull requests
 ------------------------
 
-We use `GitHub pull
-requests <https://help.github.com/articles/about-pull-requests>`__ to
-accept contributions.
+We use `GitHub pull requests`_ to accept contributions.
 
-While not required, opening a new issue about the bug you’re fixing or
-the feature you’re working on before you open a pull request is an
-important step in starting a discussion with the community about your
-work. The issue gives us a place to talk about the idea and how we can
-work together to implement it in the code. It also lets the community
-know what you’re working on, and if you need help, you can reference the
-issue when discussing it with other community and team members.
+.. _GitHub pull requests: https://docs.github.com/en/pull-requests
 
-If you’ve written some code but need help finishing it, want to get
+While not required, it is best practice to **open a new issue for bug fixes 
+and feature development**, before opening a pull request. This allows
+discussion with the community about your work:
+
+.. important::
+
+   Issues provide a place to talk about the idea and how we can work together
+   to implement it in the code. They let the community know what you are
+   working on and offer help and feedback. Issues are numbered and can be
+   referenced during discussions with other community and team members.
+
+If you've written some code but need help finishing it, want to get
 initial feedback on it prior to finishing it, or want to share it and
-discuss prior to finishing the implementation, you can open a *Draft*
-pull request and prepend the title with the **[WIP]** tag (for Work In
-Progress). This will indicate to reviewers that the code in the PR isn’t
-in its final state and will change. It also means that we will not merge
-the commit until it is finished. You or a reviewer can remove the [WIP]
-tag when the code is ready to be fully reviewed for merging.
+discuss prior to finishing the implementation, you can open a **Draft
+pull request** and prepend the title with the **[WIP]** tag (for Work In
+Progress). This indicates to reviewers that the code in the PR isn't final
+and will change. The branch will not be merged until it is finished.
+You, or a reviewer, can remove the [WIP] tag when the code is ready to be
+reviewed for merging.
 
-Before marking your Pull Request as “ready for review” make sure you
-have followed the PR Checklist below. PRs that adhere to this list are
-more likely to get reviewed and merged in a timely manner.
+Before marking your PR as “ready for review”, make sure you
+have followed the PR checklist below. PRs that adhere to this list are
+more likely to be reviewed and merged in a timely manner.
 
 Pull request checklist
 ~~~~~~~~~~~~~~~~~~~~~~
 
-When submitting a pull request and you feel it is ready for review,
-please ensure that:
+When submitting a pull request for review, please ensure that:
 
-1. The code follows the code style of the project and successfully
-   passes the CI tests. For convenience, you can execute the following
+#. The code follows the **code style** of the project and successfully
+   passes the **CI tests**. For convenience, you can execute the following
    commands locally, which will run these checks and report any issues.
 
    -  ``make lint-rust-all``
@@ -144,18 +152,18 @@ please ensure that:
    -  ``make fmt-rust``
    -  ``make fmt-python``
 
-2. The documentation has been updated accordingly. In particular, if a
+#. The **documentation has been updated** accordingly. In particular, if a
    function or class has been modified during the PR, please update the
-   *docstring* accordingly.
-3. If you are of the opinion that the modifications you made warrant
+   **docstring** accordingly.
+#. If you are of the opinion that the modifications you made warrant
    additional tests, feel free to include them
-4. Ensure that if your change has an end user facing impact (new
+#. Ensure that if your change has an end user facing impact (new
    feature, deprecation, removal etc) that you have added a reno release
    note for that change and that the PR is tagged for the changelog.
-5. All contributors have signed the CLA.
-6. The PR has a concise and explanatory title (e.g. ``Fixes Issue1234``
+#. All contributors have signed the CLA.
+#. The PR has a concise and explanatory title (e.g. ``Fixes Issue1234``
    is a bad title!).
-7. If the PR addresses an open issue the PR description includes the
+#. If the PR addresses an open issue the PR description includes the
    ``fixes #issue-number`` syntax to link the PR to that issue (**you
    must use the exact phrasing in order for GitHub to automatically
    close the issue when the PR merges**)
