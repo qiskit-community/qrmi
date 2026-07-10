@@ -69,6 +69,7 @@ Contributors
 
    .. contributors:: qiskit-community/qrmi
       :avatars:
+      :exclude: dependabot[bot], pre-commit-ci[bot]
 
 .. toctree::
    :maxdepth: 2

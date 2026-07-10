@@ -30,7 +30,16 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "shibuya"
+
 html_static_path = ["_static"]
+
+html_css_files = [
+    "custom.css",
+]
+
+html_js_files = [
+    "contributors.js",
+]
 
 html_theme_options = {
     # "light_logo": "logo-light.svg",
