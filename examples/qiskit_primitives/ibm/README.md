@@ -3,7 +3,7 @@
 ## Prerequisites
 
 * Python 3.11 or 3.12
-* [Installation of QRMI primitives python package(`qiskit-qrmi-primitives`)](../../../../README.md)
+* [Installation of QRMI python package(`qiskit-qrmi-primitives`)](../../../README.md)
 
 ## Install dependencies
 
@@ -93,7 +93,7 @@ export ibm_marrakesh_QRMI_IBM_QRS_SERVICE_CRN=your_instance
 
 ### SamplerV2
 
-Code is based on "Get started with Sampler" tutorial (https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-sampler).
+Code is based on "Get started with Sampler" tutorial (https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-backend-primitives#get-started-with-the-sampler-backend-primitive).
 
 ```shell-session
 $ python sampler.py
@@ -101,7 +101,7 @@ $ python sampler.py
 
 ### EstimatorV2
 
-Code is based on "Get started with Estimator" tutorial (https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-estimator).
+Code is based on "Get started with Estimator" tutorial (https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-backend-primitives#get-started-with-the-estimator-backend-primitive).
 
 ```shell-session
 $ python estimator.py
@@ -109,4 +109,4 @@ $ python estimator.py
 
 ### SQD tutorial
 
-[01_chemistry_hamiltonian.ipynb](./01_chemistry_hamiltonian.ipynb) is QRMI primitive port of [Improving energy estimation of a chemistry Hamiltonian with SQD](https://github.com/Qiskit/qiskit-addon-sqd/blob/main/docs/tutorials/01_chemistry_hamiltonian.ipynb). Start jupyter notebook and run all cells from beginning.
+[01_chemistry_hamiltonian.ipynb](./01_chemistry_hamiltonian.ipynb) is QRMI primitive port of [Improving energy estimation of a chemistry Hamiltonian with SQD](https://quantum.cloud.ibm.com/docs/en/tutorials/sample-based-quantum-diagonalization). Start jupyter notebook and run all cells from beginning.
