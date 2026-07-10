@@ -1,7 +1,9 @@
 QRMI Provider - Examples in Python
 ==================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/resource_providers
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/resource_providers
 
 Prerequisites
 -------------

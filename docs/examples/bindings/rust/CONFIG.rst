@@ -1,7 +1,9 @@
 Parsing QRMI config file in Rust
 ================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qrmi_config
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qrmi_config
 
 Prerequisites
 -------------

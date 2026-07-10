@@ -17,6 +17,39 @@ Quantum Resource Management Interface (QRMI)
     :doc:`Docs <getting_started/INSTALLATION>`
     `GitHub <https://github.com/qiskit-community/qrmi>`_
 
+.. rubric:: Supported Vendors
+   :class: centered
+
+.. grid:: 1 2 4 4
+
+    .. grid-item::
+
+        .. image:: /_static/images/ibm-quantum-logo.png
+           :width: 90%
+           :target: https://www.ibm.com/quantum
+           :align: center
+
+    .. grid-item::
+
+        .. image:: /_static/images/pasqal-logo.png
+           :width: 70%
+           :target: https://www.pasqal.com/
+           :align: center
+
+    .. grid-item::
+
+        .. image:: /_static/images/alice-and-bob-logo.png
+           :width: 100%
+           :target: https://alice-bob.com/
+           :align: center
+
+    .. grid-item::
+
+        .. image:: /_static/images/iqm-logo.png
+           :width: 50%
+           :target: https://iqm.tech/
+           :align: center
+
 |License| |Current Release| |Platform| |PyPI - Python Version| |Minimum
 rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
 
@@ -33,8 +66,7 @@ The source code to build and deploy QRMI is available
 
 An optional ``task_runner`` command line tool to execute quantum
 payloads against quantum hardware is included in the Python package. For
-more information, read the documentation available
-`here <https://github.com/qiskit-community/qrmi/blob/main/python/qrmi/tools/task_runner/README.md>`__.
+more information, read the documentation available :ref:`here <task_runner>`.
 
 .. grid:: 1 1 2 3
    :gutter: 2

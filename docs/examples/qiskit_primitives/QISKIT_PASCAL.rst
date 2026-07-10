@@ -1,6 +1,10 @@
 Qiskit Primitives with Pasqal Cloud QRMI - Python Example
 =========================================================
 
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qiskit_primitives/pasqal
+
 Prerequisites
 -------------
 

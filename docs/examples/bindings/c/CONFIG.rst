@@ -1,7 +1,9 @@
-Parsing QRMI config file in C
+Parsing QRMI Config File in C
 =============================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
 
 Prerequisites
 -------------

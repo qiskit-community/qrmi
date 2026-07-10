@@ -1,7 +1,9 @@
 Pasqal CLoud QRMI - Examples in Rust
 ====================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/pasqal_cloud
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/pasqal_cloud
 
 Prerequisites
 -------------

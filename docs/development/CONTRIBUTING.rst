@@ -15,6 +15,8 @@ QRMI community in this goal.
    :local:
    :depth: 2
 
+.. _contributing_prereq:
+
 Prerequisites
 -------------
 
@@ -107,6 +109,8 @@ Install QRMI from source
 
 Refer to :ref:`install`.
 
+.. _contributing_issues:
+
 Issues and pull requests
 ------------------------
 
@@ -155,46 +159,60 @@ When submitting a pull request for review, please ensure that:
 #. The **documentation has been updated** accordingly. In particular, if a
    function or class has been modified during the PR, please update the
    **docstring** accordingly.
-#. If you are of the opinion that the modifications you made warrant
-   additional tests, feel free to include them
-#. Ensure that if your change has an end user facing impact (new
-   feature, deprecation, removal etc) that you have added a reno release
-   note for that change and that the PR is tagged for the changelog.
-#. All contributors have signed the CLA.
-#. The PR has a concise and explanatory title (e.g. ``Fixes Issue1234``
-   is a bad title!).
-#. If the PR addresses an open issue the PR description includes the
-   ``fixes #issue-number`` syntax to link the PR to that issue (**you
-   must use the exact phrasing in order for GitHub to automatically
-   close the issue when the PR merges**)
 
-Pre-commit detect-secrets
-~~~~~~~~~~~~~~~~~~~~~~~~~
+#. If your changes warrant additional tests, feel free to include them.
+
+#. Ensure that if your change impacts the end-user (new feature, deprecation, 
+   removal, etc.) that you have added a reno release note for that change and that
+   the PR is tagged for the changelog.
+
+#. Ensure all contributors have signed the :ref:`CLA <contributing_cla>`.
+
+#. The PR has a concise and descriptive title.
+
+   - ``Fixes Issue1234`` is a bad title. ``Fix <ERROR_NAME>`` is much more descriptive.
+
+#. If the PR addresses an open issue, the PR description includes the
+   ``Fixes #<ISSUE_NUMBER>`` syntax to link the PR to that issue.
+
+   - You must use the **exact phrasing** for GitHub to automatically close the issue when the PR merges.
+
+Pre-commit ``detect-secrets``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``detect-secrets`` is an open-source, developer-friendly tool designed
-to scan codebases for mistakenly committed secrets—such as API keys,
-passwords, and private tokens—before they leak. To keep our credentials
+to scan codebases for mistakenly committed secrets (such as API keys,
+passwords, and private tokens) before they leak. To keep our credentials
 secure, we recommend that all developers integrate this into their
-workflow using the following instructions.
+workflow using the following instructions:
 
--  Prerequisites: Before you begin, ensure you have a Python virtual
-   environment (venv) active. You will need to install pre-commit, which
-   manages the hooks that run detect-secrets automatically.
+.. attention::
+   Before you begin, ensure you have a **Python virtual environment** (i.e. ``venv``) active. You will need to install ``pre-commit``, which manages the hooks that run ``detect-secrets`` automatically.
+
+Installing ``pre-commit``
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+#. Run the following commands in your virtual environment terminal:
 
 .. code:: bash
 
    pip install pre-commit
    pre-commit install
 
-Please find ``.pre-commit-config.yaml`` for the initial setup. Following
-command was used to generate ``.secrets.baseline`` and to maximize the
-detection coverage.
+Find ``.pre-commit-config.yaml`` for the initial setup. 
+
+#. Run the following command to generate a ``.secrets.baseline`` file.
 
 .. code:: bash
 
    detect-secrets scan --force-use-all-plugins > .secrets.baseline
 
-**Handling False Positives** If the pre-commit hook identifies a secret
+This file maximises the detection coverage.
+
+Handling False Positives
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the pre-commit hook identifies a secret
 that you have verified is not sensitive (a false positive), please use
 the following command to audit and update the baseline file. Once
 updated, include the modified .secrets.baseline in your Pull Request to
@@ -238,19 +256,21 @@ remind them to review your work.
 
 Please be patient! Maintainers have a number of other priorities to
 focus on and so it may take some time for your work to get reviewed and
-merged. PRs that are in a good shape (i.e. following the `Pull request
+merged. PRs that are in a good shape (i.e. following the `Pull request
 checklist <#pull-request-checklist>`__) are easier for maintainers to
 review and more likely to get merged in a timely manner. Please also
 make sure to always be kind and respectful in your interactions with
 maintainers and other contributors, you can read `the QRMI Code of
 Conduct <https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md>`__.
 
+.. _contributing_cla:
+
 Contributor Licensing Agreement
 -------------------------------
 
 Before you can submit any code, all contributors must sign a contributor
-license agreement (CLA). By signing a CLA, you’re attesting that you are
-the author of the contribution, and that you’re freely contributing it
+license agreement (CLA). By signing a CLA, you're attesting that you are
+the author of the contribution, and that you're freely contributing it
 under the terms of the Apache-2.0 license.
 
 When you contribute to the Qiskit project with a new pull request, a bot
@@ -264,23 +284,25 @@ contribution is the property of your employer, then you will more than
 likely need to sign a `corporate CLA <https://qisk.it/corporate-cla>`__
 too and email it to us at qiskit@us.ibm.com.
 
+.. _contributing_testing:
+
 Testing
 -------
 
-Once you’ve made a code change, it is important to verify that your
+Once you've made a code change, it is important to verify that your
 change does not break any existing tests and that any new tests that
-you’ve added also run successfully. Before you open a new pull request
-for your change, you’ll want to run QRMI’s Python test suite (as well as
-its Rust-based unit tests if you’ve modified native code).
+you've added also run successfully. Before you open a new pull request
+for your change, you'll want to run QRMI's Python test suite (as well as
+its Rust-based unit tests if you've modified native code).
 
 Testing Python modules
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The easiest way to run QRMI’s Python test suite is to use
+The easiest way to run QRMI's Python test suite is to use
 `pytest <https://docs.pytest.org/en/stable/>`__. You can install pytest
 with pip: ``pip install -U pytest``.
 
-To run QRMI’s Python test suite:
+To run QRMI's Python test suite:
 
 .. code:: bash
 
@@ -290,7 +312,7 @@ To run QRMI’s Python test suite:
 Testing Rust components
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Many of QRMI’s core data structures and code are implemented in Rust.
+Many of QRMI's core data structures and code are implemented in Rust.
 
 To provide Rust unit testing, we use ``cargo test``. Rust tests are
 integrated directly into the Rust file being tested within a ``tests``
@@ -308,7 +330,7 @@ built and run as tests.
    }
 
 For more detailed guidance on how to write Rust tests, you can refer to
-the Rust documentation’s `guide on writing
+the Rust documentation's `guide on writing
 tests <https://doc.rust-lang.org/book/ch11-01-writing-tests.html>`__.
 
 For executing the tests with the makefile, a ``make test`` target is
@@ -339,7 +361,7 @@ After this, you can run the Miri test suite with
 
    MIRIFLAGS="<flags go here>" cargo +nightly miri test
 
-For the current set of ``MIRIFLAGS`` used by Qiskit’s CI, see the
+For the current set of ``MIRIFLAGS`` used by Qiskit's CI, see the
 ```miri.yml`` <https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml>`__
 GitHub Action file. This same file may also include patches to
 dependencies to make them compatible with Miri, which you would need to
@@ -355,6 +377,8 @@ Writing C API tests
 
 TBD
 
+.. _contributing_style:
+
 Style and lint
 --------------
 
@@ -369,7 +393,7 @@ issues and potential bugs and other common issues in Python.
 Rust style and lint
 ~~~~~~~~~~~~~~~~~~~
 
-For formatting and lint checking Rust code, you’ll need to use different
+For formatting and lint checking Rust code, you'll need to use different
 tools than you would for Python. QRMI uses
 `rustfmt <https://github.com/rust-lang/rustfmt>`__ for code formatting.
 You can simply run ``cargo fmt`` (if you installed Rust with the default
@@ -385,6 +409,8 @@ QRMI uses
 `clang-format <https://clang.llvm.org/docs/ClangFormat.html>`__ to
 format C code. The style is based on LLVM, with a few QRMI-specific
 adjustments.
+
+.. _contributing_api:
 
 Building API docs locally
 -------------------------
@@ -410,7 +436,7 @@ How to generate Python API document
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Prerequisites: QRMI Python package is installed in your python virtual
-environment(e.g. ``~/py312_qrmi_venv``)
+environment(e.g. ``~/py312_qrmi_venv``)
 
 .. code:: shell-session
 
@@ -441,6 +467,8 @@ How to generate C API document
 
 HTML document will be created under ``./html`` directory. Open
 ``html/index.html`` in your web browser.
+
+.. _contributing_release:
 
 Updating files for new release
 ------------------------------

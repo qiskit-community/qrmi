@@ -1,7 +1,9 @@
 Pasqal Local QRMI - Examples in C
 =================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_local
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_local
 
 Prerequisites
 -------------

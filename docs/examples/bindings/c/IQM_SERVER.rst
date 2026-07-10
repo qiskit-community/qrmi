@@ -1,7 +1,9 @@
 IQM Server QRMI - Examples in C
 ===============================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/iqm_server
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/iqm_server
 
 Prerequisites
 -------------

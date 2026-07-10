@@ -1,7 +1,9 @@
 Qiskit Runtime Service QRMI - Examples in Rust
 ==============================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qiskit_runtime_service
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qiskit_runtime_service
 
 Prerequisites
 -------------

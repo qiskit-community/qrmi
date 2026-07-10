@@ -4,11 +4,11 @@ QRMI Examples in C
 .. toctree::
     :maxdepth: 2
 
-    c/CONFIG
-    c/IBM_QUANTUM
-    c/QISKIT_RUNTIME
-    c/IQM_SERVER
-    c/PASQAL_CLOUD
-    c/PASQAL_LOCAL
-    c/ALICE_AND_BOB
-    c/PROVIDER
+    Parsing QRMI Config File <c/CONFIG>
+    IBM Quantum System <c/IBM_QUANTUM>
+    Qiskit Runtime Service <c/QISKIT_RUNTIME>
+    IQM Server <c/IQM_SERVER>
+    Pasqal Cloud <c/PASQAL_CLOUD>
+    Pasqal Local <c/PASQAL_LOCAL>
+    Alice and Bob Felis <c/ALICE_AND_BOB>
+    QRMI Provider <c/PROVIDER>
