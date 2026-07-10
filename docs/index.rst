@@ -17,7 +17,6 @@ Quantum Resource Management Interface (QRMI)
     :doc:`Docs <getting_started/INSTALLATION>`
     `GitHub <https://github.com/qiskit-community/qrmi>`_
 
-
 |License| |Current Release| |Platform| |PyPI - Python Version| |Minimum
 rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
 
@@ -63,6 +62,13 @@ more information, read the documentation available
       The examples provide information on how to use QRMI with different
       vendor frameworks.
 
+Contributors
+------------
+
+.. container:: rounded-image
+
+   .. contributors:: qiskit-community/qrmi
+      :avatars:
 
 .. toctree::
    :maxdepth: 2

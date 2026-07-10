@@ -19,6 +19,8 @@ release = "2025"
 
 extensions = [
     "sphinx_design",
+    "sphinx_tabs.tabs",
+    "sphinx_contributors",
 ]
 
 templates_path = ["_templates"]
@@ -37,11 +39,6 @@ html_theme_options = {
     "discussion_url": "https://github.com/qiskit-community",
     "github_url": "https://github.com/qiskit-community/qrmi",
     "nav_links": [
-        {
-            "title": "Qiskit Community",
-            "url": "https://github.com/qiskit-community",
-            "external": True,
-        },
         {
             "title": "SPANK Plugins",
             "url": "https://github.com/qiskit-community/spank-plugins",

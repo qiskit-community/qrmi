@@ -1,8 +1,14 @@
 QRMI Examples in C
 ==================
 
--  `IBM Quantum System QRMI <./ibm_quantum_system>`__
--  `IBM Qiskit Runtime Service QRMI <./qiskit_runtime_service>`__
--  `IQM Server QRMI <./iqm_server>`__
--  `Pasqal Cloud <./pasqal_cloud>`__
--  `Pasqal Local <./pasqal_local>`__
+.. toctree::
+    :maxdepth: 2
+
+    c/CONFIG
+    c/IBM_QUANTUM
+    c/QISKIT_RUNTIME
+    c/IQM_SERVER
+    c/PASQAL_CLOUD
+    c/PASQAL_LOCAL
+    c/ALICE_AND_BOB
+    c/PROVIDER
