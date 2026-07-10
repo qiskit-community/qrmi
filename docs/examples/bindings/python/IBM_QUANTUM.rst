@@ -1,7 +1,9 @@
 Quantum System QRMI - Examples in Python
 ========================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/ibm_quantum_system
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/ibm_quantum_system
 
 Prerequisites
 -------------

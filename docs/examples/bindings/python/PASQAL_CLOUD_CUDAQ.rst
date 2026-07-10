@@ -1,7 +1,9 @@
 Pasqal Cloud QRMI - CUDA-Q Examples
 ===================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/cudaq
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/cudaq
 
 Prerequisites
 -------------
