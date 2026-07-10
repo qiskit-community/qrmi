@@ -1,7 +1,9 @@
 Alice and Bob Felis QRMI - Examples in Python
 =============================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/alice_bob_felis
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/alice_bob_felis
 
 Prerequisites
 -------------

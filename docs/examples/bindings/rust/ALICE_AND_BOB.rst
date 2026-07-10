@@ -1,7 +1,9 @@
 Alice Bob Felis QRMI - Examples in Rust
 =======================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/alice_bob_felis
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/alice_bob_felis
 
 Prerequisites
 -------------

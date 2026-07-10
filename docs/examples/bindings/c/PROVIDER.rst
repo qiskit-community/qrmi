@@ -1,7 +1,9 @@
 QRMI Provider Example in C
 ==========================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/resource_providers
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/resource_providers
 
 A unified example that works with any supported provider type
 (``qiskit-runtime-service``, ``ibm-quantum-system``, etc.). The resource

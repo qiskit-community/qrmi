@@ -4,11 +4,11 @@ QRMI Examples in Rust
 .. toctree::
     :maxdepth: 2
 
-    rust/CONFIG
-    rust/IBM_QUANTUM
-    rust/QISKIT_RUNTIME
-    rust/IQM_SERVER
-    rust/PASQAL_CLOUD
-    rust/PASQAL_LOCAL
-    rust/ALICE_AND_BOB
-    rust/PROVIDER
+    Parsing QRMI Config File <rust/CONFIG>
+    IBM Quantum System <rust/IBM_QUANTUM>
+    Qiskit Runtime Service <rust/QISKIT_RUNTIME>
+    IQM Server <rust/IQM_SERVER>
+    Pasqal Cloud <rust/PASQAL_CLOUD>
+    Pasqal Local <rust/PASQAL_LOCAL>
+    Alice and Bob Felis <rust/ALICE_AND_BOB>
+    QRMI Provider <rust/PROVIDER>

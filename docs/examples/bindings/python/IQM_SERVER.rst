@@ -1,7 +1,9 @@
 IQM Server QRMI - Examples in Python
 ====================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/iqm_server
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/iqm_server
 
 Prerequisites
 -------------

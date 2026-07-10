@@ -1,7 +1,9 @@
 Qiskit Runtime Service QRMI - Examples in C
 ===========================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/qiskit_runtime_service
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/qiskit_runtime_service
 
 Prerequisites
 -------------
