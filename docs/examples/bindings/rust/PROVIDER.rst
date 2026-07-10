@@ -1,7 +1,9 @@
 QRMI Provider - Examples in Rust
 ================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/resource_providers
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/resource_providers
 
 Prerequisites
 -------------

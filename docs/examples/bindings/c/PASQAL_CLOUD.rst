@@ -1,7 +1,9 @@
 Pasqal Cloud QRMI - Examples in C
 =================================
 
-https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_cloud
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_cloud
 
 Prerequisites
 -------------
