@@ -34,6 +34,8 @@ pub enum ReturnCode {
     NullPointerError = 101,
 }
 
+pub type QrmiLogCallback = crate::common::QrmiLogCallback;
+
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Payload {
@@ -177,6 +179,15 @@ fn _set_last_error(msg: String) {
                 CString::new("Failed to generate a C-compatible string").unwrap()
             }));
     });
+}
+
+/// Registers a QRMI log callback for C hosts.
+///
+/// Pass NULL to clear the current callback.
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) {
+    crate::common::set_log_callback(callback);
+    crate::common::initialize();
 }
 
 /// @ingroup Qrmi
