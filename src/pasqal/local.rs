@@ -47,12 +47,9 @@ impl PasqalLocal {
         let url = match env::var(&warden_url_var) {
             Ok(url) => url,
             Err(_) => {
-                let url = env::var(&legacy_url_var).map_err(|_| {
-                    anyhow!("{warden_url_var} environment variable is not set")
-                })?;
-                warn!(
-                    "{legacy_url_var} is deprecated, please use {warden_url_var} instead."
-                );
+                let url = env::var(&legacy_url_var)
+                    .map_err(|_| anyhow!("{warden_url_var} environment variable is not set"))?;
+                warn!("{legacy_url_var} is deprecated, please use {warden_url_var} instead.");
                 url
             }
         };
