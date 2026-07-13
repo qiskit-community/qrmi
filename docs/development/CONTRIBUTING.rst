@@ -23,18 +23,46 @@ Prerequisites
 If you are new to contributing to Qiskit, we recommend you do the following
 before diving into the code:
 
--  Read the `Code of Conduct`_
+-  Read the :ref:`Code of Conduct <code_of_conduct>`
 
-.. _Code of Conduct: https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md
-
--  Familiarize yourself with the Qiskit community (via
+-  Familiarise yourself with the Qiskit community (via
    `Slack`_, `GitHub`_, etc.)
 
 .. _Slack: https://qisk.it/join-slack
 .. _GitHub: https://github.com/qiskit-community/feedback/discussions
 
-Set up a virtual development environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _contributing_cla:
+
+Contributor Licensing Agreement
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- `Individual CLA`_
+- `Corporate CLA`_
+
+.. _Individual CLA: https://qisk.it/cla
+.. _Corporate CLA: https://qisk.it/corporate-cla
+
+Before you can submit any code, all contributors must sign a **contributor
+license agreement** (CLA). By signing a CLA, you are attesting that you are
+the author of the contribution, and that you're freely contributing it
+under the terms of the Apache-2.0 license.
+
+When you contribute to the Qiskit project with a new pull request, a bot
+will evaluate whether you have signed the CLA. If required, the bot will
+comment on the pull request, including a link to accept the agreement.
+The `Individual CLA`_ document is available for review as a PDF.
+
+.. note::
+
+   If your contribution is part of your employment or your contribution is the 
+   property of your employer, then you likely need to sign a `Corporate CLA`_ too.
+   Please email this to us at qiskit@us.ibm.com.
+
+Setting up the developer environment
+------------------------------------
+
+Create a virtual environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Virtual environments are used for QRMI development to isolate the
 development environment from system-wide packages. This way, we avoid
@@ -142,6 +170,8 @@ Before marking your PR as “ready for review”, make sure you
 have followed the PR checklist below. PRs that adhere to this list are
 more likely to be reviewed and merged in a timely manner.
 
+.. _pull_request_checklist:
+
 Pull request checklist
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -212,11 +242,9 @@ This file maximises the detection coverage.
 Handling False Positives
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-If the pre-commit hook identifies a secret
-that you have verified is not sensitive (a false positive), please use
-the following command to audit and update the baseline file. Once
-updated, include the modified .secrets.baseline in your Pull Request to
-ensure the pre-commit passes in the future.
+If the pre-commit hook identifies a secret that you have verified is not sensitive
+(a false positive), please use the following command to audit and update the baseline file.
+Once updated, include the modified .secrets.baseline in your PR to ensure the pre-commit passes in the future.
 
 .. code:: bash
 
@@ -224,17 +252,25 @@ ensure the pre-commit passes in the future.
    detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
    detect-secrets audit .secrets.baseline
 
-**Manual Execution and Overrides** To manually trigger a scan of all
-files in the repository for a local sanity check, execute the following
-command:
+Manual Execution and Overrides
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To manually trigger a scan of all files in the repository for a local sanity check,
+execute the following command:
 
 .. code:: bash
 
    pre-commit run --all-files
 
-**Bypassing the Hook (Not Recommended)** While not recommended, if you
-must force a commit without running the pre-commit checks (e.g., during
-an emergency fix), you may use the ``--no-verify`` flag:
+Bypassing the Hook
+^^^^^^^^^^^^^^^^^^
+
+.. warning:: 
+
+   Bypassing the hook is not recommended.
+
+If you must force a commit without running the pre-commit checks
+(e.g. during an emergency fix), you may use the ``--no-verify`` flag:
 
 .. code:: bash
 
@@ -243,129 +279,124 @@ an emergency fix), you may use the ``--no-verify`` flag:
 Code Review
 ~~~~~~~~~~~
 
-Code review is done in the open and is open to anyone. While only
-maintainers have access to merge commits, community feedback on pull
-requests is extremely valuable. It is also a good mechanism to learn
+Code review is transparent and open to anyone. While only
+maintainers have permission to merge commits, community feedback on pull
+requests is extremely valuable. It is also a good way to learn
 about the code base.
 
-Response times may vary for your PR, it is not unusual to wait a few
+Response times may vary for your PR. It is not unusual to wait a few
 weeks for a maintainer to review your work, due to other internal
 commitments. If you have been waiting over a week for a review on your
-PR feel free to tag the relevant maintainer in a comment to politely
+PR, feel free to tag the relevant maintainer in a comment to politely
 remind them to review your work.
 
 Please be patient! Maintainers have a number of other priorities to
-focus on and so it may take some time for your work to get reviewed and
-merged. PRs that are in a good shape (i.e. following the `Pull request
-checklist <#pull-request-checklist>`__) are easier for maintainers to
-review and more likely to get merged in a timely manner. Please also
-make sure to always be kind and respectful in your interactions with
-maintainers and other contributors, you can read `the QRMI Code of
-Conduct <https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md>`__.
+focus on, therefore it may take some time for your work to be reviewed and
+merged. PRs that are in a good shape (i.e. following the 
+:ref:`pull request checklist <pull_request_checklist>`) are easier for maintainers
+to review and are more likely to get merged in a timely manner. 
 
-.. _contributing_cla:
+Please also make sure to always be kind and respectful in your interactions with
+maintainers and other contributors, in line with the :ref:`QRMI Code of Conduct <code_of_conduct>`.
 
-Contributor Licensing Agreement
--------------------------------
+Documentation
+-------------
 
-Before you can submit any code, all contributors must sign a contributor
-license agreement (CLA). By signing a CLA, you're attesting that you are
-the author of the contribution, and that you're freely contributing it
-under the terms of the Apache-2.0 license.
-
-When you contribute to the Qiskit project with a new pull request, a bot
-will evaluate whether you have signed the CLA. If required, the bot will
-comment on the pull request, including a link to accept the agreement.
-The `individual CLA <https://qisk.it/cla>`__ document is available for
-review as a PDF.
-
-Note: If your contribution is part of your employment or your
-contribution is the property of your employer, then you will more than
-likely need to sign a `corporate CLA <https://qisk.it/corporate-cla>`__
-too and email it to us at qiskit@us.ibm.com.
+Please ensure any code changes are reflected in the documentation. 
+Refer to :ref:`adding_documentation` for further guidance.
 
 .. _contributing_testing:
 
 Testing
 -------
 
-Once you've made a code change, it is important to verify that your
-change does not break any existing tests and that any new tests that
-you've added also run successfully. Before you open a new pull request
-for your change, you'll want to run QRMI's Python test suite (as well as
-its Rust-based unit tests if you've modified native code).
+Once you've made a code change, it is important to verify that it doesn't break 
+any existing tests and that newly added tests run successfully. Before 
+you open a new pull request for your change, run QRMI's Python test suite. If you've
+modified native code, you should also run its Rust-based unit tests.
 
-Testing Python modules
-~~~~~~~~~~~~~~~~~~~~~~
+Running Unit Tests
+~~~~~~~~~~~~~~~~~~
 
-The easiest way to run QRMI's Python test suite is to use
-`pytest <https://docs.pytest.org/en/stable/>`__. You can install pytest
-with pip: ``pip install -U pytest``.
+.. tabs::
 
-To run QRMI's Python test suite:
+   .. tab:: Python
 
-.. code:: bash
+      `pytest`_ offers the easiest way to run QRMI's Python test suite.
 
-   pip install "$(ls ./target/wheels/qrmi-*.whl)[ibm,pasqal]"
-   pytest .
+      .. _pytest: https://docs.pytest.org/en/stable/
 
-Testing Rust components
-~~~~~~~~~~~~~~~~~~~~~~~
+      You can install pytest using ``pip``: 
 
-Many of QRMI's core data structures and code are implemented in Rust.
+      .. code-block:: bash
+         
+         pip install -U pytest
 
-To provide Rust unit testing, we use ``cargo test``. Rust tests are
-integrated directly into the Rust file being tested within a ``tests``
-module. Functions decorated with ``#[test]`` within these modules are
-built and run as tests.
+      To run QRMI's Python test suite:
 
-.. code:: rust
+      .. code:: bash
 
-   #[cfg(test)]
-   mod tests {
-       #[test]
-       fn my_first_test() {
-           assert_eq!(2, 1 + 1);
-       }
-   }
+         pip install "$(ls ./target/wheels/qrmi-*.whl)[ibm,pasqal]"
+         pytest .
 
-For more detailed guidance on how to write Rust tests, you can refer to
-the Rust documentation's `guide on writing
-tests <https://doc.rust-lang.org/book/ch11-01-writing-tests.html>`__.
+   .. tab:: Rust
 
-For executing the tests with the makefile, a ``make test`` target is
-available. The execution of the tests (both via the make target and
-during manual invocation) takes into account the ``LOG_LEVEL``
-environment variable.
+      Many of QRMI's core data structures and code are implemented in Rust.
+
+      ``cargo test`` is responsible for Rust unit testing. Rust tests are
+      integrated directly into the Rust file being tested within a ``tests``
+      module. Functions within these modules decorated with ``#[test]`` are
+      built and run as tests.
+
+      .. code:: rust
+
+         #[cfg(test)]
+         mod tests {
+            #[test]
+            fn my_first_test() {
+               assert_eq!(2, 1 + 1);
+            }
+         }
+
+      For more detailed information on how to write Rust tests, you can refer to
+      the Rust documentation's guidance on `writing tests`_.
+
+      .. _writing tests: https://doc.rust-lang.org/book/ch11-01-writing-tests.html
+
+      To execute the tests with the makefile, a ``make test`` target is
+      available. The execution of the tests (both via the make target and
+      during manual invocation) takes into account the ``LOG_LEVEL``
+      environment variable.
 
 Unsafe code and Miri
 ~~~~~~~~~~~~~~~~~~~~
 
-Any ``unsafe`` code added to the Rust logic should be exercised by
+Any ``unsafe`` code added to the Rust logic must be executed by
 Rust-space tests, in addition to the more complete Python test suite. In
-CI, we run the Rust test suite under
-`Miri <https://github.com/rust-lang/miri>`__ as an undefined-behavior
+CI, we run the Rust test suite under `Miri`_ as an undefined-behavior
 sanitizer.
 
+.. _Miri: https://github.com/rust-lang/miri
+
 Miri is currently only available on ``nightly`` Rust channels, so to run
-it locally you will need to ensure you have that channel available, such
-as by
+it locally you will need to ensure you have that channel available:
 
 .. code:: bash
 
    rustup install nightly --components miri
 
-After this, you can run the Miri test suite with
+After this, you can run the Miri test suite using the following command:
 
 .. code:: bash
 
-   MIRIFLAGS="<flags go here>" cargo +nightly miri test
+   MIRIFLAGS="<FLAGS_GO_HERE>" cargo +nightly miri test
 
 For the current set of ``MIRIFLAGS`` used by Qiskit's CI, see the
-```miri.yml`` <https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml>`__
-GitHub Action file. This same file may also include patches to
+`miri.yml`_ GitHub Action file. This same file may also include patches to
 dependencies to make them compatible with Miri, which you would need to
 temporarily apply as well.
+
+.. _miri.yml: https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml
 
 Testing the C API
 ~~~~~~~~~~~~~~~~~
@@ -379,94 +410,43 @@ TBD
 
 .. _contributing_style:
 
-Style and lint
---------------
+Style and linting
+-----------------
 
-QRMI uses three tools for Python code formatting and lint checking. The
-first tool is `black <https://github.com/psf/black>`__ which is a code
-formatting tool that will automatically update the code formatting to a
-consistent style. The second tool is
-`pylint <https://docs.pytest.org/en/stable/>`__ which is a code linter
-which does a deeper analysis of the Python code to find both style
-issues and potential bugs and other common issues in Python.
+.. tabs::
 
-Rust style and lint
-~~~~~~~~~~~~~~~~~~~
+   .. tab:: Python
 
-For formatting and lint checking Rust code, you'll need to use different
-tools than you would for Python. QRMI uses
-`rustfmt <https://github.com/rust-lang/rustfmt>`__ for code formatting.
-You can simply run ``cargo fmt`` (if you installed Rust with the default
-settings using ``rustup``), and it will update the code formatting
-automatically to conform to the style guidelines. For lint checking,
-QRMI uses `clippy <https://github.com/rust-lang/rust-clippy>`__ which
-can be invoked via ``cargo clippy``.
+      QRMI uses two tools for Python code formatting and lint checking. The
+      first tool is `black`_ which is a code formatting tool that will automatically
+      update the code formatting to a consistent style.
 
-C style and lint
-~~~~~~~~~~~~~~~~
+      .. _black: https://github.com/psf/black
 
-QRMI uses
-`clang-format <https://clang.llvm.org/docs/ClangFormat.html>`__ to
-format C code. The style is based on LLVM, with a few QRMI-specific
-adjustments.
+      The second tool is `pylint`_, which is a code linter capable of deeper
+      analysis of the Python code to find both style issues and potential bugs
+      and other common issues.
 
-.. _contributing_api:
+      .. _pylint: https://docs.pytest.org/en/stable/
 
-Building API docs locally
--------------------------
+   .. tab:: Rust
 
-Prerequisites
-~~~~~~~~~~~~~
+      QRMI uses `rustfmt`_ for Rust formatting and linting. You can run ``cargo fmt``
+      (if you installed Rust with the default settings using ``rustup``), and it will
+      automatically update the code formatting according to the style guidelines.
 
--  Doxygen (for generating C API document)
+      .. _rustfmt: https://github.com/rust-lang/rustfmt
 
-   -  ``dnf install doxygen`` for Linux(RHEL/CentOS/Rocky Linux etc)
-   -  ``apt install doxygen`` for Linux(Ubuntu etc.)
-   -  ``brew install doxygen``\ for MacOS
+      For lint checking, QRMI uses `clippy`_ which can be invoked using ``cargo clippy``.
 
-How to generate Rust API document
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      .. _clippy: https://github.com/rust-lang/rust-clippy
 
-.. code:: shell-session
+   .. tab:: C
 
-   . ~/.cargo/env
-   cargo doc --no-deps --open
+      To format C code, QRMI uses `clang-format`_. The style is based on LLVM,
+      with a few QRMI-specific adjustments.
 
-How to generate Python API document
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Prerequisites: QRMI Python package is installed in your python virtual
-environment(e.g. ``~/py312_qrmi_venv``)
-
-.. code:: shell-session
-
-   source ~/py312_qrmi_venv/bin/activate
-   python -m pydoc -p 8290
-   Server ready at http://localhost:8290/
-   Server commands: [b]rowser, [q]uit
-   server> b
-
-Open the following page in your browser.
-
-.. code:: shell-session
-
-   http://localhost:8290/qrmi.html
-
-Quit server.
-
-.. code:: shell-session
-
-   server> q
-
-How to generate C API document
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code:: shell-session
-
-   doxygen Doxyfile
-
-HTML document will be created under ``./html`` directory. Open
-``html/index.html`` in your web browser.
+      .. _clang-format: https://clang.llvm.org/docs/ClangFormat.html
 
 .. _contributing_release:
 
