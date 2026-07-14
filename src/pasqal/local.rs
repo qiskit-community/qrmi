@@ -25,6 +25,7 @@ pub struct PasqalLocal {
     pub(crate) backend_name: String,
     pub(crate) job_uid: i32,
     pub(crate) job_id: String,
+    pub(crate) qpu_slots: i32,
 }
 
 impl PasqalLocal {
@@ -37,6 +38,8 @@ impl PasqalLocal {
     /// # Environment variables
     /// * `QRMI_JOB_UID`: uid of the slurm job
     /// * `QRMI_JOB_ID`: id of the slurm job
+    /// * `QRMI_JOB_QPU_SLOTS`: optional number of QPU slots to claim when
+    ///   acquiring a Warden session (default `1`)
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
     ///
@@ -89,12 +92,14 @@ impl PasqalLocal {
             })?;
 
         let job_id = resolve_opt_required("QRMI_JOB_ID", config)?;
+        let qpu_slots = parse_qpu_slots(resolve_opt("QRMI_JOB_QPU_SLOTS", config))?;
 
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
             backend_name: backend_name.to_string(),
             job_uid,
             job_id,
+            qpu_slots,
         })
     }
 }
@@ -117,7 +122,7 @@ impl QuantumResource for PasqalLocal {
     async fn acquire(&mut self) -> Result<String> {
         let session = self
             .api_client
-            .create_session(self.job_uid, &self.job_id)
+            .create_session(self.job_uid, &self.job_id, self.qpu_slots)
             .await?;
         Ok(session.id)
     }
@@ -185,6 +190,25 @@ impl QuantumResource for PasqalLocal {
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
     }
+}
+
+fn parse_qpu_slots(value: Option<String>) -> Result<i32> {
+    let Some(value) = value else {
+        return Ok(1);
+    };
+    let slots = value
+        .parse::<i32>()
+        .map_err(|source| QrmiError::ParseError {
+            name: "QRMI_JOB_QPU_SLOTS".into(),
+            value,
+            source: Box::new(source),
+        })?;
+    if slots < 1 {
+        return Err(QrmiError::InvalidConfig(
+            "QRMI_JOB_QPU_SLOTS must be an integer greater than zero".into(),
+        ));
+    }
+    Ok(slots)
 }
 
 #[cfg(test)]

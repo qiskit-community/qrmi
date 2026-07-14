@@ -55,3 +55,51 @@ fn job_uid_parsing_fail_raises_qrmi_error() {
     };
     assert_eq!(expected, err.kind())
 }
+
+fn slots_config(slots: Option<&str>) -> HashMap<String, String> {
+    let mut config = HashMap::from([
+        (
+            "QRMI_WARDEN_URL".to_string(),
+            "http://localhost:8006".to_string(),
+        ),
+        ("QRMI_JOB_UID".to_string(), "1000".to_string()),
+        ("QRMI_JOB_ID".to_string(), "1".to_string()),
+    ]);
+    if let Some(slots) = slots {
+        config.insert("QRMI_JOB_QPU_SLOTS".to_string(), slots.to_string());
+    }
+    config
+}
+
+#[test]
+fn qpu_slots_default_to_one() {
+    let qrmi = PasqalLocal::from_config("test_backend", slots_config(None)).unwrap();
+    assert_eq!(qrmi.qpu_slots, 1);
+}
+
+#[test]
+fn qpu_slots_read_from_config() {
+    let qrmi = PasqalLocal::from_config("test_backend", slots_config(Some("5"))).unwrap();
+    assert_eq!(qrmi.qpu_slots, 5);
+}
+
+#[test]
+fn qpu_slots_reject_zero() {
+    let Err(err) = PasqalLocal::from_config("test_backend", slots_config(Some("0"))) else {
+        panic!("expected QRMI_JOB_QPU_SLOTS=0 to be rejected");
+    };
+    assert_eq!(err.kind(), QrmiErrorKind::InvalidConfig);
+}
+
+#[test]
+fn qpu_slots_reject_negative() {
+    assert!(PasqalLocal::from_config("test_backend", slots_config(Some("-1"))).is_err());
+}
+
+#[test]
+fn qpu_slots_reject_non_integer() {
+    let Err(err) = PasqalLocal::from_config("test_backend", slots_config(Some("two"))) else {
+        panic!("expected QRMI_JOB_QPU_SLOTS=two to be rejected");
+    };
+    assert_eq!(err.kind(), QrmiErrorKind::ParseError);
+}
