@@ -34,6 +34,8 @@ pub enum ReturnCode {
     NullPointerError = 101,
 }
 
+pub type QrmiLogCallback = crate::common::QrmiLogCallback;
+
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Payload {
@@ -177,6 +179,46 @@ fn _set_last_error(msg: String) {
                 CString::new("Failed to generate a C-compatible string").unwrap()
             }));
     });
+}
+
+/// @ingroup Qrmi
+/// Registers a QRMI log callback for C hosts.
+///
+/// Once registered, all log records produced by this library (subject to
+/// the active `RUST_LOG` filter, default level `warn`) are routed to
+/// `callback` instead of stderr.
+///
+/// Pass NULL to clear the current callback and revert to the default stderr writer.
+///
+/// # Safety
+///
+/// * If `callback` is non-NULL, it must remain a valid, callable function
+///   pointer for as long as it might still be invoked. Because a
+///   currently-executing log call may have already captured the previous
+///   callback pointer, do not unload code backing a callback immediately
+///   after replacing or clearing it — a small number of in-flight calls
+///   may still land on the old pointer.
+///
+/// # Example
+///
+/// @code
+///   void my_log_cb(const char *level, const char *target, const char *message) {
+///     fprintf(stderr, "[%s] %s: %s\n", level, target, message);
+///   }
+///   QrmiReturnCode rc = qrmi_log_callback_set(my_log_cb);
+/// @endcode
+///
+/// @param (callback) [in] Callback function, or NULL to clear.
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.20.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> ReturnCode {
+    let result = crate::common::set_log_callback(callback);
+    crate::common::initialize();
+    match result {
+        Ok(()) => ReturnCode::Success,
+        Err(()) => ReturnCode::Error,
+    }
 }
 
 /// @ingroup Qrmi
