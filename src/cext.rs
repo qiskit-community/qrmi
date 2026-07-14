@@ -192,8 +192,12 @@ fn _set_last_error(msg: String) {
 ///
 /// # Safety
 ///
-/// If `callback` is non-NULL, it must remain a valid, callable function
-/// pointer for as long as it might still be invoked.
+/// * If `callback` is non-NULL, it must remain a valid, callable function
+///   pointer for as long as it might still be invoked. Because a
+///   currently-executing log call may have already captured the previous
+///   callback pointer, do not unload code backing a callback immediately
+///   after replacing or clearing it — a small number of in-flight calls
+///   may still land on the old pointer.
 ///
 /// # Example
 ///
@@ -206,7 +210,7 @@ fn _set_last_error(msg: String) {
 ///
 /// @param (callback) [in] Callback function, or NULL to clear.
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.6.0
+/// @version 0.20.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> ReturnCode {
     let result = crate::common::set_log_callback(callback);
