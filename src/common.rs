@@ -12,37 +12,46 @@
 use std::ffi::CString;
 use std::io::Write;
 use std::os::raw::c_char;
-use std::sync::{Mutex, Once};
+use std::sync::{Once, RwLock};
 
 static INIT: Once = Once::new();
-static LOG_CALLBACK: Mutex<QrmiLogCallback> = Mutex::new(None);
+static LOG_CALLBACK: RwLock<QrmiLogCallback> = RwLock::new(None);
 
 pub type QrmiLogCallback = Option<
     unsafe extern "C" fn(level: *const c_char, target: *const c_char, message: *const c_char),
 >;
 
-pub(crate) fn set_log_callback(callback: QrmiLogCallback) {
-    if let Ok(mut current) = LOG_CALLBACK.lock() {
-        *current = callback;
-    }
+pub(crate) fn set_log_callback(callback: QrmiLogCallback) -> Result<(), ()> {
+    LOG_CALLBACK
+        .write()
+        .map(|mut current| *current = callback)
+        .map_err(|_| ())
 }
 
-fn callback_log(record: &log::Record<'_>) -> bool {
-    let callback = LOG_CALLBACK.lock().ok().and_then(|current| *current);
+fn sanitized_cstring(value: &str) -> CString {
+    CString::new(
+        value
+            .as_bytes()
+            .iter()
+            .copied()
+            .filter(|byte| *byte != 0)
+            .collect::<Vec<_>>(),
+    )
+    .unwrap_or_default()
+}
+
+fn dispatch_to_callback(record: &log::Record<'_>) -> bool {
+    let callback = LOG_CALLBACK.read().ok().and_then(|current| *current);
     let Some(callback) = callback else {
         return false;
     };
-    let level = CString::new(record.level().as_str()).ok();
-    let target = CString::new(record.target()).ok();
-    let message = CString::new(record.args().to_string()).ok();
-    if let (Some(level), Some(target), Some(message)) = (level, target, message) {
-        unsafe {
-            callback(level.as_ptr(), target.as_ptr(), message.as_ptr());
-        }
-        true
-    } else {
-        false
+    let level = sanitized_cstring(record.level().as_str());
+    let target = sanitized_cstring(record.target());
+    let message = sanitized_cstring(&record.args().to_string());
+    unsafe {
+        callback(level.as_ptr(), target.as_ptr(), message.as_ptr());
     }
+    true
 }
 
 /// Called once before using the API library to initialize static resources(logger etc.) in underlying layers. If called more than once, the second and subsequent calls are ignored.
@@ -50,7 +59,7 @@ pub(crate) fn initialize() {
     INIT.call_once(|| {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
             .format(|buf, record| {
-                if callback_log(record) {
+                if dispatch_to_callback(record) {
                     Ok(())
                 } else {
                     writeln!(

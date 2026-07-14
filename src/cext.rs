@@ -181,13 +181,40 @@ fn _set_last_error(msg: String) {
     });
 }
 
+/// @ingroup Qrmi
 /// Registers a QRMI log callback for C hosts.
 ///
-/// Pass NULL to clear the current callback.
+/// Once registered, all log records produced by this library (subject to
+/// the active `RUST_LOG` filter, default level `warn`) are routed to
+/// `callback` instead of stderr.
+///
+/// Pass NULL to clear the current callback and revert to the default stderr writer.
+///
+/// # Safety
+///
+/// If `callback` is non-NULL, it must remain a valid, callable function
+/// pointer for as long as it might still be invoked.
+///
+/// # Example
+///
+/// @code
+///   void my_log_cb(const char *level, const char *target, const char *message) {
+///     fprintf(stderr, "[%s] %s: %s\n", level, target, message);
+///   }
+///   QrmiReturnCode rc = qrmi_log_callback_set(my_log_cb);
+/// @endcode
+///
+/// @param (callback) [in] Callback function, or NULL to clear.
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.6.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) {
-    crate::common::set_log_callback(callback);
+pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> ReturnCode {
+    let result = crate::common::set_log_callback(callback);
     crate::common::initialize();
+    match result {
+        Ok(()) => ReturnCode::Success,
+        Err(()) => ReturnCode::Error,
+    }
 }
 
 /// @ingroup Qrmi
