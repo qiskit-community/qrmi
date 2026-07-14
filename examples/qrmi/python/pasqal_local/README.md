@@ -23,6 +23,7 @@ Because QRMI is an environment variable driven software library, all configurati
 | `<backend_name>_QRMI_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`) |
 | `QRMI_JOB_UID` | ID of the user executing the job |
 | `QRMI_JOB_ID` | ID of the job |
+| `QRMI_JOB_QPU_SLOTS` | Optional Warden slot reservation; defaults to `1` |
 
 Where `<backend_name>` is the backend name passed via `--backend` (e.g. `PASQAL_LOCAL`).
 
