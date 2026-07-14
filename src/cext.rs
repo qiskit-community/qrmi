@@ -13,7 +13,7 @@
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
@@ -644,13 +644,6 @@ pub unsafe extern "C" fn qrmi_resource_new(
 
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
         let res: Box<dyn crate::QuantumResource> = match resource_type {
-            ResourceType::IBMDirectAccess => match IBMDirectAccess::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
             ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {

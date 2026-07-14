@@ -75,7 +75,6 @@ class App:
     POLLING_INTERVAL_SECONDS = 1
 
     RESOURCE_TYPE_MAP = {
-        "direct-access": ResourceType.IBMDirectAccess,
         "ibm-quantum-system": ResourceType.IBMQuantumSystem,
         "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
         "pasqal-cloud": ResourceType.PasqalCloud,
@@ -173,7 +172,6 @@ class App:
         with open(self._input_filename, encoding="utf-8") as input_file:
             task_input = json.load(input_file)
             if res_type in [
-                ResourceType.IBMDirectAccess,
                 ResourceType.IBMQuantumSystem,
                 ResourceType.IBMQiskitRuntimeService,
             ]:
