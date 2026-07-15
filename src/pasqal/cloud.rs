@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::cloud_config::PasqalConfig;
+use super::Retries;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,7 +54,31 @@ impl PasqalCloud {
     /// # Config file fallback
     ///
     /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `client_id`, `client_secret`, `token`, `project_id`, `auth_endpoint`
+    ///
+    /// HTTP requests are not retried. Use [`Self::new_with_retries`] for a
+    /// client that rides out transient failures.
     pub fn new(backend_name: &str) -> Result<Self> {
+        Self::build(backend_name, Retries::Disabled)
+    }
+
+    /// Same as [`Self::new`], but retries transient HTTP failures.
+    ///
+    /// Callers that can afford to block should use this; callers on a latency
+    /// budget (notably the Slurm SPANK plugin, via the C bindings) should not.
+    ///
+    /// # Environment variables
+    ///
+    /// * `<backend_name>_QRMI_PASQAL_RETRIES_DISABLED` (or the unprefixed
+    ///   `QRMI_PASQAL_RETRIES_DISABLED`): set to a truthy value to turn retries
+    ///   back off.
+    /// * `<backend_name>_QRMI_PASQAL_MAX_RETRY_COUNT` (or the unprefixed
+    ///   `QRMI_PASQAL_MAX_RETRY_COUNT`): how many times to retry a failed
+    ///   request.
+    pub fn new_with_retries(backend_name: &str) -> Result<Self> {
+        Self::build(backend_name, Retries::EnabledUnlessEnvOptsOut)
+    }
+
+    fn build(backend_name: &str, retries: Retries) -> Result<Self> {
         debug!(
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
@@ -72,10 +97,19 @@ impl PasqalCloud {
         if let Some(base_url) = base_url {
             builder.with_base_url(base_url);
         }
-        if super::retries_disabled(backend_name) {
-            debug!("HTTP retries disabled for backend '{}'", backend_name);
-            builder.with_retry_disabled();
-        }
+        match retries.max_retries_for(backend_name) {
+            Some(max_retries) => {
+                debug!(
+                    "HTTP requests retried up to {} time(s) for backend '{}'",
+                    max_retries, backend_name
+                );
+                builder.with_max_retries(max_retries)
+            }
+            None => {
+                debug!("HTTP retries disabled for backend '{}'", backend_name);
+                builder.with_retry_disabled()
+            }
+        };
 
         let (username, password) = cfg.credentials();
         let (client_id, client_secret) = cfg.service_account_credentials(backend_name);

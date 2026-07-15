@@ -19,6 +19,8 @@ use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::env;
 
+use super::Retries;
+
 use async_trait::async_trait;
 
 /// QRMI implementation for Pasqal Local
@@ -41,7 +43,29 @@ impl PasqalLocal {
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
     ///
+    /// HTTP requests are not retried. Use [`Self::new_with_retries`] for a
+    /// client that rides out transient failures.
     pub fn new(backend_name: &str) -> Result<Self> {
+        Self::build(backend_name, Retries::Disabled)
+    }
+
+    /// Same as [`Self::new`], but retries transient HTTP failures.
+    ///
+    /// Callers that can afford to block should use this; callers on a latency
+    /// budget (notably the Slurm SPANK plugin, via the C bindings) should not.
+    ///
+    /// # Environment variables
+    /// * `<backend_name>_QRMI_PASQAL_RETRIES_DISABLED` (or the unprefixed
+    ///   `QRMI_PASQAL_RETRIES_DISABLED`): set to a truthy value to turn retries
+    ///   back off.
+    /// * `<backend_name>_QRMI_PASQAL_MAX_RETRY_COUNT` (or the unprefixed
+    ///   `QRMI_PASQAL_MAX_RETRY_COUNT`): how many times to retry a failed
+    ///   request.
+    pub fn new_with_retries(backend_name: &str) -> Result<Self> {
+        Self::build(backend_name, Retries::EnabledUnlessEnvOptsOut)
+    }
+
+    fn build(backend_name: &str, retries: Retries) -> Result<Self> {
         let warden_url_var = format!("{backend_name}_QRMI_WARDEN_URL");
         let legacy_url_var = format!("{backend_name}_QRMI_URL");
         let url = match env::var(&warden_url_var) {
@@ -59,9 +83,10 @@ impl PasqalLocal {
             .unwrap();
         let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
         let mut builder = ClientBuilder::new(url);
-        if super::retries_disabled(backend_name) {
-            builder.with_retry_disabled();
-        }
+        match retries.max_retries_for(backend_name) {
+            Some(max_retries) => builder.with_max_retries(max_retries),
+            None => builder.with_retry_disabled(),
+        };
         Ok(Self {
             api_client: builder.build().unwrap(),
             backend_name: backend_name.to_string(),
@@ -183,3 +208,7 @@ impl QuantumResource for PasqalLocal {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/local.rs"]
+mod tests;

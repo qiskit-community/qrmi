@@ -120,7 +120,7 @@ impl Client {
             Self::request_access_token(
                 &self.auth_endpoint,
                 AccessTokenRequest::UsernamePassword { username, password },
-                self.retries_enabled,
+                self.max_retries,
             )
             .await?
         } else if let (Some(client_id), Some(client_secret)) =
@@ -133,7 +133,7 @@ impl Client {
                     client_id,
                     client_secret,
                 },
-                self.retries_enabled,
+                self.max_retries,
             )
             .await?
         } else {
@@ -146,19 +146,19 @@ impl Client {
 
     /// Request a Pasqal Cloud access token.
     ///
-    /// `retries_enabled` controls whether the token request is retried on
-    /// transient failures; pass `false` to disable retries.
+    /// `max_retries` controls how many times the token request is retried on
+    /// transient failures; pass `None` to disable retries.
     pub async fn request_access_token(
         auth_endpoint: &str,
         request: AccessTokenRequest<'_>,
-        retries_enabled: bool,
+        max_retries: Option<u32>,
     ) -> Result<String> {
         let auth_endpoint = Self::normalize_auth_endpoint(auth_endpoint)?;
         let client_params = request.form_params();
 
         let mut client_builder = ReqwestClientBuilder::new(reqwest::Client::new());
-        if retries_enabled {
-            client_builder = pasqal_common::with_retry(client_builder);
+        if let Some(max_retries) = max_retries {
+            client_builder = pasqal_common::with_retry(client_builder, max_retries);
         }
         let client = client_builder.build();
 

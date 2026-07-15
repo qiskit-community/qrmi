@@ -74,13 +74,17 @@ impl PyQuantumResource {
                     }
                 }
             }
-            ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
+            // Retries are opt-in, and the Python bindings are the caller that
+            // opts in: a job's own requests can afford to ride out a transient
+            // outage, unlike the SPANK plugin's, which run through the C
+            // bindings while job launch waits on them.
+            ResourceType::PasqalCloud => match PasqalCloud::new_with_retries(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
                 }
             },
-            ResourceType::PasqalLocal => match PasqalLocal::new(resource_id) {
+            ResourceType::PasqalLocal => match PasqalLocal::new_with_retries(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
                     return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));

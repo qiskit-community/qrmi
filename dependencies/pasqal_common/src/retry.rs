@@ -14,24 +14,29 @@
 //! Retries are split into two tiers:
 //!
 //! * ordinary transient failures (5xx, timeouts, connection errors), handled by
-//!   the stock [`RetryTransientMiddleware`] with an exponential backoff, and
+//!   the stock [`RetryTransientMiddleware`] with an exponential backoff that
+//!   starts at 1s, doubles, and is capped at 5s per wait, and
 //! * rate-limit / locked responses (HTTP 429 and 423), handled by
-//!   [`RetryAfterMiddleware`], which honors the server's `Retry-After` header
-//!   when present and otherwise falls back to the same exponential backoff.
+//!   [`RetryAfterMiddleware`]. When the server sends a `Retry-After` header we
+//!   trust it and retry exactly once, since the server has told us when it will
+//!   be ready and guessing again afterwards only adds load. With no such header
+//!   we fall back to an exponential backoff that starts at 5s, doubles, and is
+//!   capped at 30s per wait — a rate-limited backend wants more breathing room
+//!   between polls than a merely flaky one.
 //!
-//! Both tiers are bounded by wall-clock time rather than a retry count, so a
-//! request never spends longer than its tier's `max_total_duration`
-//! retrying, no matter how many attempts that allows. The rate-limit tier gets
-//! a larger per-attempt ceiling and a larger total budget, since a busy backend
-//! wants to be given more room between polls.
+//! Both tiers are bounded by a retry *count* rather than a wall-clock budget,
+//! and share the same count so that a caller has a single number to reason
+//! about (see [`with_retry`]). A count of zero disables both tiers, including
+//! the `Retry-After`-guided retry.
 
 use std::time::{Duration, SystemTime};
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use http::Extensions;
 use log::debug;
 use reqwest_middleware::{ClientBuilder, Middleware, Next};
-use reqwest_retry::policies::{ExponentialBackoff, ExponentialBackoffTimed};
+use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::{
     default_on_request_failure, default_on_request_success, Jitter, RetryDecision, RetryPolicy,
     RetryTransientMiddleware, Retryable, RetryableStrategy,
@@ -39,6 +44,17 @@ use reqwest_retry::{
 
 const HTTP_TOO_MANY_REQUESTS: u16 = 429;
 const HTTP_LOCKED: u16 = 423;
+
+/// How many times a request is retried, absent an explicit choice by the caller.
+pub const DEFAULT_MAX_RETRIES: u32 = 5;
+
+/// Longest wait a server's `Retry-After` header can ask of us.
+///
+/// The header is honored as sent, up to this ceiling: a backend that asks us to
+/// come back in an hour is telling us it is not coming back within the lifetime
+/// of any request we care about, so the request fails with an error naming the
+/// wait the server asked for instead of sleeping on it.
+const RETRY_AFTER_MAX_WAIT: Duration = Duration::from_secs(300);
 
 /// Backoff parameters for a single class of retryable responses.
 #[derive(Debug, Clone)]
@@ -51,14 +67,13 @@ struct BackoffConfig {
     base: u32,
     /// Whether to apply bounded jitter to smooth out retry storms.
     jitter: bool,
-    /// Hard cap on the total wall-clock time spent retrying a request. Once
-    /// this budget is exhausted the request fails, regardless of attempt count.
-    max_total_duration: Duration,
+    /// How many times a failed request is retried before it is given up on.
+    max_retries: u32,
 }
 
 impl BackoffConfig {
-    /// Compile these parameters into a time-bounded exponential backoff policy.
-    fn build_policy(&self) -> ExponentialBackoffTimed {
+    /// Compile these parameters into a count-bounded exponential backoff policy.
+    fn build_policy(&self) -> ExponentialBackoff {
         ExponentialBackoff::builder()
             .retry_bounds(self.min_interval, self.max_interval)
             .base(self.base)
@@ -67,46 +82,47 @@ impl BackoffConfig {
             } else {
                 Jitter::None
             })
-            .build_with_total_retry_duration(self.max_total_duration)
+            .build_with_max_retries(self.max_retries)
     }
 }
 
 /// Retry policy for a Pasqal HTTP client.
 ///
-/// This is an internal implementation detail: callers only ever get the
-/// [`Default`] policy (via [`with_retry`]) or no retries at all. The knobs are
-/// not exposed for per-call tuning by design — retries are toggled on/off at
-/// the client level, nothing more.
+/// This is an internal implementation detail: the only knob callers get is the
+/// retry count passed to [`with_retry`] (or no retries at all). The backoff
+/// shape is not exposed for per-call tuning by design.
+/// Client errors (e.g. missing/wrong auth, 401/403, are never retried)
+/// See https://docs.rs/reqwest-retry/0.7.0/reqwest_retry/fn.default_on_request_success.html
 #[derive(Debug, Clone)]
 struct RetryConfig {
     /// Backoff for ordinary transient failures (5xx, timeouts, connection
     /// errors). Excludes 429/423, which are handled by [`Self::rate_limit`].
     transient: BackoffConfig,
-    /// Backoff for rate-limit (429) and locked (423) responses.
+    /// Fallback backoff for rate-limit (429) and locked (423) responses that
+    /// carry no `Retry-After` header.
     rate_limit: BackoffConfig,
 }
 
-impl Default for RetryConfig {
-    /// Sensible production defaults: spend at most two minutes retrying
-    /// ordinary transient failures, and up to five minutes on rate limits.
-    fn default() -> Self {
+impl RetryConfig {
+    /// Production defaults, retrying each tier at most `max_retries` times.
+    fn new(max_retries: u32) -> Self {
         Self {
             transient: BackoffConfig {
                 min_interval: Duration::from_secs(1),
-                max_interval: Duration::from_secs(10),
+                max_interval: Duration::from_secs(5),
                 base: 2,
                 jitter: true,
-                max_total_duration: Duration::from_secs(120),
+                max_retries,
             },
             rate_limit: BackoffConfig {
-                min_interval: Duration::from_secs(1),
                 // A rate-limited backend wants more breathing room between
-                // polls, so allow a higher per-attempt ceiling and a longer
-                // overall budget than ordinary transient errors.
-                max_interval: Duration::from_secs(60),
+                // polls, so start higher and allow a higher per-attempt ceiling
+                // than ordinary transient errors.
+                min_interval: Duration::from_secs(5),
+                max_interval: Duration::from_secs(30),
                 base: 2,
                 jitter: true,
-                max_total_duration: Duration::from_secs(300),
+                max_retries,
             },
         }
     }
@@ -154,17 +170,21 @@ fn parse_retry_after(headers: &http::HeaderMap, now: SystemTime) -> Option<Durat
 
 /// Middleware dedicated to rate-limit (429) and locked (423) responses.
 ///
-/// On such a response it waits for the duration advertised by the server's
-/// `Retry-After` header when present, and otherwise falls back to the
-/// exponential backoff in `policy`. Retrying stops once `max_total_duration`
-/// of wall-clock time has elapsed; if a `Retry-After` value would push past
-/// that budget the request gives up immediately rather than sleeping
-/// pointlessly. Every other outcome — success, non-429/423 status, or a
-/// request-level error — is passed straight through so the transient tier can
-/// handle it.
+/// Two behaviors, depending on what the server tells us:
+///
+/// * With a `Retry-After` header, we wait as instructed and retry **once**. The
+///   server has stated when it expects to be ready; if it rate-limits us again
+///   anyway, retrying further is guesswork, so the response goes to the caller.
+///   A `Retry-After` beyond [`RETRY_AFTER_MAX_WAIT`] is treated as "not coming
+///   back in time": the request fails immediately with an error explaining that
+///   we chose not to wait, rather than with a bare rate-limit response.
+/// * Without one, we retry up to `max_retries` times on the exponential backoff
+///   in `policy`.
+///
+/// Every other outcome — success, a non-429/423 status, or a request-level
+/// error — is passed straight through for the transient tier to handle.
 struct RetryAfterMiddleware {
-    policy: ExponentialBackoffTimed,
-    max_total_duration: Duration,
+    policy: ExponentialBackoff,
 }
 
 #[async_trait]
@@ -176,7 +196,11 @@ impl Middleware for RetryAfterMiddleware {
         next: Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
         let start = SystemTime::now();
+        // Counts only the backoff-driven retries: the single `Retry-After`
+        // retry is budgeted separately, and consuming from the same counter
+        // would let a server shrink its own backoff budget by sending a header.
         let mut n_past_retries: u32 = 0;
+        let mut retry_after_used = false;
         loop {
             // A non-cloneable body (e.g. a stream) cannot be replayed, so we
             // can only send it once and return whatever we get.
@@ -190,54 +214,69 @@ impl Middleware for RetryAfterMiddleware {
                 return Ok(response);
             }
 
-            // `should_retry` enforces the total-duration budget and provides the
-            // fallback backoff when the server sends no `Retry-After` header.
-            let RetryDecision::Retry { execute_after } =
-                self.policy.should_retry(start, n_past_retries)
-            else {
-                return Ok(response);
-            };
             let now = SystemTime::now();
-            let backoff = execute_after.duration_since(now).unwrap_or_default();
-
             let delay = match parse_retry_after(response.headers(), now) {
                 Some(retry_after) => {
-                    // Respect the server's signal, but never sleep past our own
-                    // budget: if it would, give up now instead.
-                    let elapsed = now.duration_since(start).unwrap_or_default();
-                    let remaining = self.max_total_duration.saturating_sub(elapsed);
-                    if retry_after > remaining {
+                    if retry_after_used {
                         debug!(
-                            "Retry-After ({:?}) exceeds remaining retry budget ({:?}); giving up",
-                            retry_after, remaining
+                            "Received status {} again after honoring Retry-After; giving up",
+                            status
                         );
                         return Ok(response);
                     }
+                    if retry_after > RETRY_AFTER_MAX_WAIT {
+                        // Declining to wait is our decision, not the server's,
+                        // so say so: passing the bare 429 up would surface as an
+                        // ordinary rate-limit error and leave the caller unable
+                        // to tell that the backend had in fact told us when to
+                        // come back.
+                        return Err(reqwest_middleware::Error::Middleware(anyhow!(
+                            "Request was rate limited (HTTP {status}) and the server asked to \
+                             retry after {}s, which is longer than the maximum wait of {}s. \
+                             The request was not retried; try again later.",
+                            retry_after.as_secs(),
+                            RETRY_AFTER_MAX_WAIT.as_secs(),
+                        )));
+                    }
+                    retry_after_used = true;
                     retry_after
                 }
-                None => backoff,
+                None => {
+                    let RetryDecision::Retry { execute_after } =
+                        self.policy.should_retry(start, n_past_retries)
+                    else {
+                        debug!("Received status {}; retry budget exhausted", status);
+                        return Ok(response);
+                    };
+                    n_past_retries += 1;
+                    execute_after.duration_since(now).unwrap_or_default()
+                }
             };
 
-            debug!(
-                "Received status {}; retrying after {:?} (attempt {})",
-                status,
-                delay,
-                n_past_retries + 1
-            );
+            debug!("Received status {}; retrying after {:?}", status, delay);
             tokio::time::sleep(delay).await;
-            n_past_retries += 1;
         }
     }
 }
 
-/// Attach the default retry middleware to `builder`.
+/// Attach the default retry middleware to `builder`, retrying a failed request
+/// at most `max_retries` times.
 ///
 /// Two middlewares are stacked: a [`RetryTransientMiddleware`] (with
 /// `RetryStrategyExcept429`) for ordinary transient failures, and a
-/// `RetryAfterMiddleware` for 429/423 responses. Each is bounded by its
-/// tier's `max_total_duration`, so a request never retries beyond that budget.
-pub fn with_retry(builder: ClientBuilder) -> ClientBuilder {
-    let config = RetryConfig::default();
+/// [`RetryAfterMiddleware`] for 429/423 responses. See the module docs for the
+/// backoff each uses.
+///
+/// A `max_retries` of zero attaches nothing: every request is made exactly
+/// once. In particular the single `Retry-After`-guided retry — which for a
+/// nonzero count is budgeted *in addition to* `max_retries` — is not granted
+/// either, since a caller asking for zero retries is asking to never sleep on
+/// a response.
+pub fn with_retry(builder: ClientBuilder, max_retries: u32) -> ClientBuilder {
+    if max_retries == 0 {
+        return builder;
+    }
+    let config = RetryConfig::new(max_retries);
     builder
         .with(RetryTransientMiddleware::new_with_policy_and_strategy(
             config.transient.build_policy(),
@@ -245,7 +284,6 @@ pub fn with_retry(builder: ClientBuilder) -> ClientBuilder {
         ))
         .with(RetryAfterMiddleware {
             policy: config.rate_limit.build_policy(),
-            max_total_duration: config.rate_limit.max_total_duration,
         })
 }
 
@@ -263,20 +301,40 @@ mod tests {
     }
 
     #[test]
-    fn default_config_budgets() {
-        let cfg = RetryConfig::default();
-        // Transient errors give up after 2 minutes; rate limits get 5 minutes.
-        assert_eq!(cfg.transient.max_total_duration, Duration::from_secs(120));
-        assert_eq!(cfg.rate_limit.max_total_duration, Duration::from_secs(300));
-        // The rate-limit tier also gets a larger per-attempt ceiling.
-        assert!(cfg.rate_limit.max_interval > cfg.transient.max_interval);
+    fn default_config_backoffs() {
+        let cfg = RetryConfig::new(DEFAULT_MAX_RETRIES);
+        // Transient failures back off from 1s to at most 5s...
+        assert_eq!(cfg.transient.min_interval, Duration::from_secs(1));
+        assert_eq!(cfg.transient.max_interval, Duration::from_secs(5));
+        // ...while rate limits start higher and are given more room.
+        assert_eq!(cfg.rate_limit.min_interval, Duration::from_secs(5));
+        assert_eq!(cfg.rate_limit.max_interval, Duration::from_secs(30));
+        // Both tiers double, and share the caller's retry count.
+        assert_eq!(cfg.transient.base, 2);
+        assert_eq!(cfg.rate_limit.base, 2);
+        assert_eq!(cfg.transient.max_retries, DEFAULT_MAX_RETRIES);
+        assert_eq!(cfg.rate_limit.max_retries, DEFAULT_MAX_RETRIES);
+    }
+
+    #[test]
+    fn policy_stops_after_max_retries() {
+        let policy = RetryConfig::new(2).transient.build_policy();
+        let start = SystemTime::now();
+        assert!(matches!(
+            policy.should_retry(start, 1),
+            RetryDecision::Retry { .. }
+        ));
+        assert!(matches!(
+            policy.should_retry(start, 2),
+            RetryDecision::DoNotRetry
+        ));
     }
 
     #[test]
     fn with_retry_builds_a_usable_client() {
         // Ensure the middleware stack type-checks and a client can be built.
         let builder = ClientBuilder::new(reqwest::Client::new());
-        let _client = with_retry(builder).build();
+        let _client = with_retry(builder, DEFAULT_MAX_RETRIES).build();
     }
 
     #[test]

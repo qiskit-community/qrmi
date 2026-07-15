@@ -16,7 +16,6 @@ The required environment variables are listed below. This example assumes that a
 | <backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID |  Pasqal Cloud Project ID to access the QPU |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN | Pasqal Cloud Auth Token (optional when username/password are configured) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
-| QRMI_PASQAL_RETRIES_DISABLED | (Optional) Disable automatic HTTP request retries for all Pasqal backends. Set to `1`, `true`, `yes`, or `on`; retries are enabled by default. |
 | PASQAL_USERNAME | Pasqal Cloud username (optional, user-provided) |
 | PASQAL_PASSWORD | Pasqal Cloud password (optional, user-provided) |
 

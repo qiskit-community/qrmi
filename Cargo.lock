@@ -2301,6 +2301,7 @@ dependencies = [
 name = "pasqal-common"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "http 1.4.0",
  "httpdate",
@@ -2620,6 +2621,7 @@ dependencies = [
  "libc",
  "log",
  "pasqal-cloud-api",
+ "pasqal-common",
  "pasqal-local-api",
  "pyo3",
  "pyo3-stub-gen",
