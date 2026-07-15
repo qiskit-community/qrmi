@@ -79,7 +79,7 @@ pub struct DeviceSpecs {
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateSessionPayload {
     pub user_id: String,
-    pub slurm_job_id: String,
+    pub scheduler_job_id: String,
     pub qpu_slots: i32,
 }
 
@@ -160,13 +160,13 @@ impl Client {
     pub async fn create_session(
         &self,
         user_id: i32,
-        slurm_job_id: &str,
+        scheduler_job_id: &str,
         qpu_slots: i32,
     ) -> Result<SessionResponse> {
         let url = format!("{}/sessions", self.base_url);
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
-            slurm_job_id: slurm_job_id.to_string(),
+            scheduler_job_id: scheduler_job_id.to_string(),
             qpu_slots,
         };
 
@@ -183,10 +183,16 @@ impl Client {
     }
 
     pub async fn revoke_session(&self, session_id: &str) -> Result<SessionResponse> {
-        let url = format!("{}/sessions/{}", self.base_url, session_id);
+        let url = format!("{}/sessions", self.base_url);
 
         let headers = self.create_headers().await?;
-        let resp = self.client.delete(url).headers(headers).send().await?;
+        let resp = self
+            .client
+            .delete(url)
+            .headers(headers)
+            .header("X-Warden-Session", session_id)
+            .send()
+            .await?;
 
         self.handle_request(resp).await
     }

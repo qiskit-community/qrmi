@@ -39,46 +39,47 @@ print("Pasqal Local QR is %s accessible" % "not" if not is_avail else "")
 # Get a session
 session = qrmi.acquire()
 os.environ[f"{args.backend}_QRMI_JOB_ACQUISITION_TOKEN"] = session
-print("Pasqal Local session ID:", session)
+try:
+    # Get target
+    target = qrmi.target()
+    print("QR Target %s" % target.value)
 
-# Get target
-target = qrmi.target()
-print("QR Target %s" % target.value)
+    # nit:start_task would be nicer probably
+    task_id = qrmi.task_start(
+        Payload.PasqalCloud(sequence=serialized_sequence, job_runs=1000)
+    )
+    print("Task ID: %s" % task_id)
 
-# nit:start_task would be nicer probably
-task_id = qrmi.task_start(
-    Payload.PasqalCloud(sequence=serialized_sequence, job_runs=1000)
-)
-print("Task ID: %s" % task_id)
+    # Get its status
+    print("Status after creation %s" % qrmi.task_status(task_id))
 
-# Get its status
-print("Status after creation %s" % qrmi.task_status(task_id))
+    # Quickly stop it
+    qrmi.task_stop(task_id)
 
-# Quickly stop it
-qrmi.task_stop(task_id)
+    # Get status, it should be stopped
+    print("Status after cancelation %s" % qrmi.task_status(task_id))
 
-# Get status, it should be stopped
-print("Status after cancelation %s" % qrmi.task_status(task_id))
+    # Send send another task
+    new_task_id = qrmi.task_start(
+        Payload.PasqalCloud(sequence=serialized_sequence, job_runs=100)
+    )
+    print("New Task ID: %s" % new_task_id)
 
-# Send send another task
-new_task_id = qrmi.task_start(
-    Payload.PasqalCloud(sequence=serialized_sequence, job_runs=100)
-)
-print("New Task ID: %s" % new_task_id)
+    # Wait for completion
+    while True:
+        status = qrmi.task_status(new_task_id)
+        if status == TaskStatus.Completed:
+            print("Task completed")
+            time.sleep(0.5)
+            break
+        elif status == TaskStatus.Failed:
+            print("Task failed")
+            break
+        else:
+            print("Task status %s, waiting 1s" % status)
+            time.sleep(1)
 
-# Wait for completion
-while True:
-    status = qrmi.task_status(new_task_id)
-    if status == TaskStatus.Completed:
-        print("Task completed")
-        time.sleep(0.5)
-        break
-    elif status == TaskStatus.Failed:
-        print("Task failed")
-        break
-    else:
-        print("Task status %s, waiting 1s" % status)
-        time.sleep(1)
-
-# Get the results
-print("Results: %s" % qrmi.task_result(new_task_id).value)
+    # Get the results
+    print("Results: %s" % qrmi.task_result(new_task_id).value)
+finally:
+    qrmi.release(session)

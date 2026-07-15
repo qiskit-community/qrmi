@@ -56,7 +56,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let lock = qrmi.acquire().await?;
-    println!("acquisition token = {}", lock);
 
     // Set lock as env variable with name  <backend>_QRMI_JOB_ACQUISITION_TOKEN
     let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", args.backend);

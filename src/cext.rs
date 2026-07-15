@@ -1481,7 +1481,8 @@ pub unsafe extern "C" fn qrmi_resource_type(
 ///   char *acquisition_token;
 ///   QrmiReturnCode rc = qrmi_resource_acquire(qrmi, &acquisition_token);
 ///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///     printf("acquisition token = %s\n", acquisition_token);
+///     qrmi_resource_release(qrmi, acquisition_token);
+///     qrmi_string_free(acquisition_token);
 ///   }
 ///   else {
 ///     printf("qrmi_resource_acquire failed.");
