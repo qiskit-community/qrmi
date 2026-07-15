@@ -100,9 +100,9 @@ async fn new_with_retries_retries() {
     let (addr, requests) = spawn_failing_server();
     let mut qrmi = build_qrmi(addr, &[], PasqalLocal::new_with_retries);
 
-    // The retry budget runs to two minutes, so rather than wait it out we give
-    // the client long enough to make its first retry (the backoff starts at one
-    // second) and then drop the request.
+    // Exhausting the default five retries takes on the order of 20s of backoff,
+    // so rather than wait it out we give the client long enough to make its
+    // first retry (the backoff starts at one second) and then drop the request.
     let _ = tokio::time::timeout(Duration::from_secs(4), qrmi.is_accessible()).await;
 
     assert!(
@@ -139,7 +139,7 @@ async fn new_with_retries_honors_env_max_retry_count() {
     let mut qrmi = build_qrmi(addr, &one_retry, PasqalLocal::new_with_retries);
 
     // The single retry waits out the 1s base backoff, so 10s is ample for the
-    // client to exhaust its budget and return.
+    // client to exhaust its retry count and return.
     let result = tokio::time::timeout(Duration::from_secs(10), qrmi.is_accessible()).await;
 
     assert!(result.is_ok(), "the client should stop after its one retry");

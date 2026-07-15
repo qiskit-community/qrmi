@@ -26,8 +26,8 @@ The required environment variables are listed below. This example assumes that a
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID | Pasqal Cloud service account client ID (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account client secret (optional) |
 | <backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path for token retrieval. Default: `authenticate.pasqal.cloud/oauth/token` |
-| QRMI_PASQAL_RETRIES_DISABLED | (Optional) Disable automatic HTTP request retries. Set to `1`, `true`, `yes`, or `on`. Retries are enabled by default for the Python bindings only; the C bindings (used by the Slurm SPANK plugin) never retry. |
-| QRMI_PASQAL_MAX_RETRY_COUNT | (Optional) How many times a failed HTTP request is retried. Default: `5`. |
+| <backend_name>_QRMI_PASQAL_RETRIES_DISABLED | (Optional) Disable automatic HTTP request retries. Set to `1`, `true`, `yes`, or `on`. The unprefixed `QRMI_PASQAL_RETRIES_DISABLED` acts as a global fallback. Retries are enabled by default for the Python bindings only; the C bindings (used by the Slurm SPANK plugin) never retry. |
+| <backend_name>_QRMI_PASQAL_MAX_RETRY_COUNT | (Optional) How many times a failed HTTP request is retried. The unprefixed `QRMI_PASQAL_MAX_RETRY_COUNT` acts as a global fallback. Default: `5`. |
 | PASQAL_USERNAME | Pasqal Cloud username (optional, user-provided) |
 | PASQAL_PASSWORD | Pasqal Cloud password (optional, user-provided) |
 
