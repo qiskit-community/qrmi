@@ -43,8 +43,8 @@ pub struct Client {
     pub(crate) client_id: Option<String>,
     pub(crate) client_secret: Option<String>,
     /// How many times a failed HTTP request (including token refresh) is
-    /// retried, or `None` to not retry at all.
-    pub(crate) max_retries: Option<u32>,
+    /// retried; zero means it is never retried.
+    pub(crate) max_retries: u32,
 }
 
 impl Client {
@@ -188,16 +188,11 @@ impl Client {
 }
 
 impl Client {
-    fn build_http_client(
-        max_retries: Option<u32>,
-    ) -> Result<reqwest_middleware::ClientWithMiddleware> {
+    fn build_http_client(max_retries: u32) -> Result<reqwest_middleware::ClientWithMiddleware> {
         let mut reqwest_client_builder = reqwest::Client::builder();
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-        let mut reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
-        if let Some(max_retries) = max_retries {
-            reqwest_builder = pasqal_common::with_retry(reqwest_builder, max_retries);
-        }
-        Ok(reqwest_builder.build())
+        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        Ok(pasqal_common::with_retry(reqwest_builder, max_retries).build())
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&mut self, url: &str) -> Result<T> {
@@ -268,10 +263,10 @@ pub struct ClientBuilder {
     password: Option<String>,
     client_id: Option<String>,
     client_secret: Option<String>,
-    /// How many times a failed HTTP request is retried, or `None` to not retry
-    /// at all. Defaults to [`pasqal_common::DEFAULT_MAX_RETRIES`]; changed with
-    /// [`Self::with_max_retries`] or [`Self::with_retry_disabled`].
-    max_retries: Option<u32>,
+    /// How many times a failed HTTP request is retried; zero disables retries.
+    /// Defaults to [`pasqal_common::DEFAULT_MAX_RETRIES`]; changed with
+    /// [`Self::with_max_retries`].
+    max_retries: u32,
 }
 
 impl ClientBuilder {
@@ -294,21 +289,14 @@ impl ClientBuilder {
             password: None,
             client_id: None,
             client_secret: None,
-            max_retries: Some(pasqal_common::DEFAULT_MAX_RETRIES),
+            max_retries: pasqal_common::DEFAULT_MAX_RETRIES,
         }
     }
 
-    /// Retry a failed HTTP request at most `max_retries` times.
+    /// Retry a failed HTTP request at most `max_retries` times; zero disables
+    /// retries entirely.
     pub fn with_max_retries(&mut self, max_retries: u32) -> &mut Self {
-        self.max_retries = Some(max_retries);
-        self
-    }
-
-    /// Disable HTTP request retries entirely.
-    ///
-    /// Retries are enabled by default.
-    pub fn with_retry_disabled(&mut self) -> &mut Self {
-        self.max_retries = None;
+        self.max_retries = max_retries;
         self
     }
 

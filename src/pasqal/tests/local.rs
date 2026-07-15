@@ -72,6 +72,69 @@ fn build_qrmi(
     qrmi
 }
 
+/// Constructs a `PasqalLocal` with the URL var set and `QRMI_JOB_UID` /
+/// `QRMI_JOB_ID` set or removed per the arguments, restoring both afterwards.
+///
+/// Used to check that `PasqalLocal::new` reports a missing or malformed job
+/// environment as an `Err` rather than panicking, which would surface to
+/// Python users as a raw `PanicException` and could abort across the C
+/// bindings.
+fn build_with_job_env(job_uid: Option<&str>, job_id: Option<&str>) -> anyhow::Result<()> {
+    let _guard = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+
+    let vars = [("QRMI_JOB_UID", job_uid), ("QRMI_JOB_ID", job_id)];
+    let saved: Vec<_> = vars
+        .iter()
+        .map(|(var, _)| (*var, std::env::var(var).ok()))
+        .collect();
+
+    std::env::set_var(format!("{BACKEND}_QRMI_URL"), "http://127.0.0.1:1");
+    for (var, value) in vars {
+        match value {
+            Some(v) => std::env::set_var(var, v),
+            None => std::env::remove_var(var),
+        }
+    }
+
+    let result = PasqalLocal::new(BACKEND);
+
+    for (var, value) in saved {
+        match value {
+            Some(v) => std::env::set_var(var, v),
+            None => std::env::remove_var(var),
+        }
+    }
+    result.map(|_| ())
+}
+
+#[test]
+fn new_errors_when_job_uid_is_not_set() {
+    let err = build_with_job_env(None, Some("test-job")).expect_err("build should fail");
+    assert_eq!(
+        err.to_string(),
+        "QRMI_JOB_UID environment variable is not set"
+    );
+}
+
+#[test]
+fn new_errors_when_job_uid_is_not_an_integer() {
+    let err =
+        build_with_job_env(Some("not-a-number"), Some("test-job")).expect_err("build should fail");
+    assert_eq!(
+        err.to_string(),
+        "QRMI_JOB_UID environment variable is not a valid integer: 'not-a-number'"
+    );
+}
+
+#[test]
+fn new_errors_when_job_id_is_not_set() {
+    let err = build_with_job_env(Some("1000"), None).expect_err("build should fail");
+    assert_eq!(
+        err.to_string(),
+        "QRMI_JOB_ID environment variable is not set"
+    );
+}
+
 /// The C bindings (and hence the Slurm SPANK plugin) construct resources with
 /// `PasqalLocal::new`, which must fail fast rather than stall job launch.
 #[tokio::test]

@@ -97,19 +97,12 @@ impl PasqalCloud {
         if let Some(base_url) = base_url {
             builder.with_base_url(base_url);
         }
-        match retries.max_retries_for(backend_name) {
-            Some(max_retries) => {
-                debug!(
-                    "HTTP requests retried up to {} time(s) for backend '{}'",
-                    max_retries, backend_name
-                );
-                builder.with_max_retries(max_retries)
-            }
-            None => {
-                debug!("HTTP retries disabled for backend '{}'", backend_name);
-                builder.with_retry_disabled()
-            }
-        };
+        let max_retries = retries.max_retries_for(backend_name);
+        debug!(
+            "HTTP requests retried up to {} time(s) for backend '{}'",
+            max_retries, backend_name
+        );
+        builder.with_max_retries(max_retries);
 
         let (username, password) = cfg.credentials();
         let (client_id, client_secret) = cfg.service_account_credentials(backend_name);

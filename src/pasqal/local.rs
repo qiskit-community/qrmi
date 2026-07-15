@@ -77,16 +77,15 @@ impl PasqalLocal {
                 url
             }
         };
-        let job_uid: i32 = env::var("QRMI_JOB_UID")
-            .ok()
-            .and_then(|s| s.parse::<i32>().ok())
-            .unwrap();
-        let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
+        let job_uid_value = env::var("QRMI_JOB_UID")
+            .map_err(|_| anyhow!("QRMI_JOB_UID environment variable is not set"))?;
+        let job_uid: i32 = job_uid_value.parse().map_err(|_| {
+            anyhow!("QRMI_JOB_UID environment variable is not a valid integer: '{job_uid_value}'")
+        })?;
+        let job_id: String = env::var("QRMI_JOB_ID")
+            .map_err(|_| anyhow!("QRMI_JOB_ID environment variable is not set"))?;
         let mut builder = ClientBuilder::new(url);
-        match retries.max_retries_for(backend_name) {
-            Some(max_retries) => builder.with_max_retries(max_retries),
-            None => builder.with_retry_disabled(),
-        };
+        builder.with_max_retries(retries.max_retries_for(backend_name));
         Ok(Self {
             api_client: builder.build().unwrap(),
             backend_name: backend_name.to_string(),

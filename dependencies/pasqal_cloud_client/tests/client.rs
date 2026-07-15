@@ -135,7 +135,7 @@ async fn request_access_token_uses_username_password() {
             username: "mock-user",
             password: "mock-password", // pragma: allowlist secret
         },
-        None,
+        0,
     )
     .await
     .expect("username/password token request should succeed");
@@ -178,7 +178,7 @@ async fn request_access_token_uses_service_account_credentials() {
             client_id: "mock-client-id",
             client_secret: "mock-client-secret", // pragma: allowlist secret
         },
-        None,
+        0,
     )
     .await
     .expect("service account token request should succeed");

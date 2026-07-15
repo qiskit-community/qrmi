@@ -51,27 +51,30 @@ pub(crate) enum Retries {
 }
 
 impl Retries {
-    /// How many times the client should retry a failed request, or `None` when
-    /// it should not retry at all.
-    pub(crate) fn max_retries_for(self, backend_name: &str) -> Option<u32> {
+    /// How many times the client should retry a failed request; zero means it
+    /// should not retry at all.
+    pub(crate) fn max_retries_for(self, backend_name: &str) -> u32 {
         match self {
-            Self::Disabled => None,
-            Self::EnabledUnlessEnvOptsOut => {
-                (!disabled_by_env(backend_name)).then(|| max_retry_count(backend_name))
-            }
+            Self::Disabled => 0,
+            Self::EnabledUnlessEnvOptsOut if disabled_by_env(backend_name) => 0,
+            Self::EnabledUnlessEnvOptsOut => max_retry_count(backend_name),
         }
     }
 }
 
-/// Reads `var` for `backend_name`.
+/// Reads `var` for `backend_name`, returning the resolved variable name along
+/// with its value so diagnostics can point at the variable that was actually
+/// read.
 ///
 /// QRMI namespaces backend configuration under a `<backend_name>_` prefix, so
 /// `<backend_name>_<var>` (e.g. `FRESNEL_QRMI_PASQAL_MAX_RETRY_COUNT`) wins,
 /// falling back to the unprefixed name as a global override (e.g. for e2e
 /// tests).
-fn scoped_var(backend_name: &str, var: &str) -> Option<String> {
-    env::var(format!("{backend_name}_{var}"))
-        .or_else(|_| env::var(var))
+fn scoped_var(backend_name: &str, var: &str) -> Option<(String, String)> {
+    let prefixed = format!("{backend_name}_{var}");
+    env::var(&prefixed)
+        .map(|value| (prefixed, value))
+        .or_else(|_| env::var(var).map(|value| (var.to_string(), value)))
         .ok()
 }
 
@@ -81,7 +84,7 @@ fn scoped_var(backend_name: &str, var: &str) -> Option<String> {
 /// anything else (or unset) leaves the retry policy in place.
 fn disabled_by_env(backend_name: &str) -> bool {
     scoped_var(backend_name, RETRIES_DISABLED_ENV)
-        .map(|v| {
+        .map(|(_, v)| {
             matches!(
                 v.trim().to_ascii_lowercase().as_str(),
                 "1" | "true" | "yes" | "on"
@@ -96,14 +99,14 @@ fn disabled_by_env(backend_name: &str) -> bool {
 /// should not silently change how long a job hangs on a failing backend — and
 /// the default is used instead.
 fn max_retry_count(backend_name: &str) -> u32 {
-    let Some(value) = scoped_var(backend_name, MAX_RETRY_COUNT_ENV) else {
+    let Some((name, value)) = scoped_var(backend_name, MAX_RETRY_COUNT_ENV) else {
         return DEFAULT_MAX_RETRIES;
     };
     match value.trim().parse::<u32>() {
         Ok(count) => count,
         Err(_) => {
             warn!(
-                "Ignoring {MAX_RETRY_COUNT_ENV}='{value}': expected a non-negative integer, using {DEFAULT_MAX_RETRIES}"
+                "Ignoring {name}='{value}': expected a non-negative integer, using {DEFAULT_MAX_RETRIES}"
             );
             DEFAULT_MAX_RETRIES
         }
@@ -153,7 +156,7 @@ mod tests {
     #[test]
     fn disabled_never_retries_even_when_env_is_silent() {
         with_clean_env(|| {
-            assert_eq!(Retries::Disabled.max_retries_for(BACKEND), None);
+            assert_eq!(Retries::Disabled.max_retries_for(BACKEND), 0);
         });
     }
 
@@ -165,7 +168,7 @@ mod tests {
             env::set_var(format!("{BACKEND}_{RETRIES_DISABLED_ENV}"), "false");
             env::set_var(RETRIES_DISABLED_ENV, "false");
             env::set_var(MAX_RETRY_COUNT_ENV, "10");
-            assert_eq!(Retries::Disabled.max_retries_for(BACKEND), None);
+            assert_eq!(Retries::Disabled.max_retries_for(BACKEND), 0);
         });
     }
 
@@ -174,7 +177,7 @@ mod tests {
         with_clean_env(|| {
             assert_eq!(
                 Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                Some(DEFAULT_MAX_RETRIES)
+                DEFAULT_MAX_RETRIES
             );
         });
     }
@@ -183,10 +186,7 @@ mod tests {
     fn enabled_honors_scoped_env_opt_out() {
         with_clean_env(|| {
             env::set_var(format!("{BACKEND}_{RETRIES_DISABLED_ENV}"), "1");
-            assert_eq!(
-                Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                None
-            );
+            assert_eq!(Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND), 0);
         });
     }
 
@@ -194,10 +194,7 @@ mod tests {
     fn enabled_honors_global_env_opt_out() {
         with_clean_env(|| {
             env::set_var(RETRIES_DISABLED_ENV, "on");
-            assert_eq!(
-                Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                None
-            );
+            assert_eq!(Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND), 0);
         });
     }
 
@@ -208,10 +205,7 @@ mod tests {
             env::set_var(format!("{BACKEND}_{RETRIES_DISABLED_ENV}"), "false");
             env::set_var(MAX_RETRY_COUNT_ENV, "9");
             env::set_var(format!("{BACKEND}_{MAX_RETRY_COUNT_ENV}"), "2");
-            assert_eq!(
-                Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                Some(2)
-            );
+            assert_eq!(Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND), 2);
         });
     }
 
@@ -221,7 +215,7 @@ mod tests {
             env::set_var(RETRIES_DISABLED_ENV, "maybe");
             assert_eq!(
                 Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                Some(DEFAULT_MAX_RETRIES)
+                DEFAULT_MAX_RETRIES
             );
         });
     }
@@ -230,10 +224,7 @@ mod tests {
     fn max_retry_count_is_configurable() {
         with_clean_env(|| {
             env::set_var(MAX_RETRY_COUNT_ENV, "3");
-            assert_eq!(
-                Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                Some(3)
-            );
+            assert_eq!(Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND), 3);
         });
     }
 
@@ -241,10 +232,7 @@ mod tests {
     fn zero_max_retry_count_means_a_single_attempt() {
         with_clean_env(|| {
             env::set_var(MAX_RETRY_COUNT_ENV, "0");
-            assert_eq!(
-                Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                Some(0)
-            );
+            assert_eq!(Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND), 0);
         });
     }
 
@@ -254,7 +242,35 @@ mod tests {
             env::set_var(MAX_RETRY_COUNT_ENV, "lots");
             assert_eq!(
                 Retries::EnabledUnlessEnvOptsOut.max_retries_for(BACKEND),
-                Some(DEFAULT_MAX_RETRIES)
+                DEFAULT_MAX_RETRIES
+            );
+        });
+    }
+
+    #[test]
+    fn scoped_var_resolves_to_the_prefixed_name_when_set() {
+        // The parse warning names the variable the value came from, so the
+        // resolved name must be the scoped one when it is set.
+        with_clean_env(|| {
+            env::set_var(format!("{BACKEND}_{MAX_RETRY_COUNT_ENV}"), "lots");
+            env::set_var(MAX_RETRY_COUNT_ENV, "also lots");
+            assert_eq!(
+                scoped_var(BACKEND, MAX_RETRY_COUNT_ENV),
+                Some((
+                    format!("{BACKEND}_{MAX_RETRY_COUNT_ENV}"),
+                    "lots".to_string()
+                ))
+            );
+        });
+    }
+
+    #[test]
+    fn scoped_var_resolves_to_the_unprefixed_name_on_fallback() {
+        with_clean_env(|| {
+            env::set_var(MAX_RETRY_COUNT_ENV, "lots");
+            assert_eq!(
+                scoped_var(BACKEND, MAX_RETRY_COUNT_ENV),
+                Some((MAX_RETRY_COUNT_ENV.to_string(), "lots".to_string()))
             );
         });
     }

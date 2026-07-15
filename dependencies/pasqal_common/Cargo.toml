@@ -22,4 +22,5 @@ tokio = { version = "1.40.0", features = ["time"] }
 [dev-dependencies]
 tokio = { version = "1.40.0", features = ["macros", "rt", "time"] }
 mockito = "1.5.0"
-reqwest = { version = "0.12.14", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12.14", default-features = false, features = ["json", "rustls-tls", "stream"] }
+futures-util = "0.3.31"

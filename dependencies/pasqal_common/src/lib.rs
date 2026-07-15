@@ -16,4 +16,4 @@
 
 pub mod retry;
 
-pub use retry::{with_retry, DEFAULT_MAX_RETRIES};
+pub use retry::{with_retry, with_retry_config, BackoffConfig, RetryConfig, DEFAULT_MAX_RETRIES};
