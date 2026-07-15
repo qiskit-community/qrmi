@@ -20,7 +20,7 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| `<backend_name>_QRMI_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`) |
+| `<backend_name>_QRMI_WARDEN_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`). Falls back to the deprecated `<backend_name>_QRMI_URL` if not set. |
 | `QRMI_JOB_UID` | ID of the user executing the job |
 | `QRMI_JOB_ID` | ID of the job |
 

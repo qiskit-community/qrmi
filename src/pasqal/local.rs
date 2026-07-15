@@ -14,6 +14,7 @@ use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use anyhow::anyhow;
 use anyhow::{bail, Result};
+use log::warn;
 use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::env;
@@ -37,12 +38,21 @@ impl PasqalLocal {
     ///
     /// # Environment variables
     /// * `QRMI_JOB_UID`: uid of the slurm job
-    /// * `<backend_name>_QRMI_URL`: URL of the pasqd middleware (warden)
+    /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
+    ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
     ///
     pub fn new(backend_name: &str) -> Result<Self> {
-        let url_var = format!("{backend_name}_QRMI_URL");
-        let url =
-            env::var(&url_var).map_err(|_| anyhow!("{url_var} environment variable is not set"))?;
+        let warden_url_var = format!("{backend_name}_QRMI_WARDEN_URL");
+        let legacy_url_var = format!("{backend_name}_QRMI_URL");
+        let url = match env::var(&warden_url_var) {
+            Ok(url) => url,
+            Err(_) => {
+                let url = env::var(&legacy_url_var)
+                    .map_err(|_| anyhow!("{warden_url_var} environment variable is not set"))?;
+                warn!("{legacy_url_var} is deprecated, please use {warden_url_var} instead.");
+                url
+            }
+        };
         let job_uid: i32 = env::var("QRMI_JOB_UID")
             .ok()
             .and_then(|s| s.parse::<i32>().ok())
