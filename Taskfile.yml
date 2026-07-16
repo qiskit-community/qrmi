@@ -1,0 +1,15 @@
+version: '3'
+
+vars:
+  IMAGE: '{{.IMAGE | default "qrmi-operator:latest"}}'
+  NODES:
+    - master1.node.k8s-1.b2.int.alice-bob.com
+    - worker1.node.k8s-1.b2.int.alice-bob.com
+    - worker2.node.k8s-1.b2.int.alice-bob.com
+
+tasks:
+  push:
+    desc: Push operator image to cluster nodes via containerd import
+    cmds:
+      - for: { var: NODES }
+        cmd: docker save {{.IMAGE}} | ssh ab@{{.ITEM}} sudo ctr -n k8s.io images import -

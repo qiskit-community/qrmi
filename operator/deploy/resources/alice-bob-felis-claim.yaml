@@ -1,0 +1,7 @@
+apiVersion: quantum.qrmi.io/v1alpha1
+kind: QuantumResourceClaim
+metadata:
+  name: ab-felis-claim
+spec:
+  quantumResource: ab-emu-1q-lescanne-2020
+  ttl: 3600

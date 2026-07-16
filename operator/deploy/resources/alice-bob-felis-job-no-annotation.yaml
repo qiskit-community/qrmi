@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alice-bob-felis-example
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: felis-example
+          image: felis-qrmi-example:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: qrc-ab-felis-claim

@@ -1,0 +1,37 @@
+[package]
+name = "qrmi-operator"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Kubernetes operator for QRMI quantum resources"
+
+[[bin]]
+name = "qrmi-operator"
+path = "src/main.rs"
+
+[dependencies]
+qrmi = { path = "..", features = [] }
+
+# Kubernetes
+kube = { version = "0.97", features = ["runtime", "derive", "client", "rustls-tls"] }
+k8s-openapi = { version = "0.23", features = ["v1_30"] }
+rustls = { version = "0.23", features = ["ring"], default-features = false }
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+futures = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling / logging
+anyhow = { version = "1.0", features = ["backtrace"] }
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+schemars = "0.8"
+serde_yaml = "0.9"

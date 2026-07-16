@@ -63,6 +63,7 @@ members = [
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
     "dependencies/alice_bob_felis_client",
+    "operator",
 ]
 resolver = "2"
 
