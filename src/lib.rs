@@ -16,7 +16,9 @@ pub(crate) mod consts;
 pub mod ibm;
 pub mod iqm;
 pub mod pasqal;
+pub mod qrmi_service;
 pub mod resource_provider;
+pub use qrmi_service::QRMIService;
 pub use resource_provider::create_provider;
 pub use resource_provider::ResourceProvider;
 
