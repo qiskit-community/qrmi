@@ -35,7 +35,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install -e .[docs,all]
+
+      - name: Build API documentation
+        run: |
+          sphinx-apidoc --no-toc -o docs/source/api/ python/qrmi/
 
       - name: Build documentation
         run: |
@@ -58,3 +62,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
