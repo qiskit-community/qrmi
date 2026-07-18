@@ -13,13 +13,5 @@
 //! Dataclasses(Models) used in QRMI.
 
 mod config;
-mod payload;
-mod target;
-mod task_result;
-mod task_status;
 
-pub use self::config::{Config, ResourceDef, ResourceType};
-pub use self::payload::Payload;
-pub use self::target::Target;
-pub use self::task_result::TaskResult;
-pub use self::task_status::TaskStatus;
+pub use self::config::Config;

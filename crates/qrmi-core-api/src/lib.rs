@@ -9,3 +9,18 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
+
+mod payload;
+mod quantum_resource;
+mod resource_provider;
+mod target;
+mod task_result;
+mod task_status;
+
+// Crate public symbols
+pub use payload::Payload;
+pub use quantum_resource::{QuantumResource, ResourceDef, ResourceDefs, ResourceType};
+pub use resource_provider::ResourceProvider;
+pub use target::Target;
+pub use task_result::TaskResult;
+pub use task_status::TaskStatus;

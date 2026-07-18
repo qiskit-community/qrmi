@@ -1,9 +1,7 @@
 use super::PasqalCloud;
-use crate::models::ResourceType;
 use crate::pasqal::cloud_config::{
     expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalConfig,
 };
-use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
 use std::fs;
 use std::io::{Read, Write};
@@ -11,6 +9,8 @@ use std::net::TcpListener;
 use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 use std::thread;
+
+use qrmi_core_api::{QuantumResource, ResourceType};
 
 // Ensure that tests that manipulate environment variables are not run in parallel to avoid interference between them.
 fn env_lock() -> &'static Mutex<()> {

@@ -12,12 +12,13 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{models::Payload, models::TaskStatus, pasqal::PasqalCloud, QuantumResource};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-
 use std::{thread, time};
+
+use qrmi::pasqal::PasqalCloud;
+use qrmi_core_api::{Payload, QuantumResource, TaskStatus};
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]

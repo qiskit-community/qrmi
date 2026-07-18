@@ -16,8 +16,6 @@ mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQuantumSystem;
-use crate::QuantumResource;
-use crate::ResourceProvider;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -26,6 +24,8 @@ use provider_filter::BackendFilter;
 use quantum_system_api::{models::Backends, AuthMethod, ClientBuilder};
 use std::collections::HashMap;
 use std::env;
+
+use qrmi_core_api::{QuantumResource, ResourceProvider};
 
 /// A [`ResourceProvider`] that discovers backends available through IBM Quantum System.
 ///

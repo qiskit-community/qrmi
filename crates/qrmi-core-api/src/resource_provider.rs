@@ -12,6 +12,11 @@
 
 //! Trait for vendor-level quantum resource providers.
 
+use anyhow::Result;
+use async_trait::async_trait;
+
+use crate::QuantumResource;
+
 /// Defines an interface for vendors that can enumerate available quantum resources.
 ///
 /// A `ResourceProvider` represents a vendor or service endpoint and is responsible

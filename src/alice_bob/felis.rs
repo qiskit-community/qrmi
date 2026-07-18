@@ -12,8 +12,6 @@
 
 //! QRMI implementation for Alice and Bob Felis
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
 use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
 use alice_bob_felis::helpers::decode_api_key;
 use alice_bob_felis::models;
@@ -24,6 +22,8 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::env;
 use uuid::Uuid;
+
+use qrmi_core_api::{Payload, QuantumResource, ResourceType, Target, TaskResult, TaskStatus};
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
 pub struct AliceBobFelis {

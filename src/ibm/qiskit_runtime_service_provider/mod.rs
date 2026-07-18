@@ -16,8 +16,6 @@ mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQiskitRuntimeService;
-use crate::resource_provider::ResourceProvider;
-use crate::QuantumResource;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -26,6 +24,8 @@ use provider_filter::BackendFilter;
 use qiskit_runtime_client::apis::{auth, backends_api, configuration};
 use std::collections::HashMap;
 use std::env;
+
+use qrmi_core_api::{QuantumResource, ResourceProvider};
 
 /// A [`ResourceProvider`] that discovers backends available through IBM Qiskit Runtime Service.
 ///

@@ -2621,6 +2621,13 @@ dependencies = [
 [[package]]
 name = "qrmi-core-api"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "pyo3",
+ "pyo3-stub-gen",
+ "serde",
+]
 
 [[package]]
 name = "quantum-system-api"

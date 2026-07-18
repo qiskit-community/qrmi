@@ -10,11 +10,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::ResourceType;
-use crate::QuantumResource;
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use std::collections::HashMap;
+
+use qrmi_core_api::{ResourceProvider, ResourceType};
 
 /// Creates a [`ResourceProvider`] from a [`ResourceType`] and environment variable map.
 ///

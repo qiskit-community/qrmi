@@ -10,6 +10,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use anyhow::Result;
+use async_trait::async_trait;
+use std::collections::HashMap;
+
+use crate::{Payload, Target, TaskResult, TaskStatus};
+
 /// QRMI resource types
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -11,20 +11,15 @@
 // that they have been altered from the originals.
 
 pub mod alice_bob;
+mod cext;
 pub(crate) mod common;
 pub(crate) mod consts;
 pub mod ibm;
 pub mod iqm;
-pub mod pasqal;
-pub mod resource_provider;
-pub use resource_provider::create_provider;
-pub use resource_provider::ResourceProvider;
-
-mod cext;
 pub mod models;
+pub mod pasqal;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
+pub mod resource_provider;
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+pub use resource_provider::create_provider;

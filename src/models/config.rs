@@ -23,6 +23,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 
+use qrmi_core_api::{ResourceDef, ResourceDefs};
+
 /// QRMI configuration file
 ///
 /// # Example
