@@ -2607,6 +2607,7 @@ dependencies = [
  "pyo3",
  "pyo3-stub-gen",
  "qiskit_runtime_client",
+ "qrmi-core-api",
  "quantum-system-api",
  "reqwest-retry",
  "serde",
