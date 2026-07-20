@@ -23,6 +23,8 @@ Because QRMI is an environment variable driven software library, all configurati
 | `<backend_name>_QRMI_WARDEN_URL` | URL of the QPU middleware (e.g. `http://localhost:4207`). Falls back to the deprecated `<backend_name>_QRMI_URL` if not set. |
 | `QRMI_JOB_UID` | ID of the user executing the job |
 | `QRMI_JOB_ID` | ID of the job |
+| `<backend_name>_QRMI_PASQAL_RETRIES_DISABLED` | (Optional) Disable automatic HTTP request retries. Set to `1`, `true`, `yes`, or `on`. The unprefixed `QRMI_PASQAL_RETRIES_DISABLED` acts as a global fallback. Retries are enabled by default for the Python bindings only; the C bindings (used by the Slurm SPANK plugin) never retry. |
+| `<backend_name>_QRMI_PASQAL_MAX_RETRY_COUNT` | (Optional) How many times a failed HTTP request is retried. The unprefixed `QRMI_PASQAL_MAX_RETRY_COUNT` acts as a global fallback. Default: `5`. |
 
 Where `<backend_name>` is the backend name passed via `--backend` (e.g. `PASQAL_LOCAL`).
 

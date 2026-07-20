@@ -237,6 +237,10 @@ impl Client {
 pub struct ClientBuilder {
     /// The base URL this client sends requests to
     base_url: String,
+    /// How many times a failed HTTP request is retried; zero disables retries.
+    /// Defaults to [`pasqal_common::DEFAULT_MAX_RETRIES`]; changed with
+    /// [`Self::with_max_retries`].
+    max_retries: u32,
 }
 
 impl ClientBuilder {
@@ -247,11 +251,21 @@ impl ClientBuilder {
     /// ```rust
     /// use pasqal_local_api::ClientBuilder;
     ///
-    /// let _builder = ClientBuilder::new("http://localhost:4207");
+    /// let _builder = ClientBuilder::new("http://localhost:8006");
     /// ```
     pub fn new(base_url: impl Into<String>) -> Self {
         let base_url: String = base_url.into();
-        Self { base_url }
+        Self {
+            base_url,
+            max_retries: pasqal_common::DEFAULT_MAX_RETRIES,
+        }
+    }
+
+    /// Retry a failed HTTP request at most `max_retries` times; zero disables
+    /// retries entirely.
+    pub fn with_max_retries(&mut self, max_retries: u32) -> &mut Self {
+        self.max_retries = max_retries;
+        self
     }
 
     /// Returns a [`Client`] that uses this [`ClientBuilder`] configuration.
@@ -261,13 +275,16 @@ impl ClientBuilder {
     /// ```rust
     /// use pasqal_local_api::{ClientBuilder};
     ///
-    /// let _builder = ClientBuilder::new("http://localhost:4207").build();
+    /// let _builder = ClientBuilder::new("http://localhost:8006").build();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
         let mut reqwest_client_builder = reqwest::Client::builder();
         reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
 
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        let reqwest_builder = pasqal_common::with_retry(
+            ReqwestClientBuilder::new(reqwest_client_builder.build()?),
+            self.max_retries,
+        );
 
         Ok(Client {
             base_url: self.base_url.clone(),

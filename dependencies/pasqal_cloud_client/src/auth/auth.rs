@@ -17,6 +17,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
 use log::debug;
 use reqwest::header;
+use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -119,6 +120,7 @@ impl Client {
             Self::request_access_token(
                 &self.auth_endpoint,
                 AccessTokenRequest::UsernamePassword { username, password },
+                self.max_retries,
             )
             .await?
         } else if let (Some(client_id), Some(client_secret)) =
@@ -131,6 +133,7 @@ impl Client {
                     client_id,
                     client_secret,
                 },
+                self.max_retries,
             )
             .await?
         } else {
@@ -142,14 +145,21 @@ impl Client {
     }
 
     /// Request a Pasqal Cloud access token.
+    ///
+    /// `max_retries` controls how many times the token request is retried on
+    /// transient failures; pass `0` to disable retries.
     pub async fn request_access_token(
         auth_endpoint: &str,
         request: AccessTokenRequest<'_>,
+        max_retries: u32,
     ) -> Result<String> {
         let auth_endpoint = Self::normalize_auth_endpoint(auth_endpoint)?;
         let client_params = request.form_params();
 
-        let resp = reqwest::Client::new()
+        let client_builder = ReqwestClientBuilder::new(reqwest::Client::new());
+        let client = pasqal_common::with_retry(client_builder, max_retries).build();
+
+        let resp = client
             .post(auth_endpoint)
             .header(
                 reqwest::header::CONTENT_TYPE,

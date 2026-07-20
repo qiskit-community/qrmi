@@ -2283,6 +2283,7 @@ dependencies = [
  "jwt",
  "log",
  "mockito",
+ "pasqal-common",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
@@ -2294,6 +2295,23 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "pasqal-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures-util",
+ "http 1.4.0",
+ "httpdate",
+ "log",
+ "mockito",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "tokio",
 ]
 
 [[package]]
@@ -2313,6 +2331,7 @@ dependencies = [
  "jwt",
  "log",
  "mockito",
+ "pasqal-common",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
@@ -2603,6 +2622,7 @@ dependencies = [
  "libc",
  "log",
  "pasqal-cloud-api",
+ "pasqal-common",
  "pasqal-local-api",
  "pyo3",
  "pyo3-stub-gen",
@@ -2914,12 +2934,14 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.26.4",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots",
 ]
@@ -4182,6 +4204,19 @@ dependencies = [
  "indexmap 2.14.0",
  "wasm-encoder",
  "wasmparser",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
