@@ -36,7 +36,13 @@ pub enum ReturnCode {
     NullPointerError = 101,
 }
 
-pub type QrmiLogCallback = crate::common::QrmiLogCallback;
+pub type QrmiLogCallback = Option<
+    unsafe extern "C" fn(
+        level: *const std::os::raw::c_char,
+        target: *const std::os::raw::c_char,
+        message: *const std::os::raw::c_char,
+    ),
+>;
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
