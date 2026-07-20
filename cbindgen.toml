@@ -37,6 +37,10 @@ after_includes = """
  */
 """
 
+[parse]
+parse_deps = true
+include = ["qrmi-core-api"]
+
 [enum]
 prefix_with_name = true
 rename_variants = "ScreamingSnakeCase"
