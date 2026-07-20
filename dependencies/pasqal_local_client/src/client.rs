@@ -81,6 +81,7 @@ pub struct DeviceSpecs {
 pub struct CreateSessionPayload {
     pub user_id: String,
     pub slurm_job_id: String,
+    pub qpu_slots: i32,
 }
 
 impl Client {
@@ -161,11 +162,13 @@ impl Client {
         &self,
         user_id: i32,
         slurm_job_id: &str,
+        qpu_slots: i32,
     ) -> Result<SessionResponse> {
         let url = format!("{}/sessions", self.base_url);
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
             slurm_job_id: slurm_job_id.to_string(),
+            qpu_slots,
         };
 
         let headers = self.create_headers().await?;

@@ -85,9 +85,10 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn acquire(&mut self) -> Result<String> {
+        let qpu_slots = qpu_slots_from_env()?;
         match self
             .api_client
-            .create_session(self.job_uid, &self.job_id)
+            .create_session(self.job_uid, &self.job_id, qpu_slots)
             .await
         {
             Ok(session) => Ok(session.id),
@@ -179,3 +180,21 @@ impl QuantumResource for PasqalLocal {
         metadata
     }
 }
+
+fn qpu_slots_from_env() -> Result<i32> {
+    match env::var("QRMI_JOB_QPU_SLOTS") {
+        Ok(value) => {
+            let slots = value.parse::<i32>()?;
+            if slots < 1 {
+                bail!("QRMI_JOB_QPU_SLOTS must be an integer greater than zero");
+            }
+            Ok(slots)
+        }
+        Err(env::VarError::NotPresent) => Ok(1),
+        Err(err) => Err(err.into()),
+    }
+}
+
+#[cfg(test)]
+#[path = "tests/local.rs"]
+mod tests;
