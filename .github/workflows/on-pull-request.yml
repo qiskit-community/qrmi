@@ -13,6 +13,16 @@ concurrency:
 
 jobs:
 
+  # Create new qrmi-core-api version tag if it was bumped
+  crate-version:
+    if: github.repository_owner == 'qiskit-community'
+    permissions:
+      contents: write # Required to create the tag
+    uses: ./.github/workflows/crate-version.yml
+    with:
+      name: 'qrmi-core-api'
+      create-new-version-tag: true
+
   check-broken-links:
     if: github.repository_owner == 'qiskit-community'
     uses: ./.github/workflows/broken-links.yml

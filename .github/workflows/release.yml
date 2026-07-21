@@ -15,6 +15,14 @@ on:
   
 jobs:
 
+  # Check if the qrmi-core-api was changed without bumping the version
+  crate-version:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/crate-version.yml
+    with:
+      name: 'qrmi-core-api'
+      check-outdated: true
+
   # Check if the current QRMI version has already been released.
   # It also provides the checked QRMI version to other jobs through
   # the needs field.
