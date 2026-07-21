@@ -6,6 +6,9 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen"]
+
 [dependencies]
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 async-trait = "0.1.88"

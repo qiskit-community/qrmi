@@ -22,7 +22,7 @@ required-features = ["build-binary"]
 
 [features]
 default = ["quantum-system-api/iqp_retry_policy"]
-pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen"]
+pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen", "qrmi-core-api/pyo3"]
 build-binary = ["dep:signal-hook-tokio", "dep:signal-hook", "dep:eyre"]
 munge = ["pasqal-local-api/munge"]
 

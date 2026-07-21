@@ -15,13 +15,13 @@ use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
 use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
-use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
-use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
 use tokio::runtime::Runtime;
+
+use qrmi_core_api::{Payload, QuantumResource, ResourceDef, Target, TaskResult, TaskStatus};
 
 #[pyclass(eq, eq_int, hash, frozen, from_py_object)]
 #[gen_stub_pyclass_enum]
@@ -129,14 +129,14 @@ impl PyQuantumResource {
         let result = self.rt.block_on(async { self.qrmi.resource_type().await });
         match result {
             Ok(v) => Ok(match v {
-                crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
-                crate::models::ResourceType::QiskitRuntimeService => {
+                qrmi_core_api::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
+                qrmi_core_api::ResourceType::QiskitRuntimeService => {
                     ResourceType::IBMQiskitRuntimeService
                 }
-                crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
-                crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
-                crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
-                crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+                qrmi_core_api::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
+                qrmi_core_api::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+                qrmi_core_api::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
+                qrmi_core_api::ResourceType::IQMServer => ResourceType::IQMServer,
             }),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
@@ -257,14 +257,14 @@ impl PyResourceDef {
     #[getter]
     pub fn resource_type(&self) -> ResourceType {
         match self.inner.r#type {
-            crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
-            crate::models::ResourceType::QiskitRuntimeService => {
+            qrmi_core_api::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
+            qrmi_core_api::ResourceType::QiskitRuntimeService => {
                 ResourceType::IBMQiskitRuntimeService
             }
-            crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
-            crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
-            crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
-            crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+            qrmi_core_api::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
+            qrmi_core_api::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
+            qrmi_core_api::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
+            qrmi_core_api::ResourceType::IQMServer => ResourceType::IQMServer,
         }
     }
 
@@ -307,7 +307,7 @@ impl PyResourceDef {
 #[pyclass]
 #[pyo3(name = "ResourceProvider")]
 pub struct PyResourceProvider {
-    inner: Box<dyn crate::ResourceProvider>,
+    inner: Box<dyn qrmi_core_api::ResourceProvider>,
     rt: Runtime,
 }
 
@@ -325,7 +325,7 @@ impl PyResourceProvider {
         environment: std::collections::HashMap<String, String>,
     ) -> PyResult<Self> {
         crate::common::initialize();
-        let inner: Box<dyn crate::ResourceProvider> = match resource_type {
+        let inner: Box<dyn qrmi_core_api::ResourceProvider> = match resource_type {
             ResourceType::IBMQiskitRuntimeService => {
                 match IBMQiskitRuntimeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),
@@ -456,10 +456,10 @@ impl PyConfig {
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyQuantumResource>()?;
     m.add_class::<ResourceType>()?;
-    m.add_class::<crate::models::TaskStatus>()?;
-    m.add_class::<crate::models::Payload>()?;
-    m.add_class::<crate::models::Target>()?;
-    m.add_class::<crate::models::TaskResult>()?;
+    m.add_class::<qrmi_core_api::TaskStatus>()?;
+    m.add_class::<qrmi_core_api::Payload>()?;
+    m.add_class::<qrmi_core_api::Target>()?;
+    m.add_class::<qrmi_core_api::TaskResult>()?;
     m.add_class::<PyResourceDef>()?;
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
