@@ -57,7 +57,6 @@ impl QRMIService {
         Ok(service)
     }
 
-    // Unfinished, Unsure if this is needed
     pub fn from_config(file_path: &str) -> Result<Self> {
         let config = Config::load(file_path)?;
 
@@ -66,6 +65,11 @@ impl QRMIService {
         };
 
         for (resource_id, resource_def) in config.resource_map {
+            for (key, value) in resource_def.environment.iter() {
+                let env_name = format!("{}_{}", resource_id, key);
+                env::set_var(env_name, value);
+            }
+
             service.add_resource(&resource_id, resource_def.r#type)?;
         }
 
@@ -136,5 +140,30 @@ async fn discovers_resources_from_job_qpu_environment() -> Result<(), Box<dyn st
     println!("Resource info: id={}, type={}, accessible={}", resource_id, resource_type.as_str(), is_accessible);
 
     service.print_resources().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn from_config_loads_and_adds_resources() -> Result<(), Box<dyn std::error::Error>> {
+    // Use the project-relative config path as requested.
+    let mut service = QRMIService::from_config("../qrmi_config.json")?;
+
+    let resources = service.resources();
+        assert_eq!(resources.len(), 1);
+
+    let mut resource = service
+        .resources
+        .values_mut()
+        .next()
+        .expect("expected at least one resource");
+
+    let resource_id = resource.resource_id().await?;
+    let resource_type = resource.resource_type().await?;
+    let is_accessible = resource.is_accessible().await?;
+
+    println!("Resource info: id={}, type={}, accessible={}", resource_id, resource_type.as_str(), is_accessible);
+
+    service.print_resources().await?;
+
     Ok(())
 }
