@@ -8,6 +8,7 @@ QRMI Documentation
 QRMI's ongoing development requires a robust and comprehensive documentation system. This section outlines how to add new documentation to the project.
 
 
+
 ----------------
 
 .. contents::
@@ -15,9 +16,11 @@ QRMI's ongoing development requires a robust and comprehensive documentation sys
    :depth: 2
 
 
+
 Sphinx
 ------
 
+These pages are built using `Sphinx`_, a documentation generator. The process of building these HTML pages from the reStructured Text source files is automated via the Sphinx Documentation GitHub Action.
 These pages are built using `Sphinx`_, a documentation generator. The process of building these HTML pages from the reStructured Text source files is automated via the Sphinx Documentation GitHub Action.
 
 .. _Sphinx: https://www.sphinx-doc.org/en/master/
@@ -36,6 +39,7 @@ Theming and customisation (such as extensions, HTML options, etc.) are configure
 This documentation uses the `Shibuya`_ theme. 
 
 .. _Shibuya: https://shibuya.lepture.com/
+
 
 
 .. _adding_documentation:
