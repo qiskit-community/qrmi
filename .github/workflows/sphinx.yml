@@ -40,6 +40,10 @@ jobs:
           cache-dependency-path: |
             requirements-dev.txt
             pyproject.toml
+          cache: "pip"
+          cache-dependency-path: |
+            requirements-dev.txt
+            pyproject.toml
 
       - name: Install dependencies
         run: |
@@ -99,7 +103,10 @@ jobs:
             docs docs/_build/linkcheck
 
       - name: Add Rust API documentation to Sphinx
+      - name: Add Rust API documentation to Sphinx
         run: |
+          mkdir -p docs/_build/html/rust
+          cp -R target/doc/* docs/_build/html/rust/
           mkdir -p docs/_build/html/rust
           cp -R target/doc/* docs/_build/html/rust/
 
