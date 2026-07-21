@@ -145,7 +145,7 @@ async fn discovers_resources_from_job_qpu_environment() -> Result<(), Box<dyn st
 
 #[tokio::test]
 async fn from_config_loads_and_adds_resources() -> Result<(), Box<dyn std::error::Error>> {
-    // Use the project-relative config path as requested.
+
     let mut service = QRMIService::from_config("../qrmi_config.json")?;
 
     let resources = service.resources();
