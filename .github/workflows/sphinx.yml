@@ -41,19 +41,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[docs,all]
 
+      - name: Build Python API documentation
+        run: |
+          sphinx-apidoc --no-toc -o docs/api/python/ python/qrmi/
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
 
-      - name: Build Python API documentation
-        run: |
-          sphinx-apidoc --no-toc -o docs/source/api/ python/qrmi/
-
       - name: Build Rust API documentation
         run: |
           cargo doc --no-deps
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+
+      - name: Generate Doxygen XML
+        run: |
+          mkdir -p build/doxygen
+          doxygen Doxyfile
 
       - name: Build Sphinx documentation
         run: |
