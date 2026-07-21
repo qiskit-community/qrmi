@@ -15,13 +15,15 @@ use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
 use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
-use crate::models::{Config, ResourceType, TaskStatus};
+use crate::models::Config;
 use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::sync::Arc;
+
+use qrmi_core_api::{ResourceType, TaskStatus};
 
 /// Integer return codes returned to C.
 #[repr(C)]
@@ -34,7 +36,13 @@ pub enum ReturnCode {
     NullPointerError = 101,
 }
 
-pub type QrmiLogCallback = crate::common::QrmiLogCallback;
+pub type QrmiLogCallback = Option<
+    unsafe extern "C" fn(
+        level: *const std::os::raw::c_char,
+        target: *const std::os::raw::c_char,
+        message: *const std::os::raw::c_char,
+    ),
+>;
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -133,7 +141,7 @@ unsafe fn envvars_to_hashmap(
 }
 
 /// Rebuilds a Rust `models::ResourceDef` from a C `ResourceDef` struct.
-unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::models::ResourceDef> {
+unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<qrmi_core_api::ResourceDef> {
     let name = if def.name.is_null() {
         String::new()
     } else {
@@ -145,7 +153,7 @@ unsafe fn rebuild_resource_def(def: &ResourceDef) -> anyhow::Result<crate::model
 
     let environment = envvars_to_hashmap(&def.environments)?;
 
-    Ok(crate::models::ResourceDef {
+    Ok(qrmi_core_api::ResourceDef {
         name,
         r#type: def.r#type.clone(),
         is_dynamic: def.is_dynamic,
@@ -161,7 +169,7 @@ pub struct ResourceMetadata {
 
 /// Quantum resource handle
 pub struct QuantumResource {
-    inner: Box<dyn crate::QuantumResource>,
+    inner: Box<dyn qrmi_core_api::QuantumResource>,
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
@@ -643,7 +651,7 @@ pub unsafe extern "C" fn qrmi_resource_new(
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
 
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
-        let res: Box<dyn crate::QuantumResource> = match resource_type {
+        let res: Box<dyn qrmi_core_api::QuantumResource> = match resource_type {
             ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
@@ -1011,20 +1019,20 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         return ReturnCode::NullPointerError;
     }
 
-    let mut qrmi_payload: Option<crate::models::Payload> = None;
+    let mut qrmi_payload: Option<qrmi_core_api::Payload> = None;
     if let Payload::QiskitPrimitive { input, program_id } = *payload {
         if let (Ok(program_id_str), Ok(input_str)) = (
             CStr::from_ptr(program_id).to_str(),
             CStr::from_ptr(input).to_str(),
         ) {
-            qrmi_payload = Some(crate::models::Payload::QiskitPrimitive {
+            qrmi_payload = Some(qrmi_core_api::Payload::QiskitPrimitive {
                 input: input_str.to_string(),
                 program_id: program_id_str.to_string(),
             });
         }
     } else if let Payload::PasqalCloud { sequence, job_runs } = *payload {
         if let Ok(sequence_str) = CStr::from_ptr(sequence).to_str() {
-            qrmi_payload = Some(crate::models::Payload::PasqalCloud {
+            qrmi_payload = Some(qrmi_core_api::Payload::PasqalCloud {
                 sequence: sequence_str.to_string(),
                 job_runs,
             });
@@ -1038,7 +1046,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             CStr::from_ptr(human_qir).to_str(),
             CStr::from_ptr(input_params).to_str(),
         ) {
-            qrmi_payload = Some(crate::models::Payload::AliceBobFelis {
+            qrmi_payload = Some(qrmi_core_api::Payload::AliceBobFelis {
                 human_qir: human_qir_str.to_string(),
                 input_params: input_params_str.to_string(),
             });
@@ -1066,7 +1074,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             _ => Some(false),
         };
 
-        qrmi_payload = Some(crate::models::Payload::IQMServer {
+        qrmi_payload = Some(qrmi_core_api::Payload::IQMServer {
             iqmjson: json_str.to_string(),
             job_type: type_str.to_string(),
             tag: tag_opt,
@@ -1574,7 +1582,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata_keys(
 
 /// Resource provider handle.
 pub struct ResourceProvider {
-    inner: Box<dyn crate::ResourceProvider>,
+    inner: Box<dyn qrmi_core_api::ResourceProvider>,
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
@@ -1629,7 +1637,7 @@ pub unsafe extern "C" fn qrmi_provider_new(
         }
     };
 
-    let provider: Box<dyn crate::ResourceProvider> = match resource_type {
+    let provider: Box<dyn qrmi_core_api::ResourceProvider> = match resource_type {
         ResourceType::QiskitRuntimeService => {
             match IBMQiskitRuntimeServiceProvider::new(&env_map) {
                 Ok(inner) => Box::new(inner),

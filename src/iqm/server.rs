@@ -10,8 +10,6 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use iqm_server_api::apis::calibration_sets_api::{
@@ -27,6 +25,8 @@ use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
 use uuid::Uuid;
+
+use qrmi_core_api::{Payload, QuantumResource, ResourceType, Target, TaskResult, TaskStatus};
 
 /// QRMI implementation for IQM Server API
 pub struct IQMServer {

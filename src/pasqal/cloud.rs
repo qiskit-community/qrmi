@@ -10,16 +10,15 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
+use super::cloud_config::PasqalConfig;
 use anyhow::{anyhow, bail, Result};
+use async_trait::async_trait;
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::cloud_config::PasqalConfig;
-use async_trait::async_trait;
+use qrmi_core_api::{Payload, QuantumResource, ResourceType, Target, TaskResult, TaskStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PasqalTaskKind {

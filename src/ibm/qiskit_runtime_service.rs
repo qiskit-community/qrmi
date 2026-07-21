@@ -25,9 +25,8 @@
 use crate::ibm::qiskit_runtime_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
+use async_trait::async_trait;
 use log::error;
 use qiskit_runtime_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
 use qiskit_runtime_client::models;
@@ -37,7 +36,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
 
-use async_trait::async_trait;
+use qrmi_core_api::{Payload, QuantumResource, ResourceType, Target, TaskResult, TaskStatus};
 
 /// QRMI implementation for IBM Qiskit Runtime Service.
 pub struct IBMQiskitRuntimeService {

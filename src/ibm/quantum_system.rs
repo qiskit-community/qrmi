@@ -10,9 +10,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
 use anyhow::{anyhow, bail, Result};
+use async_trait::async_trait;
 use log::info;
 use quantum_system_api::utils::s3::S3Client;
 use quantum_system_api::{
@@ -28,7 +27,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
-use async_trait::async_trait;
+use qrmi_core_api::{Payload, QuantumResource, ResourceType, Target, TaskResult, TaskStatus};
 
 /// QRMI implementation for IBM Quantum System API
 pub struct IBMQuantumSystem {

@@ -19,3 +19,4 @@ rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.
 
 [workspace.dependencies]
 qrmi = { path = "../../.." }
+qrmi-core-api = { path = "../../../crates/qrmi-core-api" }

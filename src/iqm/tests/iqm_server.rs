@@ -11,9 +11,9 @@
 // that they have been altered from the originals.
 
 use super::super::IQMServer;
-use crate::models::ResourceType;
-use crate::QuantumResource;
 use iqm_server_api::apis::configuration;
+
+use qrmi_core_api::{QuantumResource, ResourceType};
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {

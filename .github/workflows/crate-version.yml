@@ -1,0 +1,81 @@
+# We have core workspace members (crate) inside of the crates directory. This workflow
+# define jobs to help maintain their stability (version, tag).
+#
+# An option of how to bump a crate version
+# https://github.com/killercup/cargo-edit/blob/master/README.md#cargo-set-version
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: >-
+          Crate name inside the crates dir (e.g qrmi-core-api)
+        type: string
+        required: true
+        default: none
+      check-outdated:
+        description: >-
+          Check if the crate version is outdated
+        type: boolean
+        required: false
+        default: true
+      create-new-tag-version:
+        description: >-
+          Create the tag <crate>-<version> and push it
+        type: boolean
+        required: false
+        default: false
+
+  workflow_dispatch:
+    inputs:
+      name:
+        description: >-
+          Crate name inside the crates dir (e.g qrmi-core-api)
+        type: string
+        required: true
+        default: none
+      check-outdated:
+        description: >-
+          Check if the crate version is outdated
+        type: boolean
+        required: false
+        default: true
+      create-new-tag-version:
+        description: >-
+          Create the tag <crate>-<version> and push it
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+
+  crate-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Collect crate info
+        id: crate
+        run: |
+          CRATE_VERSION=$(grep -m1 '^version' crates/${{ inputs.name }}/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          echo "version_tag=${{ inputs.name }}-$CRATE_VERSION" >> $GITHUB_OUTPUT
+
+      # Check if the crate source code changed after its last version tag.
+      # If so, its version must be bumped before it is released.
+      - if: inputs.check-outdated == true
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          manifest-path: semver/qrmi/crates/${{ inputs.name }}/Cargo.toml
+          baseline-rev: ${{ steps.crate.outputs.version_tag }}
+
+      - name: Create ${{ steps.crate.outputs.version_tag}} tag and push it
+        if: inputs.tag-new-version == true
+        run: |
+           if [ $(git tag -l ${{ steps.crate.outputs.version_tag }}) ]; then
+              echo "Nothing to be done. Tag ${{ steps.crate.outputs.version_tag }} already exists"
+           else
+              git tag ${{ steps.crate.outputs.version_tag }}
+              git push origin ${{ steps.crate.outputs.version_tag }}
+              echo "${{ steps.crate.outputs.version_tag}} created and pushed"
+           fi

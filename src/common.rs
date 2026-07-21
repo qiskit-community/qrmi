@@ -11,15 +11,12 @@
 // that they have been altered from the originals.
 use std::ffi::CString;
 use std::io::Write;
-use std::os::raw::c_char;
 use std::sync::{Once, RwLock};
 
 static INIT: Once = Once::new();
 static LOG_CALLBACK: RwLock<QrmiLogCallback> = RwLock::new(None);
 
-pub type QrmiLogCallback = Option<
-    unsafe extern "C" fn(level: *const c_char, target: *const c_char, message: *const c_char),
->;
+pub use crate::cext::QrmiLogCallback;
 
 pub(crate) fn set_log_callback(callback: QrmiLogCallback) -> Result<(), ()> {
     LOG_CALLBACK

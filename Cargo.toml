@@ -22,7 +22,7 @@ required-features = ["build-binary"]
 
 [features]
 default = ["quantum-system-api/iqp_retry_policy"]
-pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen"]
+pyo3 = ["dep:pyo3", "dep:pyo3-stub-gen", "qrmi-core-api/pyo3"]
 build-binary = ["dep:signal-hook-tokio", "dep:signal-hook", "dep:eyre"]
 munge = ["pasqal-local-api/munge"]
 
@@ -54,6 +54,8 @@ signal-hook-tokio = { version = "0.3.1", features = ["futures-v0_3"], optional =
 signal-hook = { version = "0.3.17", optional = true }
 eyre = { version = "0.6.8", optional = true }
 
+qrmi-core-api = { workspace = true }
+
 [build-dependencies]
 cbindgen = "0.29"
 
@@ -63,6 +65,7 @@ members = [
     "dependencies/qiskit_runtime_client",
     "dependencies/pasqal_cloud_client",
     "dependencies/alice_bob_felis_client",
+    "crates/qrmi-core-api",
 ]
 resolver = "2"
 
@@ -78,6 +81,7 @@ pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis-api = { path = "dependencies/alice_bob_felis_client" }
 iqm-server-api = { path = "dependencies/iqm_client" }
+qrmi-core-api = { path = "crates/qrmi-core-api" }
 
 [package.metadata.maturin]
 python-source = "python"

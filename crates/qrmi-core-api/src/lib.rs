@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM, Pasqal 2025, 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,8 +10,17 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Dataclasses(Models) used in QRMI.
+mod payload;
+mod quantum_resource;
+mod resource_provider;
+mod target;
+mod task_result;
+mod task_status;
 
-mod config;
-
-pub use self::config::Config;
+// Crate public symbols
+pub use payload::Payload;
+pub use quantum_resource::{QuantumResource, ResourceDef, ResourceDefs, ResourceType};
+pub use resource_provider::ResourceProvider;
+pub use target::Target;
+pub use task_result::TaskResult;
+pub use task_status::TaskStatus;
