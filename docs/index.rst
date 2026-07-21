@@ -127,6 +127,7 @@ Contributors
    development/TESTING
    development/DOCUMENTATION
    development/PYTHON_API
+   development/RUST_API
 
 .. toctree::
    :maxdepth: 2
