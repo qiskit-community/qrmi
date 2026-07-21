@@ -31,7 +31,14 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.linkcode",
+    "breathe",
 ]
+
+breathe_projects = {
+    "qrmi": "../build/doxygen/xml",
+}
+
+breathe_default_project = "qrmi"
 
 
 # -- linkcode configuration --------------------------------------------------

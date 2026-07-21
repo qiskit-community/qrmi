@@ -7,18 +7,26 @@ QRMI Documentation
 
 QRMI's ongoing development requires a robust and comprehensive documentation system. This section outlines how to add new documentation to the project.
 
+
 ----------------
 
 .. contents::
    :local:
    :depth: 2
 
+
 Sphinx
 ------
 
-These pages are built using `Sphinx`_, a documentation generator. The process of building these HTML pages from the reStructured Text source files is automated via a GitHub Action.
+These pages are built using `Sphinx`_, a documentation generator. The process of building these HTML pages from the reStructured Text source files is automated via the Sphinx Documentation GitHub Action.
 
 .. _Sphinx: https://www.sphinx-doc.org/en/master/
+
+The GitHub Action is responsible for two tasks; building the documentation, then deploying it to GitHub Pages. 
+
+- Pushing to a feature branch with an associated PR triggers the `build` job, which carries out checks ensuring the documentation builds correctly.
+- Pushing to `main` triggers both the `build` and `deploy` jobs, which build the documentation and deploy it to GitHub Pages. 
+
 
 Theming and Customisation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,8 +35,8 @@ Theming and customisation (such as extensions, HTML options, etc.) are configure
 
 This documentation uses the `Shibuya`_ theme. 
 
-
 .. _Shibuya: https://shibuya.lepture.com/
+
 
 .. _adding_documentation:
 
@@ -59,12 +67,14 @@ If you would like to add to the existing documentation, follow these steps:
 
       sphinx-autobuild . _build/
 
+
 .. _api_docs:
 
 API Documentation
 -----------------
 
 QRMI's API documentation can be built locally using the below instructions.
+
 
 Prerequisites
 ~~~~~~~~~~~~~

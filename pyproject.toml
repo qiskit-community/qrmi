@@ -67,6 +67,7 @@ docs = [
   "sphinx_design>=0.7.0",
   "sphinx-tabs>=3.5.0",
   "sphinx_contributors>=0.3.0",
+  "breathe>=4.36.0",
 ]
 all = ["qrmi[ibm,pasqal,iqm]"]
 
