@@ -6,6 +6,5 @@ Python API
 .. toctree::
     :maxdepth: 2
 
-    /source/api/qrmi
-
+    /api/python/qrmi
 
