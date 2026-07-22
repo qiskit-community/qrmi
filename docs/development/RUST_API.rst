@@ -3,6 +3,8 @@
 Rust API
 ========
 
-Open the generated Rust API documentation:
+Unlike QRMI's Python API documentation, which is built and served using Sphinx, the Rust API documentation is built using Rust's `cargo` package.
 
-`Rust API Reference <../html/rust/qrmi/index.html>`_
+Use the link below to access the Rust API documentation:
+
+`Rust API Documentation <../rust/qrmi/index.html>`_

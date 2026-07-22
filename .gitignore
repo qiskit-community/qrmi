@@ -87,3 +87,7 @@ rpmbuild/
 
 # dotenv
 .env
+
+# Sphinx
+docs/_build/
+docs/api/
