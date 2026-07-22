@@ -1,6 +1,6 @@
 use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
-use crate::models::{Config, ResourceType};
+use crate::models::{ResourceType};
 use crate::pasqal::{PasqalCloud, PasqalLocal};
 use crate::QuantumResource;
 use anyhow::{anyhow, Result};
@@ -14,11 +14,17 @@ pub struct QRMIService {
 
 impl QRMIService {
     pub fn from_environment() -> Result<Self> {
+        let plugin_error = env::var("QRMI_PLUGIN_ERROR").ok();
+        if let Some(plugin_error) = plugin_error {
+            return Err(anyhow!(plugin_error));
+        }
+
         let mut service = Self {
             resources: HashMap::new(),
         };
-        let env_var_resource_names = env::var("QRMI_JOB_QPU_RESOURCES").unwrap_or_else(|_| "<not set>".to_string());
-        let env_var_resource_types = env::var("QRMI_JOB_QPU_TYPES").unwrap_or_else(|_| "<not set>".to_string());
+
+        let env_var_resource_names = env::var("QRMI_JOB_QPU_RESOURCES")?;
+        let env_var_resource_types = env::var("QRMI_JOB_QPU_TYPES")?;
 
         let resource_names: Vec<&str> = env_var_resource_names
             .split(',')
@@ -57,24 +63,6 @@ impl QRMIService {
         Ok(service)
     }
 
-    pub fn from_config(file_path: &str) -> Result<Self> {
-        let config = Config::load(file_path)?;
-
-        let mut service = Self {
-            resources: HashMap::new(),
-        };
-
-        for (resource_id, resource_def) in config.resource_map {
-            for (key, value) in resource_def.environment.iter() {
-                let env_name = format!("{}_{}", resource_id, key);
-                env::set_var(env_name, value);
-            }
-
-            service.add_resource(&resource_id, resource_def.r#type)?;
-        }
-
-        Ok(service)
-    }
     fn add_resource(&mut self, resource_id: &str, resource_type: ResourceType) -> Result<()> {
         let resource: Box<dyn QuantumResource + Send + Sync> = match resource_type {
             ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::new(resource_id)?),
@@ -93,19 +81,46 @@ impl QRMIService {
         Ok(())
     }
 
+    pub fn resource(&self, resource_id: &str) -> Option<&Box<dyn QuantumResource + Send + Sync>> {
+        self.resources.get(resource_id)
+    }
+
     pub fn resources(&self) -> Vec<&Box<dyn QuantumResource + Send + Sync>> {
         self.resources.values().collect()
     }
 
     pub async fn print_resources(&mut self) -> Result<()> {
-        for (name, resource) in &mut self.resources {
+        for (_, resource) in &mut self.resources {
             let resource_id = resource.resource_id().await?;
             let resource_type = resource.resource_type().await?;
 
-            println!("resource {} -> id={}, type={}", name, resource_id, resource_type.as_str());
+            println!("resource -> id={}, type={}", resource_id, resource_type.as_str());
         }
 
         Ok(())
+    }
+}
+
+#[tokio::test]
+async fn errors_when_required_environment_variables_are_missing() {
+    let previous_plugin_error = env::var("QRMI_PLUGIN_ERROR").ok();
+    
+    env::remove_var("QRMI_PLUGIN_ERROR");
+    env::set_var("QRMI_PLUGIN_ERROR", "Test error message for missing environment variables");
+
+    let result = QRMIService::from_environment();
+
+    if let Some(value) = previous_plugin_error {
+        env::set_var("QRMI_PLUGIN_ERROR", value);
+    } else {
+        env::remove_var("QRMI_PLUGIN_ERROR");
+    }
+
+    match result {
+        Ok(_) => panic!("expected from_environment to fail when required env vars are missing"),
+        Err(error) => {
+            assert!(error.to_string().contains("Test error message for missing environment variables"));
+        }
     }
 }
 
@@ -127,7 +142,7 @@ async fn discovers_resources_from_job_qpu_environment() -> Result<(), Box<dyn st
     let resources = service.resources();
     assert_eq!(resources.len(), 2);
 
-    let mut resource = service
+    let resource = service
         .resources
         .values_mut()
         .next()
@@ -140,30 +155,5 @@ async fn discovers_resources_from_job_qpu_environment() -> Result<(), Box<dyn st
     println!("Resource info: id={}, type={}, accessible={}", resource_id, resource_type.as_str(), is_accessible);
 
     service.print_resources().await?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn from_config_loads_and_adds_resources() -> Result<(), Box<dyn std::error::Error>> {
-
-    let mut service = QRMIService::from_config("../qrmi_config.json")?;
-
-    let resources = service.resources();
-        assert_eq!(resources.len(), 1);
-
-    let mut resource = service
-        .resources
-        .values_mut()
-        .next()
-        .expect("expected at least one resource");
-
-    let resource_id = resource.resource_id().await?;
-    let resource_type = resource.resource_type().await?;
-    let is_accessible = resource.is_accessible().await?;
-
-    println!("Resource info: id={}, type={}, accessible={}", resource_id, resource_type.as_str(), is_accessible);
-
-    service.print_resources().await?;
-
     Ok(())
 }
