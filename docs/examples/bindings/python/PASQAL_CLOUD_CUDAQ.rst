@@ -16,7 +16,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311_qrmi_venv/bin/activate
    $ pip install -r ../requirements.txt
@@ -83,7 +83,8 @@ way it picks up the machine target from QRMI, as populated by e.g. the
 Spank plugin’s ``--qpu`` argument, or manually set by
 ``QRMI_JOB_QPU_RESOURCES``.
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    import cudaq
    cudaq.set_target("pasqal", machine="qrmi")
@@ -96,7 +97,7 @@ How to run
 
 All information is baked into the Python script.
 
-.. code:: shell-session
+.. code-block:: shell-session
 
 
    For example,
@@ -114,7 +115,7 @@ We assume Slurm containers as setup by the `spank-plugins development
 INSTALL.md <https://github.com/qiskit-community/spank-plugins/blob/main/demo/qrmi/slurm-docker-cluster/INSTALL.md>`__
 and the cudaq repo cloned in ``/shared``.
 
-.. code:: bash
+.. code-block:: bash
 
    # 1) Rebuild QRMI
    cd /shared/qrmi
@@ -137,7 +138,7 @@ to get a working environment.
 
    The CUDA-Q build config used during development were these:
 
-.. code:: bash
+.. code-block:: bash
 
    dnf install epel-release
    dnf makecache

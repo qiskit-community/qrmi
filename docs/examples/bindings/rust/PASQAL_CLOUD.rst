@@ -71,7 +71,8 @@ Create Pulser Sequence file as input
 Given a Pulser sequence ``sequence``, we can convert it to a JSON string
 and write it to a file like this:
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    serialized_sequence = sequence.to_abstract_repr()
 
@@ -81,7 +82,7 @@ and write it to a file like this:
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ cargo clean
    $ cargo build --release
@@ -89,7 +90,7 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ../target/release/qrmi-example-pasqal-cloud --help
    QRMI for Pasqal Cloud - Example
@@ -104,6 +105,6 @@ How to run this example
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ../target/release/qrmi-example-pasqal-cloud -b FRESNEL -i input.json

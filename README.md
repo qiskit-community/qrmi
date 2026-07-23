@@ -6,7 +6,7 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi)
 [![Minimum rustc 1.91](https://img.shields.io/badge/rustc-1.91+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
 [![Downloads](https://img.shields.io/pypi/dm/qrmi.svg)](https://pypi.org/project/qrmi/)
-[![Downloads](https://static.pepy.tech/badge/qrmi)](https://pepy.tech/project/qrmi)<!--- long-description-skip-end -->
+[![Downloads](https://static.pepy.tech/badge/qrmi)](https://pepy.tech/project/qrmi) <!--- long-description-skip-end -->
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20650771.svg)](https://doi.org/10.5281/zenodo.20650771)
 [![arXiv](https://img.shields.io/badge/arXiv-2506.10052-b31b1b.svg)](https://arxiv.org/abs/2506.10052)
 [![CI](https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml/badge.svg)](https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml)
@@ -15,11 +15,7 @@ The *Quantum Resource Management Interface* (QRMI) is a vendor-agnostic library 
 
 The source code to build and deploy QRMI is available [here](https://github.com/qiskit-community/qrmi).
 
-An optional `task_runner` command line tool to execute quantum payloads against quantum hardware is included in the Python package. For more information, read the documentation available [here](https://github.com/qiskit-community/qrmi/blob/main/python/qrmi/tools/task_runner/README.md).
-
-## Features
-
-TBD
+An optional `task_runner` command line tool to execute quantum payloads against quantum hardware is included in the Python package. For more information, read the documentation available [here](https://qiskit-community.github.io/qrmi/examples/task_runner/TASK_RUNNER.html#task-runner).
 
 ## Installation
 
@@ -55,21 +51,21 @@ pip install "qrmi[ibm,pasqal]"
 
 Pip will handle all dependencies automatically and you will always install the latest (and most thoroughly tested) version.
 
-To install from source, follow the instructions in the [documentation](https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md).
+To install from source, follow the instructions in the [documentation](https://qiskit-community.github.io/qrmi/getting_started/INSTALLATION.html).
 
 ### Standalone C library
 
-Prebuilt binaries for  (glibc 2.28 compatible) on x86_64, ppc64le, and aarch64 platforms are available for download from the repository's [Releases](https://github.com/qiskit-community/qrmi/releases/latest) tab.
+Prebuilt binaries for Linux (glibc 2.28 compatible) on x86_64, ppc64le, and aarch64 platforms are available for download from the repository's [Releases](https://github.com/qiskit-community/qrmi/releases/latest) tab.
 
-To install from source, follow the instructions in the [documentation](https://github.com/qiskit-community/qrmi/blob/main/INSTALL.md).
+To install from source, follow the instructions in the [documentation](https://qiskit-community.github.io/qrmi/getting_started/INSTALLATION.html#building-core-qrmi-libraries).
 
 ## Getting Started
 
-You can explore the full range of example code [here](https://github.com/qiskit-community/qrmi/blob/main/examples). Each example directory includes a README containing more details.
+You can explore the full range of example code [here](https://qiskit-community.github.io/qrmi/examples/index.html). Each example directory includes a README containing more details.
 
 One example of QRMI usage in a compute infrastructure project is the Slurm plugin for quantum resources. QRMI is used in these Slurm plugins to control quantum resources during the lifecycle of a Slurm job. You can find full details of the implementation of Quantum SPANK plugins for Slurm [here](https://github.com/qiskit-community/spank-plugins).
 
-## How to Cite this Work
+## Citing QRMI
 
 QRMI is the work of [many people](https://github.com/qiskit-community/qrmi/graphs/contributors) who contribute
 to the project at different levels. If you use QRMI, please consider citing the associated overview paper, ["Quantum resources in resource management systems"](https://arxiv.org/abs/2506.10052). This helps support the continued development and visibility of the repository. The BibTeX citation handle can be found in the [BibTeX](CITATION.bib) file.
@@ -80,17 +76,17 @@ to the project at different levels. If you use QRMI, please consider citing the 
 ## Contribution Guidelines
 
 If you'd like to contribute to QRMI, please take a look at our
-[contribution guidelines](https://github.com/qiskit-community/qrmi/blob/main/CONTRIBUTING.md).
+[Contribution Guidelines](https://qiskit-community.github.io/qrmi/development/CONTRIBUTING.html).
 
-By participating, you are expected to uphold our [code of conduct](https://github.com/qiskit-community/qrmi/blob/main/CODE_OF_CONDUCT.md).
+By participating, you are expected to uphold our [Code of Conduct](https://qiskit-community.github.io/qrmi/additional_resources/CODE_OF_CONDUCT.html).
 
-We use [GitHub issues](https://github.com/qiskit-community/qrmi/issues) for tracking requests and bugs.
+We use [GitHub Issues](https://github.com/qiskit-community/qrmi/issues) for tracking requests and bugs.
 
 For further questions, comments and discussion, please consider [joining the Qiskit Slack community](https://qisk.it/join-slack).
 
 ## Frequently Asked Questions
 
-A list of frequently asked questions is maintained [here](https://github.com/qiskit-community/qrmi/blob/main/FAQ.md).
+A list of frequently asked questions is maintained [here](https://qiskit-community.github.io/qrmi/additional_resources/FAQ.html).
 
 ## References and Acknowledgements
 
