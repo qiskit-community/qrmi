@@ -83,6 +83,7 @@ How to build this example
 -------------------------
 
 .. code-block:: shell-session
+.. code-block:: shell-session
 
    mkdir build
    cd build
@@ -94,12 +95,14 @@ How to run this example
 -----------------------
 
 .. code-block:: shell-session
+.. code-block:: shell-session
 
    ./build/quantum_system
    quantum_system <backend_name> <primitive input file> <program id>
 
 For example:
 
+.. code-block:: shell-session
 .. code-block:: shell-session
 
    export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
