@@ -21,7 +21,7 @@ Config file
 
 Create a ``qrmi_config.json`` with an ``is_dynamic: true`` entry:
 
-.. code:: json
+.. code-block:: json
 
    {
        "resources": [
@@ -42,7 +42,7 @@ Create a ``qrmi_config.json`` with an ``is_dynamic: true`` entry:
 How to build
 ------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ mkdir build
    $ cd build
@@ -52,7 +52,7 @@ How to build
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    # No filter
    ./build/providers /path/to/qrmi_config.json ibm_inst1
