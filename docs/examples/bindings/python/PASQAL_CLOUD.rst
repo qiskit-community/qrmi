@@ -15,7 +15,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311_qrmi_venv/bin/activate
    $ pip install -r ../requirements.txt
@@ -88,7 +88,8 @@ Pasqal cloud bridge. ``machine`` in
 ``cudaq.set_target(..., machine=...)`` should match ``<backend_name>``
 above (for example ``EMU_FREE``).
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    import cudaq
    cudaq.set_target("pasqal", machine="EMU_FREE")
@@ -102,7 +103,8 @@ Create Pulser Sequence file as input
 Given a Pulser sequence ``sequence``, we can convert it to a JSON string
 and write it to a file like this:
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    serialized_sequence = sequence.to_abstract_repr()
 
@@ -112,7 +114,7 @@ and write it to a file like this:
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py -h
    usage: example.py [-h] input backend
@@ -128,6 +130,6 @@ How to run
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py FRESNEL input.json

@@ -45,11 +45,9 @@ This allows:
 Integration Tests
 ~~~~~~~~~~~~~~~~~
 
--  May require network access, services, or real backends.
+.. -  May require network access, services, or real backends.
 
-Example:
-
-Missing
+TBD
 
 Conventions
 -----------

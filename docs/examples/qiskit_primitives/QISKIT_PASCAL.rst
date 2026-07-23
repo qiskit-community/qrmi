@@ -18,7 +18,7 @@ Install dependencies
 Assuming your python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311venv_qrmi_primitives/bin/activate
    $ pip install -r requirements.txt
@@ -63,7 +63,8 @@ This example wraps a QRMI backend with the Qiskit Pasqal Provider
 
 Execution returns a job object and Qiskit-style result object:
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    job = sampler.run([qc], shots=100)
    result = job.result()
@@ -74,7 +75,8 @@ QRMI run options can be passed through backend options: -
 
 Example:
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    backend = QRMIPasqalBackend(
        qrmi=qrmi,
@@ -85,7 +87,7 @@ Example:
 For emulator resources where device specs are not exposed, QRMI falls
 back to Pulser ``DigitalAnalogDevice``.
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python sampler.py
 
@@ -94,6 +96,6 @@ Target -> Pulser device
 
 Example to show how to get the Pulser device via the QRMI.
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python target.py

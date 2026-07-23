@@ -3,5 +3,5 @@
 C API
 =====
 
-.. doxygenindex::
+.. doxygenindex:: QrmiPayload
 

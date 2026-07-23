@@ -18,7 +18,7 @@ Install dependencies
 Assuming your python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311venv_qrmi_primitives/bin/activate
    $ pip install -r requirements.txt
@@ -100,7 +100,7 @@ set by users or administrator.
 Example
 ^^^^^^^
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export QRMI_JOB_QPU_RESOURCES=test_eagle
    export QRMI_JOB_QPU_TYPES=ibm-quantum-system
@@ -165,7 +165,7 @@ set by users or administrator.
 Example
 ^^^^^^^
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export QRMI_JOB_QPU_RESOURCES=ibm_torino,ibm_marrakesh
    export QRMI_JOB_QPU_TYPES=qiskit-runtime-service,qiskit-runtime-service
@@ -187,7 +187,7 @@ SamplerV2
 Code is based on “Get started with Sampler” tutorial
 (https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-sampler).
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python sampler.py
 
@@ -197,7 +197,7 @@ EstimatorV2
 Code is based on “Get started with Estimator” tutorial
 (https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-estimator).
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python estimator.py
 

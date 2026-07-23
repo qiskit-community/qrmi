@@ -1,3 +1,5 @@
+.. _c_examples:
+
 QRMI Examples in C
 ==================
 

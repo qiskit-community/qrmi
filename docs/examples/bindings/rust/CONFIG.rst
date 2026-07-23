@@ -14,7 +14,7 @@ Prerequisites
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ cargo clean
    $ cargo build --release
@@ -22,7 +22,7 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ../target/release/qrmi-example-config --help
    Parsing qrmi_config.json file
@@ -36,6 +36,6 @@ How to run this example
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    ../target/release/qrmi-example-config -f /etc/slurm/qrmi_config.json

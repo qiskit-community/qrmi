@@ -18,7 +18,7 @@ Install dependencies
 Assuming your python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311venv_qrmi_primitives/bin/activate
    $ pip install -r requirements.txt
@@ -69,7 +69,7 @@ Environment variables                 Descriptions
 Example
 ^^^^^^^
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export QRMI_JOB_QPU_RESOURCES=garnet_mock
    export QRMI_JOB_QPU_TYPES=iqm-server
@@ -79,6 +79,6 @@ Example
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python iqm_example.py

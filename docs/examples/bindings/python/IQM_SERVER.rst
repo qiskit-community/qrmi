@@ -15,7 +15,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311_qrmi_venv/bin/activate
    $ pip install -r ../requirements.txt
@@ -52,7 +52,7 @@ generate. You can customize quantum circuits by editting the code.
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py -h
    usage: example.py [-h] qc_alias input job_type
@@ -69,7 +69,7 @@ How to run
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
    export garnet_mock_QRMI_IQM_ISA_TOKEN=your api token

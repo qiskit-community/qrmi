@@ -1,3 +1,5 @@
+.. _rust_examples:
+
 QRMI Examples in Rust
 =====================
 

@@ -26,7 +26,7 @@ example <../../python/alice_bob_felis/README.md#generate-qir-input-file>`__
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ mkdir build
    $ cd build
@@ -36,6 +36,6 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    ./felis <backend_name> <input file>

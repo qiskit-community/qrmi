@@ -16,7 +16,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311_qrmi_venv/bin/activate
    $ pip install -r ../requirements.txt
@@ -48,7 +48,8 @@ Create Pulser Sequence file as input
 Given a Pulser sequence ``sequence``, we can convert it to a JSON string
 and write it to a file like this:
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    serialized_sequence = sequence.to_abstract_repr()
 
@@ -58,7 +59,7 @@ and write it to a file like this:
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py -h
    usage: example.py [-h] --backend BACKEND input
@@ -75,6 +76,6 @@ How to run
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py --backend BACKEND_NAME input.json

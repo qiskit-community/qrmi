@@ -24,8 +24,8 @@ These pages are built using `Sphinx`_, a documentation generator. The process of
 
 The GitHub Action is responsible for two tasks; building the documentation, then deploying it to GitHub Pages. 
 
-- Pushing to a feature branch with an associated PR triggers the `build` job, which carries out checks ensuring the documentation builds correctly.
-- Pushing to `main` triggers both the `build` and `deploy` jobs, which build the documentation and deploy it to GitHub Pages. 
+- Pushing to a feature branch with an associated PR triggers the ``build`` job, which carries out checks ensuring the documentation builds correctly.
+- Pushing to ``main`` triggers both the ``build`` and ``deploy`` jobs, which build the documentation and deploy it to GitHub Pages. 
 
 
 Theming and Customisation
@@ -54,6 +54,7 @@ If you would like to add to the existing documentation, follow these steps:
 #. In ``docs/index.rst``, add a reference to the new file in the appropriate section of the ``toctree`` directive. For example, for a new file called ``new_topic.rst``:
 
    .. code-block:: rst
+      :caption: new_topic.rst
 
       .. toctree::
          :maxdepth: 2
@@ -65,7 +66,7 @@ If you would like to add to the existing documentation, follow these steps:
 
    .. code-block:: bash
 
-      sphinx-autobuild . _build/
+      sphinx-autobuild . _build/html/
 
 
 .. _api_docs:
@@ -73,7 +74,13 @@ If you would like to add to the existing documentation, follow these steps:
 API Documentation
 -----------------
 
-QRMI's API documentation can be built locally using the below instructions.
+QRMI's API documentation can be accessed through this documentation using the below links:
+
+- :ref:`python_api`
+- :ref:`rust_api`
+- :ref:`c_api`
+
+There is also the option to build the documentation locally, using the below instructions.
 
 
 Prerequisites
@@ -96,7 +103,7 @@ Prerequisites
 
       To build the Python API docs, run the following command:
 
-      .. code:: shell-session
+      .. code-block:: shell-session
 
          source ~/py312_qrmi_venv/bin/activate
          python -m pydoc -p 8290
@@ -106,13 +113,13 @@ Prerequisites
 
       The docs will be available at the following address in your browser:
 
-      .. code:: shell-session
+      .. code-block:: shell-session
 
          http://localhost:8290/qrmi.html
 
       To quit the server:
 
-      .. code:: shell-session
+      .. code-block:: shell-session
 
          server> q
 
@@ -120,7 +127,7 @@ Prerequisites
 
       To build the Rust API docs locally, run the following command:
       
-      .. code:: shell-session
+      .. code-block:: shell-session
 
          . ~/.cargo/env
          cargo doc --no-deps --open
@@ -129,9 +136,9 @@ Prerequisites
 
       To build the C API docs locally, run the following command:
 
-      .. code:: shell-session
+      .. code-block:: shell-session
 
          doxygen Doxyfile
 
-      The HTML document will be created in the ``./html`` directory. Open
-      ``html/index.html`` in your web browser.
+      By default, the HTML documents will be created in the ``build/doxygen/html/``
+      directory. Open ``buid/doxygen/html/index.html`` in your web browser.

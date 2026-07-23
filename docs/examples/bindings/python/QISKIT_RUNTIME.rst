@@ -15,7 +15,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311_qrmi_venv/bin/activate
    $ pip install -r ../requirements.txt
@@ -79,7 +79,7 @@ generate. You can customize quantum circuits by editing the code.
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py -h
    usage: example.py [-h] backend input program_id
@@ -96,7 +96,7 @@ How to run
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
    export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com

@@ -31,11 +31,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.linkcode",
+    "sphinx_copybutton",
+    "sphinx_togglebutton",
     "breathe",
 ]
 
 breathe_projects = {
-    "qrmi": "../build/doxygen/xml",
+    "qrmi": f"{REPO_ROOT}/build/doxygen/xml",
 }
 
 breathe_default_project = "qrmi"
@@ -85,10 +87,10 @@ def linkcode_resolve(domain, info):
 
     end_lineno = lineno + len(source) - 1
 
-    branch = "sphinx-integration"
+    branch = "main"
 
     url = (
-        f"https://github.com/jcornall/qrmi/blob/{branch}/"
+        f"https://github.com/qiskit-community/qrmi/blob/{branch}/"
         f"{rel_path}#L{lineno}-L{end_lineno}"
     )
 
@@ -105,7 +107,7 @@ autodoc_mock_imports = [
 
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build/html", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -136,4 +138,12 @@ html_theme_options = {
             "external": True,
         },
     ],
+}
+
+html_context = {
+    "source_type": "github",
+    "source_user": "qiskit-community",
+    "source_repo": "qrmi",
+    "source_version": "main",  # Optional
+    "source_docs_path": "/docs/",  # Optional
 }
