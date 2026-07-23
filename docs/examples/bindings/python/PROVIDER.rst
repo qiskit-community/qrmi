@@ -15,7 +15,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311_qrmi_venv/bin/activate
    $ pip install qrmi[ibm]
@@ -23,7 +23,7 @@ Install dependencies
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    usage: example.py [-h] [--filters FILTERS] config_file resource_name
 
@@ -39,6 +39,6 @@ How to run
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    python example.py /etc/slurm/qrmi_config.json ibm_inst1 --filters "num_qubits=127&max_shots=10000"

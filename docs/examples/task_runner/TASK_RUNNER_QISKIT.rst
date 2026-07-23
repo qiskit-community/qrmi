@@ -16,7 +16,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    pip install -f requirements.txt
 
@@ -32,7 +32,7 @@ doc <https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started
 
 Usage:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    usage: gen_estimator_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
 
@@ -50,7 +50,7 @@ Usage:
 
 Example:
 
-.. code:: bash
+.. code-block:: bash
 
    python gen_estimator_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance>
 
@@ -82,7 +82,7 @@ doc <https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started
 
 Usage:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    usage: gen_sampler_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
 
@@ -100,7 +100,7 @@ Usage:
 
 Example:
 
-.. code:: bash
+.. code-block:: bash
 
    python gen_sampler_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance>
 
