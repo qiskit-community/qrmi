@@ -1,3 +1,5 @@
+.. _python_examples:
+
 QRMI Examples in Python
 ========================
 
