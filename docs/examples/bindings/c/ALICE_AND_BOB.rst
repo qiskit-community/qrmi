@@ -33,6 +33,7 @@ How to build this example
 -------------------------
 
 .. code-block:: shell-session
+.. code-block:: shell-session
 
    mkdir build
    cd build
@@ -43,6 +44,7 @@ How to build this example
 How to run this example
 -----------------------
 
+.. code-block:: shell-session
 .. code-block:: shell-session
 
    ./felis <backend_name> <input file>
