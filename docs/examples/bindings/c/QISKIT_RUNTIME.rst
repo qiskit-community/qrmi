@@ -70,7 +70,7 @@ generate. You can customize quantum circuits by editing the code.
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ mkdir build
    $ cd build
@@ -80,14 +80,14 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ./build/qiskit_runtime_service
    qiskit_runtime_service <backend_name> <primitive input file> <program id>
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
    export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com

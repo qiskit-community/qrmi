@@ -13,7 +13,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    pip install -f requirements.txt
 
@@ -28,7 +28,7 @@ Generates input file in the correct format using
 
 Example:
 
-.. code:: bash
+.. code-block:: bash
 
    python task_runner_input.py
 

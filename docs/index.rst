@@ -50,8 +50,35 @@ Quantum Resource Management Interface (QRMI)
            :target: https://iqm.tech/
            :align: center
 
+.. raw:: html
+
+   <div style="text-align:center">
+
 |License| |Current Release| |Platform| |PyPI - Python Version| |Minimum
 rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
+
+.. raw:: html
+
+   </div>
+
+.. |License| image:: https://img.shields.io/github/license/qiskit-community/qrmi.svg?
+   :target: https://opensource.org/licenses/Apache-2.0
+.. |Current Release| image:: https://img.shields.io/github/release/qiskit-community/qrmi.svg?
+   :target: https://github.com/qiskit-community/qrmi/releases
+.. |Platform| image:: https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS-blue
+.. |PyPI - Python Version| image:: https://img.shields.io/pypi/pyversions/qrmi
+.. |Minimum rustc 1.91| image:: https://img.shields.io/badge/rustc-1.91+-blue.svg
+   :target: https://rust-lang.github.io/rfcs/2495-min-rust-version.html
+.. |Downloads| image:: https://img.shields.io/pypi/dm/qrmi.svg
+   :target: https://pypi.org/project/qrmi/
+.. |image1| image:: https://static.pepy.tech/badge/qrmi
+   :target: https://pepy.tech/project/qrmi
+.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.20650771.svg
+   :target: https://doi.org/10.5281/zenodo.20650771
+.. |arXiv| image:: https://img.shields.io/badge/arXiv-2506.10052-b31b1b.svg
+   :target: https://arxiv.org/abs/2506.10052
+.. |CI| image:: https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml/badge.svg
+   :target: https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml
 
 The *Quantum Resource Management Interface* (QRMI) is a vendor-agnostic
 library for high-performance compute (HPC) systems to access, control,
@@ -94,6 +121,7 @@ more information, read the documentation available :ref:`here <task_runner>`.
       The examples provide information on how to use QRMI with different
       vendor frameworks.
 
+
 Contributors
 ------------
 
@@ -102,6 +130,22 @@ Contributors
    .. contributors:: qiskit-community/qrmi
       :avatars:
       :exclude: dependabot[bot], pre-commit-ci[bot]
+
+
+References and Acknowledgements
+-------------------------------
+
+.. toggle::
+
+   #. Quantum SPANK plugins for Slurm https://github.com/qiskit-community/spank-plugins
+   #. Slurm Documentation https://slurm.schedmd.com/
+   #. Qiskit https://www.ibm.com/quantum/qiskit
+   #. IBM Quantum https://www.ibm.com/quantum
+   #. Pasqal https://pasqal.com
+   #. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
+   #. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
+   #. Alice & Bob https://alice-bob.com/
+
 
 .. toctree::
    :maxdepth: 2
@@ -115,8 +159,10 @@ Contributors
    :caption: Additional Resources
    :hidden:
    
-   additional_resources/CODE_OF_CONDUCT
+   additional_resources/FAQ
    additional_resources/TROUBLESHOOTING
+   additional_resources/CODE_OF_CONDUCT
+   additional_resources/CITATION
 
 .. toctree::
    :maxdepth: 2
@@ -136,22 +182,3 @@ Contributors
    :hidden:
    
    examples/index
-
-.. |License| image:: https://img.shields.io/github/license/qiskit-community/qrmi.svg?
-   :target: https://opensource.org/licenses/Apache-2.0
-.. |Current Release| image:: https://img.shields.io/github/release/qiskit-community/qrmi.svg?
-   :target: https://github.com/qiskit-community/qrmi/releases
-.. |Platform| image:: https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS-blue
-.. |PyPI - Python Version| image:: https://img.shields.io/pypi/pyversions/qrmi
-.. |Minimum rustc 1.91| image:: https://img.shields.io/badge/rustc-1.91+-blue.svg
-   :target: https://rust-lang.github.io/rfcs/2495-min-rust-version.html
-.. |Downloads| image:: https://img.shields.io/pypi/dm/qrmi.svg
-   :target: https://pypi.org/project/qrmi/
-.. |image1| image:: https://static.pepy.tech/badge/qrmi
-   :target: https://pepy.tech/project/qrmi
-.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.20650771.svg
-   :target: https://doi.org/10.5281/zenodo.20650771
-.. |arXiv| image:: https://img.shields.io/badge/arXiv-2506.10052-b31b1b.svg
-   :target: https://arxiv.org/abs/2506.10052
-.. |CI| image:: https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml/badge.svg
-   :target: https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml

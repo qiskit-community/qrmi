@@ -24,7 +24,7 @@ an Open Plan account on IBM Quantum Platform.
 
 #. Setup virtual environment:
 
-.. code:: bash
+.. code-block:: bash
 
    python3.11 -m venv ~/{your_pyenv}
    source ~/{your_pyenv}/bin/activate
@@ -35,7 +35,9 @@ an Open Plan account on IBM Quantum Platform.
 Replace ``SERVICE_CRN`` and ``API_KEY`` values with your credentials and with your
 backend name.
 
-.. code:: python
+.. code-block:: python
+   :caption: test.py
+   :linenos:
 
    """A testcase to check if Qiskit Session can be created with the given credentials"""
    from qiskit_ibm_runtime import QiskitRuntimeService, Session
@@ -55,13 +57,13 @@ backend name.
 
 #. Run the test case:
 
-.. code:: bash
+.. code-block:: bash
 
    python test.py
 
 This will fail due to the error:
 
-.. code:: bash
+.. code-block:: bash
 
    You are not authorized to run a session when using the open plan.
 
@@ -75,7 +77,7 @@ This will fail due to the error:
    -  Add ``QRMI_IBM_QRS_SESSION_MODE`` environment variable with
       “batch” in your ``qrmi_config.json``
 
-.. code:: json
+.. code-block:: json
 
        {
          "name": "ibm_brisbane",

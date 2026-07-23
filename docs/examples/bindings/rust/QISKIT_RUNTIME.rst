@@ -70,7 +70,7 @@ generate. You can customize quantum circuits by editing the code.
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ cargo clean
    $ cargo build --example qrmi-example-qiskit-runtime-service --release
@@ -78,7 +78,7 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ../target/release/qrmi-example-qiskit-runtime-service --help
    QRMI for IBM Qiskit Runtime Service - Example
@@ -94,7 +94,7 @@ How to run this example
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
    export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com

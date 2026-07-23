@@ -43,7 +43,7 @@ generate. You can customize quantum circuits by editting the code.
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ cargo clean
    $ cargo build --release
@@ -51,7 +51,7 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ../target/release/qrmi-example-iqm-server -h
    QRMI for IQM Server - Example
@@ -69,7 +69,7 @@ How to run this example
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
    export garnet_mock_QRMI_IQM_ISA_TOKEN=your api token

@@ -34,7 +34,7 @@ Prerequisites
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py312_qrmi_venv/bin/activate
    $ task_runner -h
@@ -59,7 +59,7 @@ JSON schema definition is available in
 Example - IBM Quantum System & Qiskit Runtime Service
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: json
+.. code-block:: json
 
    {
       "parameters": {"pubs": [["OPENQASM 3.0;\ninclude \"stdgates.inc\";\nrz(1.5707963267948966)...\n"]], "version": 2, "options": {"default_shots": 5000}},
@@ -72,7 +72,7 @@ tools <../../../../examples/task_runner/qiskit>`__.
 Example - Pasqal Cloud
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: json
+.. code-block:: json
 
    {
       "sequence": {"version": "1", "name": "Sequence_with_defaults", "register": [{"name": "control..."}]},
@@ -107,7 +107,7 @@ IBM Quantum System or Qiskit Runtime Service
 
 Run estimator primitive on ibm_marrakesh.
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    #!/bin/bash
 
@@ -125,7 +125,7 @@ Pasqal Cloud
 Run Pulser sequence on FRESNEL. This sequence can also be generated via
 the Qiskit Pasqal Provider, as shown in the examples.
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    #!/bin/bash
 
@@ -196,7 +196,7 @@ IBM Quantum System
 
 Example:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    source ~/py312_qrmi_venv/bin/activate
 
@@ -251,7 +251,7 @@ Qiskit Runtime Service
 
 Example:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    source ~/py312_qrmi_venv/bin/activate
 
@@ -317,7 +317,7 @@ Example:
 
 Example:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    source ~/py312_qrmi_venv/bin/activate
 
@@ -342,7 +342,7 @@ QRMI_JOB_QPU_TYPES            Should be ``alice-bob-felis``
 
 Example:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    source ~/py312_qrmi_venv/bin/activate
 

@@ -26,7 +26,7 @@ example <../../python/alice_bob_felis/README.md#generate-qir-input-file>`__
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    cargo clean
    CARGO_TARGET_DIR=./target cargo build --release
@@ -34,12 +34,12 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    qrmi-example-alice-bob-felis --backend <BACKEND> --input <INPUT>
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
     ./target/debug/qrmi-example-alice-bob-felis --backend 'ab_emu_1q_lescanne_2020' --input ./generated_circuit.ll

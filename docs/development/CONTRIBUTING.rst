@@ -89,7 +89,7 @@ of QRMI, etc.).
 
       .. _Creation of virtual environments: https://docs.python.org/3/library/venv.html
 
-      .. code:: bash
+      .. code-block:: bash
 
          python3 -m venv ~/.venvs/qrmi-dev
 
@@ -97,7 +97,7 @@ of QRMI, etc.).
       for your system, which can be found within the environment folder. For
       example, for bash/zsh:
 
-      .. code:: bash
+      .. code-block:: bash
 
          source ~/.venvs/qrmi-dev/bin/activate
 
@@ -106,14 +106,14 @@ of QRMI, etc.).
       ``pip>=25.1`` to use the ``--group`` feature, used to manage developer
       dependency groups:
 
-      .. code:: bash
+      .. code-block:: bash
 
          pip install -U pip
 
       You can easily install all the standard developer dependencies for
       in-place testing, documentation-building, and linting using:
 
-      .. code:: bash
+      .. code-block:: bash
 
          pip install -r requirements-dev.txt
 
@@ -121,14 +121,14 @@ of QRMI, etc.).
 
       For Conda users, a new environment can be created as follows:
 
-      .. code:: bash
+      .. code-block:: bash
 
          conda create -y -n QRMIDevenv python=3
          conda activate QRMIDevenv
 
       Install the QRMI dependencies:
 
-      .. code:: bash
+      .. code-block:: bash
 
          pip install -e .
 
@@ -193,7 +193,7 @@ When submitting a pull request for review, please ensure that:
 #. If your changes warrant additional tests, feel free to include them.
 
 #. Ensure that if your change impacts the end-user (new feature, deprecation, 
-   removal, etc.) that you have added a reno release note for that change and that
+   removal, etc.) that you have added a Reno release note for that change and that
    the PR is tagged for the changelog.
 
 #. Ensure all contributors have signed the :ref:`CLA <contributing_cla>`.
@@ -224,7 +224,7 @@ Installing ``pre-commit``
 
 #. Run the following commands in your virtual environment terminal:
 
-.. code:: bash
+.. code-block:: bash
 
    pip install pre-commit
    pre-commit install
@@ -233,7 +233,7 @@ Find ``.pre-commit-config.yaml`` for the initial setup.
 
 #. Run the following command to generate a ``.secrets.baseline`` file.
 
-.. code:: bash
+.. code-block:: bash
 
    detect-secrets scan --force-use-all-plugins > .secrets.baseline
 
@@ -246,7 +246,7 @@ If the pre-commit hook identifies a secret that you have verified is not sensiti
 (a false positive), please use the following command to audit and update the baseline file.
 Once updated, include the modified .secrets.baseline in your PR to ensure the pre-commit passes in the future.
 
-.. code:: bash
+.. code-block:: bash
 
    pip install detect-secrets
    detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
@@ -258,7 +258,7 @@ Manual Execution and Overrides
 To manually trigger a scan of all files in the repository for a local sanity check,
 execute the following command:
 
-.. code:: bash
+.. code-block:: bash
 
    pre-commit run --all-files
 
@@ -272,7 +272,7 @@ Bypassing the Hook
 If you must force a commit without running the pre-commit checks
 (e.g. during an emergency fix), you may use the ``--no-verify`` flag:
 
-.. code:: bash
+.. code-block:: bash
 
    git commit -m "Your message" --no-verify
 
@@ -334,7 +334,7 @@ Running Unit Tests
 
       To run QRMI's Python test suite:
 
-      .. code:: bash
+      .. code-block:: bash
 
          pip install "$(ls ./target/wheels/qrmi-*.whl)[ibm,pasqal]"
          pytest .
@@ -348,7 +348,8 @@ Running Unit Tests
       module. Functions within these modules decorated with ``#[test]`` are
       built and run as tests.
 
-      .. code:: rust
+      .. code-block:: rust
+         :linenos:
 
          #[cfg(test)]
          mod tests {
@@ -368,35 +369,35 @@ Running Unit Tests
       during manual invocation) takes into account the ``LOG_LEVEL``
       environment variable.
 
-Unsafe code and Miri
-~~~~~~~~~~~~~~~~~~~~
+.. Unsafe code and Miri
+.. ~~~~~~~~~~~~~~~~~~~~
 
-Any ``unsafe`` code added to the Rust logic must be executed by
-Rust-space tests, in addition to the more complete Python test suite. In
-CI, we run the Rust test suite under `Miri`_ as an undefined-behavior
-sanitizer.
+.. Any ``unsafe`` code added to the Rust logic must be executed by
+.. Rust-space tests, in addition to the more complete Python test suite. In
+.. CI, we run the Rust test suite under `Miri`_ as an undefined-behavior
+.. sanitizer.
 
-.. _Miri: https://github.com/rust-lang/miri
+.. .. _Miri: https://github.com/rust-lang/miri
 
-Miri is currently only available on ``nightly`` Rust channels, so to run
-it locally you will need to ensure you have that channel available:
+.. Miri is currently only available on ``nightly`` Rust channels, so to run
+.. it locally you will need to ensure you have that channel available:
 
-.. code:: bash
+.. .. code-block:: bash
 
-   rustup install nightly --components miri
+..    rustup install nightly --components miri
 
-After this, you can run the Miri test suite using the following command:
+.. After this, you can run the Miri test suite using the following command:
 
-.. code:: bash
+.. .. code-block:: bash
 
-   MIRIFLAGS="<FLAGS_GO_HERE>" cargo +nightly miri test
+..    MIRIFLAGS="<FLAGS_GO_HERE>" cargo +nightly miri test
 
-For the current set of ``MIRIFLAGS`` used by Qiskit's CI, see the
-`miri.yml`_ GitHub Action file. This same file may also include patches to
-dependencies to make them compatible with Miri, which you would need to
-temporarily apply as well.
+.. For the current set of ``MIRIFLAGS`` used by Qiskit's CI, see the
+.. `miri.yml`_ GitHub Action file. This same file may also include patches to
+.. dependencies to make them compatible with Miri, which you would need to
+.. temporarily apply as well.
 
-.. _miri.yml: https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml
+.. .. _miri.yml: https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml
 
 Testing the C API
 ~~~~~~~~~~~~~~~~~
@@ -417,6 +418,15 @@ Style and linting
 
    .. tab:: Python
 
+      Execute the following commands to fix any formatting issues before submitting a PR.
+
+      .. code-block:: shell-session
+
+         $ source ~/py312_qrmi_venv/bin/activate
+         $ cd examples
+         $ pylint ./python
+         $ black --check ./python
+
       QRMI uses two tools for Python code formatting and lint checking. The
       first tool is `black`_ which is a code formatting tool that will automatically
       update the code formatting to a consistent style.
@@ -427,9 +437,20 @@ Style and linting
       analysis of the Python code to find both style issues and potential bugs
       and other common issues.
 
-      .. _pylint: https://docs.pytest.org/en/stable/
+      .. _pylint: https://pypi.org/project/pylint/
 
    .. tab:: Rust
+
+      Execute the following commands to fix any formatting issues before submitting a PR.
+
+      .. code-block:: shell-session
+
+         $ . ~/.cargo/env
+         $ cargo fmt --all -- --check
+         $ cargo clippy --all-targets -- -D warnings
+         $ cd examples/rust
+         $ cargo fmt --all -- --check
+         $ cargo clippy --all-targets -- -D warnings
 
       QRMI uses `rustfmt`_ for Rust formatting and linting. You can run ``cargo fmt``
       (if you installed Rust with the default settings using ``rustup``), and it will
@@ -457,7 +478,7 @@ To create a new release, the following files must be updated:
 
 -  ``Cargo.toml``
 
-.. code:: toml
+.. code-block:: toml
 
      [package]
      name = "qrmi"
@@ -465,7 +486,7 @@ To create a new release, the following files must be updated:
 
 -  ``Cargo.lock``
 
-.. code:: toml
+.. code-block:: toml
 
      [[package]]
      name = "qrmi"
@@ -473,7 +494,7 @@ To create a new release, the following files must be updated:
 
 -  ``cbindgen.toml``
 
-.. code:: toml
+.. code-block:: toml
 
      #define QRMI_VERSION_MAJOR 0
      #define QRMI_VERSION_MINOR 14

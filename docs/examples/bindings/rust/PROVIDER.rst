@@ -14,7 +14,7 @@ Prerequisites
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ cargo clean
    $ cargo build --release
@@ -22,7 +22,7 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    QRMI Provider Example
 
@@ -39,7 +39,7 @@ How to run this example
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    ../target/release/qrmi-example-provider /etc/slurm/qrmi_config.json ibm_inst1 -f "num_qubits=127&max_shots=10000"
    Filters: num_qubits=127&max_shots=10000

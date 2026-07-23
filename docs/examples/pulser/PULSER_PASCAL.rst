@@ -18,7 +18,7 @@ Install dependencies
 Assuming your python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ source ~/py311venv_qrmi_primitives/bin/activate
    $ pip install -r requirements.txt
@@ -61,6 +61,6 @@ SamplerV2
 
 Use Pulser’s ``QPUBackend`` with ``PulserQRMIConnection``.
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python pulser_qrmi.py

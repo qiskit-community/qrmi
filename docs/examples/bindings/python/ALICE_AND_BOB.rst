@@ -15,7 +15,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    pip install -r requirements.txt
 
@@ -81,7 +81,7 @@ do so:
 How to run
 ----------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ python example.py -h
    usage: example.py [-h] target qir_file
@@ -97,7 +97,7 @@ How to run
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_BASE_ENDPOINT='https://api.alice-bob.com/'
    export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_API_KEY='<your felis api key>'

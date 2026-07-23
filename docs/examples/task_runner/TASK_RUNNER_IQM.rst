@@ -16,7 +16,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    pip install -f requirements.txt
 
@@ -31,7 +31,7 @@ provided by IQM.
 
 Usage:
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    usage: gen_iqm_json.py [-h] qc_alias base_url token
 
@@ -47,7 +47,7 @@ Usage:
 
 Example:
 
-.. code:: bash
+.. code-block:: bash
 
    python gen_iqm_json.py sirius:mock https://resonance.meetiqm.com <your API token>
 

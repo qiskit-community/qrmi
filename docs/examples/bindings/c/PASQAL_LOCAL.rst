@@ -40,7 +40,8 @@ Create Pulser Sequence file as input
 Given a Pulser sequence ``sequence``, we can convert it to a JSON string
 and write it to a file like this:
 
-.. code:: python
+.. code-block:: python
+   :linenos:
 
    serialized_sequence = sequence.to_abstract_repr()
 
@@ -50,7 +51,7 @@ and write it to a file like this:
 How to build this example
 -------------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ mkdir build
    $ cd build
@@ -60,13 +61,13 @@ How to build this example
 How to run this example
 -----------------------
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ./build/pasqal_local
    pasqal_local <backend name> <input file>
 
 For example,
 
-.. code:: shell-session
+.. code-block:: shell-session
 
    $ ./build/pasqal_local PASQAL_LOCAL input.json
