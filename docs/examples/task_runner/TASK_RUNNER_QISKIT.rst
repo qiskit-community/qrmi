@@ -1,3 +1,5 @@
+.. _task_runner_qiskit:
+
 Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 =======================================================
 
@@ -8,10 +10,12 @@ Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 The tools demonstrate the generation of EstimatorV2/SamplerV2 inputs
 from a quantum circuit example.
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or above
+
 
 Install dependencies
 --------------------
@@ -20,15 +24,16 @@ Install dependencies
 
    pip install -f requirements.txt
 
+
 Tools
 -----
 
-gen_estimator_input.py
-~~~~~~~~~~~~~~~~~~~~~~
+``gen_estimator_input.py``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Generates EstimatorV2 input for the circuit introduced in `Getting
-started
-doc <https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-estimator>`__.
+Generates EstimatorV2 input for the circuit introduced in IBM's `Get Started with Estimator documentation`_.
+
+.. _Get Started with Estimator documentation: https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-estimator
 
 Usage:
 
@@ -60,25 +65,23 @@ Output:
 | Files                             | Descriptions                      |
 +===================================+===================================+
 | estimator_input                   | EstimatorV2 input                 |
-| \_{backend_name}_params_only.json | parameters(`EstimatorV2           |
-|                                   | sch                               |
-|                                   | ema <https://github.com/Qiskit/ib |
-|                                   | m-quantum-schemas/blob/main/schem |
-|                                   | as/estimator_v2_schema.json>`__). |
+| \_{backend_name}_params_only.json | parameters (`EstimatorV2 Schema`_)|
 +-----------------------------------+-----------------------------------+
 | est                               | An input for QRMI task runner,    |
 | imator_input\_{backend_name}.json | which contains 2 properties -     |
-|                                   | `                                 |
-|                                   | `program_id``\ (=\ ``estimator``) |
-|                                   | and ``parameters``\ (EstimatorV2  |
+|                                   | ``program_id`` (=\ ``estimator``) |
+|                                   | and ``parameters`` (EstimatorV2   |
 |                                   | input parameters).                |
 +-----------------------------------+-----------------------------------+
 
-gen_sampler_input.py
-~~~~~~~~~~~~~~~~~~~~
+.. _EstimatorV2 Schema: https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs
 
-Generates SamplerV2 input for the circuit introduced in `Getting started
-doc <https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-sampler>`__.
+``gen_sampler_input.py``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Generates SamplerV2 input for the circuit introduced in IBM's `Get Started with Sampler documentation`_.
+
+.. _Get Started with Sampler documentation: https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-sampler
 
 Usage:
 

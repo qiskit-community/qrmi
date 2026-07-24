@@ -9,8 +9,7 @@ Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `Installation of QRMI primitives python
-   package(``qiskit-qrmi-primitives``) <../../README.md>`__
+-  :ref:`Installation of QRMI primitives Python package (qiskit-qrmi-primitives) <qiskit_examples>`
 
 Install dependencies
 --------------------
@@ -41,7 +40,7 @@ set by the SPANK plugin.
 | Environment variables  | Descriptions                              |
 +========================+===========================================+
 | QRMI_JOB_QPU_RESOURCES | Quantum resource names. Comma-separated   |
-|                        | values, e.g. ``FRESNEL``                  |
+|                        | values, e.g. ``FRESNEL``                  |
 +------------------------+-------------------------------------------+
 | QRMI_JOB_QPU_TYPES     | Quantum resource types. Comma-separated   |
 |                        | values corresponding to each Quantum      |
