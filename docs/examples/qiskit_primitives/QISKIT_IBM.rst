@@ -35,6 +35,7 @@ configuration parameters must be specified in environment variables. The
 required environment variables are listed below. This example assumes
 that a ``.env`` file is available under the current directory.
 
+
 Common
 ~~~~~~
 
@@ -56,6 +57,7 @@ set by the SPANK plugin.
 |                                   | RMI_JOB_QPU_RESOURCES``.Supported |
 |                                   | types:                            |
 +-----------------------------------+-----------------------------------+
+
 
 IBM Quantum System specific
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,6 +122,7 @@ Example
    export test_eagle_QRMI_IBM_QS_S3_REGION=us-east
    export test_eagle_QRMI_IBM_QS_TIMEOUT_SECONDS=86400
 
+
 IBM Qiskit Runtime Service specific
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -181,6 +184,7 @@ Example
    export ibm_marrakesh_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
    export ibm_marrakesh_QRMI_IBM_QRS_IAM_APIKEY=your_apikey
    export ibm_marrakesh_QRMI_IBM_QRS_SERVICE_CRN=your_instance
+
 
 How to run
 ----------
