@@ -1,3 +1,5 @@
+.. _iqm_server_rust:
+
 IQM Server QRMI - Examples in Rust
 ==================================
 
@@ -5,11 +7,13 @@ IQM Server QRMI - Examples in Rust
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/iqm_server
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `QRMI Rust library <../../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 Set environment variables
 -------------------------
@@ -26,34 +30,39 @@ Environment variables                 Descriptions
 {qc_alias_name}_QRMI_IQM_ISA_TOKEN    IQM Server API token
 ===================================== ===========================
 
-..
+.. note::
 
-   [!NOTE] Replace the “:” in the QC alias name with “\_” when
+   Replace the ":" in the QC alias name with "\_" when
    specifying it. For example, ``sirius:mock`` -> ``sirius_mock``.
+
 
 Create IQM JSON input file as input
 -----------------------------------
 
-Refer `this tool <../../../../bin/task_runner/examples/iqm>`__ to
-generate. You can customize quantum circuits by editting the code.
+Refer to :ref:`this tool <task_runner_iqm>` to
+generate. You can customise quantum circuits by editing the code.
 
-   [!NOTE] Use the file with name ending with ``_params_only.json``,
-   e.g. ``iqm_json_sirius_params_only.json``.
+.. note::
+
+   Use the file with name ending ``_params_only.json``,
+   e.g. ``iqm_json_sirius_params_only.json``.
+
 
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ cargo clean
-   $ cargo build --release
+   cargo clean
+   cargo build --release
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ../target/release/qrmi-example-iqm-server -h
+   ../target/release/qrmi-example-iqm-server -h
    QRMI for IQM Server - Example
 
    Usage: qrmi-example-iqm-server [OPTIONS] --qc-alias <QC_ALIAS> --iqmjson <IQMJSON> --job-type <JOB_TYPE>
@@ -67,7 +76,7 @@ How to run this example
      -h, --help                         Print help
      -V, --version                      Print version
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

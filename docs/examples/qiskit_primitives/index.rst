@@ -1,3 +1,5 @@
+.. _qiskit_examples:
+
 Qiskit Examples
 ===============
 

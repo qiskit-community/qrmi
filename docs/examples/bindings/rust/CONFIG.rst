@@ -1,3 +1,5 @@
+.. _config_rust:
+
 Parsing QRMI config file in Rust
 ================================
 
@@ -5,26 +7,29 @@ Parsing QRMI config file in Rust
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qrmi_config
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `QRMI Rust library <../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ cargo clean
-   $ cargo build --release
+   cargo clean
+   cargo build --release
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ../target/release/qrmi-example-config --help
+   ../target/release/qrmi-example-config --help
    Parsing qrmi_config.json file
 
    Usage: qrmi-example-config --file <FILE>
@@ -34,7 +39,7 @@ How to run this example
      -h, --help         Print help
      -V, --version      Print version
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

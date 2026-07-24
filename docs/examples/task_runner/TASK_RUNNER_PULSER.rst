@@ -1,3 +1,5 @@
+.. _task_runner_pulser:
+
 Tools to Generate Input for Task Runner from Pulser
 ===================================================
 
@@ -5,10 +7,12 @@ Tools to Generate Input for Task Runner from Pulser
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/pulser
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or above
+
 
 Install dependencies
 --------------------
@@ -17,14 +21,16 @@ Install dependencies
 
    pip install -f requirements.txt
 
+
 Tools
 -----
 
 task_runner_input.py
 ~~~~~~~~~~~~~~~~~~~~
 
-Generates input file in the correct format using
-`Pulser <https://github.com/pasqal-io/pulser>`__
+Generates input file in the correct format using `Pulser`_.
+
+.. _Pulser: https://github.com/pasqal-io/pulser
 
 Example:
 

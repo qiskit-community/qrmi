@@ -1,3 +1,5 @@
+.. _pasqal_local_python:
+
 Pasqal Local QRMI - Examples in Python
 ======================================
 
@@ -5,21 +7,26 @@ Pasqal Local QRMI - Examples in Python
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_local
 
+
 Prerequisites
 -------------
 
 -  Rust 1.85.1 or above
 -  Python 3.11 or 3.12
--  `QRMI python package installation <../../../../README.md>`__
--  `Munge <https://dun.github.io/munge/>`__
+-  Install the :ref:`QRMI Python package <install_source>`
+-  `Munge`_
+
+.. _Munge: https://dun.github.io/munge/
+
 
 Install dependencies
 --------------------
 
 .. code-block:: shell-session
 
-   $ source ~/py311_qrmi_venv/bin/activate
-   $ pip install -r ../requirements.txt
+   source ~/py311_qrmi_venv/bin/activate
+   pip install -r ../requirements.txt
+
 
 Set environment variables
 -------------------------
@@ -32,7 +39,7 @@ required environment variables are listed below.
 | Environment variables             | Descriptions                      |
 +===================================+===================================+
 | ``<backend_name>_QRMI_URL``       | URL of the QPU middleware         |
-|                                   | (e.g. ``http://localhost:4207``)  |
+|                                   | (e.g. ``http://localhost:4207``)  |
 +-----------------------------------+-----------------------------------+
 | ``QRMI_JOB_UID``                  | ID of the user executing the job  |
 +-----------------------------------+-----------------------------------+
@@ -40,7 +47,8 @@ required environment variables are listed below.
 +-----------------------------------+-----------------------------------+
 
 Where ``<backend_name>`` is the backend name passed via ``--backend``
-(e.g. ``PASQAL_LOCAL``).
+(e.g. ``PASQAL_LOCAL``).
+
 
 Create Pulser Sequence file as input
 ------------------------------------
@@ -56,12 +64,13 @@ and write it to a file like this:
    with open("pulser_seq.json", "w") as f:
        f.write(serialized_sequence)
 
+
 How to run
 ----------
 
 .. code-block:: shell-session
 
-   $ python example.py -h
+   python example.py -h
    usage: example.py [-h] --backend BACKEND input
 
    An example of Pasqal Local QRMI
@@ -74,8 +83,8 @@ How to run
      --backend BACKEND
                       backend name (device identifier)
 
-For example,
+For example:
 
 .. code-block:: shell-session
 
-   $ python example.py --backend BACKEND_NAME input.json
+   python example.py --backend BACKEND_NAME input.json

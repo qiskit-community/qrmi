@@ -1,3 +1,5 @@
+.. _provider_rust:
+
 QRMI Provider - Examples in Rust
 ================================
 
@@ -9,15 +11,17 @@ Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `QRMI Rust library <../../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ cargo clean
-   $ cargo build --release
+   cargo clean
+   cargo build --release
+
 
 How to run this example
 -----------------------
@@ -37,7 +41,7 @@ How to run this example
      -h, --help               Print help
      -V, --version            Print version
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

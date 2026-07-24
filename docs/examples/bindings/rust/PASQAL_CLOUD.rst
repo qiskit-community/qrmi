@@ -1,3 +1,5 @@
+.. _pasqal_cloud_rust:
+
 Pasqal CLoud QRMI - Examples in Rust
 ====================================
 
@@ -5,11 +7,13 @@ Pasqal CLoud QRMI - Examples in Rust
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/pasqal_cloud
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `QRMI Rust library <../../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 Set environment variables
 -------------------------
@@ -46,12 +50,14 @@ assumes that a ``.env`` file is available under the current directory.
 |                                   | user-provided)                    |
 +-----------------------------------+-----------------------------------+
 
-~/.pasqal/config (optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``~/.pasqal/config`` (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create ``~/.pasqal/config``:
 
-::
+.. code-block:: text
+   :caption: config
 
    username=<your username>
    password=<your password>
@@ -64,6 +70,7 @@ Create ``~/.pasqal/config``:
    # optional override:
    # project_id=<your project id>
    # auth_endpoint=<auth endpoint URL/path>
+
 
 Create Pulser Sequence file as input
 ------------------------------------
@@ -79,20 +86,22 @@ and write it to a file like this:
    with open("pulser_seq.json", "w") as f:
        f.write(serialized_sequence)
 
+
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ cargo clean
-   $ cargo build --release
+   cargo clean
+   cargo build --release
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ../target/release/qrmi-example-pasqal-cloud --help
+   ../target/release/qrmi-example-pasqal-cloud --help
    QRMI for Pasqal Cloud - Example
 
    Usage: qrmi-example-pasqal-cloud --backend <BACKEND> --input <INPUT>
@@ -103,8 +112,8 @@ How to run this example
      -h, --help                     Print help
      -V, --version                  Print version
 
-For example,
+For example:
 
 .. code-block:: shell-session
 
-   $ ../target/release/qrmi-example-pasqal-cloud -b FRESNEL -i input.json
+   ../target/release/qrmi-example-pasqal-cloud -b FRESNEL -i input.json

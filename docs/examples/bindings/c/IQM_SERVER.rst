@@ -1,3 +1,5 @@
+.. _iqm_server_c:
+
 IQM Server QRMI - Examples in C
 ===============================
 
@@ -5,11 +7,13 @@ IQM Server QRMI - Examples in C
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/iqm_server
 
+
 Prerequisites
 -------------
 
 -  C compiler/linker, cmake and make
--  `QRMI Rust library <../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 Set environment variables
 -------------------------
@@ -26,39 +30,44 @@ Environment variables                 Descriptions
 {qc_alias_name}_QRMI_IBM_ISA_TOKEN    IQM Server API token
 ===================================== =======================
 
-..
+.. note::
 
-   [!NOTE] Replace the “:” in the QC alias name with “\_” when
+   Replace the ":" in the QC alias name with "\_" when
    specifying it. For example, ``sirius:mock`` -> ``sirius_mock``.
+
 
 Create IQM JSON input file as input
 -----------------------------------
 
-Refer `this tool <../../../../commands/task_runner/examples/iqm>`__ to
-generate. You can customize quantum circuits by editting the code.
+Refer to :ref:`this tool <task_runner_iqm>` to
+generate. You can customise quantum circuits by editing the code.
 
-   [!NOTE] Use the file with name ending with ``_params_only.json``,
-   e.g. ``iqm_json_sirius_params_only.json``.
+.. note::
+
+   Use the file with name ending ``_params_only.json``,
+   e.g. ``iqm_json_sirius_params_only.json``.
+
 
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ mkdir build
-   $ cd build
-   $ cmake ..
-   $ make
+   mkdir build
+   cd build
+   cmake ..
+   make
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ./build/iqm_server
+   ./build/iqm_server
    iqm_server <qc_alias> <IQM JSON> <job_type('circuit','run' or 'sweep')
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

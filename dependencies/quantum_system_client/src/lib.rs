@@ -13,7 +13,7 @@
 //!
 //! This is a Rust client to interact with IBM Quantum backend using the Quantum System API.
 //!
-//! The Quantum System API provides easy integrations of client’s on-premise IBM Quantum backend
+//! The Quantum System API provides easy integrations of client's on-premise IBM Quantum backend
 //! and their scheduler/workflow.
 //!
 //! # Authentication

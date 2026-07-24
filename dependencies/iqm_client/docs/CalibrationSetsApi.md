@@ -15,7 +15,7 @@ Method | HTTP request | Description
 > get_calibration_set_v1(qc, cal_set)
 Get calibration set
 
- Returns the specified quantum computer’s calibration set and its related observations by calibration set ID. Alternatively, the keyword `default` can be used to retrieve the current default calibration set. 
+ Returns the specified quantum computer's calibration set and its related observations by calibration set ID. Alternatively, the keyword `default` can be used to retrieve the current default calibration set. 
 
 ### Parameters
 

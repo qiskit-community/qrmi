@@ -19,13 +19,13 @@ body:
 
   - type: textarea
     attributes:
-      label: "Describe the solution you’d like"
+      label: "Describe the solution you'd like"
     validations:
       required: true
 
   - type: textarea
     attributes:
-      label: "Describe any alternatives you’ve considered"
+      label: "Describe any alternatives you've considered"
       description: |
         Can you do this using other tools?
         Do other popular software system have a feature for this?

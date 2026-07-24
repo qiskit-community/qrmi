@@ -11,4 +11,4 @@ Bindings Examples
 License
 -------
 
-`Apache-2.0 <https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt>`__
+`Apache-2.0 <https://github.com/qiskit-community/qrmi/blob/main/LICENSE.txt>`__

@@ -1,3 +1,5 @@
+.. _task_runner_qiskit:
+
 Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 =======================================================
 
@@ -8,10 +10,12 @@ Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 The tools demonstrate the generation of EstimatorV2/SamplerV2 inputs
 from a quantum circuit example.
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or above
+
 
 Install dependencies
 --------------------
@@ -20,15 +24,16 @@ Install dependencies
 
    pip install -f requirements.txt
 
+
 Tools
 -----
 
-gen_estimator_input.py
-~~~~~~~~~~~~~~~~~~~~~~
+``gen_estimator_input.py``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Generates EstimatorV2 input for the circuit introduced in `Getting
-started
-doc <https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-estimator>`__.
+Generates EstimatorV2 input for the circuit introduced in IBM's `Get Started with Estimator documentation`_.
+
+.. _Get Started with Estimator documentation: https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-estimator
 
 Usage:
 
@@ -74,11 +79,13 @@ Output:
 |                                   | input parameters).                |
 +-----------------------------------+-----------------------------------+
 
-gen_sampler_input.py
-~~~~~~~~~~~~~~~~~~~~
 
-Generates SamplerV2 input for the circuit introduced in `Getting started
-doc <https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-sampler>`__.
+``gen_sampler_input.py``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Generates SamplerV2 input for the circuit introduced in IBM's `Get Started with Sampler documentation`_.
+
+.. _Get Started with Sampler documentation: https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-sampler
 
 Usage:
 
