@@ -59,10 +59,9 @@ exclude_patterns = [
     ".DS_Store",
 ]
 
-nitpicky = True
-
-nitpick_ignore = [
-    ("py:class", "typing.Any"),
+suppress_warnings = [
+    "ref.python",
+    "misc.highlighting_failure",
 ]
 
 autodoc_mock_imports = [
