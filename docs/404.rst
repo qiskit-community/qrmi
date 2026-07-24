@@ -1,7 +1,0 @@
-:orphan:
-:layout: 404
-
-404
-===
-
-The requested URL was not found on this site.
