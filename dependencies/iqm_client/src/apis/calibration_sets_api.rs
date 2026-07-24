@@ -53,7 +53,7 @@ pub enum GetQualityMetricsV1Error {
     UnknownValue(serde_json::Value),
 }
 
-///  Returns the specified quantum computer’s calibration set and its related observations by calibration set ID. Alternatively, the keyword `default` can be used to retrieve the current default calibration set.
+///  Returns the specified quantum computer's calibration set and its related observations by calibration set ID. Alternatively, the keyword `default` can be used to retrieve the current default calibration set.
 pub async fn get_calibration_set_v1(
     configuration: &configuration::Configuration,
     qc: &str,

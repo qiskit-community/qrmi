@@ -258,13 +258,13 @@ impl QuantumResource for IBMQiskitRuntimeService {
 
         if do_cancel {
             // Cancel this session if any pending jobs exist.
-            // Note) According to the REST API documentation, this API is labeled as “Close job session,”
-            // but its actual behavior matches Qiskit’s cancel operation. Calling this API results
-            // in the session appearing as “Cancelled” on the IQP web interface
+            // Note) According to the REST API documentation, this API is labeled as "Close job session,"
+            // but its actual behavior matches Qiskit's cancel operation. Calling this API results
+            // in the session appearing as "Cancelled" on the IQP web interface
             sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
         } else {
             // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtim.
-            // Displays “Completed” on the IQP web.
+            // Displays "Completed" on the IQP web.
             sessions_api::update_session(
                 &self.config,
                 acquisition_token,
