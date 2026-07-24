@@ -186,7 +186,7 @@ pub async fn delete_job_v1(
     }
 }
 
-///  Retrieves the original input payload of a job identified by its job ID.  The payload is returned exactly as it was at the time of submission, without any modifications. If the job type’s payload schema changes in the future, those changes are not applied to previously submitted job payloads.  The type of the submitted job is provided in the `IQM-Job-Type` response header.  Payloads are stored in a compressed format. For best performance, include `Accept-Encoding: gzip, deflate` in the request headers so that IQM Server can serve the stored data directly.
+///  Retrieves the original input payload of a job identified by its job ID.  The payload is returned exactly as it was at the time of submission, without any modifications. If the job type's payload schema changes in the future, those changes are not applied to previously submitted job payloads.  The type of the submitted job is provided in the `IQM-Job-Type` response header.  Payloads are stored in a compressed format. For best performance, include `Accept-Encoding: gzip, deflate` in the request headers so that IQM Server can serve the stored data directly.
 pub async fn get_job_payload_v1(
     configuration: &configuration::Configuration,
     job_id: &str,
@@ -290,7 +290,7 @@ pub async fn get_job_v1(
     }
 }
 
-///  Retrieves the raw job output artifact data for a job identified by its job ID and artifact type.  The available job artifacts depend on the job type and the Station Control version of the quantum computer. Refer to the auto-generated, quantum computer–specific API documentation for details on supported artifacts and their corresponding data formats.  The list of available artifacts for each job is included in the **Get Job** endpoint response.  Artifacts are stored in a compressed format. For best performance, include `Accept-Encoding: gzip, deflate` in the request headers so that IQM Server can serve the stored data directly.
+///  Retrieves the raw job output artifact data for a job identified by its job ID and artifact type.  The available job artifacts depend on the job type and the Station Control version of the quantum computer. Refer to the auto-generated, quantum computer-specific API documentation for details on supported artifacts and their corresponding data formats.  The list of available artifacts for each job is included in the **Get Job** endpoint response.  Artifacts are stored in a compressed format. For best performance, include `Accept-Encoding: gzip, deflate` in the request headers so that IQM Server can serve the stored data directly.
 pub async fn job_get_artifacts(
     configuration: &configuration::Configuration,
     job_id: &str,
@@ -336,7 +336,7 @@ pub async fn job_get_artifacts(
     }
 }
 
-///  Submits a new job for execution. The required payload structure depends on the job type being submitted. Refer to the auto-generated, quantum computer–specific API documentation for details on supported job types and their corresponding payload formats.
+///  Submits a new job for execution. The required payload structure depends on the job type being submitted. Refer to the auto-generated, quantum computer-specific API documentation for details on supported job types and their corresponding payload formats.
 pub async fn job_submit(
     configuration: &configuration::Configuration,
     qc: &str,

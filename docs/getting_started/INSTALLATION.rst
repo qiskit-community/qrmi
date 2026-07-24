@@ -44,9 +44,10 @@ Or combine multiple resources:
 Pip will handle all dependencies automatically and you will always install the latest (and most thoroughly tested) version.
 
 
+.. _install_source:
+
 Installing from Source
 ----------------------
-
 
 Prerequisites
 ~~~~~~~~~~~~~
@@ -221,14 +222,12 @@ Further Resources
 Examples
 ~~~~~~~~
 
-A `range of example code`_ is available within this knowledge base. Each example provides detailed instructions and
+A :ref:`range of example code <examples_index>` is available within this knowledge base. Each example provides detailed instructions and
 a link to the directory's GitHub location. You can find links to language-specific examples below:
 
 -  :ref:`rust_examples`
 -  :ref:`python_examples`
 -  :ref:`c_examples`
-
-.. _range of example code: /examples/index
 
 One example of QRMI usage in a compute infrastructure project is the Slurm plugin for quantum resources. QRMI is
 used in these Slurm plugins to control quantum resources during the lifecycle of a Slurm job. You can find full
@@ -295,4 +294,4 @@ For further questions, comments and discussion, please consider `joining the Qis
 License
 -------
 
-`Apache-2.0 <https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt>`__
+`Apache-2.0 <https://github.com/qiskit-community/qrmi/blob/main/LICENSE.txt>`__

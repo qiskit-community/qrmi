@@ -1,3 +1,5 @@
+.. _provider_python:
+
 QRMI Provider - Examples in Python
 ==================================
 
@@ -5,20 +7,23 @@ QRMI Provider - Examples in Python
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/resource_providers
 
+
 Prerequisites
 -------------
 
 -  Rust 1.85.1 or above
 -  Python 3.11 or 3.12
--  `QRMI python package installation <../../../../README.md>`__
+-  Install the :ref:`QRMI Python package <install_source>`
+
 
 Install dependencies
 --------------------
 
 .. code-block:: shell-session
 
-   $ source ~/py311_qrmi_venv/bin/activate
-   $ pip install qrmi[ibm]
+   source ~/py311_qrmi_venv/bin/activate
+   pip install qrmi[ibm]
+
 
 How to run
 ----------
@@ -37,7 +42,7 @@ How to run
      -h, --help         show this help message and exit
      --filters FILTERS  Optional filter string e.g. 'num_qubits=127&name=ibm_*'
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

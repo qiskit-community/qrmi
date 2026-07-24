@@ -1,3 +1,5 @@
+.. _task_runner_iqm:
+
 Tools to Generate IQM JSON from Qiskit QuantumCircuit
 =====================================================
 
@@ -8,10 +10,12 @@ Tools to Generate IQM JSON from Qiskit QuantumCircuit
 The tools demonstrate the generation of IQM JSON input from a quantum
 circuit example.
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or above
+
 
 Install dependencies
 --------------------
@@ -20,13 +24,14 @@ Install dependencies
 
    pip install -f requirements.txt
 
+
 Tools
 -----
 
 gen_iqm_json.py
 ~~~~~~~~~~~~~~~
 
-Generates IQM JSON input for the circuit introduced in Starter notebook
+Generates IQM JSON input for the circuit introduced in the starter notebook
 provided by IQM.
 
 Usage:
