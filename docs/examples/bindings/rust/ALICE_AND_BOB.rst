@@ -1,3 +1,5 @@
+.. _alice_and_bob_felis_rust:
+
 Alice Bob Felis QRMI - Examples in Rust
 =======================================
 
@@ -5,23 +7,27 @@ Alice Bob Felis QRMI - Examples in Rust
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/alice_bob_felis
 
+
 Prerequisites
 -------------
 
 -  C compiler/linker, cmake and make
--  Build the `QRMI Rust library <../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 Set environment variables
 -------------------------
 
-See the corresponding section in `the README for the Felis Python
-example <../../python/alice_bob_felis/README.md#set-environment-variables>`__
+See the corresponding section in the :ref:`README for the Felis Python
+example <alice_and_bob_felis_python_env>`.
+
 
 Generate QIR Input file
 -----------------------
 
-See the corresponding section in `the README for the Felis Python
-example <../../python/alice_bob_felis/README.md#generate-qir-input-file>`__
+See the corresponding section in the :ref:`README for the Felis Python
+example <alice_and_bob_felis_python_qri>`.
+
 
 How to build this example
 -------------------------
@@ -31,6 +37,7 @@ How to build this example
    cargo clean
    CARGO_TARGET_DIR=./target cargo build --release
 
+
 How to run this example
 -----------------------
 
@@ -38,7 +45,7 @@ How to run this example
 
    qrmi-example-alice-bob-felis --backend <BACKEND> --input <INPUT>
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

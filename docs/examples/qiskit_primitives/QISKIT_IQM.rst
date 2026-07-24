@@ -1,3 +1,5 @@
+.. _qiskit_iqm_primitive:
+
 IQM Qiskit - Python Example
 ===========================
 
@@ -5,23 +7,25 @@ IQM Qiskit - Python Example
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qiskit_primitives/iqm
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `Installation of QRMI primitives python
-   package(``qiskit-qrmi-primitives``) <../../../../README.md>`__
+-  Install the :ref:`QRMI Python package <install_source>`
+
 
 Install dependencies
 --------------------
 
-Assuming your python virtual environment is located at
-``~/py311venv_qrmi_primitives/bin/activate``,
+Assuming your Python virtual environment is located at
+``~/py311venv_qrmi_primitives/bin/activate``:
 
 .. code-block:: shell-session
 
-   $ source ~/py311venv_qrmi_primitives/bin/activate
-   $ pip install -r requirements.txt
+   source ~/py311venv_qrmi_primitives/bin/activate
+   pip install -r requirements.txt
+
 
 Set environment variables
 -------------------------
@@ -30,6 +34,7 @@ Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
 required environment variables are listed below. This example assumes
 that a ``.env`` file is available under the current directory.
+
 
 Common
 ~~~~~~
@@ -42,11 +47,12 @@ set by the SPANK plugin.
 +===================================+===================================+
 | QRMI_JOB_QPU_RESOURCES            | Quantum resource names.           |
 |                                   | Comma-separated values,           |
-|                                   | e.g. ``garnet,emerald``           |
+|                                   | e.g. ``garnet,emerald``           |
 +-----------------------------------+-----------------------------------+
 | QRMI_JOB_QPU_TYPES                | Quantum resource types. Specify   |
 |                                   | ``iqm-server`` for this example   |
 +-----------------------------------+-----------------------------------+
+
 
 IQM Server specific
 ~~~~~~~~~~~~~~~~~~~
@@ -61,10 +67,11 @@ Environment variables                 Descriptions
 {qc_alias_name}_QRMI_IQM_ISA_TOKEN    IQM Server API token
 ===================================== =======================
 
-..
+.. note::
 
-   [!NOTE] Replace the “:” in the QC alias name with “\_” when
+   Replace the ":" in the QC alias name with "\_" when
    specifying it. For example, ``sirius:mock`` -> ``sirius_mock``.
+
 
 Example
 ^^^^^^^
@@ -76,9 +83,10 @@ Example
    export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
    export garnet_mock_QRMI_IQM_ISA_TOKEN=your token
 
+
 How to run
 ----------
 
 .. code-block:: shell-session
 
-   $ python iqm_example.py
+   python iqm_example.py

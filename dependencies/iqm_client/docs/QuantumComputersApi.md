@@ -201,7 +201,7 @@ No authorization required
 > qc_get_artifacts(qc, artifact_type)
 Get configuration artifact
 
- Returns the contents of a configuration artifact for a quantum computer identified by its ID and artifact type.  The available artifacts depend on the Station Control version of the quantum computer. Refer to the auto-generated, quantum computer–specific API documentation for details on supported artifacts and their corresponding data formats. 
+ Returns the contents of a configuration artifact for a quantum computer identified by its ID and artifact type.  The available artifacts depend on the Station Control version of the quantum computer. Refer to the auto-generated, quantum computer-specific API documentation for details on supported artifacts and their corresponding data formats. 
 
 ### Parameters
 

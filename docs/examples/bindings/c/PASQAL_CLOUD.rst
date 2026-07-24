@@ -1,3 +1,5 @@
+.. _pasqal_cloud_c:
+
 Pasqal Cloud QRMI - Examples in C
 =================================
 
@@ -5,11 +7,13 @@ Pasqal Cloud QRMI - Examples in C
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_cloud
 
+
 Prerequisites
 -------------
 
 -  C compiler/linker, cmake and make
--  `QRMI Rust library <../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 Set environment variables
 -------------------------
@@ -46,12 +50,14 @@ assumes that a ``.env`` file is available under the current directory.
 |                                   | user-provided)                    |
 +-----------------------------------+-----------------------------------+
 
-~/.pasqal/config (optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``~/.pasqal/config`` (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create ``~/.pasqal/config``:
 
-::
+.. code-block:: text
+   :caption: config
 
    username=<your username>
    password=<your password>
@@ -64,6 +70,7 @@ Create ``~/.pasqal/config``:
    # optional override:
    # project_id=<your project id>
    # auth_endpoint=<auth endpoint URL/path>
+
 
 Create Pulser Sequence file as input
 ------------------------------------
@@ -79,26 +86,28 @@ and write it to a file like this:
    with open("pulser_seq.json", "w") as f:
        f.write(serialized_sequence)
 
+
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ mkdir build
-   $ cd build
-   $ cmake ..
-   $ make
+   mkdir build
+   cd build
+   cmake ..
+   make
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ./build/pasqal-cloud
+   ./build/pasqal-cloud
    pasqal-cloud <backend_name> <input file>
 
 For example,
 
 .. code-block:: shell-session
 
-   $ ./build/pasqal-cloud FRESNEL input.json
+   ./build/pasqal-cloud FRESNEL input.json
