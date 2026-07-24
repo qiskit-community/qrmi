@@ -65,17 +65,12 @@ Output:
 | Files                             | Descriptions                      |
 +===================================+===================================+
 | estimator_input                   | EstimatorV2 input                 |
-| \_{backend_name}_params_only.json | parameters(`EstimatorV2           |
-|                                   | sch                               |
-|                                   | ema <https://github.com/Qiskit/ib |
-|                                   | m-quantum-schemas/blob/main/schem |
-|                                   | as/estimator_v2_schema.json>`__). |
+| \_{backend_name}_params_only.json | parameters (`EstimatorV2 Schema`_)|
 +-----------------------------------+-----------------------------------+
 | est                               | An input for QRMI task runner,    |
 | imator_input\_{backend_name}.json | which contains 2 properties -     |
-|                                   | `                                 |
-|                                   | `program_id``\ (=\ ``estimator``) |
-|                                   | and ``parameters``\ (EstimatorV2  |
+|                                   | ``program_id`` (=\ ``estimator``) |
+|                                   | and ``parameters`` (EstimatorV2   |
 |                                   | input parameters).                |
 +-----------------------------------+-----------------------------------+
 
