@@ -1,0 +1,82 @@
+.. _pasqal_local_c:
+
+Pasqal Local QRMI - Examples in C
+=================================
+
+`GitHub Repository`_
+
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_local
+
+
+Prerequisites
+-------------
+
+-  C compiler/linker, cmake and make
+-  Build the :ref:`QRMI Rust library <install_source>`
+-  `Munge`_
+
+.. _Munge: https://dun.github.io/munge/
+
+
+Set environment variables
+-------------------------
+
+Because QRMI is an environment variable driven software library, all
+configuration parameters must be specified in environment variables. The
+required environment variables are listed below. This example assumes
+that a ``.env`` file is available under the current directory.
+
++-----------------------------------+-----------------------------------+
+| Environment variables             | Descriptions                      |
++===================================+===================================+
+| ``<backend_name>_QRMI_URL``       | URL of the QPU middleware         |
+|                                   | (e.g. ``http://localhost:4207``)  |
++-----------------------------------+-----------------------------------+
+| ``QRMI_JOB_UID``                  | ID of the user executing the job  |
++-----------------------------------+-----------------------------------+
+| ``QRMI_JOB_ID``                   | ID of the job                     |
++-----------------------------------+-----------------------------------+
+
+Where ``<backend_name>`` is the backend name passed as the first
+argument (e.g. ``PASQAL_LOCAL``).
+
+
+Create Pulser Sequence file as input
+------------------------------------
+
+Given a Pulser sequence ``sequence``, we can convert it to a JSON string
+and write it to a file like this:
+
+.. code-block:: python
+   :linenos:
+
+   serialized_sequence = sequence.to_abstract_repr()
+
+   with open("pulser_seq.json", "w") as f:
+       f.write(serialized_sequence)
+
+
+How to build this example
+-------------------------
+
+.. code-block:: shell-session
+
+   mkdir build
+   cd build
+   cmake ..
+   make
+
+
+How to run this example
+-----------------------
+
+.. code-block:: shell-session
+
+   ./build/pasqal_local
+   pasqal_local <backend name> <input file>
+
+For example:
+
+.. code-block:: shell-session
+
+   ./build/pasqal_local PASQAL_LOCAL input.json

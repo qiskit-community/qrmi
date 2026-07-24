@@ -3,7 +3,7 @@
 This Rust API client provides all functionalities provided by Quantum System API, and also provide some extensions for ease of use by developers like below.
 
 * Primitive interface which
-  * accepts [EstimatorV2 input](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json) and [SamplerV2 input](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json) as input, which will help existsing [IBM Qiskit Runtime REST API](https://docs.quantum.ibm.com/api/runtime) users to easily migrate.
+  * accepts [EstimatorV2 input parameters](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs) and [SamplerV2 input parameters](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs) as input, which will help existsing [IBM Qiskit Runtime REST API](https://docs.quantum.ibm.com/api/runtime) users to easily migrate.
   * wraps S3 bucket operations such as uploading job input and downloading the results
 * Auto refresh of access token, allowing long job executions
 * Auto job deletions after cancel

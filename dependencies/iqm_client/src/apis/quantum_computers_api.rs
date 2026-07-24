@@ -426,7 +426,7 @@ pub async fn get_qc_timeslots_v1(
     }
 }
 
-///  Returns the contents of a configuration artifact for a quantum computer identified by its ID and artifact type.  The available artifacts depend on the Station Control version of the quantum computer. Refer to the auto-generated, quantum computer–specific API documentation for details on supported artifacts and their corresponding data formats.
+///  Returns the contents of a configuration artifact for a quantum computer identified by its ID and artifact type.  The available artifacts depend on the Station Control version of the quantum computer. Refer to the auto-generated, quantum computer-specific API documentation for details on supported artifacts and their corresponding data formats.
 pub async fn qc_get_artifacts(
     configuration: &configuration::Configuration,
     qc: &str,

@@ -1,6 +1,6 @@
 # QRMI Task Runner
 
-QRMI Task Runner is an executable to run a quantum workload on the specified QPU resource. This is designed to be used in a Slurm job, configuration parameters such as endpoint URL and access credentials are taken from the process environment variables. Users can run a quantum workload in the form of Qiskit Primitive input([EstimatorV2](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json), [SamplerV2](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json)) for IBM Quantum System or Qiskit Runtime Service, or [Pulser Sequence](https://pulser.readthedocs.io/en/stable/tutorials/serialization.html) for Pasqal Cloud.
+QRMI Task Runner is an executable to run a quantum workload on the specified QPU resource. This is designed to be used in a Slurm job, configuration parameters such as endpoint URL and access credentials are taken from the process environment variables. Users can run a quantum workload in the form of Qiskit Primitive input parameters ([EstimatorV2](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs), [SamplerV2](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs)) for IBM Quantum System or Qiskit Runtime Service, or [Pulser Sequence](https://pulser.readthedocs.io/en/stable/tutorials/serialization.html) for Pasqal Cloud.
 
 This executable receives SIGCONT/SIGTERM signals sent by Slurm infrastructure and cancels the running quantum workload.
 
@@ -231,4 +231,4 @@ task_runner ab_emu_1q_lescanne_2020 /shared/input/alice_bob_felis_input.json
 
 ## License
 
-[Apache-2.0](https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt)
+[Apache-2.0](../../../../LICENSE.txt)
