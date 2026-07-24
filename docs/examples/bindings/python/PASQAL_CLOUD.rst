@@ -1,3 +1,5 @@
+.. _pasqal_cloud_python:
+
 Pasqal Cloud QRMI - Examples in Python
 ======================================
 
@@ -5,20 +7,23 @@ Pasqal Cloud QRMI - Examples in Python
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_cloud
 
+
 Prerequisites
 -------------
 
 -  Rust 1.85.1 or above
 -  Python 3.11 or 3.12
--  `QRMI python package installation <../../../../README.md>`__
+-  Install the :ref:`QRMI Python package <install_source>`
+
 
 Install dependencies
 --------------------
 
 .. code-block:: shell-session
 
-   $ source ~/py311_qrmi_venv/bin/activate
-   $ pip install -r ../requirements.txt
+   source ~/py311_qrmi_venv/bin/activate
+   pip install -r ../requirements.txt
+
 
 Set environment variables
 -------------------------
@@ -61,12 +66,14 @@ assumes that a ``.env`` file is available under the current directory.
 |                                   | user-provided)                    |
 +-----------------------------------+-----------------------------------+
 
-~/.pasqal/config (optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``~/.pasqal/config`` (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create ``~/.pasqal/config``:
 
-::
+.. code-block:: text
+   :caption: config
 
    username=<your username>
    password=<your password>
@@ -80,13 +87,14 @@ Create ``~/.pasqal/config``:
    # project_id=<your project id>
    # auth_endpoint=<auth endpoint URL/path>
 
+
 Using this backend from CUDA-Q (``pasqal``)
 -------------------------------------------
 
 When CUDA-Q is configured with target ``pasqal``, QRMI is used as the
 Pasqal cloud bridge. ``machine`` in
 ``cudaq.set_target(..., machine=...)`` should match ``<backend_name>``
-above (for example ``EMU_FREE``).
+above (for example, ``EMU_FREE``).
 
 .. code-block:: python
    :linenos:
@@ -94,8 +102,9 @@ above (for example ``EMU_FREE``).
    import cudaq
    cudaq.set_target("pasqal", machine="EMU_FREE")
 
-For CUDA-Q build/runtime details in this workspace, see: -
-```../cudaq/README.md`` <../cudaq/README.md>`__
+For CUDA-Q build/runtime details in this workspace, refer to our
+:ref:`Pasqal Cloud CUDA-Q documentation <pasqal_cloud_cudaq>`.
+
 
 Create Pulser Sequence file as input
 ------------------------------------
@@ -111,12 +120,13 @@ and write it to a file like this:
    with open("pulser_seq.json", "w") as f:
        f.write(serialized_sequence)
 
+
 How to run
 ----------
 
 .. code-block:: shell-session
 
-   $ python example.py -h
+   python example.py -h
    usage: example.py [-h] input backend
 
    An example of Pasqal Cloud Python QRMI
@@ -128,8 +138,8 @@ How to run
    options:
      -h, --help  show this help message and exit
 
-For example,
+For example:
 
 .. code-block:: shell-session
 
-   $ python example.py FRESNEL input.json
+   python example.py FRESNEL input.json

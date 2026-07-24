@@ -75,7 +75,7 @@ This will fail due to the error:
 .. _Batch: https://quantum.cloud.ibm.com/docs/en/guides/execution-modes#batch-mode
 
    -  Add ``QRMI_IBM_QRS_SESSION_MODE`` environment variable with
-      “batch” in your ``qrmi_config.json``
+      "batch" in your ``qrmi_config.json``
 
 .. code-block:: json
 

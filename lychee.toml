@@ -18,6 +18,19 @@ extensions = ["md","txt","html", "rst"]
 # Exclude URLs and mail addresses from checking. The values are treated as regular expressions
 exclude = [
     '^http://localhost*',
+
+    # GitHub Pages links that may not exist in PR builds
+    "https://qiskit-community.github.io/qrmi/.*",
+
+    # IBM authenticated/API endpoints
+    "https://iam.cloud.ibm.com/.*",
+    "https://quantum.cloud.ibm.com/.*",
+    "https://s3.us-east.cloud-object-storage.appdomain.cloud/.*",
+
+    # Provider endpoints requiring authentication
+    "https://resonance.meetiqm.com/.*",
+    "https://api.alice-bob.com/.*",
+
     'dependencies/alice_bob_felis_client/felis_generated/docs/*',
     'dependencies/alice_bob_felis_client/felis_generated/src/*',
     'dependencies/alice_bob_felis_client/felis_generated/.openapi-generator/*',

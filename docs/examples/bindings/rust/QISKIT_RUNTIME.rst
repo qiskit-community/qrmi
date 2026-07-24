@@ -1,3 +1,5 @@
+.. _qiskit_runtime_rust:
+
 Qiskit Runtime Service QRMI - Examples in Rust
 ==============================================
 
@@ -5,11 +7,13 @@ Qiskit Runtime Service QRMI - Examples in Rust
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qiskit_runtime_service
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `QRMI Rust library <../../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 Set environment variables
 -------------------------
@@ -23,17 +27,17 @@ that a ``.env`` file is available under the current directory.
 | Environment variables             | Descriptions                      |
 +===================================+===================================+
 | {res                              | Qiskit Runtime Service endpoint   |
-| ource_name}_QRMI_IBM_QRS_ENDPOINT | URL(e.g. ``htt                    |
+| ource_name}_QRMI_IBM_QRS_ENDPOINT | URL(e.g. ``htt                    |
 |                                   | ps://quantum.cloud.ibm.com/api``) |
 +-----------------------------------+-----------------------------------+
 | {resourc                          | IBM Cloud IAM endpoint            |
-| e_name}_QRMI_IBM_QRS_IAM_ENDPOINT | URL(e.                            |
-|                                   | g. ``https://iam.cloud.ibm.com``) |
+| e_name}_QRMI_IBM_QRS_IAM_ENDPOINT | URL(e.g.                          |
+|                                   | ``https://iam.cloud.ibm.com``)    |
 +-----------------------------------+-----------------------------------+
 | {resou                            | IBM Cloud IAM API Key             |
 | rce_name}_QRMI_IBM_QRS_IAM_APIKEY |                                   |
 +-----------------------------------+-----------------------------------+
-| {resour                           | Cloud Resource Name(CRN) of the   |
+| {resour                           | Cloud Resource Name (CRN) of the  |
 | ce_name}_QRMI_IBM_QRS_SERVICE_CRN | provisioned Qiskit Runtime        |
 |                                   | Service instance, starting with   |
 |                                   | ``crn:v1:``.                      |
@@ -58,29 +62,34 @@ that a ``.env`` file is available under the current directory.
 |                                   | functions.                        |
 +-----------------------------------+-----------------------------------+
 
+
 Create Qiskit Primitive input file as input
 -------------------------------------------
 
-Refer `this tool <../../../../examples/task_runner/qiskit>`__ to
-generate. You can customize quantum circuits by editing the code.
+Refer :ref:`this tool <task_runner_qiskit>` to
+generate. You can customise quantum circuits by editing the code.
 
-   [!NOTE] Use the file with name ending with ``_params_only.json``,
-   e.g. ``sampler_input_ibm_torino_params_only.json``.
+.. note::
+
+   Use the file with name ending ``_params_only.json``,
+   e.g. ``sampler_input_ibm_torino_params_only.json``.
+
 
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ cargo clean
-   $ cargo build --example qrmi-example-qiskit-runtime-service --release
+   cargo clean
+   cargo build --example qrmi-example-qiskit-runtime-service --release
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ../target/release/qrmi-example-qiskit-runtime-service --help
+   ../target/release/qrmi-example-qiskit-runtime-service --help
    QRMI for IBM Qiskit Runtime Service - Example
 
    Usage: qrmi-example-qiskit_runtime_service --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
@@ -92,7 +101,7 @@ How to run this example
      -h, --help                     Print help
      -V, --version                  Print version
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

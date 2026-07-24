@@ -1,3 +1,5 @@
+.. _config_c:
+
 Parsing QRMI Config File in C
 =============================
 
@@ -5,31 +7,34 @@ Parsing QRMI Config File in C
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
 
+
 Prerequisites
 -------------
 
 -  C compiler/linker, cmake and make
--  `QRMI Rust library <../../../../README.md>`__
+-  Build the :ref:`QRMI Rust library <install_source>`
+
 
 How to build this example
 -------------------------
 
 .. code-block:: shell-session
 
-   $ mkdir build
-   $ cd build
-   $ cmake ..
-   $ make
+   mkdir build
+   cd build
+   cmake ..
+   make
+
 
 How to run this example
 -----------------------
 
 .. code-block:: shell-session
 
-   $ ./build/
+   ./build/
    qrmi_config <qrmi_config.json file> <resource name>
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

@@ -166,7 +166,7 @@ and will change. The branch will not be merged until it is finished.
 You, or a reviewer, can remove the [WIP] tag when the code is ready to be
 reviewed for merging.
 
-Before marking your PR as “ready for review”, make sure you
+Before marking your PR as "ready for review", make sure you
 have followed the PR checklist below. PRs that adhere to this list are
 more likely to be reviewed and merged in a timely manner.
 
