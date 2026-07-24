@@ -1,3 +1,5 @@
+.. _task_runner_qpp:
+
 Tools to Generate Input for Task Runner from Qiskit Pasqal Provider
 ===================================================================
 
@@ -5,10 +7,12 @@ Tools to Generate Input for Task Runner from Qiskit Pasqal Provider
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/qpp
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or above
+
 
 Install dependencies
 --------------------
@@ -17,14 +21,16 @@ Install dependencies
 
    pip install -f requirements.txt
 
+
 Tools
 -----
 
 task_runner_input.py
 ~~~~~~~~~~~~~~~~~~~~
 
-Generates input file in the correct format using
-`Pulser <https://github.com/qiskit-community/qiskit-pasqal-provider>`__
+Generates an input file in the correct format using `Pulser`_.
+
+.. _Pulser: https://github.com/qiskit-community/qiskit-pasqal-provider
 
 Example:
 

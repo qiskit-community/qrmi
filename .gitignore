@@ -89,4 +89,5 @@ MANIFEST
 
 # Sphinx
 docs/_build/
+docs/_build_linkcheck/
 docs/api/

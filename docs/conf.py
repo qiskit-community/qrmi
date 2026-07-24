@@ -1,72 +1,130 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Sphinx configuration for the QRMI documentation."""
 
-import inspect
-import os
-import sys
 from pathlib import Path
+import importlib
+from importlib.metadata import version
+import inspect
+
+# =============================================================================
+# Paths
+# =============================================================================
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+# =============================================================================
+# Project information
+# =============================================================================
 
 project = "Quantum Resource Management Interface (QRMI)"
-copyright = "2026, Bacher, Utz and Birmingham, Mark and Carothers, Christopher D and Damin, Andrew and Calaza, Carlos D Gonzalez and Karnad, Ashwin Kumar and Mensa, Stefano and Moreau, Matthieu and Nober, Aurelien and Ohtani, Munetaka and others"
-author = "Bacher, Utz and Birmingham, Mark and Carothers, Christopher D and Damin, Andrew and Calaza, Carlos D Gonzalez and Karnad, Ashwin Kumar and Mensa, Stefano and Moreau, Matthieu and Nober, Aurelien and Ohtani, Munetaka and others"
-release = "2025"
 
-# version = qrmi.__version__
+author = (
+    "Bacher, Utz and Birmingham, Mark and Carothers, Christopher D and "
+    "Damin, Andrew and Calaza, Carlos D Gonzalez and Karnad, Ashwin Kumar "
+    "and Mensa, Stefano and Moreau, Matthieu and Nober, Aurelien and "
+    "Ohtani, Munetaka and others"
+)
+
+copyright = f"2026, {author}"
+
+try:
+    release = version("qrmi")
+except Exception:
+    release = "dev"
+
+version = release
 
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+# =============================================================================
+# General configuration
+# =============================================================================
 
 extensions = [
+    "breathe",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.linkcode",
+    "sphinx.ext.napoleon",
+    "sphinx_contributors",
+    "sphinx_copybutton",
     "sphinx_design",
     "sphinx_tabs.tabs",
-    "sphinx_contributors",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.linkcode",
-    "sphinx_copybutton",
     "sphinx_togglebutton",
-    "breathe",
 ]
 
+templates_path = ["_templates"]
+
+exclude_patterns = [
+    "_build/html",
+    "Thumbs.db",
+    ".DS_Store",
+]
+
+suppress_warnings = [
+    "ref.python",
+    "misc.highlighting_failure",
+]
+
+autodoc_mock_imports = [
+    "iqm",
+    "pulser",
+    "qiskit_ibm_runtime",
+    "qiskit_pasqal_provider",
+]
+
+
+# =============================================================================
+# Breathe / Doxygen
+# =============================================================================
+
 breathe_projects = {
-    "qrmi": f"{REPO_ROOT}/build/doxygen/xml",
+    "qrmi": str(REPO_ROOT / "build" / "doxygen" / "xml"),
 }
 
 breathe_default_project = "qrmi"
 
 
-# -- linkcode configuration --------------------------------------------------
+# =============================================================================
+# Link checking
+# =============================================================================
+
+linkcheck_ignore = [
+    r"../rust/qrmi/index.html",
+    r"https://crates.io/crates/log",
+    r"https://github.com/Qiskit/ibm-quantum-schemas/.*",
+    r"https://resonance.iqm.tech/",
+    # r"https://qisk.it/.*",
+    # r"https://github.com/.*/tree/.*",
+    # r"https://github.com/.*/blob/.*",
+]
+
+# Optional but recommended
+linkcheck_timeout = 10
+linkcheck_retries = 2
+linkcheck_workers = 5
+
+
+# =============================================================================
+# Source code links
+# =============================================================================
+
+GITHUB_REPO = "https://github.com/qiskit-community/qrmi"
 
 
 def linkcode_resolve(domain, info):
-    """
-    Resolve a GitHub source URL for a documented Python object.
-
-    :param domain: Sphinx domain of the object.
-    :param info: Metadata describing the documented object.
-    :returns: GitHub URL for the object's source code, or ``None``.
-    """
+    """Generate GitHub source links for documented Python objects."""
 
     if domain != "py":
         return None
 
-    module_name = info["module"]
-    fullname = info["fullname"]
+    module_name = info.get("module")
+    fullname = info.get("fullname")
 
     if not module_name:
         return None
 
     try:
-        module = sys.modules[module_name]
-    except KeyError:
+        module = importlib.import_module(module_name)
+    except ImportError:
         return None
 
     obj = module
@@ -80,38 +138,21 @@ def linkcode_resolve(domain, info):
     try:
         filename = inspect.getsourcefile(obj)
         source, lineno = inspect.getsourcelines(obj)
-    except Exception:
+    except (TypeError, OSError):
+        return None
+
+    if filename is None:
         return None
 
     rel_path = Path(filename).resolve().relative_to(REPO_ROOT)
-
     end_lineno = lineno + len(source) - 1
 
-    branch = "main"
-
-    url = (
-        f"https://github.com/qiskit-community/qrmi/blob/{branch}/"
-        f"{rel_path}#L{lineno}-L{end_lineno}"
-    )
-
-    return url
+    return f"{GITHUB_REPO}/blob/main/" f"{rel_path}#L{lineno}-L{end_lineno}"
 
 
-# # Mock optional dependencies for sphinx-apidocs
-autodoc_mock_imports = [
-    "iqm",
-    "qiskit_ibm_runtime",
-    "qiskit_pasqal_provider",
-    "pulser",
-]
-
-
-templates_path = ["_templates"]
-exclude_patterns = ["_build/html", "Thumbs.db", ".DS_Store"]
-
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+# =============================================================================
+# HTML output
+# =============================================================================
 
 html_theme = "shibuya"
 
@@ -126,9 +167,6 @@ html_js_files = [
 ]
 
 html_theme_options = {
-    # "light_logo": "logo-light.svg",
-    # "dark_logo": "logo-dark.svg",
-    # "og_image_url": "https://example.com/icon.png",
     "discussion_url": "https://github.com/qiskit-community",
     "github_url": "https://github.com/qiskit-community/qrmi",
     "nav_links": [
@@ -144,6 +182,6 @@ html_context = {
     "source_type": "github",
     "source_user": "qiskit-community",
     "source_repo": "qrmi",
-    "source_version": "main",  # Optional
-    "source_docs_path": "/docs/",  # Optional
+    "source_version": "main",
+    "source_docs_path": "/docs/",
 }

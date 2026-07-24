@@ -1,3 +1,5 @@
+.. _iqm_server_python:
+
 IQM Server QRMI - Examples in Python
 ====================================
 
@@ -5,20 +7,23 @@ IQM Server QRMI - Examples in Python
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/iqm_server
 
+
 Prerequisites
 -------------
 
 -  Rust 1.85.1 or above
 -  Python 3.11 or 3.12
--  `QRMI python package installation <../../../../README.md>`__
+-  Install the :ref:`QRMI Python package <install_source>`
+
 
 Install dependencies
 --------------------
 
 .. code-block:: shell-session
 
-   $ source ~/py311_qrmi_venv/bin/activate
-   $ pip install -r ../requirements.txt
+   source ~/py311_qrmi_venv/bin/activate
+   pip install -r ../requirements.txt
+
 
 Set environment variables
 -------------------------
@@ -35,26 +40,30 @@ Environment variables                 Descriptions
 {qc_alias_name}_QRMI_IQM_ISA_TOKEN    IQM Server API token
 ===================================== ===========================
 
-..
+.. note::
 
-   [!NOTE] Replace the “:” in the QC alias name with “\_” when
+   Replace the ":" in the QC alias name with "\_" when
    specifying it. For example, ``sirius:mock`` -> ``sirius_mock``.
+
 
 Create IQM JSON input file as input
 -----------------------------------
 
-Refer `this tool <../../../../bin/task_runner/examples/iqm>`__ to
-generate. You can customize quantum circuits by editting the code.
+Refer to :ref:`this tool <task_runner_iqm>` to
+generate. You can customise quantum circuits by editing the code.
 
-   [!NOTE] Use the file with name ending with ``_params_only.json``,
-   e.g. ``iqm_json_sirius_params_only.json``.
+.. note::
+
+   Use the file with name ending ``_params_only.json``,
+   e.g. ``iqm_json_sirius_params_only.json``.
+
 
 How to run
 ----------
 
 .. code-block:: shell-session
 
-   $ python example.py -h
+   python example.py -h
    usage: example.py [-h] qc_alias input job_type
 
    An example of IBM Quantum System QRMI
@@ -67,7 +76,7 @@ How to run
    options:
      -h, --help  show this help message and exit
 
-For example,
+For example:
 
 .. code-block:: shell-session
 

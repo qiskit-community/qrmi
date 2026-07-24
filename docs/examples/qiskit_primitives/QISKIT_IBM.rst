@@ -1,3 +1,5 @@
+.. _qiskit_ibm_primitive:
+
 Sampler/Estimator Primitives with IBM Quantum System QRMI - Python Example
 ==========================================================================
 
@@ -5,23 +7,25 @@ Sampler/Estimator Primitives with IBM Quantum System QRMI - Python Example
 
 .. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qiskit_primitives/ibm
 
+
 Prerequisites
 -------------
 
 -  Python 3.11 or 3.12
--  `Installation of QRMI primitives python
-   package(``qiskit-qrmi-primitives``) <../../../../README.md>`__
+-  :ref:`Installation of QRMI primitives Python package (qiskit-qrmi-primitives) <qiskit_examples>`
+
 
 Install dependencies
 --------------------
 
-Assuming your python virtual environment is located at
-``~/py311venv_qrmi_primitives/bin/activate``,
+Assuming your Python virtual environment is located at
+``~/py311venv_qrmi_primitives/bin/activate``:
 
 .. code-block:: shell-session
 
-   $ source ~/py311venv_qrmi_primitives/bin/activate
-   $ pip install -r requirements.txt
+   source ~/py311venv_qrmi_primitives/bin/activate
+   pip install -r requirements.txt
+
 
 Set environment variables
 -------------------------
@@ -42,7 +46,7 @@ set by the SPANK plugin.
 +===================================+===================================+
 | QRMI_JOB_QPU_RESOURCES            | Quantum resource names.           |
 |                                   | Comma-separated values,           |
-|                                   | e.g. ``ibm_torino,ibm_brisbane``  |
+|                                   | e.g. ``ibm_torino,ibm_brisbane``  |
 +-----------------------------------+-----------------------------------+
 | QRMI_JOB_QPU_TYPES                | Quantum resource types.           |
 |                                   | Comma-separated values            |
@@ -65,7 +69,7 @@ set by users or administrator.
 | {resource_name}_QRMI_IBM_QS_ENDPOINT              | Quantum System endpoint URL             |
 +---------------------------------------------------+-----------------------------------------+
 | {resource_name}_QRMI_IBM_QS_IAM_ENDPOINT          | IBM Cloud IAM endpoint                  |
-|                                                   | URL(e.g. ``https://iam.cloud.ibm.com``) |
+|                                                   | URL(e.g. ``https://iam.cloud.ibm.com``) |
 +---------------------------------------------------+-----------------------------------------+
 | {resource_name}_QRMI_IBM_QS_IAM_APIKEY            | IBM Cloud IAM API Key                   |
 +---------------------------------------------------+-----------------------------------------+
@@ -85,7 +89,7 @@ set by users or administrator.
 | {resource_name}_QRMI_IBM_QS_S3_BUCKET             | S3 bucket name                          |
 +---------------------------------------------------+-----------------------------------------+
 | {resource_name}_QRMI_IBM_QS_S3_REGION             | S3 bucket region                        |
-|                                                   | name(e.g. ``us-east``)                  |
+|                                                   | name(e.g. ``us-east``)                  |
 +---------------------------------------------------+-----------------------------------------+
 | {resource_name}_QRMI_IBM_QS_TIMEOUT_SECONDS       | Time (in seconds) after which job       |
 |                                                   | should time out and get                 |
@@ -96,6 +100,7 @@ set by users or administrator.
 |                                                   | system is dedicated to processing       |
 |                                                   | your job.                               |
 +---------------------------------------------------+-----------------------------------------+
+
 
 Example
 ^^^^^^^
@@ -125,12 +130,12 @@ set by users or administrator.
 | Environment variables             | Descriptions                      |
 +===================================+===================================+
 | {res                              | Qiskit Runtime Service endpoint   |
-| ource_name}_QRMI_IBM_QRS_ENDPOINT | URL(e.g. ``htt                    |
+| ource_name}_QRMI_IBM_QRS_ENDPOINT | URL(e.g. ``htt                    |
 |                                   | ps://quantum.cloud.ibm.com/api``) |
 +-----------------------------------+-----------------------------------+
 | {resourc                          | IBM Cloud IAM endpoint            |
 | e_name}_QRMI_IBM_QRS_IAM_ENDPOINT | URL(e.                            |
-|                                   | g. ``https://iam.cloud.ibm.com``) |
+|                                   | g. ``https://iam.cloud.ibm.com``) |
 +-----------------------------------+-----------------------------------+
 | {resou                            | IBM Cloud IAM API Key             |
 | rce_name}_QRMI_IBM_QRS_IAM_APIKEY |                                   |
@@ -147,7 +152,7 @@ set by users or administrator.
 |                                   | time).                            |
 +-----------------------------------+-----------------------------------+
 | {resourc                          | Session mode,                     |
-| e_name}_QRMI_IBM_QRS_SESSION_MODE | default=‘dedicated’, batch or     |
+| e_name}_QRMI_IBM_QRS_SESSION_MODE | default=‘dedicated', batch or     |
 |                                   | dedicated.                        |
 +-----------------------------------+-----------------------------------+
 | {resou                            | Session ID, set by acquire        |
@@ -160,7 +165,6 @@ set by users or administrator.
 | dedicated to processing your job. |                                   |
 +-----------------------------------+-----------------------------------+
 
-.. _example-1:
 
 Example
 ^^^^^^^
@@ -184,28 +188,34 @@ How to run
 SamplerV2
 ~~~~~~~~~
 
-Code is based on “Get started with Sampler” tutorial
-(https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-sampler).
+Code is based on the `"Get started with Sampler" tutorial`_.
+
+.. _"Get started with Sampler" tutorial: https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-sampler
 
 .. code-block:: shell-session
 
-   $ python sampler.py
+   python sampler.py
+
 
 EstimatorV2
 ~~~~~~~~~~~
 
-Code is based on “Get started with Estimator” tutorial
-(https://docs.quantum.ibm.com/guides/get-started-with-primitives#get-started-with-estimator).
+Code is based on the `"Get started with Estimator" tutorial`_.
+
+.. _"Get started with Estimator" tutorial: https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-estimator
 
 .. code-block:: shell-session
 
-   $ python estimator.py
+   python estimator.py
 
-SQD tutorial
+
+SQD Tutorial
 ~~~~~~~~~~~~
 
-`01_chemistry_hamiltonian.ipynb <./01_chemistry_hamiltonian.ipynb>`__ is
-QRMI primitive port of `Improving energy estimation of a chemistry
-Hamiltonian with
-SQD <https://github.com/Qiskit/qiskit-addon-sqd/blob/main/docs/tutorials/01_chemistry_hamiltonian.ipynb>`__.
-Start jupyter notebook and run all cells from beginning.
+`01_chemistry_hamiltonian.ipynb`_ is a QRMI primitive port of `Improving energy estimation of a chemistry
+Hamiltonian with SQD`_.
+
+Start Jupyter Notebook and run all cells from the beginning.
+
+.. _01_chemistry_hamiltonian.ipynb: https://github.com/qiskit-community/qrmi/blob/main/examples/qiskit_primitives/ibm/01_chemistry_hamiltonian.ipynb
+.. _Improving energy estimation of a chemistry Hamiltonian with SQD: https://quantum.cloud.ibm.com/docs/en/tutorials/sample-based-quantum-diagonalization
