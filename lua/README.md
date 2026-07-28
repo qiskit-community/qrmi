@@ -90,6 +90,8 @@ lua5.4 test_real_qrmi.lua
 
 - `qrmi.new(resource_id, resource_type)` — wraps `qrmi_resource_new`
 - `resource:is_accessible()` — `qrmi_resource_is_accessible`
+- `resource:id()` — `qrmi_resource_id`
+- `resource:type()` — `qrmi_resource_type` (converted to the canonical hyphenated string via `qrmi_config_resource_type_to_str`)
 - `resource:acquire()` / `resource:release([token])` — `qrmi_resource_acquire` / `qrmi_resource_release`
 - `resource:task_start(payload)` — `qrmi_resource_task_start`. `payload` is a Lua table mirroring the C API's `QrmiPayload` tagged union, e.g. `{ qiskit_primitive = { program_id = ..., input = ... } }` (Qiskit Primitive payload only for now)
 - `resource:task_status(task_id)` — `qrmi_resource_task_status` (converts the enum to a string)

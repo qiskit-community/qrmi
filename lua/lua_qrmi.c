@@ -222,6 +222,61 @@ static int l_is_accessible(lua_State *L) {
 }
 
 /**
+ * @brief `resource:id()` - Fetch the resource's identifier.
+ *
+ * Wraps qrmi_resource_id(). This just returns the same resource_id string
+ * that was passed to `qrmi.new()`; mainly useful when a resource handle
+ * has been passed around and its original ID needs to be recovered.
+ *
+ * Lua usage:
+ * @code
+ *   local id, err = resource:id()
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments: [1] resource (qrmi.resource userdata).
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (id: string)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_resource_id(lua_State *L) {
+    lua_qrmi_resource_t *ud = check_resource(L, 1);
+    char *id = NULL;
+    QrmiReturnCode rc = qrmi_resource_id(ud->handle, &id);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+    lua_pushstring(L, id);
+    qrmi_string_free(id);
+    return 1;
+}
+
+/**
+ * @brief `resource:type()` - Fetch the resource's type.
+ *
+ * Wraps qrmi_resource_type(), converting the returned QrmiResourceType
+ * enum to its canonical hyphenated string via
+ * qrmi_config_resource_type_to_str() (the same string accepted by
+ * `qrmi.new()`), rather than exposing the raw enum value to Lua.
+ *
+ * Lua usage:
+ * @code
+ *   local type_str, err = resource:type()  -- e.g. "ibm-quantum-system"
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments: [1] resource (qrmi.resource userdata).
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (type: string)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_resource_type(lua_State *L) {
+    lua_qrmi_resource_t *ud = check_resource(L, 1);
+    QrmiResourceType type;
+    QrmiReturnCode rc = qrmi_resource_type(ud->handle, &type);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+    const char *type_str = qrmi_config_resource_type_to_str(type);
+    lua_pushstring(L, type_str ? type_str : "unknown");
+    return 1;
+}
+
+/**
  * @brief `resource:acquire()` - Acquire exclusive access to the quantum resource.
  *
  * Wraps qrmi_resource_acquire(). The returned token is also cached on the
@@ -618,6 +673,8 @@ static int l_resource_gc(lua_State *L) {
 /** @brief Method table installed on the `qrmi.resource` metatable's __index. */
 static const luaL_Reg resource_methods[] = {
     {"is_accessible", l_is_accessible},
+    {"id",            l_resource_id},
+    {"type",          l_resource_type},
     {"acquire",       l_acquire},
     {"release",       l_release},
     {"task_start",    l_task_start},
