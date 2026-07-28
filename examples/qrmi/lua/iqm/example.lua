@@ -13,14 +13,14 @@
 package.cpath = package.cpath .. ";./?.so"
 local qrmi = require("qrmi")
 
-if #arg ~= 4 then
+if #arg ~= 3 then
     print("Missing arguments\n")
-    print("Usage: lua example.lua <backend_name> <resource_type> <program type> <input filename>\n")
+    print("Usage: lua example.lua <qc_alias> <IQM JSON> <job_type('circuit','run' or 'sweep')>\n")
     os.exit(1)
 end
 
 -- Create a resource handle (corresponds to the real qrmi_resource_new)
-local resource, err = qrmi.new(arg[1], arg[2])
+local resource, err = qrmi.new(arg[1], "iqm-server")
 if not resource then
     print("new failed:", err)
     os.exit(1)
@@ -61,18 +61,21 @@ end
 print("acquired, token =", token)
 
 -- Read the task input payload from an external file, using its content as-is.
-local payload_file = io.open(arg[4], "r")
+local payload_file = io.open(arg[2], "r")
 if not payload_file then
-    print("failed to open "  .. arg[4])
+    print("failed to open "  .. arg[2])
     os.exit(1)
 end
 local input_json = payload_file:read("*a")
 payload_file:close()
 
+print("input =", input_json)
 local task_id, start_err = resource:task_start({
-    qiskit_primitive = {
-        program_id = arg[3],
-        input = input_json,
+    iqm_server = {
+        iqmjson = input_json,
+        job_type = arg[3],
+        tag = nil,
+        use_timeslot = false,
     }
 })
 if not task_id then
