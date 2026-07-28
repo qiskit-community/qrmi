@@ -1,5 +1,8 @@
 # Prerequisites
-*.d
+*.
+
+# Testing
+*.coverage
 
 # Compiled Object files
 *.slo
