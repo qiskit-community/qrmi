@@ -1,3 +1,21 @@
+#
+# This code is part of Qiskit.
+#
+# (C) Copyright IBM 2026
+#
+# This program and the accompanying materials are made available under the
+# terms of the GNU General Public License version 3, as published by the
+# Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <[https://www.gnu.org/licenses/gpl-3.0.txt]
+#
+
 cmake_minimum_required(VERSION 3.16)
 project(lua_qrmi C)
 
@@ -89,18 +107,3 @@ set_target_properties(qrmi_module PROPERTIES
 # -----------------------------------------------------------------------------
 install(TARGETS qrmi_module
     LIBRARY DESTINATION lib/lua/${LUA_VERSION})
-
-# -----------------------------------------------------------------------------
-# Test-running target (optional): via ctest or `cmake --build . --target run_test`
-# -----------------------------------------------------------------------------
-find_program(LUA_INTERPRETER NAMES lua5.4 lua5.3 lua5.1 lua)
-if(LUA_INTERPRETER)
-    add_custom_target(run_test
-        COMMAND ${CMAKE_COMMAND} -E env
-            LUA_CPATH="${CMAKE_CURRENT_BINARY_DIR}/?.so"
-            ${LUA_INTERPRETER} ${CMAKE_CURRENT_SOURCE_DIR}/test_real_qrmi.lua
-        DEPENDS qrmi_module
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Running test_real_qrmi.lua")
-endif()
-
