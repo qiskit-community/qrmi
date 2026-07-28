@@ -15,6 +15,23 @@ if not resource then
 end
 print("resource created")
 
+local meta, meta_err = resource:metadata()
+if not meta then
+    print("metadata failed:", meta_err)
+else
+    print("metadata:")
+    for k, v in pairs(meta) do
+        print("  " .. k .. " = " .. tostring(v))
+    end
+end
+
+local target, target_err = resource:target()
+if not target then
+    print("target failed:", target_err)
+else
+    print("target:", target)
+end
+
 local id, id_err = resource:id()
 print("id:", id, id_err)
  
@@ -54,8 +71,6 @@ print("task started, id =", task_id)
 
 
 -- Poll until the task reaches a terminal status (completed/failed/cancelled).
--- max_polls is just a safety net against an infinite loop if something is
--- stuck (e.g. a stale/unreachable resource); it is not a normal exit path.
 local terminal_statuses = { completed = true, failed = true, cancelled = true }
 local status, status_err = resource:task_status(task_id)
 print("status = " .. tostring(status))
@@ -77,23 +92,6 @@ print("result:", result)
 
 local logs = resource:task_logs(task_id)
 print("logs:", logs)
-
-local meta, meta_err = resource:metadata()
-if not meta then
-    print("metadata failed:", meta_err)
-else
-    print("metadata:")
-    for k, v in pairs(meta) do
-        print("  " .. k .. " = " .. tostring(v))
-    end
-end
-
-local target, target_err = resource:target()
-if not target then
-    print("target failed:", target_err)
-else
-    print("target:", target)
-end
 
 local ok, rel_err = resource:release()
 print("release:", ok, rel_err)
