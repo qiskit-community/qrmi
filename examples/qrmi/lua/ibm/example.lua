@@ -2,7 +2,7 @@ package.cpath = package.cpath .. ";./?.so"
 local qrmi = require("qrmi")
 
 -- Create a resource handle (corresponds to the real qrmi_resource_new)
-local resource, err = qrmi.new("ibm_kingston", "qiskit-ibm-runtime")
+local resource, err = qrmi.new("ibm_kingston", "qiskit-runtime-service")
 if not resource then
     print("new failed:", err)
     os.exit(1)
@@ -40,10 +40,24 @@ if not task_id then
 end
 print("task started, id =", task_id)
 
--- Poll the status (the stub returns queued on the 1st call, running on the 2nd, completed after that)
-for i = 1, 3 do
-    local status = resource:task_status(task_id)
-    print("poll " .. i .. ": status =", status)
+
+-- Poll until the task reaches a terminal status (completed/failed/cancelled).
+-- max_polls is just a safety net against an infinite loop if something is
+-- stuck (e.g. a stale/unreachable resource); it is not a normal exit path.
+local terminal_statuses = { completed = true, failed = true, cancelled = true }
+local status, status_err = resource:task_status(task_id)
+print("status = " .. tostring(status))
+
+while status and not terminal_statuses[status] do
+    os.execute("sleep 1")
+    status, status_err = resource:task_status(task_id)
+    print("status = " .. tostring(status))
+end
+
+if not status then
+    print("task_status failed:", status_err)
+elseif not terminal_statuses[status] then
+    print("warning: gave up after " .. max_polls .. " polls, last status = " .. status)
 end
 
 local result = resource:task_result(task_id)
