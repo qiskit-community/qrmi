@@ -345,21 +345,190 @@ static int l_release(lua_State *L) {
     return 1;
 }
 
+
+/**
+ * @brief Build and submit a QRMI_PAYLOAD_QISKIT_PRIMITIVE payload from a Lua sub-table.
+ *
+ * Used for `resource:task_start()`'s "qiskit_primitive" key.
+ *
+ * @param L Lua state.
+ * @param ud Resource to submit the task on.
+ * @param variant_idx Stack index of the sub-table holding `input` and `program_id`.
+ * @return Number of values pushed onto the Lua stack (see l_task_start).
+ */
+static int submit_qiskit_primitive_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
+    lua_getfield(L, variant_idx, "input");
+    const char *input = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "program_id");
+    const char *program_id = luaL_checkstring(L, -1);
+ 
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
+    payload.QISKIT_PRIMITIVE.input = (char *)input;
+    payload.QISKIT_PRIMITIVE.program_id = (char *)program_id;
+ 
+    char *task_id = NULL;
+    QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
+ 
+    lua_settop(L, variant_idx - 1); /* drop variant table, input, program_id */
+ 
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+ 
+    lua_pushstring(L, task_id);
+    qrmi_string_free(task_id);
+    return 1;
+}
+ 
+/**
+ * @brief Build and submit a QRMI_PAYLOAD_IQM_SERVER payload from a Lua sub-table.
+ *
+ * Used for `resource:task_start()`'s "iqm_server" key. `use_timeslot`
+ * defaults to false if omitted; `tag` is optional and passed as NULL if
+ * omitted or nil.
+ *
+ * @param L Lua state.
+ * @param ud Resource to submit the task on.
+ * @param variant_idx Stack index of the sub-table holding `iqmjson`,
+ *                     `job_type`, `use_timeslot`, and `tag`.
+ * @return Number of values pushed onto the Lua stack (see l_task_start).
+ */
+static int submit_iqm_server_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
+    lua_getfield(L, variant_idx, "iqmjson");
+    const char *iqmjson = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "job_type");
+    const char *job_type = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "use_timeslot");
+    int use_timeslot = lua_toboolean(L, -1); /* absent/false -> 0 */
+    lua_getfield(L, variant_idx, "tag");
+    const char *tag = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
+ 
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_IQM_SERVER;
+    payload.IQM_SERVER.iqmjson = (char *)iqmjson;
+    payload.IQM_SERVER.job_type = (char *)job_type;
+    payload.IQM_SERVER.use_timeslot = use_timeslot;
+    payload.IQM_SERVER.tag = (char *)tag;
+ 
+    char *task_id = NULL;
+    QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
+ 
+    lua_settop(L, variant_idx - 1); /* drop variant table, iqmjson, job_type, use_timeslot, tag */
+ 
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+ 
+    lua_pushstring(L, task_id);
+    qrmi_string_free(task_id);
+    return 1;
+}
+
+/**
+ * @brief Build and submit a QRMI_PAYLOAD_PASQAL_CLOUD payload from a Lua sub-table.
+ *
+ * Used for `resource:task_start()`'s "pasqal_cloud" payload key, which is
+ * used for both Pasqal Cloud and Pasqal Local resources: qrmi.h's
+ * QrmiPayload_Tag has only QRMI_PAYLOAD_PASQAL_CLOUD (no separate "local"
+ * tag), so a Pasqal Local resource submits a task using the exact same
+ * payload key and shape as a Pasqal Cloud resource — only the
+ * resource_type differs, not the payload.
+ *
+ * @param L Lua state.
+ * @param ud Resource to submit the task on.
+ * @param variant_idx Stack index of the sub-table holding `sequence` and `job_runs`.
+ * @return Number of values pushed onto the Lua stack (see l_task_start).
+ */
+static int submit_pasqal_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
+    lua_getfield(L, variant_idx, "sequence");
+    const char *sequence = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "job_runs");
+    lua_Integer job_runs = luaL_checkinteger(L, -1);
+ 
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_PASQAL_CLOUD;
+    payload.PASQAL_CLOUD.sequence = (char *)sequence;
+    payload.PASQAL_CLOUD.job_runs = (int32_t)job_runs;
+ 
+    char *task_id = NULL;
+    QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
+ 
+    lua_settop(L, variant_idx - 1); /* drop variant table, sequence, job_runs */
+ 
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+ 
+    lua_pushstring(L, task_id);
+    qrmi_string_free(task_id);
+    return 1;
+}
+
+/**
+ * @brief Build and submit a QRMI_PAYLOAD_ALICE_BOB_FELIS payload from a Lua sub-table.
+ *
+ * Used for `resource:task_start()`'s "alice_bob_felis" key.
+ *
+ * @param L Lua state.
+ * @param ud Resource to submit the task on.
+ * @param variant_idx Stack index of the sub-table holding `human_qir` and `input_params`.
+ * @return Number of values pushed onto the Lua stack (see l_task_start).
+ */
+static int submit_alice_bob_felis_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
+    lua_getfield(L, variant_idx, "human_qir");
+    const char *human_qir = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "input_params");
+    const char *input_params = luaL_checkstring(L, -1);
+ 
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_ALICE_BOB_FELIS;
+    payload.ALICE_BOB_FELIS.human_qir = (char *)human_qir;
+    payload.ALICE_BOB_FELIS.input_params = (char *)input_params;
+ 
+    char *task_id = NULL;
+    QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
+ 
+    lua_settop(L, variant_idx - 1); /* drop variant table, human_qir, input_params */
+ 
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+ 
+    lua_pushstring(L, task_id);
+    qrmi_string_free(task_id);
+    return 1;
+}
+ 
 /**
  * @brief `resource:task_start(payload)` - Start a task.
  *
  * Wraps qrmi_resource_task_start(). Mirrors the C API's QrmiPayload tagged
  * union as a Lua table: the table's single key names the payload variant,
- * and its value is a sub-table holding that variant's fields. Only the
- * Qiskit Primitive variant is currently supported:
+ * and its value is a sub-table holding that variant's fields. Currently
+ * supported variants:
  *
  * @code
+ *   -- Qiskit Primitive (IBM)
  *   payload = { qiskit_primitive = { program_id = "estimator", input = json_str } }
- * @endcode
  *
- * Pasqal/AliceBob/IQM payloads can be added later following the same
- * pattern, using a different top-level key (e.g. "pasqal_cloud") mapped
- * to the corresponding QrmiPayload_Tag and union member.
+ *   -- IQM Server
+ *   payload = {
+ *       iqm_server = {
+ *           iqmjson = json_str,        -- IQM JSON request body
+ *           job_type = "circuit",      -- "circuit", "run", or "sweep"
+ *           use_timeslot = false,      -- optional, defaults to false
+ *           tag = "my-job",            -- optional, may be omitted/nil
+ *       }
+ *   }
+ *
+ *   -- Pasqal Cloud or Pasqal Local (same "pasqal_cloud" key for both;
+ *   -- qrmi.h has only one QRMI_PAYLOAD_PASQAL_CLOUD tag, shared by both
+ *   -- resource types — only resource_type differs, not the payload)
+ *   payload = {
+ *       pasqal_cloud = { sequence = pulser_sequence_str, job_runs = 100 }
+ *   }
+ *
+ *   -- Alice & Bob Felis
+ *   payload = {
+ *       alice_bob_felis = {
+ *           human_qir = qir_str,          -- human-readable QIR input
+ *           input_params = json_str,      -- input parameters, JSON format
+ *       }
+ *   }
+ * @endcode
  *
  * Lua usage:
  * @code
@@ -381,66 +550,42 @@ static int l_release(lua_State *L) {
 static int l_task_start(lua_State *L) {
     lua_qrmi_resource_t *ud = check_resource(L, 1);
     luaL_checktype(L, 2, LUA_TTABLE);
-
-    QrmiPayload payload;
-    int variant_idx; /* stack index of the variant sub-table, for cleanup */
-
+ 
+    int variant_idx; /* stack index of the variant sub-table, set by whichever branch matches */
+ 
     lua_getfield(L, 2, "qiskit_primitive");
     if (lua_istable(L, -1)) {
         variant_idx = lua_gettop(L);
-
-        lua_getfield(L, variant_idx, "input");
-        const char *input = luaL_checkstring(L, -1);
-        lua_getfield(L, variant_idx, "program_id");
-        const char *program_id = luaL_checkstring(L, -1);
-
-        payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
-        payload.QISKIT_PRIMITIVE.input = (char *)input;
-        payload.QISKIT_PRIMITIVE.program_id = (char *)program_id;
-
-        char *task_id = NULL;
-        QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
-        lua_settop(L, variant_idx - 1); /* drop variant table, input, program_id */
-        if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-        lua_pushstring(L, task_id);
-        qrmi_string_free(task_id);
-        return 1;
+        return submit_qiskit_primitive_payload(L, ud, variant_idx);
     }
     lua_pop(L, 1);
-
+ 
     lua_getfield(L, 2, "iqm_server");
     if (lua_istable(L, -1)) {
         variant_idx = lua_gettop(L);
-
-        lua_getfield(L, variant_idx, "iqmjson");
-        const char *iqmjson = luaL_checkstring(L, -1);
-        lua_getfield(L, variant_idx, "job_type");
-        const char *job_type = luaL_checkstring(L, -1);
-        lua_getfield(L, variant_idx, "use_timeslot");
-        int use_timeslot = lua_toboolean(L, -1); /* absent/false -> 0 */
-        lua_getfield(L, variant_idx, "tag");
-        const char *tag = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-
-        payload.tag = QRMI_PAYLOAD_IQM_SERVER;
-        payload.IQM_SERVER.iqmjson = (char *)iqmjson;
-        payload.IQM_SERVER.job_type = (char *)job_type;
-        payload.IQM_SERVER.use_timeslot = use_timeslot;
-        payload.IQM_SERVER.tag = (char *)tag;
-
-        char *task_id = NULL;
-        QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
-        lua_settop(L, variant_idx - 1); /* drop variant table, iqmjson, job_type, use_timeslot, tag */
-        if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-        lua_pushstring(L, task_id);
-        qrmi_string_free(task_id);
-        return 1;
+        return submit_iqm_server_payload(L, ud, variant_idx);
+    }
+    lua_pop(L, 1);
+ 
+    lua_getfield(L, 2, "pasqal_cloud");
+    if (lua_istable(L, -1)) {
+        variant_idx = lua_gettop(L);
+        return submit_pasqal_payload(L, ud, variant_idx);
     }
     lua_pop(L, 1);
 
+    lua_getfield(L, 2, "alice_bob_felis");
+    if (lua_istable(L, -1)) {
+        variant_idx = lua_gettop(L);
+        return submit_alice_bob_felis_payload(L, ud, variant_idx);
+    }
+    lua_pop(L, 1);
+ 
     lua_pushnil(L);
     lua_pushstring(L,
-        "task_start: payload table must contain one of 'qiskit_primitive' "
-        "or 'iqm_server' (Pasqal/AliceBob payload types not yet supported)");
+        "task_start: payload table must contain one of 'qiskit_primitive', "
+        "'iqm_server', 'pasqal_cloud' (used for both Pasqal Cloud and "
+        "Pasqal Local resources), or 'alice_bob_felis'");
     return 2;
 }
 
