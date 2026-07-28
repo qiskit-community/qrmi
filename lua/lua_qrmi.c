@@ -71,7 +71,6 @@ static int push_qrmi_error(lua_State *L, QrmiReturnCode rc) {
     lua_pushnil(L);
     if (err) {
         lua_pushstring(L, err);
-        qrmi_string_free((char *)err);
     } else {
         lua_pushfstring(L, "qrmi error (code=%d)", (int)rc);
     }
@@ -169,7 +168,6 @@ static int l_qrmi_new(lua_State *L) {
         const char *err = qrmi_get_last_error();
         lua_pushnil(L);
         lua_pushstring(L, err ? err : "qrmi_resource_new failed");
-        if (err) qrmi_string_free((char *)err);
         return 2;
     }
 
@@ -664,7 +662,6 @@ static int l_qrmi_load_config(lua_State *L) {
         const char *err = qrmi_get_last_error();
         lua_pushnil(L);
         lua_pushstring(L, err ? err : "qrmi_config_load failed");
-        if (err) qrmi_string_free((char *)err);
         return 2;
     }
 
@@ -727,7 +724,6 @@ static int l_config_resource_def(lua_State *L) {
         const char *err = qrmi_get_last_error();
         lua_pushnil(L);
         lua_pushstring(L, err ? err : "qrmi_config_resource_def_get failed");
-        if (err) qrmi_string_free((char *)err);
         return 2;
     }
 
