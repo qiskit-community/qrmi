@@ -57,7 +57,7 @@ gcc -shared -fPIC -O2 $(pkg-config --cflags lua5.4) \
 
 ## Building with CMake
 
-A `CMakeLists.txt` is included. It always links against the real `libqrmi.so`.
+A `CMakeLists.txt` is included. It always links against the `libqrmi.so`.
 
 Expected layout (header and library in the same directory):
 ```
@@ -96,10 +96,6 @@ artifact's RUNPATH, so there's no need to set `LD_LIBRARY_PATH` at runtime
    `QrmiQuantumResource*` is an opaque pointer. The userdata holds exactly one,
    and the `__gc` metamethod ensures it's automatically `release`d and `free`d
    even if the caller forgets to do so explicitly.
-
-4. **Building the QrmiPayload (tagged union)**
-   Currently only `QRMI_PAYLOAD_QISKIT_PRIMITIVE` is supported. Pasqal Cloud / Alice&Bob Felis / IQM Server
-   can be added following the same pattern (`payload.tag = QRMI_PAYLOAD_XXX; payload.XXX.field = ...;`).
 
 
 ## Not yet implemented (room for extension)
