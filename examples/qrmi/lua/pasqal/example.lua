@@ -73,7 +73,7 @@ print("input =", input_json)
 local task_id, start_err = resource:task_start({
     pasqal_cloud = {
         sequence = input_json,
-        shots = 100,
+        job_runs = 100,
     }
 })
 if not task_id then
