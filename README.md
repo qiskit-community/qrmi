@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS-blue)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi)
 ![C](https://img.shields.io/badge/c-%2300599C.svg?logo=c&logoColor=white)
-[![Lua 5.4+](https://img.shields.io/badge/lua-5.4%2B-2C2D72.svg?logo=lua&logoColor=white)](https://www.lua.org/manual/5.4/)
+[![Lua 5.4+](https://img.shields.io/badge/lua-5.4%2B-blue.svg?logo=lua&logoColor=white)](https://www.lua.org/manual/5.4/)
 [![Minimum rustc 1.91](https://img.shields.io/badge/rustc-1.91+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
 [![Downloads](https://img.shields.io/pypi/dm/qrmi.svg)](https://pypi.org/project/qrmi/)
 [![Downloads](https://static.pepy.tech/badge/qrmi)](https://pepy.tech/project/qrmi)<!--- long-description-skip-end -->
