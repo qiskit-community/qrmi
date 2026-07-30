@@ -6,7 +6,7 @@ A Lua binding for the QRMI C API. Implemented using the Lua C API approach for s
 ## Prerequisites
 
 * Standard Lua (PUC-Rio Lua 5.1-5.4)
-* [QRMI Standalone C library & header](../README.md)
+* [QRMI Standalone C library & header](../README.md#standalone-c-library)
 
 ## Installation of Lua
 
