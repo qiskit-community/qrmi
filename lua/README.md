@@ -1,6 +1,6 @@
 # QRMI Lua Module
 
-A Lua binding for the QRMI C API. Implemented using the Lua C API approach for standard Lua (PUC-Rio Lua 5.1-5.4).
+A Lua binding for the QRMI C API. Implemented using the Lua C API approach for standard Lua ([PUC-Rio Lua](https://www.lua.org/)).
 
 
 ## Prerequisites
