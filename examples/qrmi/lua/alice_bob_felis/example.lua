@@ -81,7 +81,7 @@ local input_json = string.format(
 
 print("input =", input_json)
 local task_id, start_err = resource:task_start({
-    pasqal_cloud = {
+    alice_bob_felis = {
         human_qir = qir_input,
         input_params = input_json,
     }
