@@ -12,6 +12,7 @@ edition.workspace = true
 munge = []
 
 [dependencies]
+pasqal-common = { workspace = true }
 anyhow = { version = "1.0.90", features = ["backtrace"] }
 reqwest = { version = "0.12.14", default-features=false, features = ["json", "rustls-tls-native-roots"] }
 thiserror = "1.0.64"
