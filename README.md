@@ -4,6 +4,9 @@
 [![Current Release](https://img.shields.io/github/release/qiskit-community/qrmi.svg?)](https://github.com/qiskit-community/qrmi/releases)
 ![Platform](https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS-blue)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi)
+[![manylinux: 2_28](https://img.shields.io/badge/manylinux-2__28-blue.svg?logo=linux&logoColor=white)](https://github.com/pypa/manylinux)
+[![C99](https://img.shields.io/badge/C-C99-blue.svg?logo=c&logoColor=white)](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf)
+[![Lua 5.4+](https://img.shields.io/badge/lua-5.4%2B-blue.svg?logo=lua&logoColor=white)](https://www.lua.org/manual/5.4/)
 [![Minimum rustc 1.91](https://img.shields.io/badge/rustc-1.91+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
 [![Downloads](https://img.shields.io/pypi/dm/qrmi.svg)](https://pypi.org/project/qrmi/)
 [![Downloads](https://static.pepy.tech/badge/qrmi)](https://pepy.tech/project/qrmi)<!--- long-description-skip-end -->
