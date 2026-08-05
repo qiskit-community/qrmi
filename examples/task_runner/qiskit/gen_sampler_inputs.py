@@ -19,7 +19,13 @@ import argparse
 import requests
 
 import numpy as np
-from qiskit_ibm_runtime import RuntimeEncoder
+
+try:
+    # qiskit-ibm-runtime >= 0.46
+    from qiskit_ibm_runtime import RuntimeEncoder
+except ModuleNotFoundError:
+    # qiskit_ibm_runtime < 0.46
+    from qiskit_ibm_runtime.utils import RuntimeEncoder
 from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
 from qiskit_ibm_runtime.models import BackendProperties, BackendConfiguration
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
