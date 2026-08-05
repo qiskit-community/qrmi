@@ -89,7 +89,6 @@ def test_status_mapping(task_status, expected):
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return the desired task status
     qrmi.task_status = lambda job_id: task_status
 
     assert job.status() == expected
@@ -114,7 +113,6 @@ def test_done_returns_true_for_completed_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return Completed
     qrmi.task_status = lambda job_id: TaskStatus.Completed
 
     assert job.done() is True
@@ -126,7 +124,6 @@ def test_running_returns_true_for_running_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return Running
     qrmi.task_status = lambda job_id: TaskStatus.Running
 
     assert job.running() is True
@@ -138,7 +135,6 @@ def test_cancelled_returns_true_for_cancelled_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return Cancelled
     qrmi.task_status = lambda job_id: TaskStatus.Cancelled
 
     assert job.cancelled() is True
@@ -150,7 +146,6 @@ def test_errored_returns_true_for_failed_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return Failed
     qrmi.task_status = lambda job_id: TaskStatus.Failed
 
     assert job.errored() is True
@@ -162,7 +157,6 @@ def test_in_final_state_returns_true_for_completed_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return Completed
     qrmi.task_status = lambda job_id: TaskStatus.Completed
 
     assert job.in_final_state() is True
@@ -174,7 +168,6 @@ def test_in_final_state_returns_false_for_running_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to return Running
     qrmi.task_status = lambda job_id: TaskStatus.Running
 
     assert job.in_final_state() is False
@@ -196,7 +189,6 @@ def test_result_is_cached():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_result method to return a fake result
     with patch(
         "qrmi.primitives.runtime_job_v2.ResultDecoder.decode",
         return_value="decoded result",
@@ -215,13 +207,11 @@ def test_result_waits_for_completion():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to simulate a running job followed by completion
     status_sequence = [TaskStatus.Running, TaskStatus.Running, TaskStatus.Completed]
     qrmi.task_status = lambda job_id: (
         status_sequence.pop(0) if status_sequence else TaskStatus.Completed
     )
 
-    # Patch the QRMI task_result method to return a fake result
     qrmi.task_result = lambda job_id: _FakeResult(value="fake result")
 
     with patch("qrmi.primitives.runtime_job_v2.time.sleep", return_value=None):
@@ -236,10 +226,8 @@ def test_result_decodes_payload():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_result method to return a fake encoded result
     qrmi.task_result = lambda job_id: _FakeResult(value="encoded result")
 
-    # Patch the ResultDecoder.decode method to simulate decoding
     with patch(
         "qrmi.primitives.runtime_job_v2.ResultDecoder.decode",
         return_value="decoded result",
@@ -256,13 +244,11 @@ def test_result_polls_until_final_state():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    # Patch the QRMI task_status method to simulate a running job followed by completion
     status_sequence = [TaskStatus.Running, TaskStatus.Running, TaskStatus.Completed]
     qrmi.task_status = lambda job_id: (
         status_sequence.pop(0) if status_sequence else TaskStatus.Completed
     )
 
-    # Patch the QRMI task_result method to return a fake result
     qrmi.task_result = lambda job_id: _FakeResult(value="fake result")
 
     with patch("qrmi.primitives.runtime_job_v2.time.sleep", return_value=None):
