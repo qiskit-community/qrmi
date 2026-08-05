@@ -42,7 +42,7 @@ def get_backend(
 
     Args:
         qrmi: IBM QRMI object
-        use_fractional_gates: Whether to use native “fractional gates” on the device if available.
+        use_fractional_gates: Whether to use native "fractional gates" on the device if available.
 
     Returns:
         qiskit.transpiler.target.Target: Qiskit Transpiler target
