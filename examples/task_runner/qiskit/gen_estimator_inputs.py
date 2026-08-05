@@ -21,7 +21,11 @@ import requests
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
 from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
-from qiskit_ibm_runtime import RuntimeEncoder
+
+try:
+    from qiskit_ibm_runtime import RuntimeEncoder
+except ModuleNotFoundError:
+    from qiskit_ibm_runtime.utils import RuntimeEncoder
 from qiskit_ibm_runtime.models import BackendProperties, BackendConfiguration
 from qiskit import qasm3
 from qiskit.circuit.library import QAOAAnsatz
