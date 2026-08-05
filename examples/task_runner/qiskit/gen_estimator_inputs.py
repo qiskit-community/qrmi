@@ -23,8 +23,10 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
 
 try:
+    # qiskit-ibm-runtime >= 0.46
     from qiskit_ibm_runtime import RuntimeEncoder
 except ModuleNotFoundError:
+    # qiskit_ibm_runtime < 0.46
     from qiskit_ibm_runtime.utils import RuntimeEncoder
 from qiskit_ibm_runtime.models import BackendProperties, BackendConfiguration
 from qiskit import qasm3
