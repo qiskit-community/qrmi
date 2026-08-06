@@ -160,13 +160,15 @@ def test_run_serializes_pub_with_parameters():
     qc.rx(test_param, 0)
     qc.measure_all()
 
-    estimator.run([
-        (
-            qc,
-            SparsePauliOp("Z"),
-            [0.5],
-        )
-    ])
+    estimator.run(
+        [
+            (
+                qc,
+                SparsePauliOp("Z"),
+                [0.5],
+            )
+        ]
+    )
 
     payload = json.loads(qrmi.payload.input)
 
@@ -175,6 +177,7 @@ def test_run_serializes_pub_with_parameters():
     assert len(pub) == 4
     assert pub[2] == [0.5]
     assert pub[3] == 0.015625
+
 
 def test_run_serializes_pub_with_parameters_no_precision():
     """Verify that the circuit parameter values are serialised when parameters are using no precision."""
@@ -191,13 +194,15 @@ def test_run_serializes_pub_with_parameters_no_precision():
     qc.rx(test_param, 0)
     qc.measure_all()
 
-    estimator.run([
-        (
-            qc,
-            SparsePauliOp("Z"),
-            [0.5],
-        )
-    ])
+    estimator.run(
+        [
+            (
+                qc,
+                SparsePauliOp("Z"),
+                [0.5],
+            )
+        ]
+    )
 
     payload = json.loads(qrmi.payload.input)
 

@@ -19,16 +19,20 @@ class _FakeQRMI:
         self.status_calls = 0
 
     def task_stop(self, job_id):
+        """Record the stopped job ID."""
         self.stopped_job = job_id
 
-    def task_status(self, job_id):
+    def task_status(self, _job_id):
+        """Return a completed status and increment the call count."""
         self.status_calls += 1
         return TaskStatus.Completed
 
-    def task_logs(self, job_id):
+    def task_logs(self, _job_id):
+        """Return the logs value."""
         return self.logs_value
 
-    def task_result(self, job_id):
+    def task_result(self, _job_id):
+        """Return a fake result object."""
         return _FakeResult(value="test result")
 
 
@@ -57,7 +61,7 @@ def test_destructor_stops_job_when_enabled():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123", delete_job=True)
 
-    job.__del__()
+    del job
 
     assert qrmi.stopped_job == "job-123"
 
@@ -68,7 +72,7 @@ def test_destructor_does_not_stop_job_by_default():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123", delete_job=False)
 
-    job.__del__()
+    del job
 
     assert qrmi.stopped_job is None
 
@@ -89,7 +93,7 @@ def test_status_mapping(task_status, expected):
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: task_status
+    qrmi.task_status = lambda _job_id: task_status
 
     assert job.status() == expected
 
@@ -113,7 +117,7 @@ def test_done_returns_true_for_completed_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: TaskStatus.Completed
+    qrmi.task_status = lambda _job_id: TaskStatus.Completed
 
     assert job.done() is True
 
@@ -124,7 +128,7 @@ def test_running_returns_true_for_running_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: TaskStatus.Running
+    qrmi.task_status = lambda _job_id: TaskStatus.Running
 
     assert job.running() is True
 
@@ -135,7 +139,7 @@ def test_cancelled_returns_true_for_cancelled_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: TaskStatus.Cancelled
+    qrmi.task_status = lambda _job_id: TaskStatus.Cancelled
 
     assert job.cancelled() is True
 
@@ -146,7 +150,7 @@ def test_errored_returns_true_for_failed_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: TaskStatus.Failed
+    qrmi.task_status = lambda _job_id: TaskStatus.Failed
 
     assert job.errored() is True
 
@@ -157,7 +161,7 @@ def test_in_final_state_returns_true_for_completed_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: TaskStatus.Completed
+    qrmi.task_status = lambda _job_id: TaskStatus.Completed
 
     assert job.in_final_state() is True
 
@@ -168,7 +172,7 @@ def test_in_final_state_returns_false_for_running_job():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_status = lambda job_id: TaskStatus.Running
+    qrmi.task_status = lambda _job_id: TaskStatus.Running
 
     assert job.in_final_state() is False
 
@@ -208,11 +212,11 @@ def test_result_waits_for_completion():
     job = RuntimeJobV2(qrmi, "job-123")
 
     status_sequence = [TaskStatus.Running, TaskStatus.Running, TaskStatus.Completed]
-    qrmi.task_status = lambda job_id: (
+    qrmi.task_status = lambda _job_id: (
         status_sequence.pop(0) if status_sequence else TaskStatus.Completed
     )
 
-    qrmi.task_result = lambda job_id: _FakeResult(value="fake result")
+    qrmi.task_result = lambda _job_id: _FakeResult(value="fake result")
 
     with patch("qrmi.primitives.runtime_job_v2.time.sleep", return_value=None):
         result = job.result()
@@ -226,7 +230,7 @@ def test_result_decodes_payload():
     qrmi = _FakeQRMI()
     job = RuntimeJobV2(qrmi, "job-123")
 
-    qrmi.task_result = lambda job_id: _FakeResult(value="encoded result")
+    qrmi.task_result = lambda _job_id: _FakeResult(value="encoded result")
 
     with patch(
         "qrmi.primitives.runtime_job_v2.ResultDecoder.decode",
@@ -245,11 +249,11 @@ def test_result_polls_until_final_state():
     job = RuntimeJobV2(qrmi, "job-123")
 
     status_sequence = [TaskStatus.Running, TaskStatus.Running, TaskStatus.Completed]
-    qrmi.task_status = lambda job_id: (
+    qrmi.task_status = lambda _job_id: (
         status_sequence.pop(0) if status_sequence else TaskStatus.Completed
     )
 
-    qrmi.task_result = lambda job_id: _FakeResult(value="fake result")
+    qrmi.task_result = lambda _job_id: _FakeResult(value="fake result")
 
     with patch("qrmi.primitives.runtime_job_v2.time.sleep", return_value=None):
         result = job.result()

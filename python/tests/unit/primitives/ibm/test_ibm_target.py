@@ -11,6 +11,7 @@ class _FakeTarget:
 
 class _FakeQRMI:
     def target(self):
+        """Simulate a QRMI target response with a JSON payload."""
         return _FakeTarget(
             json.dumps(
                 {

@@ -70,7 +70,7 @@ def test_inaccessible_resource_is_ignored(
 
     service = QRMIService()
 
-    assert service.resources() == []
+    assert not service.resources()
     assert service.resource("ibm-qpu") is None
 
 

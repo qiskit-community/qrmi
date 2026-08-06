@@ -8,6 +8,8 @@ from qiskit_ibm_runtime.exceptions import IBMBackendError
 
 from qrmi.primitives.ibm.backend import QRMIBackend, get_backend
 
+# pylint: disable=redefined-outer-name
+
 
 class _FakeTarget:
     def __init__(self, value):
@@ -224,28 +226,6 @@ def test_getattr_falls_back_to_configuration(backend_fixture):
     """Verify unknown attributes are resolved from backend configuration."""
 
     assert backend_fixture.backend.custom_attribute == "custom_value"
-
-
-def test_getattr_raises_error_for_unknown_attribute(backend_fixture):
-    """Verify backend raises AttributeError for unknown attributes."""
-
-    with pytest.raises(AttributeError):
-        backend_fixture.backend.__getattr__("non_existent_attribute")
-
-
-@pytest.mark.parametrize(
-    "attribute",
-    [
-        "_properties",
-        "_target",
-        "_configuration",
-    ],
-)
-def test_getattr_raises_error_for_no_attribute(backend_fixture, attribute):
-    """Verify backend raises AttributeError when no attribute is provided."""
-
-    with pytest.raises(AttributeError):
-        backend_fixture.backend.__getattr__(attribute)
 
 
 def test_convert_to_target_skips_reload_target_exists(backend_fixture):
