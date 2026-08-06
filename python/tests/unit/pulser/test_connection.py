@@ -67,7 +67,10 @@ class _FakeQRMI:
 
 
 def _build_sequence() -> pulser.Sequence:
-    register = pulser.Register.from_coordinates([(0.0, 0.0)])
+    register = pulser.Register.from_coordinates(
+        [(0.0, 0.0)],
+        prefix="q",
+    )
     sequence = pulser.Sequence(register, pulser.MockDevice)
     sequence.declare_channel("rydberg", "rydberg_global")
     sequence.add(pulser.Pulse.ConstantPulse(100, 1.0, 0.0, 0.0), "rydberg")
