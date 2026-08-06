@@ -1,3 +1,5 @@
+"""Tests for Sampler V2 base class for IBM QRMI integration."""
+
 import json
 
 from qiskit import QuantumCircuit

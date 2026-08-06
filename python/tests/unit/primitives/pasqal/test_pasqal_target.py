@@ -1,3 +1,5 @@
+"""Tests for QRMI Pasqal Target integration."""
+
 import json
 from unittest.mock import MagicMock, patch
 
@@ -44,10 +46,10 @@ def test_parse_available_devices_invalid_json():
 
     result = _parse_available_devices(qrmi)
 
-    assert result == {}
+    assert not result
 
 
-def test_parse_available_devices_skips_failed_deserializations():
+def test_parse_available_devices_skips_failed():
     """Verify that _parse_available_devices skips devices that fail to deserialize and logs the error."""
     qrmi = MagicMock()
 
@@ -85,10 +87,10 @@ def test_parse_available_devices_empty_list():
 
     result = _parse_available_devices(qrmi)
 
-    assert result == {}
+    assert not result
 
 
-def test_get_device_returns_digital_analog_device_for_emulator():
+def test_get_device_emu_returns_digitalanalogdevice():
     """Verify that get_device returns DigitalAnalogDevice when the resource ID indicates an emulator."""
     qrmi = MagicMock()
     qrmi.resource_id.return_value = "emu"
@@ -118,7 +120,7 @@ def test_get_device_returns_matching_cloud_device():
     assert result is device_a
 
 
-def test_get_device_returns_first_device_for_local_resource():
+def test_get_device_returns_first_device_local_resource():
     """Verify that get_device returns the first device when the resource ID does not match any cloud device."""
     qrmi = MagicMock()
     qrmi.resource_id.return_value = "local"
@@ -138,7 +140,7 @@ def test_get_device_returns_first_device_for_local_resource():
     assert result is first_device
 
 
-def test_get_device_raises_stop_iteration_when_no_devices_available():
+def test_get_device_raises_error_no_devices_available():
     """Verify that get_device raises StopIteration when no devices are available."""
     qrmi = MagicMock()
     qrmi.resource_id.return_value = "physical"
