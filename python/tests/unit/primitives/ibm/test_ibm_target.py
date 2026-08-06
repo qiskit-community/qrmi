@@ -1,3 +1,5 @@
+"""Tests for IBM Target for IBM QRMI integration."""
+
 import json
 from unittest.mock import MagicMock, patch
 
@@ -11,6 +13,7 @@ class _FakeTarget:
 
 class _FakeQRMI:
     def target(self):
+        """Simulate a QRMI target response with a JSON payload."""
         return _FakeTarget(
             json.dumps(
                 {

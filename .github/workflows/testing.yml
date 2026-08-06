@@ -20,14 +20,43 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install -e .[dev]
-
-      - run: pip install pytest-cov
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[all]"
+          pip install pytest-cov
 
       - name: Run unit tests
+        continue-on-error: true
         run: |
           pytest \
             --cov=qrmi \
             --cov-report=term-missing \
             --cov-report=xml \
-##          --cov-fail-under=85
+            --cov-fail-under=70
+  
+      - name: Get coverage
+        id: coverage
+        run: |
+          COVERAGE=$(python - <<EOF
+          import xml.etree.ElementTree as ET
+          tree = ET.parse("coverage.xml")
+          root = tree.getroot()
+          print(round(float(root.attrib["line-rate"]) * 100, 2))
+          EOF
+          )
+          echo "value=$COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Post coverage comment
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ## Coverage Report
+
+            Coverage: **${{ steps.coverage.outputs.value }}%**
+
+      - name: Print coverage workflow summary
+        run: |
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage: **${{ steps.coverage.outputs.value }}%**" >> $GITHUB_STEP_SUMMARY

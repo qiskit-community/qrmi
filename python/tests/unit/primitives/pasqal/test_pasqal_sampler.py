@@ -45,6 +45,7 @@ class _FakeQRMI:
     def __init__(self):
         """Create a minimal QRMI stub."""
         self.payloads = []
+        self.task_stop_called = False
 
     def task_start(self, payload):
         """Track payload and return job id."""
@@ -76,7 +77,6 @@ class _FakeQRMI:
     def task_stop(self, _job_id):
         """No-op stop."""
         self.task_stop_called = True
-        return None
 
     def resource_id(self):
         """Return emulator-style resource identifier."""
@@ -167,8 +167,8 @@ def test_run_options_flow_to_job(monkeypatch):
 @patch("qrmi.primitives.pasqal.sampler.gen_seq")
 def test_run_passes_values_to_sequence_build(
     mock_gen_seq,
-    mock_get_register,
-    mock_get_device,
+    _mock_get_register,
+    _mock_get_device,
 ):
     """Verify parameter values are passed to sequence.build()."""
 
@@ -315,14 +315,14 @@ def test_extract_counts_returns_valid_counts():
     assert counts == {"00": 3, "11": 1}
 
 
-def test_extract_counts_raises_error_with_invalid_counter():
+def test_extract_counts_raises_error_invalid_counter():
     """Raise RuntimeError when the counter payload is not a dict."""
     payload = {"counter": "not a dict"}
     with pytest.raises(RuntimeError):
         pasqal_sampler._extract_counts(payload)
 
 
-def test_extract_counts_raises_error_with_no_valid_counts():
+def test_extract_counts_raises_error_no_valid_counts():
     """Raise RuntimeError when there are no valid counts in the counter payload."""
     payload = {"counter": {"00": "not a number", "11": None}}
     with pytest.raises(RuntimeError):
@@ -397,7 +397,7 @@ def test_result_returns_primitive_result(
 @patch("qrmi.primitives.pasqal.sampler.time.time")
 def test_result_raises_timeout(
     mock_time,
-    mock_sleep,
+    _mock_sleep,
 ):
     """Raise TimeoutError when task execution exceeds timeout."""
 
@@ -436,18 +436,17 @@ def test_result_raises_when_job_fails():
         job.result()
 
 
-from unittest.mock import MagicMock, patch
-
-from qiskit.providers import JobStatus
-
-
 @patch("qrmi.primitives.pasqal.sampler.time.sleep")
 @patch("qrmi.primitives.pasqal.sampler._extract_counts", return_value={"00": 100})
 @patch(
     "qrmi.primitives.pasqal.sampler._normalize_pasqal_payload",
     return_value={"result": "parsed"},
 )
-def test_result_polls_until_done(mock_normalize, mock_extract_counts, mock_sleep):
+def test_result_polls_until_done(
+    _mock_normalize,
+    _mock_extract_counts,
+    mock_sleep,
+):
     """Poll job status until a final state is reached."""
 
     qrmi = MagicMock()
