@@ -358,5 +358,5 @@ class PulserQRMIConnection(RemoteConnection):
         return Results.from_final_bitstrings(
             atom_order=sequence.get_register(include_mappable=True).qubit_ids,
             total_duration=sequence.get_duration(),
-            final_bitstrings=bitstring_counts
+            final_bitstrings=bitstring_counts,
         )
