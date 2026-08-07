@@ -32,7 +32,6 @@ from pulser.backend.remote import (
 )
 from pulser.devices import Device
 from pulser.backend.results import Results
-from pulser.result import SampledResult
 
 from qrmi import Payload, QuantumResource, TaskStatus, ResourceType  # type: ignore
 from qrmi.pulser.service import QRMIService
@@ -330,8 +329,12 @@ class PulserQRMIConnection(RemoteConnection):
         return _QRMI_TASK_STATUS_MAP.get(status, JobStatus.ERROR)
 
     def _task_result_to_results(self, task_id: str) -> Results:
+        """
+        Fetch final results from the QRMI and parse them in a pulser.Results object
+        """
         raw_result = self._qrmi.task_result(task_id).value
         parsed_result = _normalize_json_payload(raw_result)
+
         counter_payload = parsed_result.get("counter")
         if not isinstance(counter_payload, dict):
             raise RemoteResultsError(
@@ -351,12 +354,9 @@ class PulserQRMIConnection(RemoteConnection):
         sequence = self._task_sequences.get(task_id)
         if sequence is None:
             raise RemoteResultsError(f"Missing sequence context for task {task_id!r}.")
-        register = sequence.get_register(include_mappable=True)
-        basis = sequence.get_measurement_basis()
-        if basis is None:
-            raise RemoteResultsError(f"Missing measurement basis for task {task_id!r}.")
-        return SampledResult(  # pylint: disable=no-value-for-parameter
-            atom_order=tuple(register.qubit_ids),
-            meas_basis=basis,
-            bitstring_counts=bitstring_counts,
+
+        return Results.from_final_bitstrings(
+            atom_order=sequence.get_register(include_mappable=True).qubit_ids,
+            total_duration=sequence.get_duration(),
+            final_bitstrings=bitstring_counts
         )
