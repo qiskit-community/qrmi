@@ -231,6 +231,7 @@ def test_remote_results_return_results() -> None:
 
     assert len(results) == 1
     assert isinstance(results[0], Results)
+    assert "bitstrings" in results[0].get_result_tags()
     assert results[0].final_bitstrings == {"0": 3}
 
 
