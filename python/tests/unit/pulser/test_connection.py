@@ -5,7 +5,7 @@ import json
 import pulser
 import pytest
 from pulser.backend.remote import RemoteResultsError
-from pulser.result import SampledResult
+from pulser.backend.results import Results
 from qrmi import (
     ResourceType,
     TaskStatus,
@@ -67,7 +67,7 @@ class _FakeQRMI:
 
 
 def _build_sequence() -> pulser.Sequence:
-    register = pulser.Register.from_coordinates([(0.0, 0.0)])
+    register = pulser.Register.from_coordinates([(0.0, 0.0)], prefix="q")
     sequence = pulser.Sequence(register, pulser.MockDevice)
     sequence.declare_channel("rydberg", "rydberg_global")
     sequence.add(pulser.Pulse.ConstantPulse(100, 1.0, 0.0, 0.0), "rydberg")
@@ -199,7 +199,7 @@ def test_submit_wait_false_returns_remote_results() -> None:
     assert remote_results.batch_id == "job-1"
     assert remote_results.job_ids == ["job-1"]
     assert len(remote_results.results) == 1
-    assert remote_results.results[0].bitstring_counts == {"0": 3}
+    assert remote_results.results[0].final_bitstrings == {"0": 3}
 
 
 def test_submit_wait_true_returns_remote_results() -> None:
@@ -215,11 +215,11 @@ def test_submit_wait_true_returns_remote_results() -> None:
     assert remote_results.batch_id == "job-1"
     assert remote_results.job_ids == ["job-1"]
     assert len(remote_results.results) == 1
-    assert remote_results.results[0].bitstring_counts == {"0": 3}
+    assert remote_results.results[0].final_bitstrings == {"0": 3}
 
 
-def test_remote_results_return_sampled_result() -> None:
-    """Return sampled results from a completed QRMI task."""
+def test_remote_results_return_results() -> None:
+    """Return results from a completed QRMI task."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
     remote_results = connection.submit(
         _build_sequence(),
@@ -230,8 +230,8 @@ def test_remote_results_return_sampled_result() -> None:
     results = remote_results.results
 
     assert len(results) == 1
-    assert isinstance(results[0], SampledResult)
-    assert results[0].bitstring_counts == {"0": 3}
+    assert isinstance(results[0], Results)
+    assert results[0].final_bitstrings == {"0": 3}
 
 
 def test_remote_results_raise_when_task_is_running() -> None:
