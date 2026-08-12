@@ -1,7 +1,7 @@
 use alice_bob_felis::apis::{configuration, health_service, targets_service};
 use alice_bob_felis::helpers::decode_api_key;
 
-const API_KEY: &str = "dXNlcjpwYXNzd29yZA=="; // pragma: allowlist secret
+const API_KEY: &str = "bW9jay1mZWxpcy11c2VyOm1vY2stZmVsaXMtcGFzc3dvcmQ=";
 
 fn prepare_config(endpoint: String) -> configuration::Configuration {
     let mut config = configuration::Configuration::new();
