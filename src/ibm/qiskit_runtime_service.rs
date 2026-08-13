@@ -255,7 +255,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
                 .map_err(|e| classify(e, ResourceKind::Session))?;
         } else {
             // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtim.
-            // Displays "Completed" on the IQP web.
+            // Displays “Completed” on the IQP web.
             sessions_api::update_session(
                 &self.config,
                 acquisition_token,

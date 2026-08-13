@@ -66,10 +66,16 @@ If you would like to add to the existing documentation, follow these steps:
 
          new_topic
 
-#. To test and verify the changes locally (and identify any errors), run the following command:
+.. _building_documentation:
+
+Building Documentation Locally
+------------------------------
+
+To build, test and verify the changes locally (and identify any errors), run the following commands:
 
    .. code-block:: bash
 
+      cd docs/
       sphinx-autobuild . _build/html/
 
 
@@ -97,6 +103,23 @@ Prerequisites
    -  ``brew install doxygen`` for MacOS
 
 .. tabs::
+
+   .. tab:: Rust API
+
+      To build the Rust API docs locally, run the following command:
+      
+      .. code-block:: shell-session
+
+         . ~/.cargo/env
+         cargo doc --no-deps --open
+
+   .. tab:: C API
+
+      To build the C API docs locally, run the following command:
+
+      .. code-block:: shell-session
+
+         doxygen Doxyfile
 
    .. tab:: Python API
 
@@ -126,23 +149,6 @@ Prerequisites
       .. code-block:: shell-session
 
          server> q
-
-   .. tab:: Rust API
-
-      To build the Rust API docs locally, run the following command:
-      
-      .. code-block:: shell-session
-
-         . ~/.cargo/env
-         cargo doc --no-deps --open
-
-   .. tab:: C API
-
-      To build the C API docs locally, run the following command:
-
-      .. code-block:: shell-session
-
-         doxygen Doxyfile
 
       By default, the HTML documents will be created in the ``build/doxygen/html/``
       directory. Open ``buid/doxygen/html/index.html`` in your web browser.

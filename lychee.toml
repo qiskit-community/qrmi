@@ -31,12 +31,10 @@ exclude = [
     # GitHub Pages links that may not exist in PR builds
     "https://qiskit-community.github.io/qrmi/.*",
 
-    # IBM authenticated/API endpoints
+    # Provider authenticated/API endpoints
     "https://iam.cloud.ibm.com/.*",
     "https://quantum.cloud.ibm.com/.*",
     "https://s3.us-east.cloud-object-storage.appdomain.cloud/.*",
-
-    # Provider endpoints requiring authentication
     "https://resonance.meetiqm.com/.*",
     "https://api.alice-bob.com/.*",
 

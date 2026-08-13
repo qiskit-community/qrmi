@@ -283,12 +283,8 @@ before submitting a PR, follow our :ref:`style and linting documentation <contri
 Help and Support
 ~~~~~~~~~~~~~~~~
 
-For solutions to common issues, you can access our :ref:`Troubleshooting <troubleshooting>`
-and :ref:`FAQ <faq>`.
-
-For further questions, comments and discussion, please consider `joining the Qiskit Slack community`_.
-
-.. _joining the Qiskit Slack community: https://qisk.it/join-slack
+If you require support, our :ref:`help and support documentation <help_and_support>` provides up-to-date links to
+further guidance and our communication channels. Please don't hesitate to get in touch!
 
 
 License

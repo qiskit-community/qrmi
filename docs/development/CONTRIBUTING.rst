@@ -73,7 +73,30 @@ of QRMI, etc.).
 
 .. tabs::
 
-   .. tab:: Python
+   .. tab:: Conda (Rust/C)
+
+      For Conda users, a new environment can be created as follows:
+
+      .. code-block:: bash
+
+         conda create -y -n QRMIDevenv python=3
+         conda activate QRMIDevenv
+
+      Install the QRMI Rust/C dependencies:
+
+      .. code-block:: bash
+
+         . ~/.cargo/env
+         cargo clean
+         cargo build --locked --release
+
+      Optionally, you can install the Python dependencies too:
+
+      .. code-block:: bash
+
+         pip install -e .
+
+   .. tab:: venv (Python)
 
       All Python versions supported by Qiskit include a built-in virtual
       environment module, `venv`_.
@@ -117,20 +140,6 @@ of QRMI, etc.).
 
          pip install -r requirements-dev.txt
 
-   .. tab:: Conda
-
-      For Conda users, a new environment can be created as follows:
-
-      .. code-block:: bash
-
-         conda create -y -n QRMIDevenv python=3
-         conda activate QRMIDevenv
-
-      Install the QRMI dependencies:
-
-      .. code-block:: bash
-
-         pip install -e .
 
 Install QRMI from source
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -186,24 +195,27 @@ When submitting a pull request for review, please ensure that:
    -  ``make fmt-rust``
    -  ``make fmt-python``
 
-#. The **documentation has been updated** accordingly. In particular, if a
-   function or class has been modified during the PR, please update the
-   **docstring** accordingly.
+#. The **documentation has been updated** accordingly and **any new documentation 
+   has been added**. Ensure the documentation can be 
+   :ref:`successfully built locally <building_documentation>` before requesting 
+   workflows to run.
 
-#. If your changes warrant additional tests, feel free to include them.
+#. Any changes to functions or classes are reflected in **updated docstrings**.
 
-#. Ensure that if your change impacts the end-user (new feature, deprecation, 
-   removal, etc.) that you have added a Reno release note for that change and that
+#. Any additional tests, where warranted, have been added and tested locally.
+
+#. Any changes that impact the end-user (new feature, deprecation, 
+   removal, etc.) include a Reno release note for that change and that
    the PR is tagged for the changelog.
 
-#. Ensure all contributors have signed the :ref:`CLA <contributing_cla>`.
+#. All contributors have signed the :ref:`CLA <contributing_cla>`.
 
 #. The PR has a concise and descriptive title.
 
    - ``Fixes Issue1234`` is a bad title. ``Fix <ERROR_NAME>`` is much more descriptive.
 
-#. If the PR addresses an open issue, the PR description includes the
-   ``Fixes #<ISSUE_NUMBER>`` syntax to link the PR to that issue.
+#. The PR description includes the ``Fixes #<ISSUE_NUMBER>`` syntax to link the PR to
+   the relevant open issue.
 
    - You must use the **exact phrasing** for GitHub to automatically close the issue when the PR merges.
 
@@ -239,7 +251,7 @@ Find ``.pre-commit-config.yaml`` for the initial setup.
 
 This file maximises the detection coverage.
 
-Handling False Positives
+Handling false positives
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the pre-commit hook identifies a secret that you have verified is not sensitive
@@ -252,7 +264,7 @@ Once updated, include the modified .secrets.baseline in your PR to ensure the pr
    detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
    detect-secrets audit .secrets.baseline
 
-Manual Execution and Overrides
+Manual execution and overrides
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To manually trigger a scan of all files in the repository for a local sanity check,
@@ -262,7 +274,7 @@ execute the following command:
 
    pre-commit run --all-files
 
-Bypassing the Hook
+Bypassing the hook
 ^^^^^^^^^^^^^^^^^^
 
 .. warning:: 
@@ -315,7 +327,7 @@ any existing tests and that newly added tests run successfully. Before
 you open a new pull request for your change, run QRMI's Python test suite. If you've
 modified native code, you should also run its Rust-based unit tests.
 
-Running Unit Tests
+Running unit tests
 ~~~~~~~~~~~~~~~~~~
 
 .. tabs::
@@ -416,29 +428,6 @@ Style and linting
 
 .. tabs::
 
-   .. tab:: Python
-
-      Execute the following commands to fix any formatting issues before submitting a PR.
-
-      .. code-block:: shell-session
-
-         $ source ~/py312_qrmi_venv/bin/activate
-         $ cd examples
-         $ pylint ./python
-         $ black --check ./python
-
-      QRMI uses two tools for Python code formatting and lint checking. The
-      first tool is `black`_ which is a code formatting tool that will automatically
-      update the code formatting to a consistent style.
-
-      .. _black: https://github.com/psf/black
-
-      The second tool is `pylint`_, which is a code linter capable of deeper
-      analysis of the Python code to find both style issues and potential bugs
-      and other common issues.
-
-      .. _pylint: https://pypi.org/project/pylint/
-
    .. tab:: Rust
 
       Execute the following commands to fix any formatting issues before submitting a PR.
@@ -468,6 +457,29 @@ Style and linting
       with a few QRMI-specific adjustments.
 
       .. _clang-format: https://clang.llvm.org/docs/ClangFormat.html
+
+   .. tab:: Python
+
+      Execute the following commands to fix any formatting issues before submitting a PR.
+
+      .. code-block:: shell-session
+
+         $ source ~/py312_qrmi_venv/bin/activate
+         $ cd examples
+         $ pylint ./python
+         $ black --check ./python
+
+      QRMI uses two tools for Python code formatting and lint checking. The
+      first tool is `black`_ which is a code formatting tool that will automatically
+      update the code formatting to a consistent style.
+
+      .. _black: https://github.com/psf/black
+
+      The second tool is `pylint`_, which is a code linter capable of deeper
+      analysis of the Python code to find both style issues and potential bugs
+      and other common issues.
+
+      .. _pylint: https://pypi.org/project/pylint/
 
 .. _contributing_release:
 
@@ -499,3 +511,9 @@ To create a new release, the following files must be updated:
      #define QRMI_VERSION_MAJOR 0
      #define QRMI_VERSION_MINOR 14
      #define QRMI_VERSION_PATCH 1
+
+Help and Support
+----------------
+
+If you require support, our :ref:`help and support documentation <help_and_support>` provides up-to-date links to
+further guidance and our communication channels. Please don't hesitate to get in touch!

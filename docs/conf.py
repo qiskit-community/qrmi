@@ -18,12 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 project = "Quantum Resource Management Interface (QRMI)"
 
-author = (
-    "Bacher, Utz and Birmingham, Mark and Carothers, Christopher D and "
-    "Damin, Andrew and Calaza, Carlos D Gonzalez and Karnad, Ashwin Kumar "
-    "and Mensa, Stefano and Moreau, Matthieu and Nober, Aurelien and "
-    "Ohtani, Munetaka and others"
-)
+author = "Hartree Centre"
 
 copyright = f"2026, {author}"
 
@@ -66,9 +61,6 @@ suppress_warnings = [
 
 autodoc_mock_imports = [
     "iqm",
-    "pulser",
-    "qiskit_ibm_runtime",
-    "qiskit_pasqal_provider",
 ]
 
 
@@ -167,13 +159,36 @@ html_js_files = [
 ]
 
 html_theme_options = {
-    "discussion_url": "https://github.com/qiskit-community",
-    "github_url": "https://github.com/qiskit-community/qrmi",
+    # "discussion_url": "",
     "nav_links": [
         {
             "title": "SPANK Plugins",
             "url": "https://github.com/qiskit-community/spank-plugins",
             "external": True,
+        },
+    ],
+    "nav_socials": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/lepture/shibuya",
+            "icon": "simple-icons:github",
+        },
+        {
+            "name": "Slack",
+            "url": "https://qisk.it/join-slack",
+            "icon": "simple-icons:slack",
+        },
+    ],
+    "foot_socials": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/lepture/shibuya",
+            "icon": "simple-icons:github",
+        },
+        {
+            "name": "Slack",
+            "url": "https://qisk.it/join-slack",
+            "icon": "simple-icons:slack",
         },
     ],
 }
