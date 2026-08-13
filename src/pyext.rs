@@ -40,7 +40,31 @@ pub enum ResourceType {
 #[pyo3(name = "QuantumResource")]
 pub struct PyQuantumResource {
     qrmi: Box<dyn QuantumResource + Send + Sync>,
-    rt: Runtime,
+    // `ManuallyDrop`, not a plain `Runtime`, so `Drop` below can take
+    // ownership and call `shutdown_background()` instead of letting the
+    // field's own destructor run. Existing `self.rt.block_on(...)` call
+    // sites are unaffected: `ManuallyDrop<T>` derefs to `T` transparently.
+    rt: std::mem::ManuallyDrop<Runtime>,
+}
+
+impl Drop for PyQuantumResource {
+    fn drop(&mut self) {
+        // `Runtime`'s own `Drop` blocks the current thread indefinitely
+        // until every spawned task finishes. That is a problem here
+        // specifically: Python drops objects while holding the GIL, and
+        // if a worker thread needs the GIL to log something (e.g. an
+        // in-flight HTTP request logged at `RUST_LOG=trace`) before it can
+        // finish, that worker waits for the GIL forever while this thread
+        // waits for that worker forever. `shutdown_background()` discards
+        // the runtime without waiting for anything, which avoids the
+        // deadlock entirely (in exchange for not waiting for in-flight
+        // background work to finish cleanly on drop).
+        //
+        // SAFETY: `self.rt` is only ever taken here, in `Drop::drop`,
+        // which runs at most once per instance.
+        let rt = unsafe { std::mem::ManuallyDrop::take(&mut self.rt) };
+        rt.shutdown_background();
+    }
 }
 
 impl PyQuantumResource {
@@ -48,7 +72,9 @@ impl PyQuantumResource {
     pub(crate) fn from_inner(qrmi: Box<dyn QuantumResource + Send + Sync>) -> Self {
         Self {
             qrmi,
-            rt: Runtime::new().unwrap(),
+            rt: std::mem::ManuallyDrop::new(
+                Runtime::new().expect("Failed to create a new tokio runtime."),
+            ),
         }
     }
 }
@@ -102,7 +128,9 @@ impl PyQuantumResource {
 
         Ok(Self {
             qrmi,
-            rt: Runtime::new().unwrap(),
+            rt: std::mem::ManuallyDrop::new(
+                Runtime::new().expect("Failed to create a new tokio runtime."),
+            ),
         })
     }
 
@@ -313,7 +341,20 @@ impl PyResourceDef {
 #[pyo3(name = "ResourceProvider")]
 pub struct PyResourceProvider {
     inner: Box<dyn crate::ResourceProvider>,
-    rt: Runtime,
+    // See `PyQuantumResource`'s `rt` field and `Drop` impl for why this is
+    // `ManuallyDrop` rather than a plain `Runtime`.
+    rt: std::mem::ManuallyDrop<Runtime>,
+}
+
+impl Drop for PyResourceProvider {
+    fn drop(&mut self) {
+        // See `PyQuantumResource`'s `Drop` impl for why.
+        //
+        // SAFETY: `self.rt` is only ever taken here, in `Drop::drop`,
+        // which runs at most once per instance.
+        let rt = unsafe { std::mem::ManuallyDrop::take(&mut self.rt) };
+        rt.shutdown_background();
+    }
 }
 
 #[gen_stub_pymethods]
@@ -349,7 +390,9 @@ impl PyResourceProvider {
         };
         Ok(Self {
             inner,
-            rt: Runtime::new().unwrap(),
+            rt: std::mem::ManuallyDrop::new(
+                Runtime::new().expect("Failed to create a new tokio runtime."),
+            ),
         })
     }
 
@@ -489,6 +532,15 @@ impl PyConfig {
 /// particular sink happens to call into Python; that's this module's
 /// business alone. Compare `cext::qrmi_log_callback_set`, which adapts a
 /// C function pointer into the same `LogSink` shape at its own boundary.
+///
+/// Uses `Python::try_attach`, not `Python::attach`: a log record can be
+/// emitted from a `__del__` running during CPython interpreter
+/// finalization (`Py_FinalizeEx`) -- attempting to (re-)acquire the GIL
+/// in that window is a known hazard (documented on `Python::attach`
+/// itself, and the subject of e.g. PyO3#5317: repeatedly attaching during
+/// finalization has hung or segfaulted). `try_attach` returns `None`
+/// instead in that case; we simply drop the record rather than risk
+/// hanging the interpreter shutdown to deliver a log line.
 fn python_log_sink(level: log::Level, target: &str, message: &str) {
     // Python's `logging` module level numbers (see Python's `logging`
     // module docs / `Lib/logging/__init__.py`: CRITICAL=50, ERROR=40,
@@ -504,7 +556,7 @@ fn python_log_sink(level: log::Level, target: &str, message: &str) {
         log::Level::Debug | log::Level::Trace => 10,
     };
 
-    Python::attach(|py| {
+    Python::try_attach(|py| {
         let Ok(logging) = py.import("logging") else {
             return;
         };
@@ -544,6 +596,10 @@ fn python_log_sink(level: log::Level, target: &str, message: &str) {
 /// - If `callback` raises, the exception is printed (as an unhandled
 ///   exception would be) and otherwise discarded; it cannot propagate
 ///   back into the Rust code that logged in the first place.
+/// - Like `python_log_sink`, this uses `Python::try_attach`: if a record
+///   is emitted while the interpreter is finalizing, `callback` is simply
+///   not called for it rather than risking the same hang/segfault hazard
+///   `Python::attach` has in that window.
 #[gen_stub_pyfunction]
 #[pyfunction]
 fn set_log_callback(callback: Option<Py<PyAny>>) -> PyResult<()> {
@@ -551,7 +607,7 @@ fn set_log_callback(callback: Option<Py<PyAny>>) -> PyResult<()> {
     let sink: Option<crate::common::LogSink> = callback.map(|callback| {
         let sink: crate::common::LogSink =
             std::sync::Arc::new(move |level: log::Level, target: &str, message: &str| {
-                Python::attach(|py| {
+                Python::try_attach(|py| {
                     if let Err(err) = callback.call1(py, (level.as_str(), target, message)) {
                         err.print(py);
                     }
