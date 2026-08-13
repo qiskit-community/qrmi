@@ -4,15 +4,28 @@
 name: Sphinx Documentation
 
 on:
-  pull_request:
-    paths:
-      - "docs/**"
-      - "python/**"
-      - "Cargo.toml"
-      - "Doxyfile"
   push:
     branches:
       - main
+    paths:
+      - 'docs/**'
+      - 'python/**'
+      - 'src/**'
+      - '**/*.h'
+      - 'Cargo.toml'
+      - 'pyproject.toml'
+      - 'Doxyfile'
+  pull_request:  
+    branches:
+    - main
+    paths:
+      - 'docs/**'
+      - 'python/**'
+      - 'src/**'
+      - '**/*.h'
+      - 'Cargo.toml'
+      - 'pyproject.toml'
+      - 'Doxyfile'
   workflow_dispatch:
 
 permissions:
@@ -32,6 +45,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+        # Executes related steps if changes are detected
+      - name: Detect changed files
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+
+            python:
+              - 'python/**'
+
+            rust:
+              - 'src/**'
+              - 'Cargo.toml'
+
+            c:
+              - '**/*.h'
+              - 'Doxyfile'
+
+            build:
+              - 'pyproject.toml'
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -47,10 +83,17 @@ jobs:
           pip install -e .[docs]
 
       - name: Build Python API documentation
+        if: |
+          steps.changes.outputs.python == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
+          pip install -e .[all]
           sphinx-apidoc --no-toc -o docs/api/python/ python/qrmi/
 
       - name: Verify Python API documentation
+        if: |
+          steps.changes.outputs.python == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
           test "$(find docs/api/python -name '*.rst' | wc -l)" -gt 0
 
@@ -61,10 +104,16 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build Rust API documentation
+        if: |
+          steps.changes.outputs.rust == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
           cargo doc --no-deps
 
       - name: Verify Rust API documentation
+        if: |
+          steps.changes.outputs.rust == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
           test -f target/doc/qrmi/index.html
 
@@ -74,11 +123,17 @@ jobs:
           sudo apt-get install -y doxygen
 
       - name: Generate Doxygen XML
+        if: |
+          steps.changes.outputs.c == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
           mkdir -p build/doxygen
           doxygen Doxyfile
 
       - name: Verify Doxygen XML
+        if: |
+          steps.changes.outputs.c == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
           test -s build/doxygen/xml/index.xml
 
@@ -99,6 +154,9 @@ jobs:
             docs docs/_build/linkcheck
 
       - name: Add Rust API documentation to Sphinx
+        if: |
+          steps.changes.outputs.rust == 'true' ||
+          steps.changes.outputs.build == 'true'
         run: |
           mkdir -p docs/_build/html/rust
           cp -R target/doc/* docs/_build/html/rust/
