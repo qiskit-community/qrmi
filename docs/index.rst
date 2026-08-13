@@ -56,8 +56,9 @@ Quantum Resource Management Interface (QRMI)
 
    <div style="text-align:center">
 
-|License| |Current Release| |Platform| |PyPI - Python Version| |Minimum
-rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
+|License| |Current Release| |Platform| \ 
+ |PyPI - Python Version| |manylinux| |C99| |Lua| |Minimum rustc 1.91| \ 
+ |Downloads| |Download2| |DOI| |arXiv| |CI|
 
 .. raw:: html
 
@@ -69,11 +70,14 @@ rustc 1.91| |Downloads| |image1|\  |DOI| |arXiv| |CI|
    :target: https://github.com/qiskit-community/qrmi/releases
 .. |Platform| image:: https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS-blue
 .. |PyPI - Python Version| image:: https://img.shields.io/pypi/pyversions/qrmi
+.. |manylinux| image:: https://img.shields.io/badge/manylinux-2__28-blue.svg?logo=linux&logoColor=white
+.. |C99| image:: https://img.shields.io/badge/C-C99-blue.svg?logo=c&logoColor=white
+.. |Lua| image:: https://img.shields.io/badge/lua-5.4%2B-blue.svg?logo=lua&logoColor=white
 .. |Minimum rustc 1.91| image:: https://img.shields.io/badge/rustc-1.91+-blue.svg
    :target: https://rust-lang.github.io/rfcs/2495-min-rust-version.html
 .. |Downloads| image:: https://img.shields.io/pypi/dm/qrmi.svg
    :target: https://pypi.org/project/qrmi/
-.. |image1| image:: https://static.pepy.tech/badge/qrmi
+.. |Download2| image:: https://static.pepy.tech/badge/qrmi
    :target: https://pepy.tech/project/qrmi
 .. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.20650771.svg
    :target: https://doi.org/10.5281/zenodo.20650771
@@ -145,7 +149,7 @@ References and Acknowledgements
    #. IBM Quantum https://www.ibm.com/quantum
    #. Pasqal https://pasqal.com
    #. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
-   #. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
+   #. Rensselaer Polytechnic Institute, Center for Computational Innovation, https://cci.rpi.edu/
    #. Alice & Bob https://alice-bob.com/
 
 
@@ -155,6 +159,7 @@ References and Acknowledgements
    :hidden:
    
    getting_started/INSTALLATION
+   getting_started/HELP_AND_SUPPORT
 
 .. toctree::
    :maxdepth: 2

@@ -118,5 +118,5 @@ A list of frequently asked questions is maintained [here](https://qiskit-communi
 4. IBM Quantum https://www.ibm.com/quantum
 5. Pasqal https://pasqal.com
 6. STFC The Hartree Centre, https://www.hartree.stfc.ac.uk. This work was supported by the Hartree National Centre for Digital Innovation (HNCDI) programme.
-7. Rensselaer Polytechnic Institute, Center for Computational Innovation, http://cci.rpi.edu/
+7. Rensselaer Polytechnic Institute, Center for Computational Innovation, https://cci.rpi.edu/
 8. Alice & Bob https://alice-bob.com/
