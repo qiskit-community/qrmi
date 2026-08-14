@@ -11,7 +11,10 @@
 
 mod common;
 use assert_json_diff::assert_json_include;
-use quantum_system_api::{models::Backend, models::BackendStatus, models::Backends, ClientBuilder};
+use quantum_system_api::{
+    models::Backend, models::BackendLanesConfiguration, models::BackendStatus, models::Backends,
+    ClientBuilder,
+};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -292,4 +295,73 @@ async fn test_list_backends() {
     assert_eq!(BackendStatus::Offline, backends[1].status);
     assert_eq!("backend_paused", backends[2].name);
     assert_eq!(BackendStatus::Paused, backends[2].status);
+}
+
+/// Test Client.get_backend_lanes_configuration().
+/// This test will compare the deserialized values in Backend object with expected values.
+/// All comparisons should be succeeded.
+#[tokio::test]
+async fn test_get_backend_lanes_configuration() {
+    common::setup();
+
+    let mut server = mockito::Server::new_async().await;
+
+    let expected = json!({
+        "hpc_workload_manager": {
+            "lanes": 3,
+        },
+        "ibm_quantum_compute": {
+            "lanes": 2,
+        },
+    });
+
+    let not_found = json!({
+        "status_code": 404,
+        "title": "Backend unknown not found.",
+        "trace": Uuid::new_v4().to_string(),
+        "correlation_id": common::generate_random_string(20),
+        "errors":[
+            {
+                "code":"1216",
+                "message":"Backend unknown not found.",
+                "more_info":"https://cloud.ibm.com/apidocs/quantum-computing#error-handling",
+            }
+        ],
+    });
+
+    server
+        .mock("GET", "/v1/backends/test/lanes")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(expected.to_string())
+        .create_async()
+        .await;
+
+    server
+        .mock("GET", "/v1/backends/unknown/lanes")
+        .with_status(404)
+        .with_header("content-type", "application/json")
+        .with_body(not_found.to_string())
+        .create_async()
+        .await;
+
+    let base_url = server.url();
+    let client = ClientBuilder::new(&base_url).build().unwrap();
+    let actual = client
+        .get_backend_lanes_configuration::<serde_json::Value>("test")
+        .await
+        .unwrap();
+    assert_json_include!(actual: actual, expected: expected);
+
+    let actual_backend_lane_config = client
+        .get_backend_lanes_configuration::<BackendLanesConfiguration>("test")
+        .await
+        .unwrap();
+    assert_eq!(actual_backend_lane_config.hpc_workload_manager.lanes, 3);
+    assert_eq!(actual_backend_lane_config.ibm_quantum_compute.lanes, 2);
+
+    let failed = client
+        .get_backend_lanes_configuration::<BackendLanesConfiguration>("unknown")
+        .await;
+    assert!(failed.is_err());
 }

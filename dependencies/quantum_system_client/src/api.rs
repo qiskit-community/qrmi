@@ -1,5 +1,5 @@
 //
-// (C) Copyright IBM 2024
+// (C) Copyright IBM 2024-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -11,6 +11,7 @@
 
 pub mod backend_config;
 pub mod backend_details;
+pub mod backend_lanes_config;
 pub mod backend_props;
 #[cfg(feature = "pulse_defaults")]
 pub mod backend_pulse_defaults;
