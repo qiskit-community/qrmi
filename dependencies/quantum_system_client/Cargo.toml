@@ -5,7 +5,7 @@ description = "Quantum System API client library for Rust"
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
-version = "0.14.0"
+version = "0.15.0"
 edition.workspace = true
 
 [features]
