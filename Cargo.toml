@@ -39,6 +39,7 @@ uuid = "1.16.0"
 log = "0.4.26"
 quantum-system-api = { path = "dependencies/quantum_system_client" }
 qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
+pasqal-common = { path = "dependencies/pasqal_common" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
@@ -61,6 +62,7 @@ cbindgen = "0.29"
 members = [
     "dependencies/quantum_system_client",
     "dependencies/qiskit_runtime_client",
+    "dependencies/pasqal_common",
     "dependencies/pasqal_cloud_client",
     "dependencies/alice_bob_felis_client",
 ]
@@ -74,6 +76,7 @@ rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.
 
 [workspace.dependencies]
 quantum-system-api = { path = "dependencies/quantum_system_client" }
+pasqal-common = { path = "dependencies/pasqal_common" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis-api = { path = "dependencies/alice_bob_felis_client" }
