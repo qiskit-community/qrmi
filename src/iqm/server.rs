@@ -286,25 +286,19 @@ impl QuantumResource for IQMServer {
             serde_json::from_slice(&dynamic_quantum_architecture)
                 .context("Failed to parse dynamic_quantum_architecture")?;
 
-        let calibration_set = get_calibration_set_v1(
-            &self.config,
-            &self.backend_name,
-            &self.calibration_set_id,
-        )
-        .await
-        .context("Failed to get calibration_set")?;
-        let calibration_set: serde_json::Value = serde_json::from_slice(&calibration_set)
-            .context("Failed to parse calibration_set")?;
+        let calibration_set =
+            get_calibration_set_v1(&self.config, &self.backend_name, &self.calibration_set_id)
+                .await
+                .context("Failed to get calibration_set")?;
+        let calibration_set: serde_json::Value =
+            serde_json::from_slice(&calibration_set).context("Failed to parse calibration_set")?;
 
-        let quality_metrics = get_quality_metrics_v1(
-            &self.config,
-            &self.backend_name,
-            &self.calibration_set_id,
-        )
-        .await
-        .context("Failed to get quality_metrics")?;
-        let quality_metrics: serde_json::Value = serde_json::from_slice(&quality_metrics)
-            .context("Failed to parse quality_metrics")?;
+        let quality_metrics =
+            get_quality_metrics_v1(&self.config, &self.backend_name, &self.calibration_set_id)
+                .await
+                .context("Failed to get quality_metrics")?;
+        let quality_metrics: serde_json::Value =
+            serde_json::from_slice(&quality_metrics).context("Failed to parse quality_metrics")?;
 
         // Static, calibration-independent topology. Unlike the three
         // fields above, its absence (404) is expected on some Station
