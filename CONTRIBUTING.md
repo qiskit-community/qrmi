@@ -266,6 +266,10 @@ For executing the tests with the makefile, a `make test` target is available.
 The execution of the tests (both via the make target and during manual
 invocation) takes into account the `LOG_LEVEL` environment variable.
 
+All `make build*`/`lint*`/`test*` targets build in release mode by default.
+Pass `DEBUG=1` (e.g. `DEBUG=1 make build`) to build in debug mode instead.
+See `make help` for details.
+
 
 ### Unsafe code and Miri
 
