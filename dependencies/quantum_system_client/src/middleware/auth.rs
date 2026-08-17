@@ -51,7 +51,9 @@ impl TokenManager {
         retry_policy: Option<reqwest_retry::policies::ExponentialBackoff>,
     ) -> Result<Self> {
         let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        if cfg!(debug_assertions) {
+            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        }
         if let Some(v) = timeout {
             reqwest_client_builder = reqwest_client_builder.timeout(v)
         }

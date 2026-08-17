@@ -187,7 +187,9 @@ impl Client {
 impl Client {
     fn build_http_client() -> Result<reqwest_middleware::ClientWithMiddleware> {
         let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        if cfg!(debug_assertions) {
+            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        }
         let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
         Ok(reqwest_builder.build())
     }

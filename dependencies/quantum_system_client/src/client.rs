@@ -476,8 +476,10 @@ impl ClientBuilder {
             }
         }
 
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-        reqwest_plain_client_builder = reqwest_plain_client_builder.connection_verbose(true);
+        if cfg!(debug_assertions) {
+            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+            reqwest_plain_client_builder = reqwest_plain_client_builder.connection_verbose(true);
+        }
         if let Some(v) = self.timeout {
             reqwest_client_builder = reqwest_client_builder.timeout(v);
             reqwest_plain_client_builder = reqwest_plain_client_builder.timeout(v)
