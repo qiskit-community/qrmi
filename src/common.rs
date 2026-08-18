@@ -56,9 +56,20 @@ fn dispatch_to_sink(record: &log::Record<'_>) -> bool {
 }
 
 /// Called once before using the API library to initialize static resources(logger etc.) in underlying layers. If called more than once, the second and subsequent calls are ignored.
+///
+/// Uses `try_init()`, not `init()`: `init()` panics if another library in
+/// the same process already registered a `log` logger first (only one can
+/// ever be registered process-wide), and -- because that failure happens
+/// inside this `Once::call_once` closure -- a panic here poisons `INIT`,
+/// so every later call to `initialize()` (this runs at the top of nearly
+/// every QRMI entry point) panics too, for the rest of the process's
+/// lifetime. `try_init()` fails quietly instead: if we lose that race,
+/// QRMI's `log` output is simply not registered (records fall through to
+/// whichever logger did win), rather than taking down every subsequent
+/// call into QRMI.
 pub(crate) fn initialize() {
     INIT.call_once(|| {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
             .format(|buf, record| {
                 if dispatch_to_sink(record) {
                     Ok(())
@@ -73,6 +84,6 @@ pub(crate) fn initialize() {
                     )
                 }
             })
-            .init();
+            .try_init();
     });
 }
