@@ -20,51 +20,52 @@ Set environment variables
 
 Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
-required environment variables are listed below. This example assumes
+required environment variables are listed below. `This example`_ assumes
 that a ``.env`` file is available under the current directory.
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| {re                               | Quantum System endpoint URL       |
-| source_name}_QRMI_IBM_QS_ENDPOINT |                                   |
-+-----------------------------------+-----------------------------------+
-| {resour                           | IBM Cloud IAM endpoint            |
-| ce_name}_QRMI_IBM_QS_IAM_ENDPOINT | URL(e.g.                          |
-|                                   | ``https://iam.cloud.ibm.com``)    |
-+-----------------------------------+-----------------------------------+
-| {reso                             | IBM Cloud IAM API Key             |
-| urce_name}_QRMI_IBM_QS_IAM_APIKEY |                                   |
-+-----------------------------------+-----------------------------------+
-| {resou                            | Cloud Resource Name (CRN) of the  |
-| rce_name}_QRMI_IBM_QS_SERVICE_CRN | provisioned Quantum System        |
-|                                   | instance, starting with           |
-|                                   | ``crn:v1:``.                      |
-+-----------------------------------+-----------------------------------+
-| {resource_na                      | AWS Access Key ID to access S3    |
-| me}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID | bucket                            |
-+-----------------------------------+-----------------------------------+
-| {resource_name}_                  | AWS Secret Access Key to access   |
-| QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY | S3 bucket                         |
-+-----------------------------------+-----------------------------------+
-| {resou                            | S3 endpoint URL                   |
-| rce_name}_QRMI_IBM_QS_S3_ENDPOINT |                                   |
-+-----------------------------------+-----------------------------------+
-| {res                              | S3 bucket name                    |
-| ource_name}_QRMI_IBM_QS_S3_BUCKET |                                   |
-+-----------------------------------+-----------------------------------+
-| {res                              | S3 bucket region                  |
-| ource_name}_QRMI_IBM_QS_S3_REGION | name(e.g. ``us-east``)            |
-+-----------------------------------+-----------------------------------+
-| {resour                           | Time (in seconds) after which job |
-| ce_name}_QRMI_JOB_TIMEOUT_SECONDS | should time out and get           |
-|                                   | cancelled. It is based on system  |
-|                                   | execution time (not wall clock    |
-|                                   | time). System execution time is   |
-|                                   | the amount of time that the       |
-|                                   | system is dedicated to processing |
-|                                   | your job.                         |
-+-----------------------------------+-----------------------------------+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/ibm_quantum_system
+
++-------------------------------------------------------+------------------------------------------+
+|                 Environment variables                 |               Descriptions               |
++=======================================================+==========================================+
+| ``{resource_name}_QRMI_IBM_QS_ENDPOINT``              | Quantum System endpoint URL              |
+|                                                       |                                          |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_IAM_ENDPOINT``          | IBM Cloud IAM endpoint                   |
+|                                                       | URL (e.g. ``https://iam.cloud.ibm.com``) |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_IAM_APIKEY``            | IBM Cloud IAM API Key                    |
+|                                                       |                                          |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_SERVICE_CRN``           | Cloud Resource Name (CRN) of the         |
+|                                                       | provisioned Quantum System               |
+|                                                       | instance, starting with                  |
+|                                                       | ``crn:v1:``.                             |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID``     | AWS Access Key ID to access S3           |
+|                                                       | bucket                                   |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY`` | AWS Secret Access Key to access          |
+|                                                       | S3 bucket                                |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_S3_ENDPOINT``           | S3 endpoint URL                          |
+|                                                       |                                          |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_S3_BUCKET``             | S3 bucket name                           |
+|                                                       |                                          |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QS_S3_REGION``             | S3 bucket region                         |
+|                                                       | name (e.g. ``us-east``)                  |
++-------------------------------------------------------+------------------------------------------+
+| ``{resource_name}_QRMI_JOB_TIMEOUT_SECONDS``          | Time (in seconds) after which job        |
+|                                                       | should time out and get                  |
+|                                                       | cancelled. It is based on system         |
+|                                                       | execution time (not wall clock           |
+|                                                       | time). System execution time is          |
+|                                                       | the amount of time that the              |
+|                                                       | system is dedicated to processing        |
+|                                                       | your job.                                |
++-------------------------------------------------------+------------------------------------------+
 
 
 Create Qiskit Primitive input file as input
@@ -79,8 +80,8 @@ generate. You can customise quantum circuits by editing the code.
    e.g. ``sampler_input_ibm_torino_params_only.json``.
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
 
 .. code-block:: shell-session
 
@@ -90,8 +91,8 @@ How to build this example
    make
 
 
-How to run this example
------------------------
+How to run `this example`
+-------------------------
 
 .. code-block:: shell-session
 

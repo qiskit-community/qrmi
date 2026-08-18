@@ -95,6 +95,24 @@ integration into nearly any computational environment.
 The source code to build and deploy QRMI is available
 `here <https://github.com/qiskit-community/qrmi>`__.
 
+QRMI is also resource manager agnostic, allowing it to integrate with a
+range of resource managers. Full details about the resource manager plugin 
+integrations are available in our :ref:`Quantum-HPC Integration paper <qrmi_integrations>`,
+but you can find links to each plugin below:
+
+- `Slurm`_
+- `OpenPBS`_
+- `LSF`_
+- `Grid Engine`_
+- `Flux Framework`_
+
+.. _Slurm: https://github.com/qiskit-community/spank-plugins
+.. _OpenPBS: https://github.com/ohtanim/pbs-hooks-for-qrmi 
+.. _LSF: https://github.com/IBM/lsf-quantum 
+.. _Grid Engine: https://github.com/hpc-gridware/qpu-resource/ 
+.. _Flux Framework: https://github.com/qrmi-community/flux-shell-integration
+
+
 An optional ``task_runner`` command line tool to execute quantum
 payloads against quantum hardware is included in the Python package. For
 more information, read the documentation available :ref:`here <task_runner>`.
@@ -177,9 +195,10 @@ References and Acknowledgements
    development/CONTRIBUTING
    development/TESTING
    development/DOCUMENTATION
-   development/PYTHON_API
    development/RUST_API
+   development/PYTHON_API
    development/C_API
+   development/LUA_API
 
 .. toctree::
    :maxdepth: 2

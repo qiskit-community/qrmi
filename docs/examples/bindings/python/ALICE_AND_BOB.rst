@@ -35,22 +35,22 @@ required environment variables are listed below. You can either create a
 ``.env`` file in the current directory or set them in the shell
 directly.
 
-=========================== =============
-Environment variables       Descriptions
-=========================== =============
-QRMI_AB_FELIS_BASE_ENDPOINT Felis URL
-QRMI_AB_FELIS_API_KEY       Felis API Key
-=========================== =============
+=============================== =============
+Environment variables           Descriptions
+=============================== =============
+``QRMI_AB_FELIS_BASE_ENDPOINT`` Felis URL
+``QRMI_AB_FELIS_API_KEY``       Felis API Key
+=============================== =============
 
 You may also use separate URLs and API keys for different target
 resources:
 
-=========================================== =============
-Environment variables                       Descriptions
-=========================================== =============
-{resource_name}_QRMI_AB_FELIS_BASE_ENDPOINT Felis URL
-{resource_name}_QRMI_AB_FELIS_API_KEY       Felis API Key
-=========================================== =============
+=============================================== =============
+Environment variables                           Descriptions
+=============================================== =============
+``{resource_name}_QRMI_AB_FELIS_BASE_ENDPOINT`` Felis URL
+``{resource_name}_QRMI_AB_FELIS_API_KEY``       Felis API Key
+=============================================== =============
 
 
 .. _alice_and_bob_felis_python_qri:
@@ -63,7 +63,7 @@ expresses intermediate representations of quantum circuits. It supports
 standard QIR gates together with a few custom Alice & Bob gates.
 
 You can optionally modify the Qiskit circuit in
-``generate_input_native_gates.py`` before generating it in QIR form as
+`generate_input_generic.py`_ before generating it in QIR form as
 follows:
 
 .. code-block:: shell-session
@@ -89,8 +89,14 @@ like ``measure_x``. To do so:
    python generate_input_generic.py > generated_circuit.ll
 
 
-How to run
-----------
+How to run `this example`_
+--------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/alice_bob_felis
+
+Run `example.py`_:
+
+.. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/alice_bob_felis/example.py
 
 .. code-block:: shell-session
 
