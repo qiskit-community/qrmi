@@ -238,7 +238,6 @@ impl Client {
     async fn handle_request<T: DeserializeOwned>(&self, resp: reqwest::Response) -> Result<T> {
         if resp.status().is_success() {
             let json_text = resp.text().await?;
-            debug!("{}", json_text);
             let val = serde_json::from_str(&json_text)?;
             Ok(val)
         } else {
