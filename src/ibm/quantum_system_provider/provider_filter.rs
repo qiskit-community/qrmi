@@ -191,6 +191,7 @@ mod tests {
             status,
             message: None,
             version: None,
+            locked: Some(false),
         }
     }
 

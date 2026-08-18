@@ -15,39 +15,39 @@ include Makefile_common.mk
 .PHONY: build build-rust-examples build-task-runner build-stubgen
 .PHONY: build-c-examples build-wheels build-rust-all
 
-LIBQRMI_SO_PATH : build
+$(LIBQRMI_SO_PATH): build
 
 build:
-	cargo build --locked --release --lib
+	cargo build --locked $(CARGO_PROFILE_FLAG) --lib
 
 build-rust-examples:
-	cargo build --locked --release --examples
+	cargo build --locked $(CARGO_PROFILE_FLAG) --examples
 
 build-task-runner:
-	cargo build --locked --release --bin task_runner --features="build-binary"
+	cargo build --locked $(CARGO_PROFILE_FLAG) --bin task_runner --features="build-binary"
 
 build-stubgen: check-python-devel-installed
 ifeq ($(INSIDE_CONTAINER),1)
 	$(error "Manylinux images don't come with libpython, please run the command without ./run_in_container.sh")
 endif
-	PYO3_PYTHON=python$(PYTHON_VERSION) cargo build --locked --release --bin stubgen --features="pyo3"
+	PYO3_PYTHON=python$(PYTHON_VERSION) cargo build --locked $(CARGO_PROFILE_FLAG) --bin stubgen --features="pyo3"
 
 build-c-examples: $(LIBQRMI_SO_PATH)
 	@mkdir -p examples/qrmi/c/ibm_quantum_system/build
 	@cd examples/qrmi/c/ibm_quantum_system/build && \
-		cmake -DCMAKE_BUILD_TYPE=Release .. && \
+		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
 	@mkdir -p examples/qrmi/c/qiskit_runtime_service/build
 	@cd examples/qrmi/c/qiskit_runtime_service/build && \
-		cmake -DCMAKE_BUILD_TYPE=Release .. && \
+		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
 	@mkdir -p examples/qrmi/c/pasqal_cloud/build
 	@cd examples/qrmi/c/pasqal_cloud/build && \
-		cmake -DCMAKE_BUILD_TYPE=Release .. && \
+		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
 	@mkdir -p examples/qrmi/c/config/build
 	@cd examples/qrmi/c/config/build && \
-		cmake -DCMAKE_BUILD_TYPE=Release .. && \
+		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
 
 $(WHEELS_PATH):
@@ -67,19 +67,19 @@ build-rust-all: build build-rust-examples build-task-runner
 .PHONY: lint-wheels lint-rust-all
 
 lint:
-	cargo clippy --locked --release --lib -- -D warnings
+	cargo clippy --locked $(CARGO_PROFILE_FLAG) --lib -- -D warnings
 
 lint-rust-examples:
-	cargo clippy --locked --release --examples -- -D warnings
+	cargo clippy --locked $(CARGO_PROFILE_FLAG) --examples -- -D warnings
 
 lint-task-runner:
-	cargo clippy --locked --release --bin task_runner --features="build-binary" -- -D warnings
+	cargo clippy --locked $(CARGO_PROFILE_FLAG) --bin task_runner --features="build-binary" -- -D warnings
 
 lint-stubgen: check-python-devel-installed
 ifeq ($(INSIDE_CONTAINER),1)
 	$(error "Manylinux images don't come with libpython, please run the command without ./run_in_container.sh")
 endif
-	PYO3_PYTHON=python$(PYTHON_VERSION) cargo clippy --locked --release --bin stubgen --features="pyo3" -- -D warnings
+	PYO3_PYTHON=python$(PYTHON_VERSION) cargo clippy --locked $(CARGO_PROFILE_FLAG) --bin stubgen --features="pyo3" -- -D warnings
 
 lint-wheels: $(PYTHON_VENV_DIR) install-wheels
 	@source $(PYTHON_VENV_ACTIVATE) && \
@@ -96,27 +96,27 @@ lint-rust-all: lint lint-rust-examples lint-task-runner
 .PHONY: test-stubgen test-wheels test-rust-all
 
 test:
-	cargo test --lib --locked --release
+	cargo test --lib --locked $(CARGO_PROFILE_FLAG)
 
 test-doc:
-	cargo test --doc --locked --release
+	cargo test --doc --locked $(CARGO_PROFILE_FLAG)
 
 test-deps:
-	cargo test --locked --release -p quantum-system-api
-	cargo test --locked --release -p pasqal-cloud-api
-	cargo test --locked --release -p qiskit_runtime_client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum-system-api
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-cloud-api
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p qiskit_runtime_client
 
 test-rust-examples:
-	cargo test --examples --locked --release
+	cargo test --examples --locked $(CARGO_PROFILE_FLAG)
 
 test-task-runner:
-	cargo test --locked --release --bin task_runner --features="build-binary"
+	cargo test --locked $(CARGO_PROFILE_FLAG) --bin task_runner --features="build-binary"
 
 test-stubgen: check-python-devel-installed
 ifeq ($(INSIDE_CONTAINER),1)
 	$(error "Manylinux images don't come with libpython, please run the command without ./run_in_container.sh")
 endif
-	PYO3_PYTHON=python$(PYTHON_VERSION) cargo test --locked --release --bin stubgen --features="pyo3"
+	PYO3_PYTHON=python$(PYTHON_VERSION) cargo test --locked $(CARGO_PROFILE_FLAG) --bin stubgen --features="pyo3"
 
 test-wheels: $(PYTHON_VENV_DIR)
 	@source $(PYTHON_VENV_ACTIVATE) && \
@@ -225,7 +225,7 @@ vendor-tarball:
 	@echo
 	@echo "Created: $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz"
 
-libqrmi-tarball: LIBQRMI_SO_PATH
+libqrmi-tarball: $(LIBQRMI_SO_PATH)
 	@TARBALL="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-$(ARCH).tar.gz" && \
 	WORKDIR="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)" && \
 	mkdir -p $$WORKDIR && \
@@ -346,6 +346,9 @@ $$ source $$(make get-venv-activate)
 
 Create a venv for a custom python version.
 $$ PYTHON_VERSION=3.13 make create-venv
+
+Build libqrmi.so, qrmi.h and examples, task_runner, etc. in debug mode instead of release.
+$$ DEBUG=1 make build
 
 Activate a customized venv created by the makefile.
 $$ source $$(PYTHON=3.12 make get-venv-activate)
