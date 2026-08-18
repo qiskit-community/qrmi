@@ -220,6 +220,14 @@ is the property of your employer, then you will more than likely need to sign a
 [corporate CLA](https://qisk.it/corporate-cla) too and
 email it to us at <qiskit@us.ibm.com>.
 
+## Debug builds
+
+All `make build*`/`lint*`/`test*` targets build in release mode by default.
+Pass `DEBUG=1` (e.g. `DEBUG=1 make build`) to build in debug mode instead.
+See `make help` for details.
+
+For the python build process, run `maturin build` without the `--release` flag instead.
+
 ## Testing
 
 Once you've made a code change, it is important to verify that your change
@@ -265,10 +273,6 @@ documentation's [guide on writing tests](https://doc.rust-lang.org/book/ch11-01-
 For executing the tests with the makefile, a `make test` target is available.
 The execution of the tests (both via the make target and during manual
 invocation) takes into account the `LOG_LEVEL` environment variable.
-
-All `make build*`/`lint*`/`test*` targets build in release mode by default.
-Pass `DEBUG=1` (e.g. `DEBUG=1 make build`) to build in debug mode instead.
-See `make help` for details.
 
 
 ### Unsafe code and Miri
