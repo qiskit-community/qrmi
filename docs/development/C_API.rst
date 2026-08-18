@@ -1,7 +1,7 @@
 .. _c_api:
 
-C API
-=====
+C API Reference
+===============
 
 .. doxygenindex::
 

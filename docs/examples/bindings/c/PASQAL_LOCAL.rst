@@ -23,8 +23,10 @@ Set environment variables
 
 Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
-required environment variables are listed below. This example assumes
+required environment variables are listed below. `This example`_ assumes
 that a ``.env`` file is available under the current directory.
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_local
 
 +-----------------------------------+-----------------------------------+
 | Environment variables             | Descriptions                      |
@@ -56,8 +58,8 @@ and write it to a file like this:
        f.write(serialized_sequence)
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
 
 .. code-block:: shell-session
 
@@ -67,8 +69,8 @@ How to build this example
    make
 
 
-How to run this example
------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 

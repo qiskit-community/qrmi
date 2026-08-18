@@ -1,7 +1,7 @@
 .. _rust_api:
 
-Rust API
-========
+Rust API Reference
+==================
 
 Unlike QRMI's Python API documentation, which is built and served using Sphinx, the Rust API documentation is built using Rust's `cargo` package.
 

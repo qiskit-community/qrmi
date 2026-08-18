@@ -15,10 +15,11 @@ Prerequisites
 -  Build the :ref:`QRMI Rust library <install_source>`
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
 
-.. code-block:: shell-session
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
+
 .. code-block:: shell-session
 
    mkdir build
@@ -27,8 +28,8 @@ How to build this example
    make
 
 
-How to run this example
------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 .. code-block:: shell-session

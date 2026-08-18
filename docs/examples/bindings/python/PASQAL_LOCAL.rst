@@ -65,8 +65,14 @@ and write it to a file like this:
        f.write(serialized_sequence)
 
 
-How to run
-----------
+How to run `this example`_
+--------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_local
+
+Run `example.py`_:
+
+.. _example.py: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_local
 
 .. code-block:: shell-session
 

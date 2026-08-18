@@ -162,52 +162,47 @@ below.
 IBM Quantum System
 ^^^^^^^^^^^^^^^^^^
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| QRMI_JOB_QPU_RESOURCES            | Quantum backend name              |
-+-----------------------------------+-----------------------------------+
-| QRMI_JOB_QPU_TYPES                | Should be ``ibm-quantum-system``  |
-+-----------------------------------+-----------------------------------+
-| {b                                | Quantum System API endpoint URL   |
-| ackend_name}_QRMI_IBM_QS_ENDPOINT |                                   |
-+-----------------------------------+-----------------------------------+
-| {backe                            | IBM Cloud IAM endpoint            |
-| nd_name}_QRMI_IBM_QS_IAM_ENDPOINT | URL(e.g.                          |
-|                                   | ``https://iam.cloud.ibm.com``)    |
-+-----------------------------------+-----------------------------------+
-| {bac                              | IBM Cloud IAM API Key             |
-| kend_name}_QRMI_IBM_QS_IAM_APIKEY |                                   |
-+-----------------------------------+-----------------------------------+
-| {back                             | Cloud Resource Name(CRN) of the   |
-| end_name}_QRMI_IBM_QS_SERVICE_CRN | provisioned Quantum System API    |
-|                                   | instance, starting with           |
-|                                   | ``crn:v1:``.                      |
-+-----------------------------------+-----------------------------------+
-| {backend_na                       | AWS Access Key ID to access S3    |
-| me}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID | bucket                            |
-+-----------------------------------+-----------------------------------+
-| {backend_name}_                   | AWS Secret Access Key to access   |
-| QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY | S3 bucket                         |
-+-----------------------------------+-----------------------------------+
-| {back                             | S3 endpoint URL                   |
-| end_name}_QRMI_IBM_QS_S3_ENDPOINT |                                   |
-+-----------------------------------+-----------------------------------+
-| {ba                               | S3 bucket name                    |
-| ckend_name}_QRMI_IBM_QS_S3_BUCKET |                                   |
-+-----------------------------------+-----------------------------------+
-| {ba                               | S3 bucket region                  |
-| ckend_name}_QRMI_IBM_QS_S3_REGION | name(e.g. ``us-east``)            |
-+-----------------------------------+-----------------------------------+
-| {backe                            | Time (in seconds) after which job |
-| nd_name}_QRMI_JOB_TIMEOUT_SECONDS | should time out and get           |
-|                                   | cancelled. It is based on system  |
-|                                   | execution time (not wall clock    |
-|                                   | time). System execution time is   |
-|                                   | the amount of time that the       |
-|                                   | system is dedicated to processing |
-|                                   | your job.                         |
-+-----------------------------------+-----------------------------------+
++------------------------------------------------------+------------------------------------------+
+|                Environment variables                 |               Descriptions               |
++======================================================+==========================================+
+| ``QRMI_JOB_QPU_RESOURCES``                           | Quantum backend name                     |
++------------------------------------------------------+------------------------------------------+
+| ``QRMI_JOB_QPU_TYPES``                               | Should be ``ibm-quantum-system``         |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_ENDPOINT``              | Quantum System API endpoint URL          |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_IAM_ENDPOINT``          | IBM Cloud IAM endpoint                   |
+|                                                      | URL (e.g. ``https://iam.cloud.ibm.com``) |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_IAM_APIKEY``            | IBM Cloud IAM API Key                    |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_SERVICE_CRN``           | Cloud Resource Name (CRN) of the         |
+|                                                      | provisioned Quantum System API           |
+|                                                      | instance, starting with                  |
+|                                                      | ``crn:v1:``.                             |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID``     | AWS Access Key ID to access S3           |
+|                                                      | bucket                                   |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY`` | AWS Secret Access Key to access          |
+|                                                      | S3 bucket                                |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_S3_ENDPOINT``           | S3 endpoint URL                          |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_S3_BUCKET``             | S3 bucket name                           |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QS_S3_REGION``             | S3 bucket region                         |
+|                                                      | name (e.g. ``us-east``)                  |
++------------------------------------------------------+------------------------------------------+
+| ``{backend_name}_QRMI_JOB_TIMEOUT_SECONDS``          | Time (in seconds) after which job        |
+|                                                      | should time out and get                  |
+|                                                      | cancelled. It is based on system         |
+|                                                      | execution time (not wall clock           |
+|                                                      | time). System execution time is          |
+|                                                      | the amount of time that the              |
+|                                                      | system is dedicated to processing        |
+|                                                      | your job.                                |
++------------------------------------------------------+------------------------------------------+
 
 Example:
 
@@ -234,36 +229,33 @@ Example:
 Qiskit Runtime Service
 ^^^^^^^^^^^^^^^^^^^^^^
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| QRMI_JOB_QPU_RESOURCES            | Quantum backend name              |
-+-----------------------------------+-----------------------------------+
-| QRMI_JOB_QPU_TYPES                | Should be                         |
-|                                   | ``qiskit-runtime-service``        |
-+-----------------------------------+-----------------------------------+
-| {ba                               | Qiskit Runtime Service endpoint   |
-| ckend_name}_QRMI_IBM_QRS_ENDPOINT | URL(e.g. ``https:                 |
-|                                   | //quantum.cloud.ibm.com/api/v1``) |
-+-----------------------------------+-----------------------------------+
-| {backen                           | IBM Cloud IAM endpoint            |
-| d_name}_QRMI_IBM_QRS_IAM_ENDPOINT | URL(e.                            |
-|                                   | g. ``https://iam.cloud.ibm.com``) |
-+-----------------------------------+-----------------------------------+
-| {back                             | IBM Cloud IAM API Key             |
-| end_name}_QRMI_IBM_QRS_IAM_APIKEY |                                   |
-+-----------------------------------+-----------------------------------+
-| {backe                            | Cloud Resource Name(CRN) of the   |
-| nd_name}_QRMI_IBM_QRS_SERVICE_CRN | provisioned Qiskit Runtime        |
-|                                   | Service instance, starting with   |
-|                                   | ``crn:v1:``.                      |
-+-----------------------------------+-----------------------------------+
-| {backend_n                        | (Optional) Cost of the job as the |
-| ame}_QRMI_IBM_QRS_TIMEOUT_SECONDS | estimated time it should take to  |
-|                                   | complete (in seconds). Should not |
-|                                   | exceed the cost of the program,   |
-|                                   | default: ``None``.                |
-+-----------------------------------+-----------------------------------+
++-------------------------------------------------+-----------------------------------------------------+
+|              Environment variables              |                    Descriptions                     |
++=================================================+=====================================================+
+| ``QRMI_JOB_QPU_RESOURCES``                      | Quantum backend name                                |
++-------------------------------------------------+-----------------------------------------------------+
+| ``QRMI_JOB_QPU_TYPES``                          | Should be                                           |
+|                                                 | ``qiskit-runtime-service``                          |
++-------------------------------------------------+-----------------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QRS_ENDPOINT``        | Qiskit Runtime Service endpoint                     |
+|                                                 | URL (e.g. ``https://quantum.cloud.ibm.com/api/v1``) |
++-------------------------------------------------+-----------------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                              |
+|                                                 | URL (e.g. ``https://iam.cloud.ibm.com``)            |
++-------------------------------------------------+-----------------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QRS_IAM_APIKEY``      | IBM Cloud IAM API Key                               |
++-------------------------------------------------+-----------------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QRS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                    |
+|                                                 | provisioned Qiskit Runtime                          |
+|                                                 | Service instance, starting with                     |
+|                                                 | ``crn:v1:``.                                        |
++-------------------------------------------------+-----------------------------------------------------+
+| ``{backend_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS`` | (Optional) Cost of the job as the                   |
+|                                                 | estimated time it should take to                    |
+|                                                 | complete (in seconds). Should not                   |
+|                                                 | exceed the cost of the program,                     |
+|                                                 | default: ``None``.                                  |
++-------------------------------------------------+-----------------------------------------------------+
 
 Example:
 
@@ -284,29 +276,28 @@ Example:
 Pasqal Cloud
 ^^^^^^^^^^^^
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| QRMI_JOB_QPU_RESOURCES            | Backend name                      |
-+-----------------------------------+-----------------------------------+
-| QRMI_JOB_QPU_TYPES                | Should be ``pasqal-cloud``        |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_PROJECT_ID    | Pasqal Cloud Project ID to access |
-|                                   | the QPU                           |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_AUTH_TOKEN    | Pasqal Cloud Auth Token           |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_CLIENT_ID     | Pasqal Cloud service account      |
-|                                   | client ID (optional)              |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account      |
-|                                   | client secret (optional)          |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path |
-|                                   | for token retrieval. Default:     |
-|                                   | ``authen                          |
-|                                   | ticate.pasqal.cloud/oauth/token`` |
-+-----------------------------------+-----------------------------------+
++----------------------------------------------------+-------------------------------------------+
+|               Environment variables                |               Descriptions                |
++====================================================+===========================================+
+| ``QRMI_JOB_QPU_RESOURCES``                         | Backend name                              |
++----------------------------------------------------+-------------------------------------------+
+| ``QRMI_JOB_QPU_TYPES``                             | Should be ``pasqal-cloud``                |
++----------------------------------------------------+-------------------------------------------+
+| ``{backend_name}_QRMI_PASQAL_CLOUD_PROJECT_ID``    | Pasqal Cloud Project ID to access         |
+|                                                    | the QPU                                   |
++----------------------------------------------------+-------------------------------------------+
+| ``{backend_name}_QRMI_PASQAL_CLOUD_AUTH_TOKEN``    | Pasqal Cloud Auth Token                   |
++----------------------------------------------------+-------------------------------------------+
+| ``{backend_name}_QRMI_PASQAL_CLOUD_CLIENT_ID``     | Pasqal Cloud service account              |
+|                                                    | client ID (optional)                      |
++----------------------------------------------------+-------------------------------------------+
+| ``{backend_name}_QRMI_PASQAL_CLOUD_CLIENT_SECRET`` | Pasqal Cloud service account              |
+|                                                    | client secret (optional)                  |
++----------------------------------------------------+-------------------------------------------+
+| ``{backend_name}_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`` | (Optional) Auth endpoint URL/path         |
+|                                                    | for token retrieval. Default:             |
+|                                                    | ``authenticate.pasqal.cloud/oauth/token`` |
++----------------------------------------------------+-------------------------------------------+
 
 Pasqal Cloud auth can also be provided via ``~/.pasqal/config`` (token
 or username/password). ``PASQAL_CONFIG_ROOT`` may point elsewhere and
@@ -348,14 +339,14 @@ Example:
 Alice & Bob
 ^^^^^^^^^^^
 
-============================= =============================
-Environment variables         Descriptions
-============================= =============================
-QRMI_JOB_QPU_RESOURCES        Backend name
-QRMI_JOB_QPU_TYPES            Should be ``alice-bob-felis``
-\_QRMI_AB_FELIS_BASE_ENDPOINT Felis URL
-\_QRMI_AB_FELIS_API_KEY       Felis API Key
-============================= =============================
+=============================================== =============================
+Environment variables                           Descriptions
+=============================================== =============================
+``QRMI_JOB_QPU_RESOURCES``                      Backend name
+``QRMI_JOB_QPU_TYPES``                          Should be ``alice-bob-felis``
+``{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT``  Felis URL
+``{backend_name}_QRMI_AB_FELIS_API_KEY``        Felis API Key
+=============================================== =============================
 
 Example:
 

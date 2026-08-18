@@ -30,19 +30,21 @@ Set environment variables
 
 Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
-required environment variables are listed below. This example assumes
+required environment variables are listed below. `This example`_ assumes
 that a ``.env`` file is available under the current directory.
 
-===================================== ===========================
-Environment variables                 Descriptions
-===================================== ===========================
-{qc_alias_name}_QRMI_IQM_ISA_ENDPOINT IQM Server API endpoint URL
-{qc_alias_name}_QRMI_IQM_ISA_TOKEN    IQM Server API token
-===================================== ===========================
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/iqm_server
+
+========================================= ===========================
+Environment variables                     Descriptions
+========================================= ===========================
+``{qc_alias_name}_QRMI_IQM_ISA_ENDPOINT`` IQM Server API endpoint URL
+``{qc_alias_name}_QRMI_IQM_ISA_TOKEN``    IQM Server API token
+========================================= ===========================
 
 .. note::
 
-   Replace the ":" in the QC alias name with "\_" when
+   Replace the ":" in the ``{qc_alias_name}`` with "\_" when
    specifying it. For example, ``sirius:mock`` -> ``sirius_mock``.
 
 
@@ -58,8 +60,14 @@ generate. You can customise quantum circuits by editing the code.
    e.g. ``iqm_json_sirius_params_only.json``.
 
 
-How to run
-----------
+How to run `this example`_
+--------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/iqm_server
+
+Run `example.py`_:
+
+.. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/iqm_server/example.py
 
 .. code-block:: shell-session
 

@@ -4,9 +4,10 @@ Bindings Examples
 .. toctree::
     :maxdepth: 2
     
-    C_EXAMPLES
-    PYTHON_EXAMPLES
     RUST_EXAMPLES
+    PYTHON_EXAMPLES
+    C_EXAMPLES
+    LUA_EXAMPLES
 
 License
 -------

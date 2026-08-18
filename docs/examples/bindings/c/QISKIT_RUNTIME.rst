@@ -20,47 +20,46 @@ Set environment variables
 
 Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
-required environment variables are listed below. This example assumes
+required environment variables are listed below. `This example`_ assumes
 that a ``.env`` file is available under the current directory.
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| {res                              | Qiskit Runtime Service endpoint   |
-| ource_name}_QRMI_IBM_QRS_ENDPOINT | URL(e.g. ``htt                    |
-|                                   | ps://quantum.cloud.ibm.com/api``) |
-+-----------------------------------+-----------------------------------+
-| {resourc                          | IBM Cloud IAM endpoint            |
-| e_name}_QRMI_IBM_QRS_IAM_ENDPOINT | URL(e.g.                          |
-|                                   | ``https://iam.cloud.ibm.com``)    |
-+-----------------------------------+-----------------------------------+
-| {resou                            | IBM Cloud IAM API Key             |
-| rce_name}_QRMI_IBM_QRS_IAM_APIKEY |                                   |
-+-----------------------------------+-----------------------------------+
-| {resour                           | Cloud Resource Name (CRN) of the  |
-| ce_name}_QRMI_IBM_QRS_SERVICE_CRN | provisioned Qiskit Runtime        |
-|                                   | Service instance, starting with   |
-|                                   | ``crn:v1:``.                      |
-+-----------------------------------+-----------------------------------+
-| {resourc                          | Execution mode to run the session |
-| e_name}_QRMI_IBM_QRS_SESSION_MODE | in, ``default='dedicated'``,      |
-|                                   | ``batch`` or ``dedicated``.       |
-+-----------------------------------+-----------------------------------+
-| {resource_n                       | The maximum time (in seconds) for |
-| ame}_QRMI_IBM_QRS_SESSION_MAX_TTL | the session to run, subject to    |
-|                                   | plan limits, default: ``28800``.  |
-+-----------------------------------+-----------------------------------+
-| {resource_n                       | (Optional) Cost of the job as the |
-| ame}_QRMI_IBM_QRS_TIMEOUT_SECONDS | estimated time it should take to  |
-|                                   | complete (in seconds). Should not |
-|                                   | exceed the cost of the program,   |
-|                                   | default: ``None``.                |
-+-----------------------------------+-----------------------------------+
-| {resou                            | (Optional) Session ID, can be     |
-| rce_name}_QRMI_IBM_QRS_SESSION_ID | obtanied by acquire function. If  |
-|                                   | exists, used in the target        |
-|                                   | functions.                        |
-+-----------------------------------+-----------------------------------+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/qiskit_runtime_service
+
++--------------------------------------------------+--------------------------------------------------+
+|              Environment variables               |                   Descriptions                   |
++==================================================+==================================================+
+| ``{resource_name}_QRMI_IBM_QRS_ENDPOINT``        | Qiskit Runtime Service endpoint                  |
+|                                                  | URL (e.g. ``https://quantum.cloud.ibm.com/api``) |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                           |
+|                                                  | URL (e.g.``https://iam.cloud.ibm.com``)          |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_IAM_APIKEY``      | IBM Cloud IAM API Key                            |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                 |
+|                                                  | provisioned Qiskit Runtime                       |
+|                                                  | Service instance, starting with                  |
+|                                                  | ``crn:v1:``.                                     |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_SESSION_MODE``    | Execution mode to run the session                |
+|                                                  | in, ``default='dedicated'``,                     |
+|                                                  | ``batch`` or ``dedicated``.                      |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_SESSION_MAX_TTL`` | The maximum time (in seconds) for                |
+|                                                  | the session to run, subject to                   |
+|                                                  | plan limits, default: ``28800``.                 |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS`` | (Optional) Cost of the job as the                |
+|                                                  | estimated time it should take to                 |
+|                                                  | complete (in seconds). Should not                |
+|                                                  | exceed the cost of the program,                  |
+|                                                  | default: ``None``.                               |
++--------------------------------------------------+--------------------------------------------------+
+| ``{resource_name}_QRMI_IBM_QRS_SESSION_ID``      | (Optional) Session ID, can be                    |
+|                                                  | obtanied by acquire function. If                 |
+|                                                  | exists, used in the target                       |
+|                                                  | functions.                                       |
++--------------------------------------------------+--------------------------------------------------+
 
 
 Create Qiskit Primitive input file as input
@@ -75,8 +74,8 @@ generate. You can customise quantum circuits by editing the code.
    e.g. ``sampler_input_ibm_torino_params_only.json``.
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
 
 .. code-block:: shell-session
 
@@ -86,8 +85,8 @@ How to build this example
    make
 
 
-How to run this example
------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 
