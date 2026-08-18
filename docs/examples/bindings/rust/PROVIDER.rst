@@ -14,8 +14,10 @@ Prerequisites
 -  Build the :ref:`QRMI Rust library <install_source>`
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/resource_providers
 
 .. code-block:: shell-session
 
@@ -23,8 +25,8 @@ How to build this example
    cargo build --release
 
 
-How to run this example
------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 

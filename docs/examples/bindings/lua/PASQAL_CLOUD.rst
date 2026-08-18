@@ -1,28 +1,34 @@
-.. _pasqal_cloud_python:
+.. _pasqal_cloud_lua:
 
-Pasqal Cloud QRMI - Examples in Python
-======================================
+Pasqal Cloud QRMI - Examples in Lua
+===================================
 
 `GitHub Repository`_
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_cloud
+.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/pasqal
 
 
 Prerequisites
 -------------
 
--  Rust 1.85.1 or above
--  Python 3.11 or 3.12
--  Install the :ref:`QRMI Python package <install_source>`
+-  :ref:`QRMI C library (libqrmi.so) <building_core_qrmi_libraries>`
+-  :ref:`QRMI Lua Module (qrmi.so) <installing_lua_bindings>`
 
 
-Install dependencies
---------------------
+Setup
+-----
 
-.. code-block:: shell-session
+.. code:: shell-session
 
-   source ~/py311_qrmi_venv/bin/activate
-   pip install -r ../requirements.txt
+   export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
+
+Example:
+
+.. code:: shell-session
+
+   export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
 
 
 Set environment variables
@@ -35,10 +41,8 @@ and takes priority over ``<backend_name>_PASQAL_CONFIG_ROOT``; QRMI
 expands ``~``, ``$VAR``, and ``${VAR}`` before appending
 ``.pasqal/config``. # pragma: allowlist secret
 
-The required environment variables are listed below. `This example`_
+The required environment variables are listed below. This example
 assumes that a ``.env`` file is available under the current directory.
-
-.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_cloud
 
 +----------------------------------------------------+-------------------------------------------+
 |               Environment variables                |               Descriptions                |
@@ -49,12 +53,6 @@ assumes that a ``.env`` file is available under the current directory.
 | ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN``    | Pasqal Cloud Auth Token (optional         |
 |                                                    | when username/password are                |
 |                                                    | configured)                               |
-+----------------------------------------------------+-------------------------------------------+
-| ``<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID``     | Pasqal Cloud service account              |
-|                                                    | client ID (optional)                      |
-+----------------------------------------------------+-------------------------------------------+
-| ``<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET`` | Pasqal Cloud service account              |
-|                                                    | client secret (optional)                  |
 +----------------------------------------------------+-------------------------------------------+
 | ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`` | (Optional) Auth endpoint URL/path         |
 |                                                    | for token retrieval. Default:             |
@@ -89,28 +87,6 @@ Create ``~/.pasqal/config``:
    # auth_endpoint=<auth endpoint URL/path>
 
 
-Using this backend from CUDA-Q (``pasqal``)
--------------------------------------------
-
-When CUDA-Q is configured with target ``pasqal``, QRMI is used as the
-Pasqal cloud bridge. ``machine`` in
-``cudaq.set_target(..., machine=...)`` should match ``<backend_name>``
-above (for example, ``EMU_FREE``).
-
-In `pasqal.py`_:
-
-.. _pasqal.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/cudaq/pasqal.py
-
-.. code-block:: python
-   :linenos:
-
-   import cudaq
-   cudaq.set_target("pasqal", machine="EMU_FREE")
-
-For CUDA-Q build/runtime details in this workspace, refer to our
-:ref:`Pasqal Cloud CUDA-Q documentation <pasqal_cloud_cudaq>`.
-
-
 Create Pulser Sequence file as input
 ------------------------------------
 
@@ -129,28 +105,18 @@ and write it to a file like this:
 How to run `this example`_
 --------------------------
 
-.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_cloud
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/pasqal
 
-Run `example.py`_:
+Run `example.lua`_:
 
-.. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/pasqal_cloud/example.py
+.. _example.lua: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/pasqal/example.lua
 
-.. code-block:: shell-session
+.. code:: shell-session
 
-   python example.py -h
-   usage: example.py [-h] input backend
-
-   An example of Pasqal Cloud Python QRMI
-
-   positional arguments:
-     backend  'FRESNEL'
-     input       sequence input file
-
-   options:
-     -h, --help  show this help message and exit
+   lua example.lua <backend name> <resource type> <input file>
 
 For example:
 
-.. code-block:: shell-session
+.. code:: shell-session
 
-   python example.py FRESNEL input.json
+   lua example.lua FRESNEL pasqal-cloud input.json
