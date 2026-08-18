@@ -1,6 +1,6 @@
 .. _pasqal_cloud_rust:
 
-Pasqal CLoud QRMI - Examples in Rust
+Pasqal Cloud QRMI - Examples in Rust
 ====================================
 
 `GitHub Repository`_
@@ -25,30 +25,31 @@ and takes priority over ``<backend_name>_PASQAL_CONFIG_ROOT``; QRMI
 expands ``~``, ``$VAR``, and ``${VAR}`` before appending
 ``.pasqal/config``. # pragma: allowlist secret
 
-The required environment variables are listed below. This example
+The required environment variables are listed below. `This example`_
 assumes that a ``.env`` file is available under the current directory.
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| \_QRMI_PASQAL_CLOUD_PROJECT_ID    | Pasqal Cloud Project ID to access |
-|                                   | the QPU                           |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_AUTH_TOKEN    | Pasqal Cloud Auth Token (optional |
-|                                   | when username/password are        |
-|                                   | configured)                       |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path |
-|                                   | for token retrieval. Default:     |
-|                                   | ``authen                          |
-|                                   | ticate.pasqal.cloud/oauth/token`` |
-+-----------------------------------+-----------------------------------+
-| PASQAL_USERNAME                   | Pasqal Cloud username (optional,  |
-|                                   | user-provided)                    |
-+-----------------------------------+-----------------------------------+
-| PASQAL_PASSWORD                   | Pasqal Cloud password (optional,  |
-|                                   | user-provided)                    |
-+-----------------------------------+-----------------------------------+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/pasqal_cloud
+
++----------------------------------------------------+-------------------------------------------+
+|               Environment variables                |               Descriptions                |
++====================================================+===========================================+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID``    | Pasqal Cloud Project ID to access         |
+|                                                    | the QPU                                   |
++----------------------------------------------------+-------------------------------------------+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN``    | Pasqal Cloud Auth Token (optional         |
+|                                                    | when username/password are                |
+|                                                    | configured)                               |
++----------------------------------------------------+-------------------------------------------+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`` | (Optional) Auth endpoint URL/path         |
+|                                                    | for token retrieval. Default:             |
+|                                                    | ``authenticate.pasqal.cloud/oauth/token`` |
++----------------------------------------------------+-------------------------------------------+
+| ``PASQAL_USERNAME``                                | Pasqal Cloud username (optional,          |
+|                                                    | user-provided)                            |
++----------------------------------------------------+-------------------------------------------+
+| ``PASQAL_PASSWORD``                                | Pasqal Cloud password (optional,          |
+|                                                    | user-provided)                            |
++----------------------------------------------------+-------------------------------------------+
 
 
 ``~/.pasqal/config`` (optional)
@@ -87,8 +88,8 @@ and write it to a file like this:
        f.write(serialized_sequence)
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
 
 .. code-block:: shell-session
 
@@ -96,8 +97,8 @@ How to build this example
    cargo build --release
 
 
-How to run this example
------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 

@@ -32,8 +32,10 @@ Set environment variables
 
 Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
-required environment variables are listed below. This example assumes
+required environment variables are listed below. `This example`_ assumes
 that a ``.env`` file is available under the current directory.
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/pulser/pasqal
 
 
 Common
@@ -42,30 +44,35 @@ Common
 When run as a job in a Slurm cluster, these environment variables are
 set by the SPANK plugin.
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| QRMI_JOB_QPU_RESOURCES            | Quantum resource names.           |
-|                                   | Comma-separated values,           |
-|                                   | e.g. ``FRESNEL``                  |
-+-----------------------------------+-----------------------------------+
-| QRMI_JOB_QPU_TYPES                | Quantum resource types.           |
-|                                   | Comma-separated values            |
-|                                   | corresponding to each Quantum     |
-|                                   | resource name specified by        |
-|                                   | ``Q                               |
-|                                   | RMI_JOB_QPU_RESOURCES``.Supported |
-|                                   | types:                            |
-+-----------------------------------+-----------------------------------+
++----------------------------+-----------------------------------+
+|   Environment variables    |           Descriptions            |
++============================+===================================+
+| ``QRMI_JOB_QPU_RESOURCES`` | Quantum resource names.           |
+|                            | Comma-separated values,           |
+|                            | e.g. ``FRESNEL``                  |
++----------------------------+-----------------------------------+
+| ``QRMI_JOB_QPU_TYPES``     | Quantum resource types.           |
+|                            | Comma-separated values            |
+|                            | corresponding to each Quantum     |
+|                            | resource name specified by        |
+|                            | ``QRMI_JOB_QPU_RESOURCES``.       |
+|                            | Supported types: ``pasqal-cloud`` |
++----------------------------+-----------------------------------+
 
 
-How to run
-----------
+How to run `this example`_
+--------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/pulser/pasqal
 
 SamplerV2
 ~~~~~~~~~
 
-Use Pulser's ``QPUBackend`` with ``PulserQRMIConnection``:
+Use Pulser's ``QPUBackend`` with ``PulserQRMIConnection``.
+
+Run `pulser_qrmi.py`_:
+
+.. _pulser_qrmi.py: https://github.com/qiskit-community/qrmi/blob/main/examples/pulser/pasqal/pulser_qrmi.py
 
 .. code-block:: shell-session
 

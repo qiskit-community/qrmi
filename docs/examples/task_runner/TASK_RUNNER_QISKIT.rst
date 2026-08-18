@@ -28,8 +28,10 @@ Install dependencies
 Tools
 -----
 
-``gen_estimator_input.py``
+`gen_estimator_inputs.py`_
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _gen_estimator_inputs.py: https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/qiskit/gen_estimator_inputs.py
 
 Generates EstimatorV2 input for the circuit introduced in IBM's `Get Started with Estimator documentation`_.
 
@@ -61,23 +63,25 @@ Example:
 
 Output:
 
-+-----------------------------------+-----------------------------------+
-| Files                             | Descriptions                      |
-+===================================+===================================+
-| estimator_input                   | EstimatorV2 input                 |
-| \_{backend_name}_params_only.json | parameters (`EstimatorV2 Schema`_)|
-+-----------------------------------+-----------------------------------+
-| est                               | An input for QRMI task runner,    |
-| imator_input\_{backend_name}.json | which contains 2 properties -     |
-|                                   | ``program_id`` (=\ ``estimator``) |
-|                                   | and ``parameters`` (EstimatorV2   |
-|                                   | input parameters).                |
-+-----------------------------------+-----------------------------------+
++-----------------------------------------------------+------------------------------------+
+|                        Files                        |            Descriptions            |
++=====================================================+====================================+
+| ``estimator_input_<backend_name>_params_only.json`` | EstimatorV2 input                  |
+|                                                     | parameters (`EstimatorV2 Schema`_) |
++-----------------------------------------------------+------------------------------------+
+| ``estimator_input_<backend_name>.json``             | An input for QRMI task runner,     |
+|                                                     | which contains 2 properties -      |
+|                                                     | ``program_id`` (= ``estimator``)   |
+|                                                     | and ``parameters`` (EstimatorV2    |
+|                                                     | input parameters).                 |
++-----------------------------------------------------+------------------------------------+
 
 .. _EstimatorV2 Schema: https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs
 
-``gen_sampler_input.py``
-~~~~~~~~~~~~~~~~~~~~~~~~
+`gen_sampler_input.py`_
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _gen_sampler_input.py: https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/qiskit/gen_sampler_inputs.py
 
 Generates SamplerV2 input for the circuit introduced in IBM's `Get Started with Sampler documentation`_.
 
@@ -109,19 +113,17 @@ Example:
 
 Output:
 
-+-----------------------------------+-----------------------------------+
-| Files                             | Descriptions                      |
-+===================================+===================================+
-| sampler_input                     | SamplerV2 input                   |
-| \_{backend_name}_params_only.json | parameters(`SamplerV2             |
-|                                   | s                                 |
-|                                   | chema <https://github.com/Qiskit/ |
-|                                   | ibm-quantum-schemas/blob/main/sch |
-|                                   | emas/sampler_v2_schema.json>`__). |
-+-----------------------------------+-----------------------------------+
-| s                                 | An input for QRMI task runner,    |
-| ampler_input\_{backend_name}.json | which contains 2 properties -     |
-|                                   | ``program_id``\ (=\ ``sampler``)  |
-|                                   | and ``parameters``\ (SamplerV2    |
-|                                   | input parameters).                |
-+-----------------------------------+-----------------------------------+
++---------------------------------------------------+-----------------------------------+
+|                       Files                       |           Descriptions            |
++===================================================+===================================+
+| ``sampler_input_<backend_name>_params_only.json`` | SamplerV2 input                   |
+|                                                   | parameters (`SamplerV2 schema`_). |
++---------------------------------------------------+-----------------------------------+
+| ``sampler_input_<backend_name>.json``             | An input for QRMI task runner,    |
+|                                                   | which contains 2 properties -     |
+|                                                   | ``program_id``  (= ``sampler``)   |
+|                                                   | and ``parameters`` (SamplerV2     |
+|                                                   | input parameters).                |
++---------------------------------------------------+-----------------------------------+
+
+.. _SamplerV2 schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json

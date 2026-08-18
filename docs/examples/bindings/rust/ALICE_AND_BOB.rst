@@ -29,8 +29,10 @@ See the corresponding section in the :ref:`README for the Felis Python
 example <alice_and_bob_felis_python_qri>`.
 
 
-How to build this example
--------------------------
+How to build `this example`_
+----------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/alice_bob_felis
 
 .. code-block:: shell-session
 
@@ -38,8 +40,8 @@ How to build this example
    CARGO_TARGET_DIR=./target cargo build --release
 
 
-How to run this example
------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 

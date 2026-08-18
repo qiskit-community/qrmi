@@ -3,6 +3,8 @@
 Citing QRMI
 ===========
 
+.. _qrmi_overview:
+
 QRMI Overview
 ~~~~~~~~~~~~~
 
@@ -20,6 +22,8 @@ The BibTeX citation handle can be found in the `BibTeX file`_.
 .. note::
 
     We expect multiple versions of the overview paper to be released as the project evolves.
+
+.. _qrmi_integrations:
 
 Quantum-HPC Integration
 ~~~~~~~~~~~~~~~~~~~~~~~

@@ -70,6 +70,9 @@ Prerequisites
          -  ``/usr/include/python3.1x``
          -  ``/usr/lib64/libpython3.1x.so``
 
+   - Standard Lua (PUC-Rio Lua 5.1-5.4)
+   - :ref:`QRMI Standalone C library & header <building_core_qrmi_libraries>`
+
 -  Runtime requires the following tools:
 
    -  gcc (libgcc RPM for RHEL compatible OS)
@@ -84,6 +87,7 @@ Prerequisites
    -  ``apt install doxygen`` for Linux(Ubuntu etc.)
    -  ``brew install doxygen`` for MacOS
 
+.. _building_core_qrmi_libraries:
 
 Building Core QRMI Libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -97,7 +101,7 @@ platforms are available for download from the repository's `Releases tab`_.
 
 .. _Releases tab: https://github.com/qiskit-community/qrmi/releases/latest
 
-This section will guide you through building QRMI for C and Python.
+This section will guide you through building QRMI for C, Python and Lua.
 
 .. tabs::
 
@@ -161,6 +165,103 @@ This section will guide you through building QRMI for C and Python.
          source ~/py312_qrmi_venv/bin/activate
          pip install /shared/qrmi/target/release/maturin/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 
+.. _installing_lua_bindings:
+
+Installing Lua Bindings
+^^^^^^^^^^^^^^^^^^^^^^^
+
+For RHEL / Clone OS installs (Rocky Linux 9, AlmaLinux 8), you need to enable the additional
+repository (CRB or PowerTools) to install the development packages (``-devel``).
+
+.. tabs::
+
+   .. tab:: Rocky Linux 9
+
+      .. code:: bash
+
+         sudo dnf config-manager --set-enabled crb
+         sudo dnf install lua lua-devel
+
+   .. tab:: AlmaLinux 8
+
+      .. code:: bash
+
+         sudo dnf config-manager --set-enabled powertools
+         sudo dnf install lua lua-devel
+
+   .. tab:: Debian / Ubuntu
+
+      On Debian and Ubuntu, development packages use the ``-dev`` suffix
+      instead of ``-devel``. You can specify the Lua version (e.g., ``5.4``)
+      during installation.
+
+         .. code:: bash
+
+            sudo apt update
+            sudo apt install lua5.4 liblua5.4-dev
+
+      .. note:: 
+
+         You can replace ``5.4`` with other versions like ``5.3`` or
+         ``5.1`` depending on your requirements.
+
+Once installed, the Lua binding can be built using either gcc or cmake:
+
+.. tabs::
+
+   .. tab:: gcc
+
+      Assuming the ``qrmi.h`` and ``libqrmi.so`` live in the same directory
+      (``<QRMI_ROOT>``, e.g. ``/path/to/qrmi``):
+
+      .. code:: bash
+
+         gcc -shared -fPIC -O2 $(pkg-config --cflags lua5.4) \
+            -I/path/to/qrmi \
+            -o qrmi.so lua_qrmi.c \
+            -L/path/to/qrmi -lqrmi \
+            $(pkg-config --libs lua5.4) \
+            -Wl,-rpath,/path/to/qrmi
+
+      -  ``-I/path/to/qrmi`` — lets the compiler find ``qrmi.h``
+      -  ``-L/path/to/qrmi -lqrmi`` — links against ``libqrmi.so``
+      -  ``-Wl,-rpath,/path/to/qrmi`` — bakes that directory into
+         ``qrmi.so``'s RUNPATH, so ``LD_LIBRARY_PATH`` doesn't need to be
+         set at runtime (verify with ``readelf -d qrmi.so``)
+
+   .. tab:: cmake
+
+      A ``CMakeLists.txt`` is included. It always links against the
+      ``libqrmi.so``.
+
+      Expected layout (header and library in the same directory):
+
+      ::
+
+         <QRMI_ROOT>/qrmi.h
+         <QRMI_ROOT>/libqrmi.so
+
+      .. code:: bash
+
+         mkdir build && cd build
+         cmake -DQRMI_ROOT=/path/to/qrmi/install ..
+         cmake --build .
+
+      To specify paths individually:
+
+      .. code:: bash
+
+         cmake -DQRMI_INCLUDE_DIR=/path/to/include -DQRMI_LIBRARY=/path/to/libqrmi.so ..
+
+      The directory containing ``libqrmi.so`` is automatically baked into the
+      built artifact's RUNPATH, so there's no need to set ``LD_LIBRARY_PATH``
+      at runtime (verifiable with ``readelf -d qrmi.so``).
+
+
+
+
+
+
 
 Building Optional Libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,17 +276,6 @@ Building ``task_runner``
 against quantum hardware. Under the hood, it uses the QRMI library.
 
 .. tabs::
-
-   .. tab:: Rust
-
-      .. warning::
-
-         The Rust version of ``task_runner`` is now obselete. Please use the Python version.
-
-      .. code-block:: shell-session
-
-         . ~/.cargo/env
-         cargo build --bin task_runner --release --features=build-binary
 
    .. tab:: Python
 
@@ -228,12 +318,17 @@ a link to the directory's GitHub location. You can find links to language-specif
 -  :ref:`rust_examples`
 -  :ref:`python_examples`
 -  :ref:`c_examples`
+-  :ref:`lua_examples`
 
-One example of QRMI usage in a compute infrastructure project is the Slurm plugin for quantum resources. QRMI is
-used in these Slurm plugins to control quantum resources during the lifecycle of a Slurm job. You can find full
-details on implementing the Quantum SPANK plugins for Slurm `here`_.
+QRMI is **workload manager agnostic** and supports a range of workload managers via plugins. One example of QRMI usage in a compute 
+infrastructure project is the Slurm plugin for quantum resources. QRMI is used in these Slurm plugins to control quantum resources 
+during the lifecycle of a Slurm job. You can find full details on implementing the Quantum SPANK plugins for Slurm `here`_.
 
 .. _here: https://github.com/qiskit-community/spank-plugins
+
+
+The Slurm plugin for quantum resources is only one example of QRMI's workload manager integrations. More information about QRMI's 
+integrations is available in our :ref:`Quantum-HPC Integration paper <qrmi_integrations>`.
 
 
 Logging
@@ -260,6 +355,13 @@ If you specify ``trace``, you can find underlying HTTP transaction logs.
 
 API Documentation
 ~~~~~~~~~~~~~~~~~
+
+Links to the Python, Rust, C and Lua API documentation is available here:
+
+-  :ref:`rust_api`
+-  :ref:`python_api`
+-  :ref:`c_api`
+-  :ref:`lua_api`
 
 The Python, Rust and C API documentation can be built locally using our :ref:`API documentation guide <api_docs>`.
 

@@ -28,8 +28,10 @@ Install dependencies
 Tools
 -----
 
-gen_iqm_json.py
-~~~~~~~~~~~~~~~
+`gen_iqm_json.py`_
+~~~~~~~~~~~~~~~~~~
+
+.. _gen_iqm_json.py: https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/iqm/gen_iqm_json.py
 
 Generates IQM JSON input for the circuit introduced in the starter notebook
 provided by IQM.
@@ -58,13 +60,13 @@ Example:
 
 Output:
 
-+---------------------------------------+---------------------------------------+
-| Files                                 | Descriptions                          |
-+=======================================+=======================================+
-| iqm_json\_{qc_alias}_params_only.json | IQM JSON input.                       |
-+---------------------------------------+---------------------------------------+
-| iqm_json\_{qc_alias}.json             | An input for QRMI task runner,        |
-|                                       | which contains additional             |
-|                                       | properties - ``job_type``,            |
-|                                       | ``use_timeslot`` and ``tag``.         |
-+---------------------------------------+---------------------------------------+
++------------------------------------------+--------------------------------+
+|                  Files                   |          Descriptions          |
++==========================================+================================+
+| ``iqm_json_{qc_alias}_params_only.json`` | IQM JSON input.                |
++------------------------------------------+--------------------------------+
+| ``iqm_json_{qc_alias}.json``             | An input for QRMI task runner, |
+|                                          | which contains additional      |
+|                                          | properties - ``job_type``,     |
+|                                          | ``use_timeslot`` and ``tag``.  |
++------------------------------------------+--------------------------------+
