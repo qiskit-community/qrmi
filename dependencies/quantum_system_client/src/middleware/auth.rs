@@ -208,7 +208,6 @@ impl Middleware for AuthMiddleware {
         let token = token_manager.get_token().await?;
         // add authentication header to the request
         let mut cloned_req = request.try_clone().unwrap();
-        debug!("current token {}", token);
         cloned_req.headers_mut().insert(
             reqwest::header::AUTHORIZATION,
             format!("Bearer {}", token).parse().unwrap(),
@@ -227,7 +226,6 @@ impl Middleware for AuthMiddleware {
             debug!("renew access token");
             token_manager.get_access_token().await?;
             let token = token_manager.get_token().await?;
-            debug!("new token {}", token);
             let mut new_request = request.try_clone().unwrap();
             new_request.headers_mut().insert(
                 reqwest::header::AUTHORIZATION,

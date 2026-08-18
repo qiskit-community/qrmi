@@ -15,7 +15,7 @@ use anyhow::{bail, Result};
 use std::time::Duration;
 
 #[allow(unused_imports)]
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
@@ -134,7 +134,6 @@ impl Client {
                 let status = resp.status();
                 if status.is_success() {
                     let json_text = resp.text().await?;
-                    debug!("{}", json_text);
                     Ok(serde_json::from_str::<T>(&json_text)?)
                 } else {
                     match resp.json::<ExtendedErrorResponse>().await {
