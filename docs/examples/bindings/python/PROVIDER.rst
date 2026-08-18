@@ -25,8 +25,14 @@ Install dependencies
    pip install qrmi[ibm]
 
 
-How to run
-----------
+How to run `this example`_
+--------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/resource_providers
+
+Run `example.py`_:
+
+.. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/resource_providers/example.py
 
 .. code-block:: shell-session
 

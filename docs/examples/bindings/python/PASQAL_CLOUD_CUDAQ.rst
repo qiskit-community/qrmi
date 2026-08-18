@@ -40,25 +40,24 @@ expands ``~``, ``$VAR``, and ``${VAR}`` before appending
 The required environment variables are listed below. They are populated
 automatically by the spank plugin.
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| \_QRMI_PASQAL_CLOUD_PROJECT_ID    | Pasqal Cloud Project ID to access |
-|                                   | the QPU                           |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_AUTH_TOKEN    | Pasqal Cloud Auth Token           |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_CLIENT_ID     | Pasqal Cloud service account      |
-|                                   | client ID (optional)              |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_CLIENT_SECRET | Pasqal Cloud service account      |
-|                                   | client secret (optional)          |
-+-----------------------------------+-----------------------------------+
-| \_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT | (Optional) Auth endpoint URL/path |
-|                                   | for token retrieval. Default:     |
-|                                   | ``authen                          |
-|                                   | ticate.pasqal.cloud/oauth/token`` |
-+-----------------------------------+-----------------------------------+
++----------------------------------------------------+-------------------------------------------+
+|               Environment variables                |               Descriptions                |
++====================================================+===========================================+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_PROJECT_ID``    | Pasqal Cloud Project ID to access         |
+|                                                    | the QPU                                   |
++----------------------------------------------------+-------------------------------------------+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_TOKEN``    | Pasqal Cloud Auth Token                   |
++----------------------------------------------------+-------------------------------------------+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_ID``     | Pasqal Cloud service account              |
+|                                                    | client ID (optional)                      |
++----------------------------------------------------+-------------------------------------------+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_CLIENT_SECRET`` | Pasqal Cloud service account              |
+|                                                    | client secret (optional)                  |
++----------------------------------------------------+-------------------------------------------+
+| ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT`` | (Optional) Auth endpoint URL/path         |
+|                                                    | for token retrieval. Default:             |
+|                                                    | ``authenticate.pasqal.cloud/oauth/token`` |
++----------------------------------------------------+-------------------------------------------+
 
 
 ``~/.pasqal/config`` (optional)
@@ -91,6 +90,10 @@ way it picks up the machine target from QRMI, as populated by (for example) the
 SPANK plugin's ``--qpu`` argument, or manually set by
 ``QRMI_JOB_QPU_RESOURCES``.
 
+In `pasqal.py`_:
+
+.. _pasqal.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/cudaq/pasqal.py
+
 .. code-block:: python
    :linenos:
 
@@ -101,10 +104,12 @@ See the CUDA-Q docs to see how to send a C++ job. To use QRMI, simply
 set the target and machine as above.
 
 
-How to run
-----------
+How to run `this example`_
+--------------------------
 
-All information is baked into the Python script:
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/cudaq
+
+All information is baked into the Python script. Run `pasqal.py`_:
 
 .. code-block:: shell-session
 
