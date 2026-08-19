@@ -5,3 +5,4 @@
 * [IQM Server QRMI](./iqm_server)
 * [Pasqal Cloud](./pasqal_cloud)
 * [Pasqal Local](./pasqal_local)
+* [QRMI Service](./service)

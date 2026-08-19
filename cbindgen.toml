@@ -34,6 +34,16 @@ after_includes = """
  *  @defgroup QrmiResourceMetadata Quantum Resource Metadata
  *
  *  Functions used when accessing Quantum resource metadata from the QRMI C API.
+ *
+ *  @defgroup QrmiResourceProvider Resource Provider
+ *
+ *  Functions used to dynamically discover quantum resources from a vendor
+ *  endpoint via the QRMI C API.
+ *
+ *  @defgroup QrmiService QRMI Service
+ *
+ *  Functions used to discover the QPU resources assigned to the current job
+ *  from the QRMI C API.
  */
 """
 

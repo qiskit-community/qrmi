@@ -460,6 +460,104 @@ impl PyResourceProvider {
 }
 
 // ---------------------------------------------------------------------------
+// QRMIService Python bindings
+// ---------------------------------------------------------------------------
+
+/// Python wrapper for `QRMIService`.
+///
+/// Discovers the QPU resources assigned to the current job -- read from the
+/// `QRMI_JOB_QPU_RESOURCES` / `QRMI_JOB_QPU_TYPES` environment variables, or
+/// their legacy `SLURM_JOB_QPU_RESOURCES` / `SLURM_JOB_QPU_TYPES`
+/// equivalents -- and exposes the ones that are currently accessible as
+/// `QuantumResource` instances.
+///
+/// This is a thin wrapper around the plain-Rust [`crate::QRMIService`],
+/// which does the actual discovery/filtering and is usable on its own from
+/// Rust (see its docs for a Rust example). This wrapper's job is only to
+/// bridge that to Python: it drives `QRMIService::new()`'s `Future` to
+/// completion on a private tokio `Runtime` (mirroring `PyResourceProvider`
+/// and `PyQuantumResource` elsewhere in this module, since `pyo3` classes
+/// can't themselves be `async`), then moves each resource returned by
+/// `QRMIService::into_resource_map()` into its own, independently owned
+/// `PyQuantumResource` -- exactly as `PyResourceProvider::resources()` does
+/// for each `Box<dyn QuantumResource>` returned by
+/// `ResourceProvider::resources()`.
+///
+/// # Example (Python)
+///
+/// ```python
+/// from qrmi import QRMIService
+///
+/// service = QRMIService()
+/// for resource in service.resources():
+///     print(resource.resource_id())
+///
+/// resource = service.resource("ibm_torino")
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[pyo3(name = "QRMIService")]
+pub struct PyQRMIService {
+    // Keyed by resource id (i.e. QPU name). Stored as `Py<PyQuantumResource>`
+    // rather than owning `PyQuantumResource` directly so that `resources()`
+    // and `resource()` can hand back the *same* underlying instance on every
+    // call (cheap refcount bump) instead of constructing a fresh one --
+    // `PyQuantumResource` cannot be cloned (it owns a `Box<dyn
+    // QuantumResource>` and its own tokio `Runtime`), and callers may rely
+    // on identity, e.g. having already called `acquire()` on the instance
+    // returned earlier.
+    qrmi_resources: std::collections::HashMap<String, Py<PyQuantumResource>>,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyQRMIService {
+    #[new]
+    pub fn new(py: Python<'_>) -> PyResult<Self> {
+        crate::common::initialize();
+
+        // A short-lived runtime just to drive `QRMIService::new()` -- unlike
+        // `PyQuantumResource`/`PyResourceProvider`, no long-lived async
+        // methods are called after this, so there's no need to keep it
+        // around (or worry about its `Drop` deadlocking; see those types'
+        // `Drop` impls for why that's normally a concern here).
+        let rt = Runtime::new().expect("Failed to create a new tokio runtime.");
+        let inner = py
+            .detach(|| rt.block_on(async { crate::QRMIService::new().await }))
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+
+        let qrmi_resources = inner
+            .into_resource_map()
+            .into_iter()
+            .map(|(id, boxed)| {
+                Py::new(py, PyQuantumResource::from_inner(boxed)).map(|obj| (id, obj))
+            })
+            .collect::<PyResult<std::collections::HashMap<_, _>>>()?;
+
+        Ok(Self { qrmi_resources })
+    }
+
+    /// Returns all accessible QRMI resources.
+    fn resources(&self, py: Python<'_>) -> Vec<Py<PyQuantumResource>> {
+        self.qrmi_resources
+            .values()
+            .map(|r| r.clone_ref(py))
+            .collect()
+    }
+
+    /// Returns a single resource matching the specified resource identifier.
+    ///
+    /// # Arguments
+    ///
+    /// * `resource_id` - A resource identifier, i.e. backend name for IBM Quantum.
+    ///
+    /// Returns `None` if not found.
+    fn resource(&self, py: Python<'_>, resource_id: &str) -> Option<Py<PyQuantumResource>> {
+        self.qrmi_resources.get(resource_id).map(|r| r.clone_ref(py))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Config Python bindings
 // ---------------------------------------------------------------------------
 
@@ -635,6 +733,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyResourceDef>()?;
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
+    m.add_class::<PyQRMIService>()?;
     Ok(())
 }
 define_stub_info_gatherer!(stub_info);

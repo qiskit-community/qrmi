@@ -46,14 +46,8 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "ibm-quantum-system" => Ok(ResourceType::IBMQuantumSystem),
-            "qiskit-runtime-service" => Ok(ResourceType::QiskitRuntimeService),
-            "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
-            "pasqal-local" => Ok(ResourceType::PasqalLocal),
-            "alice-bob-felis" => Ok(ResourceType::AliceBobFelis),
-            "iqm-server" => Ok(ResourceType::IQMServer),
-            _ => Err(serde::de::Error::unknown_variant(
+        ResourceType::from_qpu_type_str(&s).ok_or_else(|| {
+            serde::de::Error::unknown_variant(
                 &s,
                 &[
                     "ibm-quantum-system",
@@ -63,8 +57,8 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
                     "alice-bob-felis",
                     "iqm-server",
                 ],
-            )),
-        }
+            )
+        })
     }
 }
 impl ResourceType {
@@ -76,6 +70,25 @@ impl ResourceType {
             ResourceType::PasqalLocal => "pasqal-local",
             ResourceType::AliceBobFelis => "alice-bob-felis",
             ResourceType::IQMServer => "iqm-server",
+        }
+    }
+
+    /// Parses one of QRMI's `qpu_type` strings (e.g. as used in the
+    /// `QRMI_JOB_QPU_TYPES` environment variable, or the `"type"` field of a
+    /// `qrmi_config.json` resource definition) into a `ResourceType`.
+    ///
+    /// Returns `None` for an unrecognized string, rather than an error,
+    /// since callers iterating over a job's QPU list generally want to warn
+    /// and skip an unsupported entry rather than abort the whole scan.
+    pub fn from_qpu_type_str(s: &str) -> Option<Self> {
+        match s {
+            "ibm-quantum-system" => Some(ResourceType::IBMQuantumSystem),
+            "qiskit-runtime-service" => Some(ResourceType::QiskitRuntimeService),
+            "pasqal-cloud" => Some(ResourceType::PasqalCloud),
+            "pasqal-local" => Some(ResourceType::PasqalLocal),
+            "alice-bob-felis" => Some(ResourceType::AliceBobFelis),
+            "iqm-server" => Some(ResourceType::IQMServer),
+            _ => None,
         }
     }
 }

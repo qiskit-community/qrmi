@@ -20,6 +20,9 @@ pub mod resource_provider;
 pub use resource_provider::create_provider;
 pub use resource_provider::ResourceProvider;
 
+pub mod service;
+pub use service::QRMIService;
+
 mod cext;
 pub mod models;
 #[cfg(feature = "pyo3")]

@@ -1968,3 +1968,140 @@ pub unsafe extern "C" fn qrmi_provider_least_busy(
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// QRMIService C bindings
+// ---------------------------------------------------------------------------
+
+/// @ingroup QrmiService
+/// Discovers the QPU resources assigned to the current job -- read from the
+/// `QRMI_JOB_QPU_RESOURCES` / `QRMI_JOB_QPU_TYPES` environment variables, or
+/// their legacy `SLURM_JOB_QPU_RESOURCES` / `SLURM_JOB_QPU_TYPES`
+/// equivalents -- and returns the ones that are currently accessible.
+///
+/// This is the C counterpart of `qrmi.QRMIService` (Python) and
+/// `qrmi::QRMIService` (Rust); all three share the same underlying
+/// discovery/filtering logic.
+///
+/// Unlike qrmi_provider_resources(), which is called against a persistent
+/// QrmiResourceProvider handle (and can be called repeatedly, e.g. with
+/// different filters), this function takes no arguments and is a one-shot
+/// operation: there is no separate "service" handle to create or free.
+/// Discovery happens inline, and each QrmiQuantumResource handle placed in
+/// `resources_out` is independently owned by the caller from that point on
+/// -- usable with the same qrmi_resource_*() functions as a handle returned
+/// by qrmi_resource_new(), just not individually freed (see
+/// qrmi_service_resources_free() below).
+///
+/// The caller is responsible for freeing the returned struct with
+/// qrmi_service_resources_free(). Individual handles inside the struct must
+/// NOT be freed separately.
+///
+/// # Safety
+///
+/// * `resources_out` must be non-null and point to a zero-initialized
+///   QrmiQuantumResources.
+///
+/// # Example
+///
+/// @code
+///   QrmiQuantumResources resources = {0};
+///   QrmiReturnCode rc = qrmi_service_resources(&resources);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     for (size_t i = 0; i < resources.length; i++) {
+///       char *id = NULL;
+///       qrmi_resource_id(resources.resources[i], &id);
+///       printf("resource: %s\n", id);
+///       qrmi_string_free(id);
+///     }
+///     qrmi_service_resources_free(&resources);
+///   } else {
+///     const char *err = qrmi_get_last_error();
+///     printf("error: %s\n", err);
+///   }
+/// @endcode
+///
+/// @param (resources_out) [out] Pointer to a QrmiQuantumResources struct to populate
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.23.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_service_resources(
+    resources_out: *mut QuantumResources,
+) -> ReturnCode {
+    crate::common::initialize();
+    if resources_out.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    // One `Runtime`, shared (via `Arc`) across every `QuantumResource`
+    // handle this call produces -- same approach `qrmi_provider_resources`
+    // takes for the handles it produces, rather than each handle getting
+    // its own `Runtime` (contrast `PyQuantumResource` in `pyext.rs`, where
+    // each Python-visible object needs to be independently droppable and
+    // so does own its own).
+    let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
+    let result = runtime.block_on(async { crate::QRMIService::new().await });
+
+    match result {
+        Ok(service) => {
+            let resource_map = service.into_resource_map();
+            let count = resource_map.len();
+            let mut raw_ptrs: Vec<*mut QuantumResource> = resource_map
+                .into_values()
+                .map(|r| {
+                    Box::into_raw(Box::new(QuantumResource {
+                        inner: r,
+                        runtime: runtime.clone(),
+                    }))
+                })
+                .collect();
+
+            let ptr = raw_ptrs.as_mut_ptr();
+            std::mem::forget(raw_ptrs);
+
+            (*resources_out).resources = ptr;
+            (*resources_out).length = count;
+            ReturnCode::Success
+        }
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            ReturnCode::Error
+        }
+    }
+}
+
+/// @ingroup QrmiService
+/// Frees a QrmiQuantumResources struct populated by qrmi_service_resources().
+///
+/// This frees both the individual QrmiQuantumResource handles and the
+/// internal array. After calling this, the struct's fields are zeroed.
+/// Do NOT call qrmi_resource_free() on individual elements after calling
+/// this.
+///
+/// # Safety
+///
+/// * `resources` must have been populated by a previous call to
+///   qrmi_service_resources().
+///
+/// # Example
+///
+/// @code
+///   qrmi_service_resources_free(&resources);
+/// @endcode
+///
+/// @param (resources) [in] Pointer to a QrmiQuantumResources struct to free
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.23.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_service_resources_free(
+    resources: *mut QuantumResources,
+) -> ReturnCode {
+    // Identical shape and freeing logic to `qrmi_provider_resources_free`
+    // (same `QuantumResources` struct, same ownership rules) -- delegate to
+    // it rather than duplicating the unsafe pointer-walking code. A
+    // separate function (rather than just telling callers to reuse
+    // `qrmi_provider_resources_free`) exists so the name at the call site
+    // matches the `qrmi_service_*` family it was populated by, and so it
+    // shows up under this file's `QrmiService` Doxygen group.
+    unsafe { qrmi_provider_resources_free(resources) }
+}
