@@ -126,4 +126,4 @@ Output:
 |                                                   | input parameters).                |
 +---------------------------------------------------+-----------------------------------+
 
-.. _SamplerV2 schema: https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json
+.. _SamplerV2 schema: https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs
