@@ -179,6 +179,24 @@ fn _set_last_error(msg: String) {
     });
 }
 
+/// Converts a Rust string into a `CString` suitable for handing across the
+/// C ABI, stripping any embedded NUL bytes first (a `&str` may contain
+/// them; a C string cannot). Used only at the C boundary -- see
+/// `qrmi_log_callback_set`'s adapter closure -- because this is where
+/// Rust's log records get converted to the C-callable log callback's
+/// pointer arguments.
+fn sanitized_cstring(value: &str) -> CString {
+    CString::new(
+        value
+            .as_bytes()
+            .iter()
+            .copied()
+            .filter(|byte| *byte != 0)
+            .collect::<Vec<_>>(),
+    )
+    .unwrap_or_default()
+}
+
 /// @ingroup Qrmi
 /// Free a string allocated by C API
 ///

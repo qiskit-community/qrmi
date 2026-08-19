@@ -16,7 +16,6 @@ use crate::munge;
 use anyhow::{bail, Result};
 
 use crate::models::job::JobStatus;
-use log::debug;
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
@@ -212,7 +211,6 @@ impl Client {
     async fn handle_request<T: DeserializeOwned>(&self, resp: reqwest::Response) -> Result<T> {
         if resp.status().is_success() {
             let json_text = resp.text().await?;
-            debug!("{}", json_text);
             let val = serde_json::from_str(&json_text)?;
             Ok(val)
         } else {
@@ -257,8 +255,9 @@ impl ClientBuilder {
     /// ```
     pub fn build(&mut self) -> Result<Client> {
         let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-
+        if cfg!(debug_assertions) {
+            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        }
         let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
 
         Ok(Client {

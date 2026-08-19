@@ -1,31 +1,50 @@
-use anyhow::Result;
-use dotenvy::dotenv;
-use felis::apis::{configuration, health_service, targets_service};
-use felis::helpers::decode_api_key;
+use alice_bob_felis::apis::{configuration, health_service, targets_service};
+use alice_bob_felis::helpers::decode_api_key;
 
-async fn prepare_config() -> Result<configuration::Configuration, anyhow::Error> {
-    dotenv().ok();
-    let api_key = std::env::var("FELIS_API_KEY")?;
-    let endpoint = std::env::var("FELIS_BASE_ENDPOINT")?;
+const API_KEY: &str = "bW9jay1mZWxpcy11c2VyOm1vY2stZmVsaXMtcGFzc3dvcmQ=";
 
+fn prepare_config(endpoint: String) -> configuration::Configuration {
     let mut config = configuration::Configuration::new();
     config.base_path = endpoint;
-    config.basic_auth = decode_api_key(&api_key).unwrap();
+    config.basic_auth = decode_api_key(API_KEY).unwrap();
 
-    Ok(config)
+    config
 }
 
 #[tokio::test]
-async fn test_health_check() -> Result<(), anyhow::Error> {
-    let config = prepare_config().await?;
-    let response = health_service::check_health(&config, None).await?;
+async fn test_health_check() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("GET", "/v1/health/")
+        .match_header("authorization", format!("Basic {API_KEY}").as_str())
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body("\"OK\"")
+        .create_async()
+        .await;
+
+    let config = prepare_config(server.url());
+    let response = health_service::check_health(&config, None).await.unwrap();
+
     assert_eq!(response, "OK");
-    Ok(())
+    mock.assert_async().await;
 }
 
 #[tokio::test]
-async fn test_list_targets() -> Result<(), anyhow::Error> {
-    let config = prepare_config().await?;
-    targets_service::list_targets(&config).await?;
-    Ok(())
+async fn test_list_targets() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("GET", "/v1/targets/")
+        .match_header("authorization", format!("Basic {API_KEY}").as_str())
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body("[]")
+        .create_async()
+        .await;
+
+    let config = prepare_config(server.url());
+    let response = targets_service::list_targets(&config).await.unwrap();
+
+    assert!(response.is_empty());
+    mock.assert_async().await;
 }
