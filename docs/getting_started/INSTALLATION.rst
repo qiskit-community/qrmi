@@ -3,6 +3,10 @@
 Installing QRMI
 ===============
 
+.. rst-class:: lead
+
+    Learn how to install QRMI and explore information about further resources.
+
 .. contents::
    :local:
    :depth: 2
@@ -256,11 +260,6 @@ Once installed, the Lua binding can be built using either gcc or cmake:
       The directory containing ``libqrmi.so`` is automatically baked into the
       built artifact's RUNPATH, so there's no need to set ``LD_LIBRARY_PATH``
       at runtime (verifiable with ``readelf -d qrmi.so``).
-
-
-
-
-
 
 
 Building Optional Libraries

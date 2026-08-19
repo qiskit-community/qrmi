@@ -25,8 +25,8 @@ Install dependencies
 Tools
 -----
 
-`task_runner_input.py`
-~~~~~~~~~~~~~~~~~~~~~~
+`task_runner_input.py`_
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _task_runner_input.py: https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/pulser/task_runner_input.py
 
