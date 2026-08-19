@@ -1,6 +1,7 @@
 // This code is part of Qiskit.
 //
 // (C) Copyright IBM 2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -15,7 +16,7 @@
 mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
-use crate::ibm::IBMQiskitRuntimeService;
+use crate::ibm::IBMQuantumComputeService;
 use crate::resource_provider::ResourceProvider;
 use crate::QuantumResource;
 use anyhow::{anyhow, Result};
@@ -27,7 +28,7 @@ use quantum_compute_client::apis::{auth, backends_api, configuration};
 use std::collections::HashMap;
 use std::env;
 
-/// A [`ResourceProvider`] that discovers backends available through IBM Qiskit Runtime Service.
+/// A [`ResourceProvider`] that discovers backends available through IBM Quantum Compute Service.
 ///
 /// Constructed from a [`ResourceDef`] with `is_dynamic: true`.
 ///
@@ -38,34 +39,34 @@ use std::env;
 ///     "resources": [
 ///         {
 ///             "name": "ibm_inst1",
-///             "type": "qiskit-runtime-service",
+///             "type": "ibm-quantum-compute-service",
 ///             "is_dynamic": true,
 ///             "environment": {
-///                 "QRMI_IBM_QRS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
-///                 "QRMI_IBM_QRS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
-///                 "QRMI_IBM_QRS_IAM_APIKEY":   "my_apikey",
-///                 "QRMI_IBM_QRS_SERVICE_CRN":  "my_instance"
+///                 "QRMI_IBM_QCS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
+///                 "QRMI_IBM_QCS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
+///                 "QRMI_IBM_QCS_IAM_APIKEY":   "my_apikey",
+///                 "QRMI_IBM_QCS_SERVICE_CRN":  "my_instance"
 ///             }
 ///         }
 ///     ]
 /// }
 /// ```
-pub struct IBMQiskitRuntimeServiceProvider {
+pub struct IBMQuantumComputeServiceProvider {
     config: configuration::Configuration,
     api_key: String,
     iam_endpoint: String,
     provider_env: HashMap<String, String>,
 }
 
-impl IBMQiskitRuntimeServiceProvider {
+impl IBMQuantumComputeServiceProvider {
     /// Constructs a new provider from an environment variable map.
     ///
     /// # Required keys
     ///
-    /// - `QRMI_IBM_QRS_ENDPOINT`
-    /// - `QRMI_IBM_QRS_IAM_ENDPOINT`
-    /// - `QRMI_IBM_QRS_IAM_APIKEY`
-    /// - `QRMI_IBM_QRS_SERVICE_CRN`
+    /// - `QRMI_IBM_QCS_ENDPOINT`
+    /// - `QRMI_IBM_QCS_IAM_ENDPOINT`
+    /// - `QRMI_IBM_QCS_IAM_APIKEY`
+    /// - `QRMI_IBM_QCS_SERVICE_CRN`
     pub fn new(environment: &HashMap<String, String>) -> Result<Self> {
         let get = |key: &str| -> Result<String> {
             environment
@@ -74,10 +75,10 @@ impl IBMQiskitRuntimeServiceProvider {
                 .ok_or_else(|| anyhow!("Missing '{}' in environment map", key))
         };
 
-        let qrs_endpoint = get("QRMI_IBM_QRS_ENDPOINT")?;
-        let iam_endpoint = get("QRMI_IBM_QRS_IAM_ENDPOINT")?;
-        let api_key = get("QRMI_IBM_QRS_IAM_APIKEY")?;
-        let service_crn = get("QRMI_IBM_QRS_SERVICE_CRN")?;
+        let qrs_endpoint = get("QRMI_IBM_QCS_ENDPOINT")?;
+        let iam_endpoint = get("QRMI_IBM_QCS_IAM_ENDPOINT")?;
+        let api_key = get("QRMI_IBM_QCS_IAM_APIKEY")?;
+        let service_crn = get("QRMI_IBM_QCS_SERVICE_CRN")?;
 
         let mut config = configuration::Configuration::new();
         config.base_path = qrs_endpoint;
@@ -114,8 +115,8 @@ impl IBMQiskitRuntimeServiceProvider {
 }
 
 #[async_trait]
-impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
-    /// Returns backends available through IBM Qiskit Runtime Service,
+impl ResourceProvider for IBMQuantumComputeServiceProvider {
+    /// Returns backends available through IBM Quantum Compute Service,
     /// filtered and sorted by `queue_length` (ascending).
     ///
     /// # Filter string format
@@ -225,11 +226,11 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
 
                 self.inject_backend_env(&device.name);
 
-                match IBMQiskitRuntimeService::new(&device.name) {
+                match IBMQuantumComputeService::new(&device.name) {
                     Ok(r) => Some(Box::new(r) as Box<dyn QuantumResource + Send + Sync>),
                     Err(e) => {
                         warn!(
-                            "Skipping backend {:?}: failed to construct IBMQiskitRuntimeService: {:?}",
+                            "Skipping backend {:?}: failed to construct IBMQuantumComputeService: {:?}",
                             device.name, e
                         );
                         None

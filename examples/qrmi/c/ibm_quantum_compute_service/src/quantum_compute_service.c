@@ -23,7 +23,7 @@ extern const char *read_file(const char *);
 int main(int argc, char *argv[]) {
 
   if (argc != 4) {
-    fprintf(stderr, "qiskit_runtime_service <backend_name> <primitive input "
+    fprintf(stderr, "quantum_compute_service <backend_name> <primitive input "
                     "file> <program id>\n");
     return EXIT_SUCCESS;
   }
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   load_dotenv();
 
   QrmiQuantumResource *qrmi =
-      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE);
+      qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE);
   if (!qrmi) {
     const char* last_error = qrmi_get_last_error();
     fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);

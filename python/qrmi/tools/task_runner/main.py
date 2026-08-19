@@ -3,6 +3,7 @@
 # This code is part of Qiskit.
 #
 # (C) Copyright IBM 2025, 2026
+# (C) Copyright UKRI-STFC 2026
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -76,6 +77,7 @@ class App:
 
     RESOURCE_TYPE_MAP = {
         "ibm-quantum-system": ResourceType.IBMQuantumSystem,
+        "ibm-quantum-compute-service": ResourceType.IBMQuantumComputeService,
         "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
         "pasqal-cloud": ResourceType.PasqalCloud,
         "iqm-server": ResourceType.IQMServer,
@@ -173,6 +175,7 @@ class App:
             task_input = json.load(input_file)
             if res_type in [
                 ResourceType.IBMQuantumSystem,
+                ResourceType.IBMQuantumComputeService,
                 ResourceType.IBMQiskitRuntimeService,
             ]:
                 payload = Payload.QiskitPrimitive(

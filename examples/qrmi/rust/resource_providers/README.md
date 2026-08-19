@@ -34,9 +34,9 @@ Filters: num_qubits=127&max_shots=10000
 
 Available resources (3 found):
 ----------------------------------------
-  ibm_fez                        type=qiskit-runtime-service    accessible=true
-  ibm_marrakesh                  type=qiskit-runtime-service    accessible=true
-  ibm_kingston                   type=qiskit-runtime-service    accessible=true
+  ibm_fez                        type=ibm-quantum-compute-service    accessible=true
+  ibm_marrakesh                  type=ibm-quantum-compute-service    accessible=true
+  ibm_kingston                   type=ibm-quantum-compute-service    accessible=true
 
 Least busy resource:
   ibm_fez

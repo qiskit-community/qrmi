@@ -12,7 +12,7 @@
 
 """Unified QRMI provider example.
 
-Works with any supported provider type (qiskit-runtime-service,
+Works with any supported provider type (qiskit-runtime-service, ibm-quantum-compute-service,
 ibm-quantum-system, etc.). The resource type is read from qrmi_config.json
 — no code changes needed when switching between providers.
 """

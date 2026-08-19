@@ -1,5 +1,6 @@
 //
 // (C) Copyright IBM 2025-2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -30,7 +31,7 @@ use clap::builder::TypedValueParser as _;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
-use qrmi::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
+use qrmi::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
 use qrmi::pasqal::PasqalCloud;
 use qrmi::pasqal::PasqalLocal;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
@@ -76,14 +77,15 @@ pub struct QrmiInput {
     /// type.
     job_runs: Option<i32>,
 
-    /// Parameters to inject into the primitive. Required for ibm-quantum-system and
-    /// qiskit-runtime-service QPU resources. Estimator schema:
+    /// Parameters to inject into the primitive. Required for ibm-quantum-system,
+    /// ibm-quantum-compute-service and
+    /// qiskit-runtime-service(deprecated) QPU resources. Estimator schema:
     /// https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json,
     /// Sampler schema:
     /// https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json
     parameters: Option<serde_json::Value>,
 
-    /// ID of the primitive to be executed. Required for ibm-quantum-system and qiskit-runtime-service
+    /// ID of the primitive to be executed. Required for ibm-quantum-system, ibm-quantum-compute-service and qiskit-runtime-service(deprecated)
     /// QPU resources.
     program_id: Option<PrimitiveType>,
 
@@ -103,8 +105,15 @@ pub enum ResourceType {
         /// Qiskit primitive type
         program_id: PrimitiveType,
     },
-    /// IBM Qiskit Runtime Service
+    /// IBM Qiskit Runtime Service(deprecated)
     QiskitRuntimeService {
+        /// Qiskit primitive input
+        input: String,
+        /// Qiskit primitive type
+        program_id: PrimitiveType,
+    },
+    /// IBM Quantum Compute Service
+    IBMQuantumComputeService {
         /// Qiskit primitive input
         input: String,
         /// Qiskit primitive type
@@ -162,6 +171,20 @@ impl ResourceType {
                 }
             };
             Ok(Self::QiskitRuntimeService { input, program_id })
+        } else if qpu_type == "ibm-quantum-compute-service" {
+            let input = match &deserialized.parameters {
+                Some(v) => v.to_string(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "parameters").into());
+                }
+            };
+            let program_id = match &deserialized.program_id {
+                Some(v) => v.clone(),
+                None => {
+                    return Err(eyre!("Missing property: {} in the payload.", "program_id").into());
+                }
+            };
+            Ok(Self::IBMQuantumComputeService { input, program_id })
         } else if qpu_type == "pasqal-cloud" {
             let job_runs = match &deserialized.job_runs {
                 Some(v) => v,
@@ -199,7 +222,7 @@ impl ResourceType {
         } else {
             Err(
                 eyre!(
-                    "Resource type {} is not supported. [supported types: ibm-quantum-system, qiskit-runtime-service, pasqal-cloud]",
+                    "Resource type {} is not supported. [supported types: ibm-quantum-systemibm-quantum-compute-service, qiskit-runtime-service(deprecated), pasqal-cloud]",
                     qpu_type,
                 ).into()
             )
@@ -210,6 +233,7 @@ impl ResourceType {
         match self {
             ResourceType::IBMQuantumSystem { .. } => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
+            ResourceType::IBMQuantumComputeService { .. } => "ibm-quantum-compute-service",
             ResourceType::PasqalCloud { .. } => "pasqal-cloud",
             ResourceType::PasqalLocal { .. } => "pasqal-local",
         }
@@ -217,7 +241,8 @@ impl ResourceType {
     fn to_payload(&self) -> Option<Payload> {
         match self {
             ResourceType::IBMQuantumSystem { input, program_id }
-            | ResourceType::QiskitRuntimeService { input, program_id } => {
+            | ResourceType::QiskitRuntimeService { input, program_id }
+            | ResourceType::IBMQuantumComputeService { input, program_id } => {
                 Some(Payload::QiskitPrimitive {
                     input: input.to_string(),
                     program_id: program_id.as_str().to_string(),
@@ -243,6 +268,9 @@ impl ResourceType {
             }
             ResourceType::QiskitRuntimeService { .. } => {
                 Ok(Box::new(IBMQiskitRuntimeService::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
+            ResourceType::IBMQuantumComputeService { .. } => {
+                Ok(Box::new(IBMQuantumComputeService::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
             ResourceType::PasqalCloud { .. } => {
                 Ok(Box::new(PasqalCloud::new(qpu_name)?) as Box<dyn QuantumResource>)

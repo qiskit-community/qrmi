@@ -1,26 +1,13 @@
-# Quantum Compute Service QRMI - Examples in Lua
+# Quantum Compute Service QRMI - Examples in Rust
 
 ## Prerequisites
 
-* [QRMI C library(libqrmi.so)](../../../../README.md#standalone-c-library)
-* [QRMI Lua Module(qrmi.so)](../../../../lua/README.md)
-
-## Setup
-
-```bash
-export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
-```
-
-Example:
-```bash
-export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
-```
+* Python 3.11 or 3.12
+* [QRMI Rust library](../../../../README.md)
 
 ## Set environment variables
 
-Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below.
+Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
@@ -43,15 +30,23 @@ Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can 
 ## How to build this example
 
 ```shell-session
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
+$ cargo clean
+$ cargo build --example qrmi-example-ibm-quantum-compute-service --release
 ```
 
 ## How to run this example
 ```shell-session
-lua example.lua <backend_name> <resource_type> <program type> <input filename>
+$ ../target/release/qrmi-example-ibm-quantum-compute-service --help
+QRMI for IBM Quantum Compute Service - Example
+
+Usage: qrmi-example-qiskit_runtime_service --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
+
+Options:
+  -b, --backend <BACKEND>        backend name
+  -i, --input <INPUT>            primitive input file
+  -p, --program-id <PROGRAM_ID>  program id
+  -h, --help                     Print help
+  -V, --version                  Print version
 ```
 For example,
 ```shell-session
@@ -60,5 +55,5 @@ export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
 export ibm_torino_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
 export ibm_torino_QRMI_IBM_QCS_SERVICE_CRN=your_instance
 
-lua example.lua ibm_torino ibm-quantum-compute-service sampler ../../examples/task_runner/qiskit/sampler_input_ibm_torino_params_only.json
+../target/release/qrmi-example-ibm-quantum-compute-service  -b ibm_torino -i sampler_input.json -p sampler
 ```

@@ -1,26 +1,13 @@
-# Quantum Compute Service QRMI - Examples in Lua
+# Quantum Compute Service QRMI - Examples in C
 
 ## Prerequisites
 
-* [QRMI C library(libqrmi.so)](../../../../README.md#standalone-c-library)
-* [QRMI Lua Module(qrmi.so)](../../../../lua/README.md)
-
-## Setup
-
-```bash
-export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
-```
-
-Example:
-```bash
-export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
-```
+* C compiler/linker, cmake and make
+* [QRMI Rust library](../../../README.md)
 
 ## Set environment variables
 
-Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below.
+Because QRMI is an environment variable driven software library, all configuration parameters must be specified in environment variables. The required environment variables are listed below. This example assumes that a `.env` file is available under the current directory.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
@@ -51,7 +38,8 @@ $ make
 
 ## How to run this example
 ```shell-session
-lua example.lua <backend_name> <resource_type> <program type> <input filename>
+$ ./build/quantum_compute_service
+quantum_compute_service <backend_name> <primitive input file> <program id>
 ```
 For example,
 ```shell-session
@@ -60,5 +48,5 @@ export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
 export ibm_torino_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
 export ibm_torino_QRMI_IBM_QCS_SERVICE_CRN=your_instance
 
-lua example.lua ibm_torino ibm-quantum-compute-service sampler ../../examples/task_runner/qiskit/sampler_input_ibm_torino_params_only.json
+./build/quantum_compute_service ibm_torino sampler_input.json sampler
 ```

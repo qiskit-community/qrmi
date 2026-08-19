@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// Copyright (C) 2025 UKRI-STFC (Hartree Centre), IBM
+// Copyright (C) 2025-2026 UKRI-STFC (Hartree Centre), IBM
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -12,7 +12,7 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{ibm::IBMQiskitRuntimeService, models::Payload, models::TaskStatus, QuantumResource};
+use qrmi::{ibm::IBMQuantumComputeService, models::Payload, models::TaskStatus, QuantumResource};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -21,7 +21,7 @@ use std::{thread, time};
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]
-#[command(about = "QRMI for IBM Qiskit Runtime Service - Example")]
+#[command(about = "QRMI for IBM Quantum Compute Service - Example")]
 struct Args {
     /// backend name
     #[arg(short, long)]
@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     println!("{}", dotenv().unwrap().display());
 
-    let mut qrmi = IBMQiskitRuntimeService::new(&args.backend)?;
+    let mut qrmi = IBMQuantumComputeService::new(&args.backend)?;
     println!(
         "Selected resource: id={} type={}",
         qrmi.resource_id().await?,

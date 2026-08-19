@@ -1,6 +1,7 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright 2025 IBM. All Rights Reserved.
+# (C) Copyright 2025-2026 IBM. All Rights Reserved.
+# (C) Copyright 2026 UKRI-STFC (Hartree Centre). All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -41,6 +42,8 @@ class QRMIService:
             qrmi = None
             if qpu_types[i] == "ibm-quantum-system":
                 qrmi = QuantumResource(qpu, ResourceType.IBMQuantumSystem)
+            elif qpu_types[i] == "ibm-quantum-compute-service":
+                qrmi = QuantumResource(qpu, ResourceType.IBMQuantumComputeService)
             elif qpu_types[i] == "qiskit-runtime-service":
                 qrmi = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
             elif qpu_types[i] == "pasqal-cloud":
