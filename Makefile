@@ -104,7 +104,7 @@ test-doc:
 test-deps:
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum-system-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-cloud-api
-	cargo test --locked $(CARGO_PROFILE_FLAG) -p qiskit_runtime_client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum_compute_client
 
 test-rust-examples:
 	cargo test --examples --locked $(CARGO_PROFILE_FLAG)
