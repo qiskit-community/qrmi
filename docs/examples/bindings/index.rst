@@ -1,6 +1,10 @@
 Bindings Examples
 =================
 
+.. rst-class:: lead
+
+    Examples demonstrating how QRMI can be accessed and used from its supported programming language bindings.
+
 .. toctree::
     :maxdepth: 2
     

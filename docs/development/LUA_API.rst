@@ -3,6 +3,10 @@
 Lua API Reference
 =================
 
+.. rst-class:: lead
+
+   QRMI Lua bindings and available interfaces for developing quantum workflows in Lua.
+
 Generated from the Doxygen comments in `lua_qrmi.c`_. This summarises
 the full API exposed by the module loaded via ``require("qrmi")``, from
 a Lua consumer's point of view (for C-level implementation details, see
@@ -41,14 +45,6 @@ Design Notes
    pointer. The userdata holds exactly one, and the ``__gc`` metamethod
    ensures it's automatically ``release``\ d and ``free``\ d even if the
    caller forgets to do so explicitly.
-
-
-Not yet implemented (room for extension)
-----------------------------------------
-
--  ``QrmiResourceProvider`` / ``qrmi_provider_new()`` — resource
-   discovery / least-busy selection
--  Redirecting logs to Lua via ``qrmi_log_callback_set()``
 
 
 --------------

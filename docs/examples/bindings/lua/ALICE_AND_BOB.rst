@@ -48,7 +48,7 @@ How to run `this example`_
 
 .. _this example: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/alice_bob_felis
 
-Run `example.lua`:
+Run `example.lua`_:
 
 .. _example.lua: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/alice_bob_felis/example.lua
 

@@ -84,7 +84,6 @@ How to build `this example`_
 ----------------------------
 
 .. code-block:: shell-session
-.. code-block:: shell-session
 
    mkdir build
    cd build
@@ -92,10 +91,9 @@ How to build `this example`_
    make
 
 
-How to run `this example`
--------------------------
+How to run `this example`_
+--------------------------
 
-.. code-block:: shell-session
 .. code-block:: shell-session
 
    ./build/quantum_system
@@ -103,7 +101,6 @@ How to run `this example`
 
 For example:
 
-.. code-block:: shell-session
 .. code-block:: shell-session
 
    export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080

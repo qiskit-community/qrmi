@@ -3,6 +3,10 @@
 Qiskit Examples
 ===============
 
+.. rst-class:: lead
+
+    Explore examples demonstrating QRMI's Qiskit Primitive interfaces for backend-agnostic quantum program execution.
+
 .. toctree::
     :maxdepth: 2
     

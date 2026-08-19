@@ -3,6 +3,10 @@
 Testing QRMI
 ============
 
+.. rst-class:: lead
+
+   Explore QRMI's testing strategy, frameworks, conventions, and best practices.
+
 .. contents::
    :local:
    :depth: 2
