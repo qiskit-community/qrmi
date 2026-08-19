@@ -34,14 +34,6 @@ pub enum ReturnCode {
     NullPointerError = 101,
 }
 
-/// C ABI type for `qrmi_log_callback_set`. This is a C-facing detail: it
-/// does not appear anywhere in `common.rs`, which only knows about plain
-/// Rust closures (see `common::LogSink`). `qrmi_log_callback_set` below
-/// adapts one of these into a `LogSink` at registration time.
-pub type QrmiLogCallback = Option<
-    unsafe extern "C" fn(level: *const c_char, target: *const c_char, message: *const c_char),
->;
-
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Payload {
@@ -203,61 +195,6 @@ fn sanitized_cstring(value: &str) -> CString {
             .collect::<Vec<_>>(),
     )
     .unwrap_or_default()
-}
-
-/// @ingroup Qrmi
-/// Registers a QRMI log callback for C hosts.
-///
-/// Once registered, all log records produced by this library (subject to
-/// the active `RUST_LOG` filter, default level `warn`) are routed to
-/// `callback` instead of stderr.
-///
-/// Pass NULL to clear the current callback and revert to the default stderr writer.
-///
-/// # Safety
-///
-/// * If `callback` is non-NULL, it must remain a valid, callable function
-///   pointer for as long as it might still be invoked. Because a
-///   currently-executing log call may have already captured the previous
-///   callback pointer, do not unload code backing a callback immediately
-///   after replacing or clearing it — a small number of in-flight calls
-///   may still land on the old pointer.
-///
-/// # Example
-///
-/// @code
-///   void my_log_cb(const char *level, const char *target, const char *message) {
-///     fprintf(stderr, "[%s] %s: %s\n", level, target, message);
-///   }
-///   QrmiReturnCode rc = qrmi_log_callback_set(my_log_cb);
-/// @endcode
-///
-/// @param (callback) [in] Callback function, or NULL to clear.
-/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.20.0
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> ReturnCode {
-    let sink: Option<crate::common::LogSink> = callback.map(|f| {
-        let adapter: crate::common::LogSink = std::sync::Arc::new(move |level, target, message| {
-            let level = sanitized_cstring(level.as_str());
-            let target = sanitized_cstring(target);
-            let message = sanitized_cstring(message);
-            // SAFETY: `f` is a C function pointer supplied by the caller of
-            // `qrmi_log_callback_set`, which documents the same validity
-            // requirement this closure now carries: `f` must remain valid
-            // and callable for as long as it might still be invoked.
-            unsafe {
-                f(level.as_ptr(), target.as_ptr(), message.as_ptr());
-            }
-        });
-        adapter
-    });
-    let result = crate::common::set_log_sink(sink);
-    crate::common::initialize();
-    match result {
-        Ok(()) => ReturnCode::Success,
-        Err(()) => ReturnCode::Error,
-    }
 }
 
 /// @ingroup Qrmi

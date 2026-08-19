@@ -7,4 +7,4 @@
 
 ## License
 
-[Apache-2.0](../../LICENSE.txt)
+[Apache-2.0](https://github.com/qiskit-community/spank-plugins/blob/main/qrmi/LICENSE.txt)

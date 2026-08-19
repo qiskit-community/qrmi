@@ -3,7 +3,7 @@
 ## Prerequisites
 
 * Python 3.11 or 3.12
-* Installation of [QRMI python package](../../../README.md)
+* [Installation of QRMI primitives python package(`qiskit-qrmi-primitives`)](../../../../README.md)
 
 ## Install dependencies
 
