@@ -51,7 +51,9 @@ impl TokenManager {
         retry_policy: Option<reqwest_retry::policies::ExponentialBackoff>,
     ) -> Result<Self> {
         let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        if cfg!(debug_assertions) {
+            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        }
         if let Some(v) = timeout {
             reqwest_client_builder = reqwest_client_builder.timeout(v)
         }
@@ -206,7 +208,6 @@ impl Middleware for AuthMiddleware {
         let token = token_manager.get_token().await?;
         // add authentication header to the request
         let mut cloned_req = request.try_clone().unwrap();
-        debug!("current token {}", token);
         cloned_req.headers_mut().insert(
             reqwest::header::AUTHORIZATION,
             format!("Bearer {}", token).parse().unwrap(),
@@ -225,7 +226,6 @@ impl Middleware for AuthMiddleware {
             debug!("renew access token");
             token_manager.get_access_token().await?;
             let token = token_manager.get_token().await?;
-            debug!("new token {}", token);
             let mut new_request = request.try_clone().unwrap();
             new_request.headers_mut().insert(
                 reqwest::header::AUTHORIZATION,

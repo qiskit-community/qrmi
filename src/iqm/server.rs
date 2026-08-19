@@ -12,16 +12,15 @@
 
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use iqm_server_api::apis::calibration_sets_api::{
     get_calibration_set_v1, get_dynamic_quantum_architecture_v1, get_quality_metrics_v1,
 };
 use iqm_server_api::apis::configuration;
 use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
-use iqm_server_api::apis::quantum_computers_api::get_qc_health_v1;
+use iqm_server_api::apis::quantum_computers_api::{get_qc_health_v1, qc_get_artifacts};
 use iqm_server_api::models::IqmServerJobStatus;
-use log::error;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
@@ -79,6 +78,36 @@ impl IQMServer {
             calibration_set_id: calset_id.to_string(),
         })
     }
+
+    /// Interprets the result of an artifact fetch -- `job_get_artifacts` or
+    /// `qc_get_artifacts` -- as JSON.
+    ///
+    /// Returns `Value::Null` only when the provider reports a 404 for this
+    /// specific artifact. Both endpoints document this as normal: which
+    /// artifacts exist depends on job type (`job_get_artifacts`) or the
+    /// quantum computer's Station Control version (`qc_get_artifacts`).
+    /// Any other failure -- network, auth, a non-404 error status, or a
+    /// response that isn't valid JSON -- is returned as `Err` rather than
+    /// being folded into the same `null`.
+    fn parse_optional_artifact<B, E>(
+        result: std::result::Result<B, iqm_server_api::apis::Error<E>>,
+        artifact_type: &str,
+    ) -> Result<Value>
+    where
+        B: AsRef<[u8]>,
+        E: std::fmt::Debug + Send + Sync + 'static,
+    {
+        match result {
+            Ok(bytes) => serde_json::from_slice::<Value>(bytes.as_ref())
+                .with_context(|| format!("'{artifact_type}' artifact is not valid JSON")),
+            Err(iqm_server_api::apis::Error::ResponseError(resp))
+                if resp.status.as_u16() == 404 =>
+            {
+                Ok(Value::Null)
+            }
+            Err(e) => Err(e).with_context(|| format!("Failed to fetch '{artifact_type}'")),
+        }
+    }
 }
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
@@ -102,15 +131,15 @@ impl QuantumResource for IQMServer {
         }
     }
 
-    /// Creates a new session.
-    ///
+    /// IQM Server has no session concept. This does not contact the
+    /// provider; it returns a generated id so callers written against the
+    /// trait do not need a special case for this backend.
     async fn acquire(&mut self) -> Result<String> {
         Ok(Uuid::new_v4().to_string())
     }
 
-    /// Deletes the current session.
-    ///
-    /// This sends a DELETE request to /sessions/{session_id}/close via the qiskit_runtime_api client.
+    /// IQM Server has no session concept, so this is a no-op: nothing is
+    /// contacted and nothing is released. See `acquire()`.
     async fn release(&mut self, _acquisition_token: &str) -> Result<()> {
         Ok(())
     }
@@ -173,31 +202,34 @@ impl QuantumResource for IQMServer {
     /// Retrieves the results of a completed job.
     ///
     /// This function calls GET /jobs/{id}/results and serializes the returned JSON into a string.
+    ///
+    /// Which artifacts exist depends on the job type (see
+    /// `job_get_artifacts`'s own documentation), so a 404 for
+    /// `measurements` or `measurement_counts` is normal and is represented
+    /// as `null` for that field. Any other failure -- network, auth, a
+    /// non-404 error status, or a response that isn't valid JSON --
+    /// propagates as `Err` instead of being silently swallowed into the
+    /// same `null`.
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let mut result = json!({
-            "measurements": Value::Null,
-            "measurement_counts": Value::Null,
+        let measurements = Self::parse_optional_artifact(
+            job_get_artifacts(&self.config, task_id, "measurements").await,
+            "measurements",
+        )
+        .context("Failed to get 'measurements' artifact")?;
+        let measurement_counts = Self::parse_optional_artifact(
+            job_get_artifacts(&self.config, task_id, "measurement_counts").await,
+            "measurement_counts",
+        )
+        .context("Failed to get 'measurement_counts' artifact")?;
+
+        let result = json!({
+            "measurements": measurements,
+            "measurement_counts": measurement_counts,
         });
 
-        match job_get_artifacts(&self.config, task_id, "measurements").await {
-            Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
-                Ok(json) => result["measurements"] = json,
-                Err(e) => error!("Failed to json-parse measurements: {:?}", e),
-            },
-            Err(e) => error!("Failed to obtain 'measurements' artifact: {:?}", e),
-        }
-        match job_get_artifacts(&self.config, task_id, "measurement_counts").await {
-            Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
-                Ok(json) => result["measurement_counts"] = json,
-                Err(e) => error!("Failed to json-parse measurement_counts: {:?}", e),
-            },
-            Err(e) => error!("Failed to obtain 'measurement_counts' artifact: {:?}", e),
-        }
-
-        match serde_json::to_string_pretty(&result) {
-            Ok(result_str) => Ok(TaskResult { value: result_str }),
-            Err(e) => bail!("Failed to serialize result: {:?}", e),
-        }
+        let result_str =
+            serde_json::to_string_pretty(&result).context("Failed to serialize result")?;
+        Ok(TaskResult { value: result_str })
     }
 
     /// Returns the log messages of the task.
@@ -230,59 +262,64 @@ impl QuantumResource for IQMServer {
     /// Retrieves target details.
     ///
     /// This function combines the results of GET /backends/{id}/configuration and
-    /// GET /backends/{id}/properties into a single JSON object.
+    /// GET /backends/{id}/properties, plus the QC-level (not calibration-set-bound)
+    /// `static-quantum-architectures` artifact, into a single JSON object.
+    ///
+    /// `dynamic_quantum_architecture`, `calibration_set`, and
+    /// `quality_metrics` are expected to always exist, so if any of those
+    /// three underlying REST calls fails, or its response is not valid
+    /// JSON, this returns `Err` rather than a document with that field
+    /// silently replaced by `null`. `static_quantum_architecture` is
+    /// different: `qc_get_artifacts`'s own documentation says available
+    /// artifacts depend on the quantum computer's Station Control version,
+    /// so a 404 for it specifically is normal and represented as `null`;
+    /// any other failure for it still propagates as `Err` the same way.
     async fn target(&mut self) -> Result<Target> {
-        let mut resp = json!({});
-        resp["dynamic_quantum_architecture"] = match get_dynamic_quantum_architecture_v1(
+        let dynamic_quantum_architecture = get_dynamic_quantum_architecture_v1(
             &self.config,
             &self.backend_name,
             &self.calibration_set_id,
         )
         .await
-        {
-            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
-                error!("Failed to parse dynamic_quantum_architecture: {:?}", e);
-                json!(null)
-            }),
-            Err(e) => {
-                error!("Failed to get dynamic_quantum_architecture: {:?}", e);
-                json!(null)
-            }
-        };
+        .context("Failed to get dynamic_quantum_architecture")?;
+        let dynamic_quantum_architecture: serde_json::Value =
+            serde_json::from_slice(&dynamic_quantum_architecture)
+                .context("Failed to parse dynamic_quantum_architecture")?;
 
-        resp["calibration_set"] = match get_calibration_set_v1(
-            &self.config,
-            &self.backend_name,
-            &self.calibration_set_id,
-        )
-        .await
-        {
-            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
-                error!("Failed to parse calibration_set: {:?}", e);
-                json!(null)
-            }),
-            Err(e) => {
-                error!("Failed to get calibration_set: {:?}", e);
-                json!(null)
-            }
-        };
+        let calibration_set =
+            get_calibration_set_v1(&self.config, &self.backend_name, &self.calibration_set_id)
+                .await
+                .context("Failed to get calibration_set")?;
+        let calibration_set: serde_json::Value =
+            serde_json::from_slice(&calibration_set).context("Failed to parse calibration_set")?;
 
-        resp["quality_metrics"] = match get_quality_metrics_v1(
-            &self.config,
-            &self.backend_name,
-            &self.calibration_set_id,
+        let quality_metrics =
+            get_quality_metrics_v1(&self.config, &self.backend_name, &self.calibration_set_id)
+                .await
+                .context("Failed to get quality_metrics")?;
+        let quality_metrics: serde_json::Value =
+            serde_json::from_slice(&quality_metrics).context("Failed to parse quality_metrics")?;
+
+        // Static, calibration-independent topology. Unlike the three
+        // fields above, its absence (404) is expected on some Station
+        // Control versions -- see the doc comment above.
+        let static_quantum_architecture = Self::parse_optional_artifact(
+            qc_get_artifacts(
+                &self.config,
+                &self.backend_name,
+                "static-quantum-architectures",
+            )
+            .await,
+            "static_quantum_architecture",
         )
-        .await
-        {
-            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).unwrap_or_else(|e| {
-                error!("Failed to parse quality_metrics: {:?}", e);
-                json!(null)
-            }),
-            Err(e) => {
-                error!("Failed to get quality_metrics: {:?}", e);
-                json!(null)
-            }
-        };
+        .context("Failed to get static_quantum_architecture")?;
+
+        let resp = json!({
+            "dynamic_quantum_architecture": dynamic_quantum_architecture,
+            "calibration_set": calibration_set,
+            "quality_metrics": quality_metrics,
+            "static_quantum_architecture": static_quantum_architecture,
+        });
 
         Ok(Target {
             value: resp.to_string(),

@@ -12,6 +12,7 @@
 //! Models used by Quantum System API Client for Rust
 
 mod backend_configuration;
+mod backend_lanes_configuration;
 mod backend_properties;
 mod backends;
 
@@ -24,6 +25,7 @@ pub(crate) mod versions;
 pub use self::backend_configuration::{
     BackendConfiguration, GateConfig, ProcessorType, TimingConstraints,
 };
+pub use self::backend_lanes_configuration::{BackendLanesConfiguration, LaneConfiguration};
 pub use self::backend_properties::{BackendProperties, Gate, Nduv};
 pub use self::backends::{Backend, BackendStatus, Backends};
 pub use self::errors::{Error, ErrorResponse, ExtendedErrorResponse, Target};

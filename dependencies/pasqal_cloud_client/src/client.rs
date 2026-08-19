@@ -187,7 +187,9 @@ impl Client {
 impl Client {
     fn build_http_client() -> Result<reqwest_middleware::ClientWithMiddleware> {
         let mut reqwest_client_builder = reqwest::Client::builder();
-        reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        if cfg!(debug_assertions) {
+            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
+        }
         let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
         Ok(reqwest_builder.build())
     }
@@ -236,7 +238,6 @@ impl Client {
     async fn handle_request<T: DeserializeOwned>(&self, resp: reqwest::Response) -> Result<T> {
         if resp.status().is_success() {
             let json_text = resp.text().await?;
-            debug!("{}", json_text);
             let val = serde_json::from_str(&json_text)?;
             Ok(val)
         } else {
