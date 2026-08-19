@@ -70,7 +70,15 @@ seq.add(pulse1, "rydberg")
 seq.measure("ground-rydberg")
 
 backend = pulser.QPUBackend(seq, qrmi_conn)
-remote_results = backend.run([JobParams(runs=500, variables=[])], wait=True)
+remote_results: pulser.backend.RemoteResults = backend.run([JobParams(runs=500, variables=[])], wait=True)
 
-print(f"Logs: ", qrmi_conn.get_batch_logs(batch_id=remote_results.batch_id))
-print(f"Results: {remote_results.results}")
+available_logs = qrmi_conn.get_batch_logs(batch_id=remote_results.batch_id)
+available_results: pulser.backend.Results = remote_results.get_available_results()[remote_results.batch_id]
+
+# Printing logs and results
+print("\nLogs\n----")
+print(*available_logs)
+print(available_results)
+print("\nObservables\n-----------")
+for observable, result in available_results.get_tagged_results().items():
+    print(f"{observable}:", result)

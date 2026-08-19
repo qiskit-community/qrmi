@@ -37,7 +37,6 @@ fn ask_confirm(question: &str) -> bool {
 #[allow(unreachable_code)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let uuid = uuid::new_v4();
-    println!("UUIDv4: {}", uuid);
 
     let s3 = S3Client::new(
         S3_ENDPOINT,
@@ -59,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let content = String::from("Hello, World.");
     s3.put_object(S3_BUCKET, &s3_object_key, &content.into_bytes())
         .await?;
-    println!("PutObject: {}", s3_object_key);
+    println!("PutObject completed");
 
     let retrieved = s3.get_object(S3_BUCKET, &s3_object_key).await?;
     let retrieved_txt = String::from_utf8(retrieved).unwrap();

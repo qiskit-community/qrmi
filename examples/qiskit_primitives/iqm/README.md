@@ -37,7 +37,7 @@ When run as a job in a Slurm cluster, these environment variables are set by use
 | {qc_alias_name}_QRMI_IQM_ISA_TOKEN | IQM Server API token |
 
 > [!NOTE]
-> Replace the “:” in the QC alias name with “_” when specifying it. For example, `sirius:mock` -> `sirius_mock`.
+> Replace the ":" in the QC alias name with "_" when specifying it. For example, `sirius:mock` -> `sirius_mock`.
 
 #### Example
 ```shell-session

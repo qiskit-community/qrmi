@@ -7,7 +7,7 @@ This executable receives SIGCONT/SIGTERM signals sent by Slurm infrastructure an
 ## Prerequisites
 
 * Python 3.11, 3.12 or 3.13
-* [QRMI Python package](../../../../INSTALL.md#how-to-build--install-qrmi-python-package) is installed on your python virtual environment. This document assumes your python virtual environment is created under `~/py312_qrmi_venv` directory.
+* [QRMI Python package](https://qiskit-community.github.io/qrmi/development/INSTALLATION.html#installing-from-source) is installed on your Python virtual environment. This document assumes your python virtual environment is created under `~/py312_qrmi_venv` directory.
 
 
 ## How to run
