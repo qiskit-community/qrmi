@@ -37,8 +37,8 @@ build-c-examples: $(LIBQRMI_SO_PATH)
 	@cd examples/qrmi/c/ibm_quantum_system/build && \
 		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
-	@mkdir -p examples/qrmi/c/qiskit_runtime_service/build
-	@cd examples/qrmi/c/qiskit_runtime_service/build && \
+	@mkdir -p examples/qrmi/c/quantum_compute_client/build
+	@cd examples/qrmi/c/quantum_compute_client/build && \
 		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
 	@mkdir -p examples/qrmi/c/pasqal_cloud/build
@@ -178,7 +178,7 @@ clean:
 
 clean-c-examples:
 	rm -rf examples/qrmi/c/ibm_quantum_system/build
-	rm -rf examples/qrmi/c/qiskit_runtime_service/build
+	rm -rf examples/qrmi/c/quantum_compute_client/build
 	rm -rf examples/qrmi/c/pasqal_cloud/build
 	rm -rf examples/qrmi/c/config/build
 
