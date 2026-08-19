@@ -36,12 +36,13 @@ impl Configuration {
 
 impl Default for Configuration {
     fn default() -> Self {
-        let client = reqwest::Client::builder()
+        let mut client_builder = reqwest::Client::builder();
+        if cfg!(debug_assertions) {
             // Enabling this option will emit log messages at the TRACE level for
             // read and write operations on connections.
-            .connection_verbose(true)
-            .build()
-            .unwrap();
+            client_builder = client_builder.connection_verbose(true)
+        }
+        let client = client_builder.build().unwrap();
 
         Configuration {
             base_path: "/api".to_owned(),

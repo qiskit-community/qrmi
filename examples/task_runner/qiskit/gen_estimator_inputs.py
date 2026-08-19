@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# (C) Copyright 2025 IBM. All Rights Reserved.
+# (C) Copyright 2025, 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -21,7 +21,13 @@ import requests
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
 from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
-from qiskit_ibm_runtime.utils import RuntimeEncoder
+
+try:
+    # qiskit-ibm-runtime >= 0.46
+    from qiskit_ibm_runtime import RuntimeEncoder
+except ModuleNotFoundError:
+    # qiskit_ibm_runtime < 0.46
+    from qiskit_ibm_runtime.utils import RuntimeEncoder
 from qiskit_ibm_runtime.models import BackendProperties, BackendConfiguration
 from qiskit import qasm3
 from qiskit.circuit.library import QAOAAnsatz

@@ -1,2 +1,2 @@
-pulser>=1.5.3
+pulser>=1.9.0
 qrmi

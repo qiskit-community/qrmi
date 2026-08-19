@@ -58,6 +58,9 @@ pub struct Backend {
     #[serde(default)]
     /// Version of the backend
     pub version: Option<String>,
+
+    /// Whether the backend is locked by an active reservation. Only present for online backends.
+    pub locked: Option<bool>,
 }
 
 #[allow(dead_code)]

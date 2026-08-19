@@ -19,8 +19,20 @@ PYTHON_VENV_ACTIVATE = $(PYTHON_VENV_DIR)/bin/activate
 
 WHEELS_PATH = wheelhouse/qrmi-$(QRMI_VERSION)-cp$(PYTHON_VERSION_NO_DOTS)-abi3-$(MANYLINUX_VERSION)_$(ARCH).whl
 
-LIBQRMI_SO_PATH = target/release/libqrmi.so
 QRMI_H_PATH = qrmi.h
+
+DEBUG ?= 0
+ifeq ($(DEBUG),1)
+CARGO_PROFILE_FLAG =
+CARGO_PROFILE_DIR = debug
+CMAKE_BUILD_TYPE = Debug
+else
+CARGO_PROFILE_FLAG = --release
+CARGO_PROFILE_DIR = release
+CMAKE_BUILD_TYPE = Release
+endif
+
+LIBQRMI_SO_PATH = target/$(CARGO_PROFILE_DIR)/libqrmi.so
 
 ifeq ($(INSIDE_CONTAINER),1)
 CONTAINER_ENGINE = inside_container

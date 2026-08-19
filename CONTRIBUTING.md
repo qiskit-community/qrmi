@@ -220,6 +220,14 @@ is the property of your employer, then you will more than likely need to sign a
 [corporate CLA](https://qisk.it/corporate-cla) too and
 email it to us at <qiskit@us.ibm.com>.
 
+## Debug builds
+
+All `make build*`/`lint*`/`test*` targets build in release mode by default.
+Pass `DEBUG=1` (e.g. `DEBUG=1 make build`) to build in debug mode instead.
+See `make help` for details.
+
+For the python build process, run `maturin build` without the `--release` flag instead.
+
 ## Testing
 
 Once you've made a code change, it is important to verify that your change
