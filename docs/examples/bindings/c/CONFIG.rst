@@ -32,14 +32,12 @@ How to run `this example`_
 --------------------------
 
 .. code-block:: shell-session
-.. code-block:: shell-session
 
    ./build/
    qrmi_config <qrmi_config.json file> <resource name>
 
 For example:
 
-.. code-block:: shell-session
 .. code-block:: shell-session
 
    ./build/qrmi_config /etc/slurm/qrmi_config.json ibm_fez

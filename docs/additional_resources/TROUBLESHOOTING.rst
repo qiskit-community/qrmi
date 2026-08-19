@@ -5,7 +5,7 @@ Troubleshooting
 
 .. rst-class:: lead
 
-    Guidance on how to troubleshoot common issues when using QRMI.
+   Solutions and diagnostic guidance for common issues encountered when working with QRMI.
 
 .. contents::
    :local:

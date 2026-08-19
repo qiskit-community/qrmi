@@ -46,6 +46,5 @@ How to run `this example`_
 --------------------------
 
 .. code-block:: shell-session
-.. code-block:: shell-session
 
    ./felis <backend_name> <input file>

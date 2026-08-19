@@ -5,17 +5,11 @@ QRMI Documentation
 
 .. rst-class:: lead
 
-QRMI's ongoing development requires a robust and comprehensive documentation system. This section outlines how to add new documentation to the project.
-
-
-
-----------------
+   Guidance on how QRMI documentation is structured, maintained, and generated for publication.
 
 .. contents::
    :local:
    :depth: 2
-
-
 
 Sphinx
 ------
@@ -86,9 +80,10 @@ API Documentation
 
 QRMI's API documentation can be accessed through this documentation using the below links:
 
-- :ref:`python_api`
 - :ref:`rust_api`
+- :ref:`python_api`
 - :ref:`c_api`
+- :ref:`lua_api`
 
 There is also the option to build the documentation locally, using the below instructions.
 
