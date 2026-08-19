@@ -27,7 +27,8 @@ use quantum_compute_client::apis::{auth, backends_api, configuration};
 use std::collections::HashMap;
 use std::env;
 
-/// A [`ResourceProvider`] that discovers backends available through IBM Qiskit Runtime Service.
+/// A [`ResourceProvider`] that discovers backends available through IBM Qiskit Runtime
+/// Service(deprecated).
 ///
 /// Constructed from a [`ResourceDef`] with `is_dynamic: true`.
 ///
