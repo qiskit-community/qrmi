@@ -11,7 +11,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! [`ResourceProvider`] implementation for IBM Qiskit Runtime Service.
+//! [`ResourceProvider`] implementation for IBM Quantum Compute Service.
 
 mod provider_filter;
 

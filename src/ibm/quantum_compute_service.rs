@@ -155,7 +155,7 @@ impl QuantumResource for IBMQuantumComputeService {
 
     /// Creates a new session.
     ///
-    /// This function wraps the qiskit_runtime_api client call to POST /sessions. The underlying
+    /// This function wraps the quantum_compute__api client call to POST /sessions. The underlying
     /// function (sessions_api::create_session) builds the request with the required headers
     /// (including the API key, IAM token, and service CRN) from the configuration.
     async fn acquire(&mut self) -> Result<String> {
@@ -207,7 +207,7 @@ impl QuantumResource for IBMQuantumComputeService {
 
     /// Deletes the current session.
     ///
-    /// This sends a DELETE request to /sessions/{session_id}/close via the qiskit_runtime_api client.
+    /// This sends a DELETE request to /sessions/{session_id}/close via the quantum_compute_api client.
     async fn release(&mut self, acquisition_token: &str) -> Result<()> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
@@ -255,7 +255,7 @@ impl QuantumResource for IBMQuantumComputeService {
             // in the session appearing as “Cancelled” on the IQP web interface
             sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
         } else {
-            // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtim.
+            // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtime.
             // Displays “Completed” on the IQP web.
             sessions_api::update_session(
                 &self.config,
@@ -272,7 +272,7 @@ impl QuantumResource for IBMQuantumComputeService {
     /// Starts a job task.
     ///
     /// This function sends a POST request to /jobs. The input payload is parsed as JSON,
-    /// and the job is created using the qiskit_runtime_api client function jobs_api::create_job.
+    /// and the job is created using the quantum_compute_api client function jobs_api::create_job.
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
@@ -474,6 +474,5 @@ impl QuantumResource for IBMQuantumComputeService {
 }
 
 #[cfg(test)]
-//#[path = "tests/qiskit_runtime_service.rs"]
 #[path = "tests/quantum_compute_service.rs"]
 mod tests;
