@@ -7,9 +7,13 @@ Troubleshooting
 
    Solutions and diagnostic guidance for common issues encountered when working with QRMI.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
+
+--------------
 
 Job Execution Errors
 --------------------

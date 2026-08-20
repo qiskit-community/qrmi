@@ -4,10 +4,13 @@
 Qiskit Runtime Service QRMI - Examples in Lua
 =============================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/ibm
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/ibm
+
+--------------
 
 Prerequisites
 -------------

@@ -7,9 +7,13 @@ QRMI Documentation
 
    Guidance on how QRMI documentation is structured, maintained, and generated for publication.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
+
+--------------
 
 Sphinx
 ------

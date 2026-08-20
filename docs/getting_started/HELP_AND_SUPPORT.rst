@@ -7,9 +7,13 @@ Help and Support
 
    Here you can find information on help and support available for QRMI.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
+
+--------------
 
 For solutions to common issues, you can access our :ref:`Troubleshooting <troubleshooting>`
 and :ref:`FAQ <faq>`.

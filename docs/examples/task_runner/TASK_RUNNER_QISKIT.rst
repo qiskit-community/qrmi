@@ -3,9 +3,13 @@
 Tools to Generate EstimatorV2/SamplerV2 Primitive Input
 =======================================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/qiskit
+   `GitHub`_
+
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/qiskit
+
+--------------
 
 The tools demonstrate the generation of EstimatorV2/SamplerV2 inputs
 from a quantum circuit example.
@@ -76,6 +80,7 @@ Output:
 |                                                     | input parameters).                 |
 +-----------------------------------------------------+------------------------------------+
 
+.. _EstimatorV2 Schema: https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs
 
 `gen_sampler_input.py`_
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,7 +121,7 @@ Output:
 |                       Files                       |           Descriptions            |
 +===================================================+===================================+
 | ``sampler_input_<backend_name>_params_only.json`` | SamplerV2 input                   |
-|                                                   | parameters (`SamplerV2 schema`_). |
+|                                                   | parameters (`SamplerV2 Schema`_). |
 +---------------------------------------------------+-----------------------------------+
 | ``sampler_input_<backend_name>.json``             | An input for QRMI task runner,    |
 |                                                   | which contains 2 properties -     |
@@ -125,4 +130,4 @@ Output:
 |                                                   | input parameters).                |
 +---------------------------------------------------+-----------------------------------+
 
-.. _SamplerV2 schema: https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs
+.. _SamplerV2 Schema: https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs

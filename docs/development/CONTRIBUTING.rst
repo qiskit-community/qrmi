@@ -7,9 +7,13 @@ Contributing to QRMI
 
 Outlines the process for contributing code, documentation, tests, and other improvements to QRMI.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
+
+--------------
 
 .. _contributing_prereq:
 
@@ -22,7 +26,9 @@ before diving into the code:
 -  Read the :ref:`Code of Conduct <code_of_conduct>`
 
 -  Familiarise yourself with the Qiskit community (via
-   `Slack`_, `GitHub`_, etc.)
+   `Slack`_, .. container:: buttons
+
+   `GitHub`_, etc.)
 
 .. _Slack: https://qisk.it/join-slack
 .. _GitHub: https://github.com/qiskit-community/feedback/discussions
