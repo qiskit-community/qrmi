@@ -1,6 +1,7 @@
 // This code is part of Qiskit.
 //
 // (C) Copyright IBM 2025-2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -12,7 +13,7 @@
 
 // This code is part of Qiskit.
 //
-// Copyright (C): 2025 UKRI-STFC (Hartree Centre)
+// Copyright (C): 2025-2026 UKRI-STFC (Hartree Centre)
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -28,10 +29,14 @@ pub mod error;
 pub mod models;
 mod qiskit_runtime_service;
 mod qiskit_runtime_service_provider;
+mod quantum_compute_service;
+mod quantum_compute_service_provider;
 mod quantum_system;
 mod quantum_system_provider;
 
 pub use self::qiskit_runtime_service::IBMQiskitRuntimeService;
 pub use self::qiskit_runtime_service_provider::IBMQiskitRuntimeServiceProvider;
+pub use self::quantum_compute_service::IBMQuantumComputeService;
+pub use self::quantum_compute_service_provider::IBMQuantumComputeServiceProvider;
 pub use self::quantum_system::IBMQuantumSystem;
 pub use self::quantum_system_provider::IBMQuantumSystemProvider;

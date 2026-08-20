@@ -1,6 +1,7 @@
 // This code is part of Qiskit.
 //
 // (C) Copyright IBM 2025-2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This program and the accompanying materials are made available under the
 // terms of the GNU General Public License version 3, as published by the
@@ -29,8 +30,10 @@ use std::io::BufReader;
 pub enum ResourceType {
     /// IBM Quantum System
     IBMQuantumSystem,
-    /// Qiskit Runtime Service
+    /// Qiskit Runtime Service(deprecated)
     QiskitRuntimeService,
+    /// IBM Quantum Compute Service
+    IBMQuantumComputeService,
     /// Pasqal Cloud
     PasqalCloud,
     // Pasqal Local
@@ -49,6 +52,7 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
         match s.as_str() {
             "ibm-quantum-system" => Ok(ResourceType::IBMQuantumSystem),
             "qiskit-runtime-service" => Ok(ResourceType::QiskitRuntimeService),
+            "ibm-quantum-compute-service" => Ok(ResourceType::IBMQuantumComputeService),
             "pasqal-cloud" => Ok(ResourceType::PasqalCloud),
             "pasqal-local" => Ok(ResourceType::PasqalLocal),
             "alice-bob-felis" => Ok(ResourceType::AliceBobFelis),
@@ -58,6 +62,7 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
                 &[
                     "ibm-quantum-system",
                     "qiskit-runtime-service",
+                    "ibm-quantum-compute-service",
                     "pasqal-cloud",
                     "pasqal-local",
                     "alice-bob-felis",
@@ -72,6 +77,7 @@ impl ResourceType {
         match self {
             ResourceType::IBMQuantumSystem => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
+            ResourceType::IBMQuantumComputeService => "ibm-quantum-compute-service",
             ResourceType::PasqalCloud => "pasqal-cloud",
             ResourceType::PasqalLocal => "pasqal-local",
             ResourceType::AliceBobFelis => "alice-bob-felis",

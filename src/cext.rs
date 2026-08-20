@@ -1,6 +1,7 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM, Pasqal, Alice and Bob 2025, 2026
+// (C) Copyright IBM, Pasqal, Alice and Bob,  2025, 2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -13,8 +14,9 @@
 use crate::alice_bob::AliceBobFelis;
 use crate::error::{QrmiError, QrmiErrorKind};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
 use crate::pasqal::PasqalCloud;
@@ -539,7 +541,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 
 /// @ingroup QrmiConfig
 /// Converts ResourceType to string representation used in qrmi_config.json, e.g.
-/// @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE to `qiskit-runtime-service`.
+/// @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QUANTUM_COMPUTE_SERVICE to `ibm-quantum-compute-service`.
 ///
 /// # Safety
 ///
@@ -548,7 +550,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 /// # Example
 ///
 /// @code
-///   char *type_as_str = qrmi_config_resource_type_to_str(QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE):
+///   char *type_as_str = qrmi_config_resource_type_to_str(QRMI_RESOURCE_TYPE_QUANTUM_COMPUTE_SERVICE):
 ///   printf("%s\n", type_as_str);
 /// @endcode
 ///
@@ -775,6 +777,13 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 Ok(v) => Box::new(v),
                 Err(err) => {
                     _record_error(err);
+                    return std::ptr::null_mut();
+                }
+            },
+            ResourceType::IBMQuantumComputeService => match IBMQuantumComputeService::new(id_str) {
+                Ok(v) => Box::new(v),
+                Err(err) => {
+                    _set_last_error(format!("{}", err));
                     return std::ptr::null_mut();
                 }
             },
@@ -1695,7 +1704,8 @@ pub struct ResourceProvider {
 /// Created handle must be released with qrmi_provider_free() when no longer needed.
 ///
 /// Currently supported resource types:
-/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE
+/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE(deprecated)
+/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE
 /// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM
 ///
 /// # Safety
@@ -1746,6 +1756,15 @@ pub unsafe extern "C" fn qrmi_provider_new(
                 Ok(inner) => Box::new(inner),
                 Err(err) => {
                     _record_error(err);
+                    return std::ptr::null_mut();
+                }
+            }
+        }
+        ResourceType::IBMQuantumComputeService => {
+            match IBMQuantumComputeServiceProvider::new(&env_map) {
+                Ok(inner) => Box::new(inner),
+                Err(err) => {
+                    _set_last_error(format!("{:?}", err));
                     return std::ptr::null_mut();
                 }
             }

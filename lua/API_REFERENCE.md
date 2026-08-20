@@ -29,12 +29,12 @@ Creates a quantum resource handle.
 | `resource_type` | string | Canonical name from `qrmi_config_resource_type_to_str()`. One of the values below |
 
 Valid values for `resource_type`:
-`ibm-quantum-system` / `qiskit-runtime-service` / `pasqal-cloud` / `pasqal-local` / `alice-bob-felis` / `iqm-server`
+`ibm-quantum-system` / `ibm-quantum-compute-service` / `qiskit-runtime-service`(deprecated) / `pasqal-cloud` / `pasqal-local` / `alice-bob-felis` / `iqm-server`
 
 **Returns:** on success, `resource` (a `qrmi.resource`); on failure, `nil, err`
 
 ```lua
-local resource, err = qrmi.new("ibm_kingston", "qiskit-runtime-service")
+local resource, err = qrmi.new("ibm_kingston", "ibm-quantum-compute-service")
 ```
 
 ### `qrmi.load_config(filename)`
@@ -226,11 +226,11 @@ Structure of `def`:
 ```lua
 {
     name = "ibm_kingston",
-    type = "qiskit-runtime-service",
+    type = "ibm-quantum-compute-service",
     is_dynamic = false,
     environments = {
-        QRMI_IBM_QRS_ENDPOINT = "...",
-        QRMI_IBM_QRS_IAM_ENDPOINT = "...",
+        QRMI_IBM_QCS_ENDPOINT = "...",
+        QRMI_IBM_QCS_IAM_ENDPOINT = "...",
     },
 }
 ```

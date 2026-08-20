@@ -1,7 +1,7 @@
 [package]
-name = "qiskit_runtime_client"
+name = "quantum_compute_client"
 version = "0.31.10"
-description = "The Qiskit Runtime API library for Rust"
+description = "The Quantum Compute Service (Qiskit Runtime) API library for Rust"
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
