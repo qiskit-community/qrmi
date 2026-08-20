@@ -3,6 +3,11 @@
 Installing QRMI
 ===============
 
+.. rst-class:: lead
+
+    Learn how to install QRMI and explore information about further resources.
+
+
 .. contents::
    :local:
    :depth: 2
@@ -258,11 +263,6 @@ Once installed, the Lua binding can be built using either gcc or cmake:
       at runtime (verifiable with ``readelf -d qrmi.so``).
 
 
-
-
-
-
-
 Building Optional Libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -325,7 +325,6 @@ infrastructure project is the Slurm plugin for quantum resources. QRMI is used i
 during the lifecycle of a Slurm job. You can find full details on implementing the Quantum SPANK plugins for Slurm `here`_.
 
 .. _here: https://github.com/qiskit-community/spank-plugins
-
 
 The Slurm plugin for quantum resources is only one example of QRMI's workload manager integrations. More information about QRMI's 
 integrations is available in our :ref:`Quantum-HPC Integration paper <qrmi_integrations>`.

@@ -91,8 +91,8 @@ How to build `this example`_
    make
 
 
-How to run `this example`
--------------------------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 

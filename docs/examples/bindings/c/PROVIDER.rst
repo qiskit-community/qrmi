@@ -46,8 +46,10 @@ Create a ``qrmi_config.json`` with an ``is_dynamic: true`` entry:
     }
 
 
-How to build
-------------
+How to build `this example`_
+----------------------------
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/resource_providers
 
 .. code-block:: shell-session
 
@@ -56,8 +58,8 @@ How to build
     cmake ..
     make
 
-How to run
-----------
+How to run `this example`_
+--------------------------
 
 .. code-block:: shell-session
 

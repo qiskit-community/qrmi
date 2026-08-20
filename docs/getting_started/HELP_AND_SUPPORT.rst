@@ -3,6 +3,10 @@
 Help and Support
 ================
 
+.. rst-class:: lead
+
+    Here you can find information on help and support available for QRMI.
+
 .. contents::
    :local:
    :depth: 2

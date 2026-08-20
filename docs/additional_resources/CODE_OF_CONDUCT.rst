@@ -7,6 +7,10 @@
 Code of Conduct
 ===============
 
+.. rst-class:: lead
+
+The expected standards of behaviour for all members and contributors of the QRMI community.
+
 All members of this project agree to adhere to the `Qiskit Code of
 Conduct`_.
 

@@ -13,6 +13,10 @@ concurrency:
 
 jobs:
 
+  check-broken-links:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/broken-links.yml
+
   # Only x86_64 is selected for libqrmi in this worflow. The other architectures are handled in the on-schedule workflow.
   # Build, unit-test, lint and format-check all QRMI Rust targets (including libqrmi)
   libqrmi:

@@ -5,7 +5,7 @@ FAQ
 
 .. rst-class:: lead
 
-Here you can find answers to frequently asked questions.
+Answers to common questions about installing, configuring, using, and developing QRMI.
 
 General Questions
 -----------------
