@@ -13,6 +13,13 @@ use anyhow::{bail, Result};
 use std::io::Write;
 use std::sync::{Arc, Once, RwLock};
 
+use crate::alice_bob::AliceBobFelis;
+use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
+use crate::iqm::IQMServer;
+use crate::models::ResourceType;
+use crate::pasqal::{PasqalCloud, PasqalLocal};
+use crate::QuantumResource;
+
 static INIT: Once = Once::new();
 static LOG_SINK: RwLock<Option<LogSink>> = RwLock::new(None);
 
@@ -132,4 +139,21 @@ pub(crate) fn get_job_qpu_resources_and_types() -> Result<(Vec<String>, Vec<Stri
         log::warn!("No QPU resources or types specified.");
     }
     Ok((qpus, qpu_types))
+}
+
+pub(crate) fn create_resource(
+    resource_type: &ResourceType,
+    resource_id: &str,
+) -> Result<Box<dyn QuantumResource + Send + Sync>> {
+    Ok(match resource_type {
+        ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::new(resource_id)?),
+        ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::new(resource_id)?),
+        ResourceType::IBMQuantumComputeService => {
+            Box::new(IBMQuantumComputeService::new(resource_id)?)
+        }
+        ResourceType::PasqalCloud => Box::new(PasqalCloud::new(resource_id)?),
+        ResourceType::PasqalLocal => Box::new(PasqalLocal::new(resource_id)?),
+        ResourceType::AliceBobFelis => Box::new(AliceBobFelis::new(resource_id)?),
+        ResourceType::IQMServer => Box::new(IQMServer::new(resource_id)?),
+    })
 }

@@ -12,11 +12,7 @@
 
 //! High-level entry point for discovering the QPU resources assigned to a job.
 
-use crate::alice_bob::AliceBobFelis;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
-use crate::iqm::IQMServer;
 use crate::models::ResourceType;
-use crate::pasqal::{PasqalCloud, PasqalLocal};
 use crate::QuantumResource;
 use anyhow::{bail, Result};
 use std::collections::HashMap;
@@ -94,7 +90,7 @@ impl QRMIService {
                 continue;
             };
 
-            let mut resource = create_resource(&resource_type, qpu)?;
+            let mut resource = crate::common::create_resource(&resource_type, qpu)?;
             if resource.is_accessible().await? {
                 resources.insert(qpu.to_string(), resource);
             } else {
@@ -136,19 +132,4 @@ impl QRMIService {
     ) -> HashMap<String, Box<dyn QuantumResource + Send + Sync>> {
         self.resources
     }
-}
-
-fn create_resource(
-    resource_type: &ResourceType,
-    resource_id: &str,
-) -> Result<Box<dyn QuantumResource + Send + Sync>> {
-    Ok(match resource_type {
-        ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::new(resource_id)?),
-        ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::new(resource_id)?),
-        ResourceType::IBMQuantumComputeService => Box::new(IBMQuantumComputeService::new(resource_id)?),
-        ResourceType::PasqalCloud => Box::new(PasqalCloud::new(resource_id)?),
-        ResourceType::PasqalLocal => Box::new(PasqalLocal::new(resource_id)?),
-        ResourceType::AliceBobFelis => Box::new(AliceBobFelis::new(resource_id)?),
-        ResourceType::IQMServer => Box::new(IQMServer::new(resource_id)?),
-    })
 }

@@ -11,15 +11,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 #![allow(dead_code)]
-use crate::alice_bob::AliceBobFelis;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
-use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
-use crate::pasqal::PasqalCloud;
-use crate::pasqal::PasqalLocal;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
@@ -169,7 +164,7 @@ pub struct ResourceMetadata {
 
 /// Quantum resource handle
 pub struct QuantumResource {
-    inner: Box<dyn crate::QuantumResource>,
+    inner: Box<dyn crate::QuantumResource + Send + Sync>,
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
@@ -684,57 +679,14 @@ pub unsafe extern "C" fn qrmi_resource_new(
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
 
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
-        let res: Box<dyn crate::QuantumResource> = match resource_type {
-            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeService::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::IBMQuantumComputeService => match IBMQuantumComputeService::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::PasqalCloud => match PasqalCloud::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::PasqalLocal => match PasqalLocal::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::AliceBobFelis => match AliceBobFelis::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::IQMServer => match IQMServer::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _set_last_error(format!("{}", err));
-                    return std::ptr::null_mut();
-                }
-            },
+        let res = match crate::common::create_resource(&resource_type, id_str) {
+            Ok(v) => v,
+            Err(err) => {
+                _set_last_error(format!("{}", err));
+                return std::ptr::null_mut();
+            }
         };
+
         let qrmi = Box::new(QuantumResource {
             inner: res,
             runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),

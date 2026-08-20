@@ -88,54 +88,9 @@ impl PyQuantumResource {
     #[new]
     pub fn new(resource_id: &str, resource_type: ResourceType) -> PyResult<Self> {
         crate::common::initialize();
-        let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
-            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                }
-            },
-            ResourceType::IBMQiskitRuntimeService => {
-                match IBMQiskitRuntimeService::new(resource_id) {
-                    Ok(v) => Box::new(v),
-                    Err(e) => {
-                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                    }
-                }
-            }
-            ResourceType::IBMQuantumComputeService => {
-                match IBMQuantumComputeService::new(resource_id) {
-                    Ok(v) => Box::new(v),
-                    Err(e) => {
-                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                    }
-                }
-            }
-            ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                }
-            },
-            ResourceType::PasqalLocal => match PasqalLocal::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                }
-            },
-            ResourceType::AliceBobFelis => match AliceBobFelis::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                }
-            },
-            ResourceType::IQMServer => match IQMServer::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
-                }
-            },
-        };
+
+        let qrmi = crate::common::create_resource(&resource_type, resource_id)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
 
         Ok(Self {
             qrmi,
