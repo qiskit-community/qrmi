@@ -12,5 +12,5 @@ Python API Reference
 .. toctree::
     :maxdepth: 2
 
-    /api/python/qrmi
+    /_api/python/qrmi
 

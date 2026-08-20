@@ -8,7 +8,7 @@ QRMI Examples in Rust
 
     Parsing QRMI Config File <rust/CONFIG>
     IBM Quantum System <rust/IBM_QUANTUM>
-    Qiskit Runtime Service <rust/QISKIT_RUNTIME>
+    Quantum Compute Service <rust/QUANTUM_COMPUTE>
     IQM Server <rust/IQM_SERVER>
     Pasqal Cloud <rust/PASQAL_CLOUD>
     Pasqal Local <rust/PASQAL_LOCAL>

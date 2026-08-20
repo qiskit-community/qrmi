@@ -1,4 +1,4 @@
-# Qiskit Runtime Service QRMI - Examples in Python
+# Quantum Compute Service QRMI - Examples in Python
 
 ## Prerequisites
 
@@ -19,10 +19,10 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
+| {resource_name}_QRMI_IBM_QRS_ENDPOINT | Quantum Compute Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
 | {resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
 | {resource_name}_QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Qiskit Runtime Service instance, starting with `crn:v1:`. |
+| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum Compute Service instance, starting with `crn:v1:`. |
 | {resource_name}_QRMI_IBM_QRS_SESSION_MODE | Execution mode to run the session in, `default='dedicated'`, `batch` or `dedicated`. |
 | {resource_name}_QRMI_IBM_QRS_SESSION_MAX_TTL | The maximum time (in seconds) for the session to run, subject to plan limits, default: `28800`. |
 | {resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS | (Optional) Cost of the job as the estimated time it should take to complete (in seconds). Should not exceed the cost of the program, default: `None`. |
@@ -41,7 +41,7 @@ Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can 
 $ python example.py -h
 usage: example.py [-h] backend input program_id
 
-An example of IBM Qiskit Runtime Service QRMI
+An example of IBM Quantum Compute Service QRMI
 
 positional arguments:
   backend     backend name

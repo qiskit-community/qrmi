@@ -12,7 +12,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""An example of IBM Qiskit Runtime Service QRMI python-bindings"""
+"""An example of IBM Quantum Compute Service QRMI python-bindings"""
 
 import os
 import time
@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
 parser = argparse.ArgumentParser(
-    description="An example of IBM Qiskit Runtime Service QRMI"
+    description="An example of IBM Quantum Compute Service QRMI"
 )
 parser.add_argument("backend", help="backend name")
 parser.add_argument("input", help="primitive input file")

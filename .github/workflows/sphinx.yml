@@ -62,11 +62,11 @@ jobs:
       - name: Build Python API documentation
         run: |
           pip install -e .[all]
-          sphinx-apidoc --no-toc -o docs/api/python/ python/qrmi/
+          sphinx-apidoc --no-toc -o docs/_api/python/ python/qrmi/
 
       - name: Verify Python API documentation
         run: |
-          test "$(find docs/api/python -name '*.rst' | wc -l)" -gt 0
+          test "$(find docs/_api/python -name '*.rst' | wc -l)" -gt 0
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -87,14 +87,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen
 
-      - name: Generate Doxygen XML
+      - name: Generate Doxygen HTML
         run: |
           mkdir -p build/doxygen
           doxygen Doxyfile
 
-      - name: Verify Doxygen XML
+      - name: Verify Doxygen HTML
         run: |
-          test -s build/doxygen/xml/index.xml
+          test -s build/doxygen/html/index.xml
 
       - name: Build Sphinx documentation
         run: |
@@ -116,6 +116,11 @@ jobs:
         run: |
           mkdir -p docs/_build/html/rust
           cp -R target/doc/* docs/_build/html/rust/
+
+      - name: Add C API documentation to Sphinx
+        run: |
+          mkdir -p docs/_build/html/c
+          cp -R build/doxygen/html/* docs/_build/html/c/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
