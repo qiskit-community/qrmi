@@ -7,9 +7,13 @@ Testing QRMI
 
    Explore QRMI's testing strategy, frameworks, conventions, and best practices.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
+
+--------------
 
 Testing helps ensure QRMI remains reliable, maintainable, and portable across
 the different backends and platforms it supports. Contributors are expected to

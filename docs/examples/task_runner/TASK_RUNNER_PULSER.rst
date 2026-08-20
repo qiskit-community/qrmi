@@ -3,10 +3,13 @@
 Tools to Generate Input for Task Runner from Pulser
 ===================================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/pulser
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/pulser
+
+--------------
 
 Prerequisites
 -------------

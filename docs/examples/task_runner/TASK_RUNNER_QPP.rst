@@ -3,10 +3,13 @@
 Tools to Generate Input for Task Runner from Qiskit Pasqal Provider
 ===================================================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/qpp
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/qpp
+
+--------------
 
 Prerequisites
 -------------

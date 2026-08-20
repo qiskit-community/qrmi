@@ -5,6 +5,8 @@ Bindings Examples
 
     Examples demonstrating how QRMI can be accessed and used from its supported programming language bindings.
 
+--------------
+
 .. toctree::
     :maxdepth: 2
     
@@ -12,6 +14,8 @@ Bindings Examples
     PYTHON_EXAMPLES
     C_EXAMPLES
     LUA_EXAMPLES
+
+--------------
 
 License
 -------

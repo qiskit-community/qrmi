@@ -3,10 +3,13 @@
 Quantum System QRMI - Examples in C
 ===================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/ibm_quantum_system
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/ibm_quantum_system
+
+--------------
 
 Prerequisites
 -------------

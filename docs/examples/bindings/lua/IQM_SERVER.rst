@@ -3,10 +3,13 @@
 IQM Server QRMI - Examples in Lua
 =================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/iqm
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/iqm
+
+--------------
 
 Prerequisites
 -------------

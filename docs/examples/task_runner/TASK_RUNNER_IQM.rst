@@ -3,9 +3,13 @@
 Tools to Generate IQM JSON from Qiskit QuantumCircuit
 =====================================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/iqm
+   `GitHub`_
+
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/task_runner/iqm
+
+--------------
 
 The tools demonstrate the generation of IQM JSON input from a quantum
 circuit example.

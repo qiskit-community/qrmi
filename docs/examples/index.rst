@@ -7,6 +7,8 @@ QRMI Examples
 
     Explore practical examples demonstrating how to use QRMI's core features, integrations, and APIs in real-world workflows.
 
+--------------
+
 QRMI includes a range of examples demonstrating various usages of the software and its associated tools.
 
 Whilst QRMI does not require a workload manager to function, it was primarily designed to work in tandem with one. 

@@ -7,6 +7,8 @@ Citing QRMI
 
     Guidance on how to cite QRMI in academic publications, reports, and other research outputs.
 
+--------------
+
 .. _qrmi_overview:
 
 QRMI Overview

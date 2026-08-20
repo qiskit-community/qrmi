@@ -7,6 +7,8 @@ Python API Reference
 
     Comprehensive documentation for the QRMI Python package, including modules, classes, functions, and examples.
 
+--------------
+
 .. toctree::
     :maxdepth: 2
 

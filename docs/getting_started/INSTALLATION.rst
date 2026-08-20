@@ -7,10 +7,13 @@ Installing QRMI
 
     Learn how to install QRMI and explore information about further resources.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
 
+--------------
 
 Quick Start
 -----------

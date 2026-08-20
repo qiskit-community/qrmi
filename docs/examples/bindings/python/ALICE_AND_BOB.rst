@@ -3,10 +3,13 @@
 Alice and Bob Felis QRMI - Examples in Python
 =============================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/alice_bob_felis
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/alice_bob_felis
+
+--------------
 
 Prerequisites
 -------------

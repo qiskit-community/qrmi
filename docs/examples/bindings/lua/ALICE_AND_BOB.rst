@@ -3,10 +3,13 @@
 Alice and Bob Felis - Examples in Lua
 =====================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/alice_bob_felis
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/alice_bob_felis
+
+--------------
 
 Prerequisites
 -------------

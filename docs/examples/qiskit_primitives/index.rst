@@ -7,6 +7,8 @@ Qiskit Examples
 
     Explore examples demonstrating QRMI's Qiskit Primitive interfaces for backend-agnostic quantum program execution.
 
+--------------
+
 .. toctree::
     :maxdepth: 2
     

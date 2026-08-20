@@ -3,10 +3,13 @@
 Pasqal Cloud QRMI - Examples in Lua
 ===================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/pasqal
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/pasqal
+
+--------------
 
 Prerequisites
 -------------
