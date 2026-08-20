@@ -1,6 +1,6 @@
 # QRMI Task Runner
 
-QRMI Task Runner is an executable to run a quantum workload on the specified QPU resource. This is designed to be used in a Slurm job, configuration parameters such as endpoint URL and access credentials are taken from the process environment variables. Users can run a quantum workload in the form of Qiskit Primitive input parameters ([EstimatorV2](https://quantum.cloud.ibm.com/docs/en/api/ibm-quantum-compute-rest/tags/jobs), [SamplerV2](https://quantum.cloud.ibm.com/docs/en/api/ibm-quantum-compute-rest/tags/jobs)) for IBM Quantum System or Quantum Compute Service, or [Pulser Sequence](https://pulser.readthedocs.io/en/stable/tutorials/serialization.html) for Pasqal Cloud.
+QRMI Task Runner is an executable to run a quantum workload on the specified QPU resource. This is designed to be used in a Slurm job, configuration parameters such as endpoint URL and access credentials are taken from the process environment variables. Users can run a quantum workload in the form of Qiskit Primitive input parameters ([EstimatorV2](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs), [SamplerV2](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs)) for IBM Quantum System or Quantum Compute Service, or [Pulser Sequence](https://pulser.readthedocs.io/en/stable/tutorials/serialization.html) for Pasqal Cloud.
 
 This executable receives SIGCONT/SIGTERM signals sent by Slurm infrastructure and cancels the running quantum workload.
 
