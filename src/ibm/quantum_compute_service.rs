@@ -1,18 +1,7 @@
 // This code is part of Qiskit.
 //
-// Copyright (C): 2025-2026 UKRI-STFC (Hartree Centre)
-//
-// This code is licensed under the Apache License, Version 2.0. You may
-// obtain a copy of this license in the LICENSE.txt file in the root directory
-// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
-//
-// Any modifications or derivative works of this code must retain this
-// copyright notice, and modified files need to carry a notice indicating
-// that they have been altered from the originals.
-
-// This code is part of Qiskit.
-//
 // (C) Copyright IBM 2025
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -22,7 +11,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::ibm::qiskit_runtime_service::models::{
+use crate::ibm::quantum_compute_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
@@ -33,15 +22,14 @@ use quantum_compute_client::apis::{auth, backends_api, configuration, jobs_api, 
 use quantum_compute_client::models;
 use quantum_compute_client::models::create_job_request_one_of::LogLevel;
 use quantum_compute_client::models::create_session_request_one_of::Mode;
-
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
 
 use async_trait::async_trait;
 
-/// QRMI implementation for IBM Qiskit Runtime Service.
-pub struct IBMQiskitRuntimeService {
+/// QRMI implementation for IBM Quantum Compute Service.
+pub struct IBMQuantumComputeService {
     pub(crate) config: configuration::Configuration,
     pub(crate) backend_name: String,
     pub(crate) session_id: Option<String>,
@@ -55,47 +43,47 @@ pub struct IBMQiskitRuntimeService {
     pub(crate) token_lifetime: u64,
 }
 
-impl IBMQiskitRuntimeService {
-    /// Constructs a QRS service instance.
+impl IBMQuantumComputeService {
+    /// Constructs a QCS service instance.
     ///
     /// Environment variables used:
-    /// * QRMI_IBM_QRS_ENDPOINT - QRS endpoint URL
-    /// * QRMI_IBM_QRS_IAM_ENDPOINT - IAM endpoint URL
-    /// * QRMI_IBM_QRS_IAM_APIKEY - IAM API key for QRS
-    /// * QRMI_IBM_QRS_SERVICE_CRN - QRS service instance CRN
-    /// * QRMI_IBM_QRS_SESSION_MODE - Session mode (default: dedicated)
-    /// * QRMI_IBM_QRS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
-    /// * QRMI_IBM_QRS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
-    /// * QRMI_IBM_QRS_SESSION_ID or QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
+    /// * QRMI_IBM_QCS_ENDPOINT - QCS endpoint URL
+    /// * QRMI_IBM_QCS_IAM_ENDPOINT - IAM endpoint URL
+    /// * QRMI_IBM_QCS_IAM_APIKEY - IAM API key for QCS
+    /// * QRMI_IBM_QCS_SERVICE_CRN - QCS service instance CRN
+    /// * QRMI_IBM_QCS_SESSION_MODE - Session mode (default: dedicated)
+    /// * QRMI_IBM_QCS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
+    /// * QRMI_IBM_QCS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
+    /// * QRMI_IBM_QCS_SESSION_ID or QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(backend_name: &str) -> Result<Self> {
         let qrs_endpoint =
-            env::var(format!("{backend_name}_QRMI_IBM_QRS_ENDPOINT")).map_err(|_| {
-                anyhow!("{backend_name}_QRMI_IBM_QRS_ENDPOINT environment variable is not set")
+            env::var(format!("{backend_name}_QRMI_IBM_QCS_ENDPOINT")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QCS_ENDPOINT environment variable is not set")
             })?;
         let iam_endpoint =
-            env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT")).map_err(|_| {
-                anyhow!("{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT environment variable is not set")
+            env::var(format!("{backend_name}_QRMI_IBM_QCS_IAM_ENDPOINT")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QCS_IAM_ENDPOINT environment variable is not set")
             })?;
         let api_key =
-            env::var(format!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY")).map_err(|_| {
-                anyhow!("{backend_name}_QRMI_IBM_QRS_IAM_APIKEY environment variable is not set")
+            env::var(format!("{backend_name}_QRMI_IBM_QCS_IAM_APIKEY")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QCS_IAM_APIKEY environment variable is not set")
             })?;
         let service_crn =
-            env::var(format!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN")).map_err(|_| {
-                anyhow!("{backend_name}_QRMI_IBM_QRS_SERVICE_CRN environment variable is not set")
+            env::var(format!("{backend_name}_QRMI_IBM_QCS_SERVICE_CRN")).map_err(|_| {
+                anyhow!("{backend_name}_QRMI_IBM_QCS_SERVICE_CRN environment variable is not set")
             })?;
-        let session_mode = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MODE"))
+        let session_mode = env::var(format!("{backend_name}_QRMI_IBM_QCS_SESSION_MODE"))
             .unwrap_or_else(|_| "dedicated".to_string());
-        let session_max_ttl: i32 = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_MAX_TTL"))
+        let session_max_ttl: i32 = env::var(format!("{backend_name}_QRMI_IBM_QCS_SESSION_MAX_TTL"))
             .ok()
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(28800);
         let timeout_secs: Option<i32> =
-            env::var(format!("{backend_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS"))
+            env::var(format!("{backend_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS"))
                 .ok()
                 .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_TIMEOUT_SECONDS")).ok())
                 .and_then(|s| s.parse::<i32>().ok());
-        let session_id = env::var(format!("{backend_name}_QRMI_IBM_QRS_SESSION_ID"))
+        let session_id = env::var(format!("{backend_name}_QRMI_IBM_QCS_SESSION_ID"))
             .ok()
             .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok());
         // Set up the config
@@ -122,13 +110,13 @@ impl IBMQiskitRuntimeService {
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
 #[async_trait]
-impl QuantumResource for IBMQiskitRuntimeService {
+impl QuantumResource for IBMQuantumComputeService {
     async fn resource_id(&mut self) -> Result<String> {
         Ok(self.backend_name.clone())
     }
 
     async fn resource_type(&mut self) -> Result<ResourceType> {
-        Ok(ResourceType::QiskitRuntimeService)
+        Ok(ResourceType::IBMQuantumComputeService)
     }
 
     /// Asynchronously checks if a backend is accessible.
@@ -164,7 +152,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
 
     /// Creates a new session.
     ///
-    /// This function wraps the qiskit_runtime_api client call to POST /sessions. The underlying
+    /// This function wraps the quantum_compute__api client call to POST /sessions. The underlying
     /// function (sessions_api::create_session) builds the request with the required headers
     /// (including the API key, IAM token, and service CRN) from the configuration.
     async fn acquire(&mut self) -> Result<String> {
@@ -216,7 +204,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
 
     /// Deletes the current session.
     ///
-    /// This sends a DELETE request to /sessions/{session_id}/close via the qiskit_runtime_api client.
+    /// This sends a DELETE request to /sessions/{session_id}/close via the quantum_compute_api client.
     async fn release(&mut self, acquisition_token: &str) -> Result<()> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
@@ -264,7 +252,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
             // in the session appearing as “Cancelled” on the IQP web interface
             sessions_api::delete_session_close(&self.config, acquisition_token, None).await?;
         } else {
-            // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtim.
+            // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtime.
             // Displays “Completed” on the IQP web.
             sessions_api::update_session(
                 &self.config,
@@ -281,7 +269,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
     /// Starts a job task.
     ///
     /// This function sends a POST request to /jobs. The input payload is parsed as JSON,
-    /// and the job is created using the qiskit_runtime_api client function jobs_api::create_job.
+    /// and the job is created using the quantum_compute_api client function jobs_api::create_job.
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
@@ -483,5 +471,5 @@ impl QuantumResource for IBMQiskitRuntimeService {
 }
 
 #[cfg(test)]
-#[path = "tests/qiskit_runtime_service.rs"]
+#[path = "tests/quantum_compute_service.rs"]
 mod tests;

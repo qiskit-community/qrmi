@@ -13,7 +13,7 @@
 //! High-level entry point for discovering the QPU resources assigned to a job.
 
 use crate::alice_bob::AliceBobFelis;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::ResourceType;
 use crate::pasqal::{PasqalCloud, PasqalLocal};
@@ -82,8 +82,7 @@ impl QRMIService {
         log::debug!("qpus: {:?}", qpus);
         log::debug!("qpu types: {:?}", qpu_types);
 
-        let mut resources: HashMap<String, Box<dyn QuantumResource + Send + Sync>> =
-            HashMap::new();
+        let mut resources: HashMap<String, Box<dyn QuantumResource + Send + Sync>> = HashMap::new();
         for (qpu, qpu_type) in qpus.iter().zip(qpu_types.iter()) {
             let qpu = qpu.trim();
             let Some(resource_type) = ResourceType::from_qpu_type_str(qpu_type) else {
@@ -132,7 +131,9 @@ impl QRMIService {
     /// handle/object -- mirroring how `cext::qrmi_provider_resources` and
     /// `pyext::PyResourceProvider::resources` each wrap the
     /// `Box<dyn QuantumResource>`s returned by `ResourceProvider::resources`.
-    pub(crate) fn into_resource_map(self) -> HashMap<String, Box<dyn QuantumResource + Send + Sync>> {
+    pub(crate) fn into_resource_map(
+        self,
+    ) -> HashMap<String, Box<dyn QuantumResource + Send + Sync>> {
         self.resources
     }
 }
@@ -144,6 +145,7 @@ fn create_resource(
     Ok(match resource_type {
         ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::new(resource_id)?),
         ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::new(resource_id)?),
+        ResourceType::IBMQuantumComputeService => Box::new(IBMQuantumComputeService::new(resource_id)?),
         ResourceType::PasqalCloud => Box::new(PasqalCloud::new(resource_id)?),
         ResourceType::PasqalLocal => Box::new(PasqalLocal::new(resource_id)?),
         ResourceType::AliceBobFelis => Box::new(AliceBobFelis::new(resource_id)?),

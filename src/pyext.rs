@@ -1,6 +1,7 @@
 // This code is part of Qiskit.
 //
 // (C) Copyright IBM, Pasqal 2025, 2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -12,8 +13,9 @@
 
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
+use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
+use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
 use crate::pasqal::PasqalCloud;
@@ -29,6 +31,7 @@ use tokio::runtime::Runtime;
 pub enum ResourceType {
     IBMQuantumSystem,
     IBMQiskitRuntimeService,
+    IBMQuantumComputeService,
     PasqalCloud,
     PasqalLocal,
     AliceBobFelis,
@@ -100,6 +103,14 @@ impl PyQuantumResource {
                     }
                 }
             }
+            ResourceType::IBMQuantumComputeService => {
+                match IBMQuantumComputeService::new(resource_id) {
+                    Ok(v) => Box::new(v),
+                    Err(e) => {
+                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    }
+                }
+            }
             ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
@@ -160,6 +171,9 @@ impl PyQuantumResource {
                 crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
                 crate::models::ResourceType::QiskitRuntimeService => {
                     ResourceType::IBMQiskitRuntimeService
+                }
+                crate::models::ResourceType::IBMQuantumComputeService => {
+                    ResourceType::IBMQuantumComputeService
                 }
                 crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
                 crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
@@ -294,6 +308,9 @@ impl PyResourceDef {
             crate::models::ResourceType::QiskitRuntimeService => {
                 ResourceType::IBMQiskitRuntimeService
             }
+            crate::models::ResourceType::IBMQuantumComputeService => {
+                ResourceType::IBMQuantumComputeService
+            }
             crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
             crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
             crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
@@ -328,7 +345,7 @@ impl PyResourceDef {
 /// config = Config.load("/path/to/qrmi_config.json")
 /// resource_def = config.resource_map["ibm_inst1"]
 ///
-/// provider = ResourceProvider(ResourceType.IBMQiskitRuntimeService, resource_def.environment)
+/// provider = ResourceProvider(ResourceType.IBMQuantumComputeService, resource_def.environment)
 /// resources = provider.resources()
 /// resources = provider.resources("num_qubits=127&name=ibm_*&status=online")
 /// resource  = provider.least_busy()
@@ -363,7 +380,8 @@ impl PyResourceProvider {
     /// Constructs a new provider from a resource type and environment variable map.
     ///
     /// Currently supported resource types:
-    /// - `ResourceType.IBMQiskitRuntimeService`
+    /// - `ResourceType.IBMQiskitRuntimeService`(deprecated)
+    /// - `ResourceType.IBMQuantumComputeService`
     /// - `ResourceType.IBMQuantumSystem`
     #[new]
     pub fn new(
@@ -374,6 +392,12 @@ impl PyResourceProvider {
         let inner: Box<dyn crate::ResourceProvider> = match resource_type {
             ResourceType::IBMQiskitRuntimeService => {
                 match IBMQiskitRuntimeServiceProvider::new(&environment) {
+                    Ok(p) => Box::new(p),
+                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                }
+            }
+            ResourceType::IBMQuantumComputeService => {
+                match IBMQuantumComputeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),
                     Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
                 }
@@ -553,7 +577,9 @@ impl PyQRMIService {
     ///
     /// Returns `None` if not found.
     fn resource(&self, py: Python<'_>, resource_id: &str) -> Option<Py<PyQuantumResource>> {
-        self.qrmi_resources.get(resource_id).map(|r| r.clone_ref(py))
+        self.qrmi_resources
+            .get(resource_id)
+            .map(|r| r.clone_ref(py))
     }
 }
 

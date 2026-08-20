@@ -50,7 +50,7 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{QuantumResource, QRMIService};
+use qrmi::{QRMIService, QuantumResource};
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]
@@ -96,10 +96,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let Some(resource) = service.resource(&resource_id) else {
-        return Err(format!(
-            "'{resource_id}' was not found among this job's accessible resources"
-        )
-        .into());
+        return Err(
+            format!("'{resource_id}' was not found among this job's accessible resources").into(),
+        );
     };
 
     println!("\nAcquiring '{resource_id}'...");

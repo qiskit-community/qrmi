@@ -1,6 +1,6 @@
 [package]
 name = "qrmi"
-version = "0.22.0"
+version = "0.23.0"
 
 edition = "2021"
 license = "Apache-2.0"
@@ -38,7 +38,7 @@ clap = { version = "4.5.29", features = ["derive"] }
 uuid = "1.16.0"
 log = "0.4.26"
 quantum-system-api = { path = "dependencies/quantum_system_client" }
-qiskit_runtime_client = { path = "dependencies/qiskit_runtime_client" }
+quantum_compute_client = { path = "dependencies/quantum_compute_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
@@ -60,7 +60,7 @@ cbindgen = "0.29"
 [workspace]
 members = [
     "dependencies/quantum_system_client",
-    "dependencies/qiskit_runtime_client",
+    "dependencies/quantum_compute_client",
     "dependencies/pasqal_cloud_client",
     "dependencies/alice_bob_felis_client",
 ]
@@ -74,6 +74,7 @@ rust-version = "1.85.1" # Keep in sync with docs/client/*.md and rust-toolchain.
 
 [workspace.dependencies]
 quantum-system-api = { path = "dependencies/quantum_system_client" }
+quantum-compute-api = { path = "dependencies/quantum_compute_client" }
 pasqal-cloud-api = { path = "dependencies/pasqal_cloud_client" }
 pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis-api = { path = "dependencies/alice_bob_felis_client" }
@@ -84,8 +85,8 @@ python-source = "python"
 module-name   = "qrmi._core"
 
 [[example]]
-name = "qrmi-example-qiskit-runtime-service"
-path = "examples/qrmi/rust/qiskit_runtime_service/src/main.rs"
+name = "qrmi-example-ibm-quantum-compute-service"
+path = "examples/qrmi/rust/ibm_quantum_compute_service/src/main.rs"
 
 [[example]]
 name = "qrmi-example-ibm-quantum-system"

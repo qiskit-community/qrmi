@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "ibm_quantum_system",
-    "qiskit_runtime_service",
+    "ibm_quantum_compute_service",
     "pasqal_cloud",
     "pasqal_local",
     "qrmi_config",

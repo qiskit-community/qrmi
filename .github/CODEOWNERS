@@ -33,11 +33,11 @@
 /python/qrmi/primitives/ibm/                    @ohtanim @OkuyanBoga
 /python/qrmi/qiskit_iqm/                        @ohtanim @yoonho
 /dependencies/quantum_system_client/            @ohtanim @yoonho
-/dependencies/qiskit_runtime_client/            @OkuyanBoga @ohtanim
+/dependencies/quantum_compute_client/           @OkuyanBoga @ohtanim
 /dependencies/iqm_client/                       @ohtanim @yoonho
 /examples/qiskit_primitives/ibm/                @ohtanim @OkuyanBoga
 /examples/qiskit_primitives/iqm/                @ohtanim @yoonho
-/examples/**/qiskit_runtime_service/            @OkuyanBoga @ohtanim
+/examples/**/quantum_compute_service/            @OkuyanBoga @ohtanim
 /examples/**/ibm_quantum_system/                @ohtanim @yoonho
 /examples/**/iqm_server/                        @ohtanim @yoonho
 /examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga

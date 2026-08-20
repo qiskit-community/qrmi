@@ -1,7 +1,7 @@
 # QRMI Provider Example in C
 
 A unified example that works with any supported provider type
-(`qiskit-runtime-service`, `ibm-quantum-system`, etc.).
+(`ibm-quantum-compute-service`, `ibm-quantum-system`, etc.).
 The resource type is read from `qrmi_config.json` — no code changes needed
 when switching between providers.
 
@@ -19,7 +19,7 @@ Create a `qrmi_config.json` with an `is_dynamic: true` entry:
     "resources": [
         {
             "name": "ibm_inst1",
-            "type": "qiskit-runtime-service",
+            "type": "ibm-quantum-compute-service",
             "is_dynamic": true,
             "environment": {
                 "QRMI_IBM_QRS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
