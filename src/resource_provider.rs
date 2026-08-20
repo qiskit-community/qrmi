@@ -108,6 +108,8 @@ pub fn create_provider(
         ResourceType::IBMQuantumSystem => Ok(Box::new(crate::ibm::IBMQuantumSystemProvider::new(
             environment,
         )?)),
-        _ => Err(QrmiError::UnsupportedResourceType(resource_type.as_str().to_string())),
+        _ => Err(QrmiError::UnsupportedResourceType(
+            resource_type.as_str().to_string(),
+        )),
     }
 }

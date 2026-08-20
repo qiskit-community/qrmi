@@ -173,12 +173,14 @@ impl PasqalCloud {
 
     async fn task_status_from_batch_id(&mut self, batch_id: &str) -> Result<TaskStatus> {
         let batch = self.api_client.get_batch(batch_id).await?;
-        let job_id = batch.data.job_ids.first().ok_or_else(|| {
-            QrmiError::TaskNotReady {
+        let job_id = batch
+            .data
+            .job_ids
+            .first()
+            .ok_or_else(|| QrmiError::TaskNotReady {
                 task_id: batch_id.to_string(),
                 reason: "no jobs found for this batch".to_string(),
-            }
-        })?;
+            })?;
         self.task_status_from_job_id(job_id).await
     }
 

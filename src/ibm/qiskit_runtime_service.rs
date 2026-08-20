@@ -134,9 +134,10 @@ impl QuantumResource for IBMQiskitRuntimeService {
         {
             error!("Token renewal failed: {:?}", e);
         }
-        let status_response = backends_api::get_backend_status(&self.config, &self.backend_name, None)
-            .await
-            .context("failed to get backend status")?;
+        let status_response =
+            backends_api::get_backend_status(&self.config, &self.backend_name, None)
+                .await
+                .context("failed to get backend status")?;
         // Print the status, using "unknown" if no status is available
         let status_str = status_response
             .status
@@ -302,9 +303,7 @@ impl QuantumResource for IBMQiskitRuntimeService {
                     let parsed = serde_json::from_value::<NoiseLearnerInput>(val)?;
                     CreateJobRequestOneOfAllOfParams::NoiseLearnerInput(Box::new(parsed))
                 }
-                &_ => {
-                    return Err(IbmError::UnknownProgramId(format!("{program_id:?}")).into())
-                }
+                &_ => return Err(IbmError::UnknownProgramId(format!("{program_id:?}")).into()),
             };
             let create_job_request_one_of = models::CreateJobRequestOneOf {
                 program_id,
