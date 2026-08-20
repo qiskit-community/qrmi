@@ -7,7 +7,7 @@ QRMI Examples in Lua
     :maxdepth: 2
 
 
-    Qiskit Runtime Service <lua/QISKIT_RUNTIME>
+    Quantum Compute Service <lua/QUANTUM_COMPUTE>
     IQM Server <lua/IQM_SERVER>
     Pasqal Cloud/Local <lua/PASQAL_CLOUD>
     Alice and Bob Felis <lua/ALICE_AND_BOB>

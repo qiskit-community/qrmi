@@ -7,7 +7,7 @@ QRMI Examples in Python
     :maxdepth: 2
 
     IBM Quantum System <python/IBM_QUANTUM>
-    Qiskit Runtime Service <python/QISKIT_RUNTIME>
+    Quantum Compute Service <python/QUANTUM_COMPUTE>
     IQM Server <python/IQM_SERVER>
     Pasqal Cloud <python/PASQAL_CLOUD>
     Pasqal Cloud - CUDA-Q <python/PASQAL_CLOUD_CUDAQ>

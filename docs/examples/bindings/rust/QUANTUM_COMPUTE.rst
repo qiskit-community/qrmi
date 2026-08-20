@@ -1,20 +1,20 @@
-.. _qiskit_runtime_c:
+.. _quantum_compute_rust:
 
-Qiskit Runtime Service QRMI - Examples in C
-===========================================
+Quantum Compute Service QRMI - Examples in Rust
+===============================================
 
 .. container:: buttons
 
    `GitHub`_
 
-.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/qiskit_runtime_service
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/ibm_quantum_compute_service
 
 --------------
 
 Prerequisites
 -------------
 
--  C compiler/linker, cmake and make
+-  Python 3.11 or 3.12
 -  Build the :ref:`QRMI Rust library <install_source>`
 
 
@@ -26,39 +26,40 @@ configuration parameters must be specified in environment variables. The
 required environment variables are listed below. `This example`_ assumes
 that a ``.env`` file is available under the current directory.
 
-.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/qiskit_runtime_service
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/ibm_quantum_compute_service
 
 +--------------------------------------------------+--------------------------------------------------+
 |              Environment variables               |                   Descriptions                   |
 +==================================================+==================================================+
-| ``{resource_name}_QRMI_IBM_QRS_ENDPOINT``        | Qiskit Runtime Service endpoint                  |
+| ``{resource_name}_QRMI_IBM_QCS_ENDPOINT``        | Quantum Compute Service endpoint                 |
 |                                                  | URL (e.g. ``https://quantum.cloud.ibm.com/api``) |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                           |
-|                                                  | URL (e.g.``https://iam.cloud.ibm.com``)          |
+| ``{resource_name}_QRMI_IBM_QCS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                           |
+|                                                  | URL (e.g. ``https://iam.cloud.ibm.com``)         |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_IAM_APIKEY``      | IBM Cloud IAM API Key                            |
+| ``{resource_name}_QRMI_IBM_QCS_IAM_APIKEY``      | IBM Cloud IAM API Key                            |
+|                                                  |                                                  |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                 |
-|                                                  | provisioned Qiskit Runtime                       |
+| ``{resource_name}_QRMI_IBM_QCS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                 |
+|                                                  | provisioned Quantum Compute                      |
 |                                                  | Service instance, starting with                  |
 |                                                  | ``crn:v1:``.                                     |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SESSION_MODE``    | Execution mode to run the session                |
+| ``{resource_name}_QRMI_IBM_QCS_SESSION_MODE``    | Execution mode to run the session                |
 |                                                  | in, ``default='dedicated'``,                     |
 |                                                  | ``batch`` or ``dedicated``.                      |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SESSION_MAX_TTL`` | The maximum time (in seconds) for                |
+| ``{resource_name}_QRMI_IBM_QCS_SESSION_MAX_TTL`` | The maximum time (in seconds) for                |
 |                                                  | the session to run, subject to                   |
 |                                                  | plan limits, default: ``28800``.                 |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS`` | (Optional) Cost of the job as the                |
+| ``{resource_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS`` | (Optional) Cost of the job as the                |
 |                                                  | estimated time it should take to                 |
 |                                                  | complete (in seconds). Should not                |
 |                                                  | exceed the cost of the program,                  |
 |                                                  | default: ``None``.                               |
 +--------------------------------------------------+--------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SESSION_ID``      | (Optional) Session ID, can be                    |
+| ``{resource_name}_QRMI_IBM_QCS_SESSION_ID``      | (Optional) Session ID, can be                    |
 |                                                  | obtanied by acquire function. If                 |
 |                                                  | exists, used in the target                       |
 |                                                  | functions.                                       |
@@ -82,10 +83,8 @@ How to build `this example`_
 
 .. code-block:: shell-session
 
-   mkdir build
-   cd build
-   cmake ..
-   make
+   cargo clean
+   cargo build --example qrmi-example-quantum-compute-service --release
 
 
 How to run `this example`_
@@ -93,16 +92,26 @@ How to run `this example`_
 
 .. code-block:: shell-session
 
-   ./build/qiskit_runtime_service
-   qiskit_runtime_service <backend_name> <primitive input file> <program id>
+   ../target/release/qrmi-example-quantum-compute-service --help
 
-For example:
+   QRMI for IBM Quantum Compute Service - Example
+
+   Usage: qrmi-example-quantum_compute_service --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
+
+   Options:
+     -b, --backend <BACKEND>        backend name
+     -i, --input <INPUT>            primitive input file
+     -p, --program-id <PROGRAM_ID>  program id
+     -h, --help                     Print help
+     -V, --version                  Print version
+
+For example, using the :ref:`generated input file <task_runner_qiskit>`, run the package:
 
 .. code-block:: shell-session
 
-   export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-   export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-   export ibm_torino_QRMI_IBM_QRS_IAM_APIKEY=your_apikey
-   export ibm_torino_QRMI_IBM_QRS_SERVICE_CRN=your_instance
+   export ibm_torino_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
+   export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
+   export ibm_torino_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
+   export ibm_torino_QRMI_IBM_QCS_SERVICE_CRN=your_instance
 
-   ./build/qiskit_runtime_service ibm_torino sampler_input.json sampler
+   ../target/release/qrmi-example-quantum-compute-service  -b ibm_torino -i sampler_input.json -p sampler
