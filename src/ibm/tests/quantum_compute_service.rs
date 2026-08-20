@@ -1,6 +1,7 @@
 // This code is part of Qiskit.
 //
 // (C) Copyright IBM, Pasqal 2026
+// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +11,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use super::super::IBMQiskitRuntimeService;
+use super::super::IBMQuantumComputeService;
 use crate::models::ResourceType;
 use crate::QuantumResource;
 use quantum_compute_client::apis::configuration;
@@ -23,7 +24,7 @@ async fn resource_id_and_type_match_backend() {
     // Note: The configuration values are not used in this test since we are only
     // testing the resource_id and resource_type methods.
     // hence their values don't matter
-    let mut qrmi = IBMQiskitRuntimeService {
+    let mut qrmi = IBMQuantumComputeService {
         config: configuration::Configuration::new(),
         backend_name: BACKEND_NAME.to_string(),
         session_id: None,
@@ -47,5 +48,5 @@ async fn resource_id_and_type_match_backend() {
         .expect("resource_type should succeed");
 
     assert_eq!(resource_id, BACKEND_NAME);
-    assert_eq!(resource_type, ResourceType::QiskitRuntimeService);
+    assert_eq!(resource_type, ResourceType::IBMQuantumComputeService);
 }

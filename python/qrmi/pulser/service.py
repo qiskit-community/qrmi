@@ -41,6 +41,8 @@ class QRMIService:
             resource = None
             if qpu_types[i] == "qiskit-runtime-service":
                 resource = QuantumResource(qpu, ResourceType.IBMQiskitRuntimeService)
+            elif qpu_types[i] == "ibm-quantum-compute-service":
+                resource = QuantumResource(qpu, ResourceType.IBMQuantumComputeService)
             elif qpu_types[i] == "pasqal-cloud":
                 resource = QuantumResource(qpu, ResourceType.PasqalCloud)
             elif qpu_types[i] == "pasqal-local":

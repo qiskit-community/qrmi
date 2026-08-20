@@ -2567,18 +2567,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "qiskit_runtime_client"
-version = "0.31.10"
-dependencies = [
- "reqwest",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "url",
-]
-
-[[package]]
 name = "qrmi"
 version = "0.22.0"
 dependencies = [
@@ -2600,8 +2588,8 @@ dependencies = [
  "pasqal-local-api",
  "pyo3",
  "pyo3-stub-gen",
- "qiskit_runtime_client",
  "quantum-system-api",
+ "quantum_compute_client",
  "reqwest-retry",
  "serde",
  "serde_json",
@@ -2641,6 +2629,18 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "quantum_compute_client"
+version = "0.31.10"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "url",
 ]
 
 [[package]]

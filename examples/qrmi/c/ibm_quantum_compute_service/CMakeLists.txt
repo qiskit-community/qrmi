@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# Copyright (C) 2025 IBM, UKRI-STFC (Hartree Centre)
+# Copyright (C) 2025-2026 IBM, UKRI-STFC (Hartree Centre)
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -58,4 +58,4 @@ function(add_example TARGET_NAME C_FILE)
   install (TARGETS ${TARGET_NAME} DESTINATION .)
 endfunction()
 
-add_example(qiskit_runtime_service src/qiskit_runtime_service.c)
+add_example(quantum_compute_service src/quantum_compute_service.c)

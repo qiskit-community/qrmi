@@ -12,8 +12,8 @@
 
 //! Unified provider example.
 //!
-//! Works with any supported provider type (`qiskit-runtime-service`,
-//! `ibm-quantum-system`, etc.). The resource type is read from
+//! Works with any supported provider type (`qiskit-runtime-service`(deprecated),
+//! `ibm-quantum-compute-service`, `ibm-quantum-system`, etc.). The resource type is read from
 //! `qrmi_config.json` — no code changes needed when switching between providers.
 //!
 //! # Setup
@@ -25,13 +25,13 @@
 //!     "resources": [
 //!         {
 //!             "name": "ibm_inst1",
-//!             "type": "qiskit-runtime-service",
+//!             "type": "ibm-quantum-compute-service",
 //!             "is_dynamic": true,
 //!             "environment": {
-//!                 "QRMI_IBM_QRS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
-//!                 "QRMI_IBM_QRS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
-//!                 "QRMI_IBM_QRS_IAM_APIKEY":   "<your_api_key>",
-//!                 "QRMI_IBM_QRS_SERVICE_CRN":  "<your_service_crn>"
+//!                 "QRMI_IBM_QCS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
+//!                 "QRMI_IBM_QCS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
+//!                 "QRMI_IBM_QCS_IAM_APIKEY":   "<your_api_key>",
+//!                 "QRMI_IBM_QCS_SERVICE_CRN":  "<your_service_crn>"
 //!             }
 //!         }
 //!     ]

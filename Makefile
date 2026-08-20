@@ -37,8 +37,8 @@ build-c-examples: $(LIBQRMI_SO_PATH)
 	@cd examples/qrmi/c/ibm_quantum_system/build && \
 		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
-	@mkdir -p examples/qrmi/c/qiskit_runtime_service/build
-	@cd examples/qrmi/c/qiskit_runtime_service/build && \
+	@mkdir -p examples/qrmi/c/quantum_compute_client/build
+	@cd examples/qrmi/c/quantum_compute_client/build && \
 		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
 		cmake --build .
 	@mkdir -p examples/qrmi/c/pasqal_cloud/build
@@ -104,7 +104,7 @@ test-doc:
 test-deps:
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum-system-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-cloud-api
-	cargo test --locked $(CARGO_PROFILE_FLAG) -p qiskit_runtime_client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum_compute_client
 
 test-rust-examples:
 	cargo test --examples --locked $(CARGO_PROFILE_FLAG)
@@ -178,7 +178,7 @@ clean:
 
 clean-c-examples:
 	rm -rf examples/qrmi/c/ibm_quantum_system/build
-	rm -rf examples/qrmi/c/qiskit_runtime_service/build
+	rm -rf examples/qrmi/c/quantum_compute_client/build
 	rm -rf examples/qrmi/c/pasqal_cloud/build
 	rm -rf examples/qrmi/c/config/build
 

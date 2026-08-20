@@ -2,7 +2,7 @@
 
 # This code is part of Qiskit.
 #
-# Copyright (C) 2025 UKRI-STFC (Hartree Centre), IBM
+# Copyright (C) 2025-2026 UKRI-STFC (Hartree Centre), IBM
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -12,7 +12,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""An example of IBM Qiskit Runtime Service QRMI python-bindings"""
+"""An example of IBM Quantum Compute Service QRMI python-bindings"""
 
 import os
 import time
@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
 parser = argparse.ArgumentParser(
-    description="An example of IBM Qiskit Runtime Service QRMI"
+    description="An example of IBM Quantum Compute Service QRMI"
 )
 parser.add_argument("backend", help="backend name")
 parser.add_argument("input", help="primitive input file")
@@ -31,7 +31,7 @@ args = parser.parse_args()
 
 load_dotenv()
 
-qrmi = QuantumResource(args.backend, ResourceType.IBMQiskitRuntimeService)
+qrmi = QuantumResource(args.backend, ResourceType.IBMQuantumComputeService)
 print(qrmi)
 print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
