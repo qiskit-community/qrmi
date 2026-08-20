@@ -3,10 +3,13 @@
 Parsing QRMI Config File in C
 =============================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
+
+--------------
 
 Prerequisites
 -------------

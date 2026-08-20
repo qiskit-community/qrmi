@@ -3,10 +3,13 @@
 Quantum System QRMI - Examples in Rust
 ======================================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/ibm_quantum_system
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/ibm_quantum_system
+
+--------------
 
 Prerequisites
 -------------

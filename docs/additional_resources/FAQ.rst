@@ -7,9 +7,13 @@ Frequently Asked Questions (FAQ)
 
     Answers to common questions about installing, configuring, using, and developing QRMI.
 
+--------------
+
 .. contents::
    :local:
    :depth: 2
+
+--------------
 
 General Questions
 -----------------

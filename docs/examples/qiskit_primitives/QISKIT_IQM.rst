@@ -3,10 +3,13 @@
 IQM Qiskit - Python Example
 ===========================
 
-`GitHub Repository`_
+.. container:: buttons
 
-.. _GitHub Repository: https://github.com/qiskit-community/qrmi/tree/main/examples/qiskit_primitives/iqm
+   `GitHub`_
 
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qiskit_primitives/iqm
+
+--------------
 
 Prerequisites
 -------------
