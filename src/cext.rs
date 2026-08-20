@@ -1003,6 +1003,7 @@ pub unsafe extern "C" fn qrmi_resource_release(
             }
             Err(err) => {
                 _set_last_error(format!("{:?}", err));
+                return ReturnCode::Error;
             }
         }
     }
