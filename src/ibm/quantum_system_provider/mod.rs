@@ -18,7 +18,8 @@ use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQuantumSystem;
 use crate::QuantumResource;
 use crate::ResourceProvider;
-use anyhow::{anyhow, Result};
+use crate::{QrmiError, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
@@ -69,7 +70,7 @@ impl IBMQuantumSystemProvider {
             environment
                 .get(key)
                 .cloned()
-                .ok_or_else(|| anyhow!("Missing '{}' in environment map", key))
+                .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
         };
 
         let endpoint = get("QRMI_IBM_QS_ENDPOINT")?;
@@ -84,7 +85,7 @@ impl IBMQuantumSystemProvider {
                 iam_endpoint_url,
             })
             .build()
-            .map_err(|e| anyhow!("Failed to build quantum system client: {:?}", e))?;
+            .context("failed to build quantum system client")?;
 
         Ok(Self {
             client,
@@ -129,7 +130,7 @@ impl ResourceProvider for IBMQuantumSystemProvider {
             .client
             .list_backends::<Backends>()
             .await
-            .map_err(|e| anyhow!("Failed to list backends: {:?}", e))?;
+            .context("failed to list backends")?;
 
         let candidates: Vec<String> = backends
             .backends

@@ -25,7 +25,7 @@
 //! Example: `num_qubits=127&name=ibm_*&status=online`
 
 use crate::ibm::models::BackendConfiguration;
-use anyhow::{anyhow, Result};
+use crate::{QrmiError, Result};
 use glob::Pattern;
 use quantum_system_api::models::{Backend, BackendStatus};
 
@@ -80,28 +80,28 @@ impl BackendFilter {
                 continue;
             }
             let (key, value) = pair.split_once('=').ok_or_else(|| {
-                anyhow!("Invalid filter segment {:?}: expected 'key=value'", pair)
+                QrmiError::InvalidFilter(format!("invalid segment {pair:?}: expected 'key=value'"))
             })?;
             match key.trim() {
                 "num_qubits" => {
                     f.num_qubits = Some(value.trim().parse::<u64>().map_err(|_| {
-                        anyhow!(
-                            "Invalid value for 'num_qubits': {:?} (expected a non-negative integer)",
-                            value
-                        )
+                        QrmiError::InvalidFilter(format!(
+                            "invalid value for 'num_qubits': {value:?} (expected a non-negative integer)"
+                        ))
                     })?);
                 }
                 "max_shots" => {
                     f.max_shots = Some(value.trim().parse::<u64>().map_err(|_| {
-                        anyhow!(
-                            "Invalid value for 'max_shots': {:?} (expected a non-negative integer)",
-                            value
-                        )
+                        QrmiError::InvalidFilter(format!(
+                            "invalid value for 'max_shots': {value:?} (expected a non-negative integer)"
+                        ))
                     })?);
                 }
                 "name" => {
                     f.name_pattern = Some(Pattern::new(value.trim()).map_err(|e| {
-                        anyhow!("Invalid glob pattern for 'name' filter {:?}: {}", value, e)
+                        QrmiError::InvalidFilter(format!(
+                            "invalid glob pattern for 'name' filter {value:?}: {e}"
+                        ))
                     })?);
                 }
                 "is_simulator" => {
@@ -109,10 +109,9 @@ impl BackendFilter {
                         "true" => true,
                         "false" => false,
                         _ => {
-                            return Err(anyhow!(
-                            "Invalid value for 'is_simulator': {:?} (expected 'true' or 'false')",
-                            value
-                        ))
+                            return Err(QrmiError::InvalidFilter(format!(
+                                "invalid value for 'is_simulator': {value:?} (expected 'true' or 'false')"
+                            )))
                         }
                     };
                 }
@@ -120,10 +119,9 @@ impl BackendFilter {
                     f.status = match value.trim() {
                         "online" => StatusFilter::Online,
                         _ => {
-                            return Err(anyhow!(
-                                "Invalid value for 'status': {:?} (supported: 'online')",
-                                value
-                            ))
+                            return Err(QrmiError::InvalidFilter(format!(
+                                "invalid value for 'status': {value:?} (supported: 'online')"
+                            )))
                         }
                     };
                 }

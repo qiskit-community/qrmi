@@ -24,6 +24,7 @@
 
 //! QRMI implementations for IBM Quantum services
 
+pub mod error;
 pub mod models;
 mod qiskit_runtime_service;
 mod qiskit_runtime_service_provider;

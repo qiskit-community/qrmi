@@ -12,13 +12,14 @@
 
 //! QRMI implementation for Alice and Bob Felis
 
+use crate::error::QrmiError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
+use crate::{QuantumResource, Result};
 use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
 use alice_bob_felis::helpers::decode_api_key;
 use alice_bob_felis::models;
 use alice_bob_felis::models::{create_external_job, EventType};
-use anyhow::{anyhow, bail, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
@@ -45,10 +46,18 @@ impl AliceBobFelis {
         // Handle environment variables
         let api_key = env::var(format!("{backend_name}_QRMI_AB_FELIS_API_KEY"))
             .or(env::var("QRMI_AB_FELIS_API_KEY"))
-            .map_err(|_| anyhow!("QRMI_AB_FELIS_API_KEY environment variable is not set"))?;
+            .map_err(|_| {
+                QrmiError::EnvVarNotSet(format!(
+                    "{backend_name}_QRMI_AB_FELIS_API_KEY (or QRMI_AB_FELIS_API_KEY)"
+                ))
+            })?;
         let endpoint = env::var(format!("{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT"))
             .or(env::var("QRMI_AB_FELIS_BASE_ENDPOINT"))
-            .map_err(|_| anyhow!("QRMI_AB_FELIS_BASE_ENDPOINT environment variable is not set"))?;
+            .map_err(|_| {
+                QrmiError::EnvVarNotSet(format!(
+                    "{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT (or QRMI_AB_FELIS_BASE_ENDPOINT)"
+                ))
+            })?;
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
         config.basic_auth = decode_api_key(&api_key).unwrap();
@@ -60,7 +69,9 @@ impl AliceBobFelis {
     }
 
     pub async fn list_backends(&mut self) -> Result<Vec<String>> {
-        let targets = targets_service::list_targets(&self.config).await?;
+        let targets = targets_service::list_targets(&self.config)
+            .await
+            .context("failed to list targets")?;
         let names: Vec<String> = targets
             .iter()
             .map(|t| target_to_device(&t.name.clone()))
@@ -69,7 +80,9 @@ impl AliceBobFelis {
     }
 
     async fn most_recent_event(&mut self, task_id: &str) -> Result<models::EventType> {
-        let job = jobs_service::get_job(&self.config, task_id, None).await?;
+        let job = jobs_service::get_job(&self.config, task_id, None)
+            .await
+            .with_context(|| format!("failed to get job {task_id}"))?;
         // Can safely assume events is non-empty
         let event = job.events.last().unwrap().r#type;
         Ok(event)
@@ -128,15 +141,16 @@ impl QuantumResource for AliceBobFelis {
                 input_params: serde_json::from_str(&input_params).unwrap(),
             };
 
-            let external_job = jobs_service::create_job(&self.config, job, None).await?;
-            jobs_service::upload_input(&self.config, &external_job.id, human_qir, None).await?;
+            let external_job = jobs_service::create_job(&self.config, job, None)
+                .await
+                .context("failed to create job")?;
+            jobs_service::upload_input(&self.config, &external_job.id, human_qir, None)
+                .await
+                .context("failed to upload job input")?;
             // If here we can assume all went well
             Ok(external_job.id)
         } else {
-            bail!(format!(
-                "Payload type {:?} is not supported by Felis.",
-                payload
-            ))
+            Err(QrmiError::UnsupportedPayload(format!("{payload:?}")))
         }
     }
 
@@ -144,7 +158,9 @@ impl QuantumResource for AliceBobFelis {
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
         let event = &self.most_recent_event(task_id).await?;
         if *event != EventType::Succeeded && *event != EventType::Cancelled {
-            jobs_service::cancel_job(&self.config, task_id, None).await?;
+            jobs_service::cancel_job(&self.config, task_id, None)
+                .await
+                .with_context(|| format!("failed to cancel job {task_id}"))?;
         }
         Ok(())
     }
@@ -171,7 +187,9 @@ impl QuantumResource for AliceBobFelis {
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let output_csv = jobs_service::download_output(&self.config, task_id, None).await?;
+        let output_csv = jobs_service::download_output(&self.config, task_id, None)
+            .await
+            .with_context(|| format!("failed to download output for job {task_id}"))?;
         Ok(TaskResult { value: output_csv })
     }
 
@@ -181,7 +199,9 @@ impl QuantumResource for AliceBobFelis {
 
     #[allow(clippy::expect_fun_call)]
     async fn target(&mut self) -> Result<Target> {
-        let targets = targets_service::list_targets(&self.config).await?;
+        let targets = targets_service::list_targets(&self.config)
+            .await
+            .context("failed to list targets")?;
 
         let target = targets
             .iter()

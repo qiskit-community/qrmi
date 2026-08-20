@@ -17,8 +17,8 @@ mod provider_filter;
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQiskitRuntimeService;
 use crate::resource_provider::ResourceProvider;
-use crate::QuantumResource;
-use anyhow::{anyhow, Result};
+use crate::{QrmiError, QuantumResource, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
@@ -71,7 +71,7 @@ impl IBMQiskitRuntimeServiceProvider {
             environment
                 .get(key)
                 .cloned()
-                .ok_or_else(|| anyhow!("Missing '{}' in environment map", key))
+                .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
         };
 
         let qrs_endpoint = get("QRMI_IBM_QRS_ENDPOINT")?;
@@ -151,11 +151,11 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
             &mut token_lifetime,
         )
         .await
-        .map_err(|e| anyhow!("Token renewal failed: {:?}", e))?;
+        .context("token renewal failed")?;
 
         let response = backends_api::list_backends(&config, Some("2025-01-01"))
             .await
-            .map_err(|e| anyhow!("Failed to list backends: {:?}", e))?;
+            .context("failed to list backends")?;
 
         // Apply name and is_simulator filters at list stage, keep queue_length for sorting.
         let candidates: Vec<_> = response

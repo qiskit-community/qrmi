@@ -10,9 +10,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::error::{required_env, QrmiError};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
-use anyhow::{anyhow, bail, Context, Result};
+use crate::{QuantumResource, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use iqm_server_api::apis::calibration_sets_api::{
     get_calibration_set_v1, get_dynamic_quantum_architecture_v1, get_quality_metrics_v1,
@@ -50,13 +51,8 @@ impl IQMServer {
             _ => unreachable!("buf should never be empty due to split()"),
         };
 
-        let iqm_endpoint =
-            env::var(format!("{backend_name}_QRMI_IQM_ISA_ENDPOINT")).map_err(|_| {
-                anyhow!("{backend_name}_QRMI_IQM_ISA_ENDPOINT environment variable is not set")
-            })?;
-        let iqm_token = env::var(format!("{backend_name}_QRMI_IQM_ISA_TOKEN")).map_err(|_| {
-            anyhow!("{backend_name}_QRMI_IQM_ISA_TOKEN environment variable is not set")
-        })?;
+        let iqm_endpoint = required_env(format!("{backend_name}_QRMI_IQM_ISA_ENDPOINT"))?;
+        let iqm_token = required_env(format!("{backend_name}_QRMI_IQM_ISA_TOKEN"))?;
         let acquisition_token = env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok();
         // Set up the config
         let mut config = configuration::Configuration::new();
@@ -92,7 +88,7 @@ impl IQMServer {
     fn parse_optional_artifact<B, E>(
         result: std::result::Result<B, iqm_server_api::apis::Error<E>>,
         artifact_type: &str,
-    ) -> Result<Value>
+    ) -> anyhow::Result<Value>
     where
         B: AsRef<[u8]>,
         E: std::fmt::Debug + Send + Sync + 'static,
@@ -123,12 +119,10 @@ impl QuantumResource for IQMServer {
 
     /// Asynchronously checks if a backend is accessible.
     async fn is_accessible(&mut self) -> Result<bool> {
-        match get_qc_health_v1(&self.config, &self.backend_name).await {
-            Ok(health) => Ok(health.healthy),
-            Err(err) => {
-                bail!(format!("Failed to get backend details: {:#?}", &err));
-            }
-        }
+        let health = get_qc_health_v1(&self.config, &self.backend_name)
+            .await
+            .context("failed to get backend details")?;
+        Ok(health.healthy)
     }
 
     /// IQM Server has no session concept. This does not contact the
@@ -155,7 +149,7 @@ impl QuantumResource for IQMServer {
         } = payload
         {
             let job: serde_json::Value = serde_json::from_str(iqmjson.as_str())?;
-            match job_submit(
+            let job = job_submit(
                 &self.config,
                 &self.backend_name,
                 &job_type,
@@ -164,32 +158,28 @@ impl QuantumResource for IQMServer {
                 Some(job),
             )
             .await
-            {
-                Ok(val) => Ok(val.id.to_string()),
-                Err(err) => {
-                    bail!("An error occurred during starting a task: {:#?}", err);
-                }
-            }
+            .context("failed to start task")?;
+            Ok(job.id.to_string())
         } else {
-            bail!(format!("Payload type is not supported. {:?}", payload));
+            Err(QrmiError::UnsupportedPayload(format!("{payload:?}")))
         }
     }
 
     /// Stops a running job.
     ///
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
-        match cancel_job_v1(&self.config, task_id).await {
-            Ok(_job) => Ok(()),
-            Err(err) => {
-                bail!(format!("Failed to cancel a job({}): {:#?}", task_id, &err));
-            }
-        }
+        cancel_job_v1(&self.config, task_id)
+            .await
+            .with_context(|| format!("failed to cancel job {task_id}"))?;
+        Ok(())
     }
 
     /// Returns the current status of a job.
     ///
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        let job = get_job_v1(&self.config, task_id, Some(true), Some(30)).await?;
+        let job = get_job_v1(&self.config, task_id, Some(true), Some(30))
+            .await
+            .with_context(|| format!("failed to get job {task_id}"))?;
         match job.status {
             IqmServerJobStatus::Waiting => Ok(TaskStatus::Queued),
             IqmServerJobStatus::Processing => Ok(TaskStatus::Running),
@@ -235,7 +225,9 @@ impl QuantumResource for IQMServer {
     /// Returns the log messages of the task.
     ///
     async fn task_logs(&mut self, task_id: &str) -> Result<String> {
-        let job = get_job_v1(&self.config, task_id, Some(true), Some(30)).await?;
+        let job = get_job_v1(&self.config, task_id, Some(true), Some(30))
+            .await
+            .with_context(|| format!("failed to get job {task_id}"))?;
         let mut log = String::new();
         writeln!(log, "Timeline   :").unwrap();
         for event in &job.timeline {
