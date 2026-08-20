@@ -120,6 +120,9 @@ Prerequisites
 
          doxygen Doxyfile
 
+      By default, the HTML documents will be created in the ``build/doxygen/html/``
+      directory. Open ``buid/doxygen/html/index.html`` in your web browser.
+
    .. tab:: Python API
 
       .. important:: 
@@ -148,6 +151,3 @@ Prerequisites
       .. code-block:: shell-session
 
          server> q
-
-      By default, the HTML documents will be created in the ``build/doxygen/html/``
-      directory. Open ``buid/doxygen/html/index.html`` in your web browser.
