@@ -103,14 +103,11 @@ impl QRMIService {
     }
 
     pub fn resources(&self) -> Vec<&(dyn QuantumResource + Send + Sync)> {
-        self.resources
-            .values()
-            .map(Box::as_ref)
-            .collect()
+        self.resources.values().map(Box::as_ref).collect()
     }
 
     pub async fn print_resources(&mut self) -> Result<()> {
-        for resource in self.resources.values_mut() {            
+        for resource in self.resources.values_mut() {
             let resource_id = resource.resource_id().await?;
             let resource_type = resource.resource_type().await?;
 
@@ -128,78 +125,20 @@ impl QRMIService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::Deserialize;
     use serial_test::serial;
-    use std::fs;
 
     #[tokio::test]
     #[serial]
-    async fn errors_when_required_environment_variables_are_missing() {
-        let previous_plugin_error = env::var("QRMI_PLUGIN_ERROR").ok();
-
-        env::remove_var("QRMI_PLUGIN_ERROR");
-        env::set_var(
-            "QRMI_PLUGIN_ERROR",
-            "Test error message for missing environment variables",
-        );
-
-        let result = QRMIService::from_environment().await;
-
-        if let Some(value) = previous_plugin_error {
-            env::set_var("QRMI_PLUGIN_ERROR", value);
-        } else {
-            env::remove_var("QRMI_PLUGIN_ERROR");
-        }
-
-        match result {
-            Ok(_) => panic!("expected from_environment to fail when required env vars are missing"),
-            Err(error) => {
-                assert!(error
-                    .to_string()
-                    .contains("Test error message for missing environment variables"));
-            }
-        }
-    }
-
-    // Needs to be changed to use a dummy QRMI resource for testing
-    // Should be changed before making it to main, uses a local env file
-    #[tokio::test]
-    #[serial]
-    async fn discovers_resources_from_job_qpu_environment() -> Result<(), Box<dyn std::error::Error>>
-    {
-        #[derive(Deserialize, Debug)]
-        struct EnvFile(HashMap<String, String>);
-
-        let json_str = fs::read_to_string("../env.json")?;
-        let env: EnvFile = serde_json::from_str(&json_str)?;
-
-        for (k, v) in env.0 {
-            env::set_var(&k, &v);
-        }
-
+    #[ignore = "requires real QRMI provider credentials and configured resources"]
+    async fn discovers_real_resources_from_environment() -> Result<(), Box<dyn std::error::Error>> {
         let mut service = QRMIService::from_environment().await?;
 
         let resources = service.resources();
-        assert_eq!(resources.len(), 2);
 
-        let resource = service
-            .resources
-            .values_mut()
-            .next()
-            .expect("expected at least one resource");
-
-        let resource_id = resource.resource_id().await?;
-        let resource_type = resource.resource_type().await?;
-        let is_accessible = resource.is_accessible().await?;
-
-        println!(
-            "Resource info: id={}, type={}, accessible={}",
-            resource_id,
-            resource_type.as_str(),
-            is_accessible
-        );
+        assert!(!resources.is_empty());
 
         service.print_resources().await?;
+
         Ok(())
     }
 
@@ -209,6 +148,68 @@ mod tests {
         } else {
             env::remove_var(name);
         }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn errors_when_plugin_error_is_set() {
+        let previous_plugin_error = env::var("QRMI_PLUGIN_ERROR").ok();
+
+        env::remove_var("QRMI_PLUGIN_ERROR");
+        env::set_var("QRMI_PLUGIN_ERROR", "Test plugin error");
+
+        let result = QRMIService::from_environment().await;
+
+        restore_env_var("QRMI_PLUGIN_ERROR", previous_plugin_error);
+
+        match result {
+            Ok(_) => panic!("expected from_environment to fail when QRMI_PLUGIN_ERROR is set"),
+            Err(error) => {
+                assert!(error
+                    .to_string()
+                    .contains("Test plugin error"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn errors_when_resource_names_are_missing() {
+        let previous_plugin_error = env::var("QRMI_PLUGIN_ERROR").ok();
+        let previous_resources = env::var("QRMI_JOB_QPU_RESOURCES").ok();
+        let previous_types = env::var("QRMI_JOB_QPU_TYPES").ok();
+
+        env::remove_var("QRMI_PLUGIN_ERROR");
+        env::remove_var("QRMI_JOB_QPU_RESOURCES");
+        env::set_var("QRMI_JOB_QPU_TYPES", "ibm-quantum-system");
+
+        let result = QRMIService::from_environment().await;
+
+        restore_env_var("QRMI_PLUGIN_ERROR", previous_plugin_error);
+        restore_env_var("QRMI_JOB_QPU_RESOURCES", previous_resources);
+        restore_env_var("QRMI_JOB_QPU_TYPES", previous_types);
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn errors_when_resource_types_are_missing() {
+        let previous_plugin_error = env::var("QRMI_PLUGIN_ERROR").ok();
+        let previous_resources = env::var("QRMI_JOB_QPU_RESOURCES").ok();
+        let previous_types = env::var("QRMI_JOB_QPU_TYPES").ok();
+
+        env::remove_var("QRMI_PLUGIN_ERROR");
+        env::set_var("QRMI_JOB_QPU_RESOURCES", "qpu-a");
+        env::remove_var("QRMI_JOB_QPU_TYPES");
+
+        let result = QRMIService::from_environment().await;
+
+        restore_env_var("QRMI_PLUGIN_ERROR", previous_plugin_error);
+        restore_env_var("QRMI_JOB_QPU_RESOURCES", previous_resources);
+        restore_env_var("QRMI_JOB_QPU_TYPES", previous_types);
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -224,12 +225,12 @@ mod tests {
 
         let service = QRMIService::from_environment().await?;
 
-        assert_eq!(service.resources().len(), 0);
-        assert!(service.resource("unsupported-qpu").is_none());
-
         restore_env_var("QRMI_PLUGIN_ERROR", previous_plugin_error);
         restore_env_var("QRMI_JOB_QPU_RESOURCES", previous_resources);
         restore_env_var("QRMI_JOB_QPU_TYPES", previous_types);
+
+        assert_eq!(service.resources().len(), 0);
+        assert!(service.resource("unsupported-qpu").is_none());
 
         Ok(())
     }
@@ -248,12 +249,12 @@ mod tests {
 
         let service = QRMIService::from_environment().await?;
 
-        assert_eq!(service.resources().len(), 0);
-        assert!(service.resource("qpu-a").is_none());
-
         restore_env_var("QRMI_PLUGIN_ERROR", previous_plugin_error);
         restore_env_var("QRMI_JOB_QPU_RESOURCES", previous_resources);
         restore_env_var("QRMI_JOB_QPU_TYPES", previous_types);
+
+        assert_eq!(service.resources().len(), 0);
+        assert!(service.resource("qpu-a").is_none());
 
         Ok(())
     }
