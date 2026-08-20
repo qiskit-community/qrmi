@@ -60,7 +60,7 @@ set by the SPANK plugin.
 |                            | resource name specified by               |
 |                            | ``QRMI_JOB_QPU_RESOURCES``.              |
 |                            | Supported types: ``ibm-quantum-system``, |
-|                            | ``qiskit-runtime-service``               |
+|                            | ``ibm-quantum-compute-service``          |
 +----------------------------+------------------------------------------+
 
 
@@ -128,8 +128,8 @@ Example
    export test_eagle_QRMI_IBM_QS_TIMEOUT_SECONDS=86400
 
 
-IBM Qiskit Runtime Service specific
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+IBM Quantum Compute Service specific
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When run as a job in a Slurm cluster, these environment variables are
 set by users or administrator.
@@ -137,31 +137,30 @@ set by users or administrator.
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |              Environment variables               |                                              Descriptions                                               |
 +==================================================+=========================================================================================================+
-| ``{resource_name}_QRMI_IBM_QRS_ENDPOINT``        | Qiskit Runtime Service endpoint                                                                         |
+| ``{resource_name}_QRMI_IBM_QCS_ENDPOINT``        | Quantum Compute Service endpoint                                                                        |
 |                                                  | URL (e.g. ``https://quantum.cloud.ibm.com/api``)                                                        |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                                                                                  |
-|                                                  | URL(e.g. ``https://iam.cloud.ibm.com``)                                                                 |
+| ``{resource_name}_QRMI_IBM_QCS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                                                                                  |
+|                                                  | URL (e.g. ``https://iam.cloud.ibm.com``)                                                                |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_IAM_APIKEY``      | IBM Cloud IAM API Key                                                                                   |
-|                                                  |                                                                                                         |
+| ``{resource_name}_QRMI_IBM_QCS_IAM_APIKEY``      | IBM Cloud IAM API Key                                                                                   |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                                                                        |
+| ``{resource_name}_QRMI_IBM_QCS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                                                                        |
 |                                                  | provisioned Quantum System                                                                              |
 |                                                  | instance, starting with                                                                                 |
 |                                                  | ``crn:v1:``.                                                                                            |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS`` | Time (in seconds) after which job                                                                       |
+| ``{resource_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS`` | Time (in seconds) after which job                                                                       |
 |                                                  | should time out and get                                                                                 |
 |                                                  | cancelled. It is based on system                                                                        |
 |                                                  | execution time (not wall clock                                                                          |
 |                                                  | time). System execution time is the amount of time that the system is dedicated to processing your job. |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SESSION_MODE``    | Session mode,                                                                                           |
+| ``{resource_name}_QRMI_IBM_QCS_SESSION_MODE``    | Session mode,                                                                                           |
 |                                                  | default='dedicated', batch or                                                                           |
 |                                                  | dedicated.                                                                                              |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| ``{resource_name}_QRMI_IBM_QRS_SESSION_ID``      | Session ID, set by acquire                                                                              |
+| ``{resource_name}_QRMI_IBM_QCS_SESSION_ID``      | Session ID, set by acquire                                                                              |
 |                                                  | function. Optional for acquire                                                                          |
 |                                                  | function, however, required other                                                                       |
 |                                                  | functions.                                                                                              |
@@ -175,15 +174,15 @@ Example
 .. code-block:: shell-session
 
    export QRMI_JOB_QPU_RESOURCES=ibm_torino,ibm_marrakesh
-   export QRMI_JOB_QPU_TYPES=qiskit-runtime-service,qiskit-runtime-service
-   export ibm_torino_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-   export ibm_torino_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-   export ibm_torino_QRMI_IBM_QRS_IAM_APIKEY=your_apikey
-   export ibm_torino_QRMI_IBM_QRS_SERVICE_CRN=your_instance
-   export ibm_marrakesh_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-   export ibm_marrakesh_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-   export ibm_marrakesh_QRMI_IBM_QRS_IAM_APIKEY=your_apikey
-   export ibm_marrakesh_QRMI_IBM_QRS_SERVICE_CRN=your_instance
+   export QRMI_JOB_QPU_TYPES=ibm-quantum-compute-service,ibm-quantum-compute-service
+   export ibm_torino_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
+   export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
+   export ibm_torino_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
+   export ibm_torino_QRMI_IBM_QCS_SERVICE_CRN=your_instance
+   export ibm_marrakesh_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
+   export ibm_marrakesh_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
+   export ibm_marrakesh_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
+   export ibm_marrakesh_QRMI_IBM_QCS_SERVICE_CRN=your_instance
 
 
 How to run `this example`_

@@ -85,7 +85,7 @@ This will fail due to the error:
 
        {
          "name": "ibm_brisbane",
-         "type": "qiskit-runtime-service",
+         "type": "ibm-quantum-compute-service",
          "environment": {
              "...": "...", 
              "QRMI_IBM_QRS_SESSION_MODE": "batch"

@@ -71,7 +71,7 @@ Creates a quantum resource handle.
 +-------------------+--------+-----------------------------------------+
 
 Valid values for ``resource_type``: ``ibm-quantum-system`` /
-``qiskit-runtime-service`` / ``pasqal-cloud`` / ``pasqal-local`` /
+``ibm-quantum-compute-service`` / ``pasqal-cloud`` / ``pasqal-local`` /
 ``alice-bob-felis`` / ``iqm-server``
 
 **Returns:** on success, ``resource`` (a ``qrmi.resource``); on failure,
@@ -79,7 +79,7 @@ Valid values for ``resource_type``: ``ibm-quantum-system`` /
 
 .. code:: lua
 
-   local resource, err = qrmi.new("ibm_kingston", "qiskit-runtime-service")
+   local resource, err = qrmi.new("ibm_kingston", "ibm-quantum-compute-service")
 
 ``qrmi.load_config(filename)``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -310,7 +310,7 @@ Structure of ``def``:
 
    {
        name = "ibm_kingston",
-       type = "qiskit-runtime-service",
+       type = "ibm-quantum-compute-service",
        is_dynamic = false,
        environments = {
            QRMI_IBM_QRS_ENDPOINT = "...",

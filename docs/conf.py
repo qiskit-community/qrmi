@@ -80,6 +80,7 @@ breathe_default_project = "qrmi"
 # =============================================================================
 
 linkcheck_ignore = [
+    r"../c/index.html",
     r"../rust/qrmi/index.html",
     r"https://crates.io/crates/log",
     r"https://github.com/Qiskit/ibm-quantum-schemas/.*",
@@ -158,8 +159,13 @@ html_js_files = [
     "contributors.js",
 ]
 
+ANNOUNCEMENT = """
+<b>Deprecation notice (since v0.23.0).</b> See the <a href="https://qiskit-community.github.io/qrmi/migration/v0.23.0.html">migration guide</a> for details.
+"""
+
 html_theme_options = {
     # "discussion_url": "",
+    "announcement": ANNOUNCEMENT,
     "nav_links": [
         {
             "title": "SPANK Plugins",
@@ -170,7 +176,7 @@ html_theme_options = {
     "nav_socials": [
         {
             "name": "GitHub",
-            "url": "https://github.com/lepture/shibuya",
+            "url": "https://github.com/qiskit-community/qrmi",
             "icon": "simple-icons:github",
         },
         {
@@ -182,7 +188,7 @@ html_theme_options = {
     "foot_socials": [
         {
             "name": "GitHub",
-            "url": "https://github.com/lepture/shibuya",
+            "url": "https://github.com/qiskit-community/qrmi",
             "icon": "simple-icons:github",
         },
         {

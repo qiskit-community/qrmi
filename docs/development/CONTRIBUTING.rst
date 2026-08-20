@@ -17,6 +17,7 @@ Outlines the process for contributing code, documentation, tests, and other impr
 
 .. _contributing_prereq:
 
+
 Prerequisites
 -------------
 
@@ -34,6 +35,7 @@ before diving into the code:
 .. _GitHub: https://github.com/qiskit-community/feedback/discussions
 
 .. _contributing_cla:
+
 
 Contributor Licensing Agreement
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,8 +62,10 @@ The `Individual CLA`_ document is available for review as a PDF.
    property of your employer, then you likely need to sign a `Corporate CLA`_ too.
    Please email this to us at qiskit@us.ibm.com.
 
+
 Setting up the developer environment
 ------------------------------------
+
 
 Create a virtual environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -150,6 +154,7 @@ Refer to :ref:`install`.
 
 .. _contributing_issues:
 
+
 Issues and pull requests
 ------------------------
 
@@ -182,6 +187,7 @@ have followed the PR checklist below. PRs that adhere to this list are
 more likely to be reviewed and merged in a timely manner.
 
 .. _pull_request_checklist:
+
 
 Pull request checklist
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -221,6 +227,7 @@ When submitting a pull request for review, please ensure that:
 
    - You must use the **exact phrasing** for GitHub to automatically close the issue when the PR merges.
 
+
 Pre-commit ``detect-secrets``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -232,6 +239,7 @@ workflow using the following instructions:
 
 .. attention::
    Before you begin, ensure you have a **Python virtual environment** (i.e. ``venv``) active. You will need to install ``pre-commit``, which manages the hooks that run ``detect-secrets`` automatically.
+
 
 Installing ``pre-commit``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -253,6 +261,7 @@ Find ``.pre-commit-config.yaml`` for the initial setup.
 
 This file maximises the detection coverage.
 
+
 Handling false positives
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -266,6 +275,7 @@ Once updated, include the modified .secrets.baseline in your PR to ensure the pr
    detect-secrets scan --force-use-all-plugins --exclude-files '.secrets.*' --exclude-files '.git*' --baseline .secrets.baseline
    detect-secrets audit .secrets.baseline
 
+
 Manual execution and overrides
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -275,6 +285,7 @@ execute the following command:
 .. code-block:: bash
 
    pre-commit run --all-files
+
 
 Bypassing the hook
 ^^^^^^^^^^^^^^^^^^
@@ -289,6 +300,7 @@ If you must force a commit without running the pre-commit checks
 .. code-block:: bash
 
    git commit -m "Your message" --no-verify
+
 
 Code Review
 ~~~~~~~~~~~
@@ -313,6 +325,7 @@ to review and are more likely to get merged in a timely manner.
 Please also make sure to always be kind and respectful in your interactions with
 maintainers and other contributors, in line with the :ref:`QRMI Code of Conduct <code_of_conduct>`.
 
+
 Documentation
 -------------
 
@@ -321,6 +334,7 @@ Refer to :ref:`adding_documentation` for further guidance.
 
 .. _contributing_testing:
 
+
 Testing
 -------
 
@@ -328,6 +342,7 @@ Once you've made a code change, it is important to verify that it doesn't break
 any existing tests and that newly added tests run successfully. Before 
 you open a new pull request for your change, run QRMI's Python test suite. If you've
 modified native code, you should also run its Rust-based unit tests.
+
 
 Running unit tests
 ~~~~~~~~~~~~~~~~~~
@@ -383,6 +398,7 @@ Running unit tests
       during manual invocation) takes into account the ``LOG_LEVEL``
       environment variable.
 
+
 .. Unsafe code and Miri
 .. ~~~~~~~~~~~~~~~~~~~~
 
@@ -413,10 +429,12 @@ Running unit tests
 
 .. .. _miri.yml: https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml
 
+
 Testing the C API
 ~~~~~~~~~~~~~~~~~
 
 TBD
+
 
 Writing C API tests
 ^^^^^^^^^^^^^^^^^^^
@@ -425,14 +443,17 @@ TBD
 
 .. _contributing_style:
 
+
 Style and linting
 -----------------
+
+Contributors must run the below commands to fix any formatting issues prior to submitting a PR.
 
 .. tabs::
 
    .. tab:: Rust
 
-      Execute the following commands to fix any formatting issues before submitting a PR.
+      Execute the following commands:
 
       .. code-block:: shell-session
 
@@ -462,7 +483,7 @@ Style and linting
 
    .. tab:: Python
 
-      Execute the following commands to fix any formatting issues before submitting a PR.
+      Execute the following commands:
 
       .. code-block:: shell-session
 
@@ -484,6 +505,7 @@ Style and linting
       .. _pylint: https://pypi.org/project/pylint/
 
 .. _contributing_release:
+
 
 Updating files for new release
 ------------------------------
@@ -513,6 +535,7 @@ To create a new release, the following files must be updated:
      #define QRMI_VERSION_MAJOR 0
      #define QRMI_VERSION_MINOR 14
      #define QRMI_VERSION_PATCH 1
+
 
 Help and Support
 ----------------

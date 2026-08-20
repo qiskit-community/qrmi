@@ -16,7 +16,7 @@ specified QPU resource. This is designed to be used in a Slurm job,
 configuration parameters such as endpoint URL and access credentials are
 taken from the process environment variables. Users can run a quantum
 workload in the form of Qiskit Primitive input (EstimatorV2, SamplerV2) for IBM Quantum System or
-Qiskit Runtime Service, or Pulser Sequence for Pasqal Cloud:
+Quantum Compute Service, or Pulser Sequence for Pasqal Cloud:
 
 - `EstimatorV2 Schema`_ (``Body Parameter`` -> ``Schema 0`` -> ``params`` -> ``EstimatorV2 input``)
 - `SamplerV2 Schema`_ (``Body Parameter`` -> ``Schema 0`` > ``params`` -> ``SamplerV2 input``)
@@ -71,8 +71,8 @@ JSON schema definition is available in `qrmi_payload_v1_schema.json`_.
 .. _qrmi_payload_v1_schema.json: https://github.com/qiskit-community/qrmi/blob/main/qrmi_payload_v1_schema.json
 
 
-Example - IBM Quantum System & Qiskit Runtime Service
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example - IBM Quantum System & Quantum Compute Service
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: json
 
@@ -118,8 +118,8 @@ Running QRMI task runner from Slurm job script
 .. _spank_qrmi: https://github.com/qiskit-community/spank-plugins/tree/main/plugins/spank_qrmi
 
 
-IBM Quantum System or Qiskit Runtime Service
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+IBM Quantum System or Quantum Compute Service
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Run estimator primitive on ibm_marrakesh.
 
@@ -230,8 +230,8 @@ Example:
    task_runner test_heron /shared/input/estimator_input.json
 
 
-Qiskit Runtime Service
-^^^^^^^^^^^^^^^^^^^^^^
+Quantum Compute Service
+^^^^^^^^^^^^^^^^^^^^^^^
 
 +-------------------------------------------------+-----------------------------------------------------+
 |              Environment variables              |                    Descriptions                     |
@@ -239,22 +239,22 @@ Qiskit Runtime Service
 | ``QRMI_JOB_QPU_RESOURCES``                      | Quantum backend name                                |
 +-------------------------------------------------+-----------------------------------------------------+
 | ``QRMI_JOB_QPU_TYPES``                          | Should be                                           |
-|                                                 | ``qiskit-runtime-service``                          |
+|                                                 | ``ibm-quantum-compute-service``                     |
 +-------------------------------------------------+-----------------------------------------------------+
-| ``{backend_name}_QRMI_IBM_QRS_ENDPOINT``        | Qiskit Runtime Service endpoint                     |
+| ``{backend_name}_QRMI_IBM_QCS_ENDPOINT``        | Quantum Compute Service endpoint                    |
 |                                                 | URL (e.g. ``https://quantum.cloud.ibm.com/api/v1``) |
 +-------------------------------------------------+-----------------------------------------------------+
-| ``{backend_name}_QRMI_IBM_QRS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                              |
+| ``{backend_name}_QRMI_IBM_QCS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                              |
 |                                                 | URL (e.g. ``https://iam.cloud.ibm.com``)            |
 +-------------------------------------------------+-----------------------------------------------------+
-| ``{backend_name}_QRMI_IBM_QRS_IAM_APIKEY``      | IBM Cloud IAM API Key                               |
+| ``{backend_name}_QRMI_IBM_QCS_IAM_APIKEY``      | IBM Cloud IAM API Key                               |
 +-------------------------------------------------+-----------------------------------------------------+
-| ``{backend_name}_QRMI_IBM_QRS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                    |
-|                                                 | provisioned Qiskit Runtime                          |
-|                                                 | Service instance, starting with                     |
+| ``{backend_name}_QRMI_IBM_QCS_SERVICE_CRN``     | Cloud Resource Name (CRN) of the                    |
+|                                                 | provisioned Quantum Compute Service                 |
+|                                                 | instance, starting with                             |
 |                                                 | ``crn:v1:``.                                        |
 +-------------------------------------------------+-----------------------------------------------------+
-| ``{backend_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS`` | (Optional) Cost of the job as the                   |
+| ``{backend_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS`` | (Optional) Cost of the job as the                   |
 |                                                 | estimated time it should take to                    |
 |                                                 | complete (in seconds). Should not                   |
 |                                                 | exceed the cost of the program,                     |
@@ -268,11 +268,11 @@ Example:
    source ~/py312_qrmi_venv/bin/activate
 
    export QRMI_JOB_QPU_RESOURCES=ibm_marrakesh
-   export QRMI_JOB_QPU_TYPES=qiskit-runtime-service
-   export test_heron_QRMI_IBM_QRS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-   export test_heron_QRMI_IBM_QRS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-   export test_heron_QRMI_IBM_QRS_IAM_APIKEY=<your API key>
-   export test_heron_QRMI_IBM_QRS_SERVICE_CRN=<your instance>
+   export QRMI_JOB_QPU_TYPES=ibm-quantum-compute-service
+   export test_heron_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
+   export test_heron_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
+   export test_heron_QRMI_IBM_QCS_IAM_APIKEY=<your API key>
+   export test_heron_QRMI_IBM_QCS_SERVICE_CRN=<your instance>
 
    task_runner ibm_marrakesh /shared/input/estimator_input.json
 
