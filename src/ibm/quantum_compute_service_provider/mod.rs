@@ -1,7 +1,6 @@
 // This code is part of Qiskit.
 //
 // (C) Copyright IBM 2026
-// (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -11,15 +10,15 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! [`ResourceProvider`] implementation for IBM Quantum Compute Service.
+//! [`ResourceProvider`] implementation for IBM Qiskit Runtime Service.
 
 mod provider_filter;
 
 use crate::ibm::models::BackendConfiguration;
 use crate::ibm::IBMQuantumComputeService;
 use crate::resource_provider::ResourceProvider;
-use crate::QuantumResource;
-use anyhow::{anyhow, Result};
+use crate::{QrmiError, QuantumResource, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
@@ -28,7 +27,8 @@ use quantum_compute_client::apis::{auth, backends_api, configuration};
 use std::collections::HashMap;
 use std::env;
 
-/// A [`ResourceProvider`] that discovers backends available through IBM Quantum Compute Service.
+/// A [`ResourceProvider`] that discovers backends available through IBM Quantum Compute
+/// Service.
 ///
 /// Constructed from a [`ResourceDef`] with `is_dynamic: true`.
 ///
@@ -72,7 +72,7 @@ impl IBMQuantumComputeServiceProvider {
             environment
                 .get(key)
                 .cloned()
-                .ok_or_else(|| anyhow!("Missing '{}' in environment map", key))
+                .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
         };
 
         let qrs_endpoint = get("QRMI_IBM_QCS_ENDPOINT")?;
@@ -152,11 +152,11 @@ impl ResourceProvider for IBMQuantumComputeServiceProvider {
             &mut token_lifetime,
         )
         .await
-        .map_err(|e| anyhow!("Token renewal failed: {:?}", e))?;
+        .context("token renewal failed")?;
 
         let response = backends_api::list_backends(&config, Some("2025-01-01"))
             .await
-            .map_err(|e| anyhow!("Failed to list backends: {:?}", e))?;
+            .context("failed to list backends")?;
 
         // Apply name and is_simulator filters at list stage, keep queue_length for sorting.
         let candidates: Vec<_> = response
