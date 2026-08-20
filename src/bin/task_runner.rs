@@ -222,7 +222,7 @@ impl ResourceType {
         } else {
             Err(
                 eyre!(
-                    "Resource type {} is not supported. [supported types: ibm-quantum-systemibm-quantum-compute-service, qiskit-runtime-service(deprecated), pasqal-cloud]",
+                    "Resource type {} is not supported. [supported types: ibm-quantum-system, ibm-quantum-compute-service, qiskit-runtime-service(deprecated), pasqal-cloud]",
                     qpu_type,
                 ).into()
             )

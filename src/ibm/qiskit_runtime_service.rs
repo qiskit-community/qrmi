@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// Copyright (C): 2025 UKRI-STFC (Hartree Centre)
+// Copyright (C): 2025-2026 UKRI-STFC (Hartree Centre)
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory

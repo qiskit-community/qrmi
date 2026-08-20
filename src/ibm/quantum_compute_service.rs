@@ -28,7 +28,6 @@ use std::env;
 
 use async_trait::async_trait;
 
-/// QRMI implementation for IBM Qiskit Runtime Service.
 /// QRMI implementation for IBM Quantum Compute Service.
 pub struct IBMQuantumComputeService {
     pub(crate) config: configuration::Configuration,
@@ -111,14 +110,12 @@ impl IBMQuantumComputeService {
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
 #[async_trait]
-//impl QuantumResource for IBMQiskitRuntimeService {
 impl QuantumResource for IBMQuantumComputeService {
     async fn resource_id(&mut self) -> Result<String> {
         Ok(self.backend_name.clone())
     }
 
     async fn resource_type(&mut self) -> Result<ResourceType> {
-        //Ok(ResourceType::QiskitRuntimeService)
         Ok(ResourceType::IBMQuantumComputeService)
     }
 
