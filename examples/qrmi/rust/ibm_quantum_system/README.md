@@ -28,7 +28,7 @@ Because QRMI is an environment variable driven software library, all configurati
 Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can customize quantum circuits by editing the code.
 
 > [!NOTE]
-> Use the file with name ending with `_params_only.json`, e.g. `sampler_input_ibm_torino_params_only.json`.
+> Use the file with name ending `_params_only.json`, e.g. `sampler_input_ibm_torino_params_only.json`.
 
 ## How to build this example
 
