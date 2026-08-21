@@ -14,7 +14,7 @@
 
 use crate::models::ResourceType;
 use crate::QuantumResource;
-use anyhow::{bail, Result};
+use crate::Result;
 use std::collections::HashMap;
 
 /// Discovers the QPU resources assigned to the current job -- read from the
@@ -67,12 +67,6 @@ impl QRMIService {
     ///   resources fails.
     pub async fn new() -> Result<Self> {
         crate::common::initialize();
-
-        // If resource acquisition failed in the QRMI plugin, the error
-        // reason may be available via this environment variable.
-        if let Ok(plugin_error) = std::env::var("QRMI_PLUGIN_ERROR") {
-            bail!(plugin_error);
-        }
 
         let (qpus, qpu_types) = crate::common::get_job_qpu_resources_and_types()?;
         log::debug!("qpus: {:?}", qpus);

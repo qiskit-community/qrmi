@@ -13,6 +13,8 @@
 pub mod alice_bob;
 pub(crate) mod common;
 pub(crate) mod consts;
+pub mod error;
+pub use error::{QrmiError, QrmiErrorKind};
 pub mod ibm;
 pub mod iqm;
 pub mod pasqal;
@@ -29,8 +31,10 @@ pub mod models;
 pub mod pyext;
 
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use anyhow::Result;
 use async_trait::async_trait;
+
+/// Result type used throughout the `QuantumResource` / `ResourceProvider` APIs.
+pub type Result<T> = std::result::Result<T, QrmiError>;
 
 /// Defines interfaces to quantum resources.
 #[async_trait]
