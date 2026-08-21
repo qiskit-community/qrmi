@@ -44,6 +44,7 @@ pasqal-local-api = { path = "dependencies/pasqal_local_client" }
 alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
 iqm-server-api = { path = "dependencies/iqm_client" }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
+thiserror = "2.0"
 glob = "0.3"
 pyo3 = { version = "0.29.0", features = ["anyhow"], optional = true }
 ffi_helpers = "0.3.0"

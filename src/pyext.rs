@@ -12,6 +12,7 @@
 // that they have been altered from the originals.
 
 use crate::alice_bob::AliceBobFelis;
+use crate::error::{QrmiError, QrmiErrorKind};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
@@ -22,8 +23,76 @@ use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
 use crate::QuantumResource;
 use pyo3::prelude::*;
-use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
+use pyo3_stub_gen::{create_exception, define_stub_info_gatherer, derive::*};
 use tokio::runtime::Runtime;
+
+create_exception!(
+    qrmi._core,
+    QrmiError_,
+    pyo3::exceptions::PyRuntimeError,
+    "Base class for all QRMI-specific errors. Catching this catches any \
+     error QRMI itself raises (as opposed to errors surfaced verbatim from \
+     an underlying vendor library)."
+);
+create_exception!(
+    qrmi._core,
+    EnvVarNotSetError,
+    QrmiError_,
+    "A required environment variable was not set."
+);
+create_exception!(
+    qrmi._core,
+    ConfigError,
+    QrmiError_,
+    "A configuration value was missing or could not be parsed (covers both \
+     `QrmiError::ParseError` and `QrmiError::MissingConfigKey`)."
+);
+create_exception!(
+    qrmi._core,
+    UnsupportedResourceTypeError,
+    QrmiError_,
+    "Dynamic discovery was requested for an unsupported resource type."
+);
+create_exception!(
+    qrmi._core,
+    UnsupportedPayloadError,
+    QrmiError_,
+    "The payload (or a value within it, such as a program ID) is not \
+     supported by this backend."
+);
+create_exception!(
+    qrmi._core,
+    TaskNotReadyError,
+    QrmiError_,
+    "The task is not in a state that allows the requested operation \
+     (e.g. its result was requested while it is still running)."
+);
+create_exception!(
+    qrmi._core,
+    InvalidFilterError,
+    QrmiError_,
+    "A `filters` string was malformed or contained an invalid value."
+);
+
+/// Converts a [`QrmiError`] into the [`PyErr`] subclass matching its kind,
+/// so Python code can `except qrmi.TaskNotReadyError` instead of parsing
+/// `RuntimeError` message text. See `QrmiError::kind` for the mapping.
+fn to_py_err(err: QrmiError) -> PyErr {
+    let msg = err.to_string();
+    match err.kind() {
+        QrmiErrorKind::EnvVarNotSet => EnvVarNotSetError::new_err(msg),
+        QrmiErrorKind::ParseError | QrmiErrorKind::MissingConfigKey => ConfigError::new_err(msg),
+        QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
+        QrmiErrorKind::UnknownProgramId | QrmiErrorKind::UnsupportedPayload => {
+            UnsupportedPayloadError::new_err(msg)
+        }
+        QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
+        QrmiErrorKind::InvalidFilter | QrmiErrorKind::InvalidValue => {
+            InvalidFilterError::new_err(msg)
+        }
+        QrmiErrorKind::Other => QrmiError_::new_err(msg),
+    }
+}
 
 #[pyclass(eq, eq_int, hash, frozen, from_py_object)]
 #[gen_stub_pyclass_enum]
@@ -92,14 +161,14 @@ impl PyQuantumResource {
             ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    return Err(to_py_err(e));
                 }
             },
             ResourceType::IBMQiskitRuntimeService => {
                 match IBMQiskitRuntimeService::new(resource_id) {
                     Ok(v) => Box::new(v),
                     Err(e) => {
-                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                        return Err(to_py_err(e));
                     }
                 }
             }
@@ -107,32 +176,32 @@ impl PyQuantumResource {
                 match IBMQuantumComputeService::new(resource_id) {
                     Ok(v) => Box::new(v),
                     Err(e) => {
-                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                        return Err(to_py_err(e));
                     }
                 }
             }
             ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    return Err(to_py_err(e));
                 }
             },
             ResourceType::PasqalLocal => match PasqalLocal::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    return Err(to_py_err(e));
                 }
             },
             ResourceType::AliceBobFelis => match AliceBobFelis::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    return Err(to_py_err(e));
                 }
             },
             ResourceType::IQMServer => match IQMServer::new(resource_id) {
                 Ok(v) => Box::new(v),
                 Err(e) => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                    return Err(to_py_err(e));
                 }
             },
         };
@@ -150,7 +219,7 @@ impl PyQuantumResource {
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.is_accessible().await }));
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -159,7 +228,7 @@ impl PyQuantumResource {
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.resource_id().await }));
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -180,7 +249,7 @@ impl PyQuantumResource {
                 crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
                 crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
             }),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -189,7 +258,7 @@ impl PyQuantumResource {
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.acquire().await }));
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -198,7 +267,7 @@ impl PyQuantumResource {
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.release(id).await }));
         match result {
             Ok(()) => Ok(()),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -210,7 +279,7 @@ impl PyQuantumResource {
         });
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -222,7 +291,7 @@ impl PyQuantumResource {
         });
         match result {
             Ok(()) => Ok(()),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -234,7 +303,7 @@ impl PyQuantumResource {
         });
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -246,7 +315,7 @@ impl PyQuantumResource {
         });
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -258,7 +327,7 @@ impl PyQuantumResource {
         });
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -267,7 +336,7 @@ impl PyQuantumResource {
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.target().await }));
         match result {
             Ok(v) => Ok(v),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -393,23 +462,23 @@ impl PyResourceProvider {
             ResourceType::IBMQiskitRuntimeService => {
                 match IBMQiskitRuntimeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),
-                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                    Err(e) => return Err(to_py_err(e)),
                 }
             }
             ResourceType::IBMQuantumComputeService => {
                 match IBMQuantumComputeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),
-                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                    Err(e) => return Err(to_py_err(e)),
                 }
             }
             ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&environment) {
                 Ok(p) => Box::new(p),
-                Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                Err(e) => return Err(to_py_err(e)),
             },
             _ => {
-                return Err(pyo3::exceptions::PyRuntimeError::new_err(
-                    "Unsupported resource type for dynamic resource discovery",
-                ))
+                return Err(to_py_err(QrmiError::UnsupportedResourceType(format!(
+                    "{resource_type:?}"
+                ))))
             }
         };
         Ok(Self {
@@ -451,7 +520,7 @@ impl PyResourceProvider {
                 .into_iter()
                 .map(PyQuantumResource::from_inner)
                 .collect()),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 
@@ -478,7 +547,7 @@ impl PyResourceProvider {
         });
         match result {
             Ok(resource) => Ok(resource.map(PyQuantumResource::from_inner)),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+            Err(e) => Err(to_py_err(e)),
         }
     }
 }
@@ -659,6 +728,28 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyResourceDef>()?;
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
+
+    // Register the QrmiError exception hierarchy so Python code can catch
+    // them by name (e.g. `except qrmi.TaskNotReadyError`). `create_exception!`
+    // only defines the Rust-side type; it does not make it importable on its
+    // own.
+    m.add("QrmiError", m.py().get_type::<QrmiError_>())?;
+    m.add("EnvVarNotSetError", m.py().get_type::<EnvVarNotSetError>())?;
+    m.add("ConfigError", m.py().get_type::<ConfigError>())?;
+    m.add(
+        "UnsupportedResourceTypeError",
+        m.py().get_type::<UnsupportedResourceTypeError>(),
+    )?;
+    m.add(
+        "UnsupportedPayloadError",
+        m.py().get_type::<UnsupportedPayloadError>(),
+    )?;
+    m.add("TaskNotReadyError", m.py().get_type::<TaskNotReadyError>())?;
+    m.add(
+        "InvalidFilterError",
+        m.py().get_type::<InvalidFilterError>(),
+    )?;
+
     Ok(())
 }
 define_stub_info_gatherer!(stub_info);

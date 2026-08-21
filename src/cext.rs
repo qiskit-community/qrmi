@@ -12,6 +12,7 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::alice_bob::AliceBobFelis;
+use crate::error::{QrmiError, QrmiErrorKind};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
@@ -27,13 +28,51 @@ use std::sync::Arc;
 
 /// Integer return codes returned to C.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub enum ReturnCode {
     /// Success.
     Success = 0,
-    /// Error.
+    /// Error. Generic/uncategorized failure -- see `qrmi_get_last_error()`
+    /// for the message and `qrmi_get_last_error_kind()` for a more specific
+    /// machine-readable reason when available.
     Error = 100,
     /// Unexpected null pointer.
     NullPointerError = 101,
+    /// A required environment variable was not set.
+    EnvVarNotSetError = 102,
+    /// A configuration value could not be parsed.
+    ParseError = 103,
+    /// Dynamic discovery was requested for an unsupported resource type.
+    UnsupportedResourceTypeError = 104,
+    /// An unrecognized program/primitive ID was supplied.
+    UnknownProgramIdError = 105,
+    /// The payload variant is not supported by this backend.
+    UnsupportedPayloadError = 106,
+    /// The task is not in a state that allows the requested operation.
+    TaskNotReadyError = 107,
+    /// A required key was missing from a provider's environment variable map.
+    MissingConfigKeyError = 108,
+    /// A `filters` string was malformed or contained an invalid value.
+    InvalidFilterError = 109,
+    /// A value was invalid for a reason not covered by a more specific code.
+    InvalidValueError = 110,
+}
+
+impl From<QrmiErrorKind> for ReturnCode {
+    fn from(kind: QrmiErrorKind) -> Self {
+        match kind {
+            QrmiErrorKind::EnvVarNotSet => ReturnCode::EnvVarNotSetError,
+            QrmiErrorKind::ParseError => ReturnCode::ParseError,
+            QrmiErrorKind::UnsupportedResourceType => ReturnCode::UnsupportedResourceTypeError,
+            QrmiErrorKind::UnknownProgramId => ReturnCode::UnknownProgramIdError,
+            QrmiErrorKind::UnsupportedPayload => ReturnCode::UnsupportedPayloadError,
+            QrmiErrorKind::TaskNotReady => ReturnCode::TaskNotReadyError,
+            QrmiErrorKind::MissingConfigKey => ReturnCode::MissingConfigKeyError,
+            QrmiErrorKind::InvalidFilter => ReturnCode::InvalidFilterError,
+            QrmiErrorKind::InvalidValue => ReturnCode::InvalidValueError,
+            QrmiErrorKind::Other => ReturnCode::Error,
+        }
+    }
 }
 
 /// C ABI type for `qrmi_log_callback_set`. This is a C-facing detail: it
@@ -176,6 +215,7 @@ pub struct QuantumResource {
 // Last error
 thread_local! {
     static LAST_ERROR: RefCell<Option<CString>> = const { RefCell::new(None) };
+    static LAST_ERROR_KIND: RefCell<QrmiErrorKind> = const { RefCell::new(QrmiErrorKind::Other) };
 }
 
 /// Set last error message text
@@ -187,6 +227,29 @@ fn _set_last_error(msg: String) {
                 CString::new("Failed to generate a C-compatible string").unwrap()
             }));
     });
+}
+
+/// Records `err` as the last error -- both its message (via `_set_last_error`,
+/// retrievable through `qrmi_get_last_error()`) and its machine-readable kind
+/// (retrievable through `qrmi_get_last_error_kind()`) -- and returns the
+/// `ReturnCode` matching that kind. Centralizing this means a new `QrmiError`
+/// variant automatically gets consistent handling everywhere it's used,
+/// instead of each call site choosing what to record.
+fn _fail(err: QrmiError) -> ReturnCode {
+    let kind = err.kind();
+    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
+    _set_last_error(err.to_string());
+    ReturnCode::from(kind)
+}
+
+/// Same recording as `_fail`, for call sites that return a pointer (`NULL`
+/// on failure) rather than a `ReturnCode` and so can't use `_fail`'s return
+/// value directly.
+fn _record_error(err: QrmiError) {
+    let kind = err.kind();
+    eprintln!("[DEBUG] _record_error kind={:?}", kind); // 一時的に追加
+    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
+    _set_last_error(err.to_string());
 }
 
 /// Converts a Rust string into a `CString` suitable for handing across the
@@ -652,6 +715,25 @@ pub unsafe extern "C" fn qrmi_get_last_error() -> *const c_char {
     })
 }
 
+/// @ingroup QrmiCore
+/// Returns a machine-readable classification of the most recent error
+/// encountered during an API call, complementing `qrmi_get_last_error()`'s
+/// human-readable message. Unlike `qrmi_get_last_error()`, this value is
+/// NOT cleared after being read, since callers typically check it before
+/// (or without) reading the message.
+///
+/// If no QRMI-specific error has been recorded (e.g. the failure came from
+/// an unrelated source, or no error has occurred yet), this returns
+/// `QRMI_RETURN_CODE_ERROR` -- the generic code -- as a safe default.
+///
+/// @return A `ReturnCode` describing the kind of the most recent error.
+/// @version 0.16.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_get_last_error_kind() -> ReturnCode {
+    crate::common::initialize();
+    LAST_ERROR_KIND.with(|cell| ReturnCode::from(*cell.borrow()))
+}
+
 /// @ingroup QrmiQuantumResource
 /// Returns a QrmiQuantumResource handle.
 ///
@@ -688,49 +770,49 @@ pub unsafe extern "C" fn qrmi_resource_new(
             ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeService::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::IBMQuantumComputeService => match IBMQuantumComputeService::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::PasqalCloud => match PasqalCloud::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::PasqalLocal => match PasqalLocal::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::AliceBobFelis => match AliceBobFelis::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
             ResourceType::IQMServer => match IQMServer::new(id_str) {
                 Ok(v) => Box::new(v),
                 Err(err) => {
-                    _set_last_error(format!("{}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             },
@@ -821,10 +903,7 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
             *outp = v;
             ReturnCode::Success
         }
-        Err(err) => {
-            _set_last_error(format!("{:?}", err));
-            ReturnCode::Error
-        }
+        Err(err) => _fail(err),
     }
 }
 
@@ -858,10 +937,7 @@ pub unsafe extern "C" fn qrmi_resource_id(
                 ReturnCode::Error
             }
         }
-        Err(err) => {
-            _set_last_error(format!("{:?}", err));
-            ReturnCode::Error
-        }
+        Err(err) => _fail(err),
     }
 }
 
@@ -892,10 +968,7 @@ pub unsafe extern "C" fn qrmi_resource_type(
             *outp = v;
             ReturnCode::Success
         }
-        Err(err) => {
-            _set_last_error(format!("{:?}", err));
-            ReturnCode::Error
-        }
+        Err(err) => _fail(err),
     }
 }
 
@@ -948,7 +1021,7 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
             }
         }
         Err(err) => {
-            _set_last_error(format!("{:?}", err));
+            return _fail(err);
         }
     }
     ReturnCode::Error
@@ -1002,7 +1075,7 @@ pub unsafe extern "C" fn qrmi_resource_release(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                _set_last_error(format!("{:?}", err));
+                return _fail(err);
             }
         }
     }
@@ -1136,7 +1209,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
                 }
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                return _fail(err);
             }
         }
     }
@@ -1189,7 +1262,7 @@ pub unsafe extern "C" fn qrmi_resource_task_stop(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                return _fail(err);
             }
         }
     }
@@ -1251,7 +1324,7 @@ pub unsafe extern "C" fn qrmi_resource_task_status(
                 return ReturnCode::Success;
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                return _fail(err);
             }
         }
     }
@@ -1316,7 +1389,7 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
                 }
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                return _fail(err);
             }
         }
     }
@@ -1381,7 +1454,7 @@ pub unsafe extern "C" fn qrmi_resource_task_logs(
                 }
             }
             Err(err) => {
-                log::error!("{:?}", err);
+                return _fail(err);
             }
         }
     }
@@ -1436,7 +1509,7 @@ pub unsafe extern "C" fn qrmi_resource_target(
             }
         }
         Err(err) => {
-            log::error!("{:?}", err);
+            return _fail(err);
         }
     }
     ReturnCode::Error
@@ -1683,7 +1756,7 @@ pub unsafe extern "C" fn qrmi_provider_new(
             match IBMQiskitRuntimeServiceProvider::new(&env_map) {
                 Ok(inner) => Box::new(inner),
                 Err(err) => {
-                    _set_last_error(format!("{:?}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             }
@@ -1692,7 +1765,7 @@ pub unsafe extern "C" fn qrmi_provider_new(
             match IBMQuantumComputeServiceProvider::new(&env_map) {
                 Ok(inner) => Box::new(inner),
                 Err(err) => {
-                    _set_last_error(format!("{:?}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             }
@@ -1700,12 +1773,14 @@ pub unsafe extern "C" fn qrmi_provider_new(
         ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&env_map) {
             Ok(inner) => Box::new(inner),
             Err(err) => {
-                _set_last_error(format!("{:?}", err));
+                _record_error(err);
                 return std::ptr::null_mut();
             }
         },
         _ => {
-            _set_last_error("Unsupported resource type for dynamic resource discovery".to_string());
+            _record_error(QrmiError::UnsupportedResourceType(format!(
+                "{resource_type:?}"
+            )));
             return std::ptr::null_mut();
         }
     };
@@ -1856,10 +1931,7 @@ pub unsafe extern "C" fn qrmi_provider_resources(
             (*resources_out).length = count;
             ReturnCode::Success
         }
-        Err(err) => {
-            _set_last_error(format!("{:?}", err));
-            ReturnCode::Error
-        }
+        Err(err) => _fail(err),
     }
 }
 
@@ -1981,9 +2053,6 @@ pub unsafe extern "C" fn qrmi_provider_least_busy(
             *resource_out = std::ptr::null_mut();
             ReturnCode::Success
         }
-        Err(err) => {
-            _set_last_error(format!("{:?}", err));
-            ReturnCode::Error
-        }
+        Err(err) => _fail(err),
     }
 }

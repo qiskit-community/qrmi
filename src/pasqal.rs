@@ -14,6 +14,7 @@
 
 mod cloud;
 mod cloud_config;
+pub mod error;
 mod local;
 
 pub use self::cloud::PasqalCloud;

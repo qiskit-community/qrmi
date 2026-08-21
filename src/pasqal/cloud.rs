@@ -11,8 +11,9 @@
 // that they have been altered from the originals.
 
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
-use crate::QuantumResource;
-use anyhow::{anyhow, bail, Result};
+use crate::pasqal::error::PasqalError;
+use crate::{QrmiError, QuantumResource, Result};
+use anyhow::Context;
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
@@ -110,8 +111,8 @@ impl PasqalCloud {
 
     fn parse_device_type(&self) -> Result<DeviceType> {
         self.backend_name.parse::<DeviceType>().map_err(|_| {
-            anyhow!(
-                "Device '{}' is invalid. Valid devices: {}",
+            PasqalError::InvalidDeviceType(format!(
+                "device '{}' is invalid. Valid devices: {}",
                 self.backend_name,
                 [
                     "FRESNEL",
@@ -121,7 +122,8 @@ impl PasqalCloud {
                     "EMU_FRESNEL"
                 ]
                 .join(", ")
-            )
+            ))
+            .into()
         })
     }
 
@@ -175,7 +177,10 @@ impl PasqalCloud {
             .data
             .job_ids
             .first()
-            .ok_or_else(|| anyhow!("No jobs found for batch '{}'", batch_id))?;
+            .ok_or_else(|| QrmiError::TaskNotReady {
+                task_id: batch_id.to_string(),
+                reason: "no jobs found for this batch".to_string(),
+            })?;
         self.task_status_from_job_id(job_id).await
     }
 
@@ -216,10 +221,12 @@ impl QuantumResource for PasqalCloud {
         // The device may be down temporarily but jobs can still
         // be submitted and queued through the cloud.
         // Thus we only check that the device is not retired.
-        match self.api_client.get_device(device_type).await {
-            Ok(device) => Ok(device.availability == "ACTIVE"),
-            Err(err) => bail!("Failed to get device: {}", err),
-        }
+        let device = self
+            .api_client
+            .get_device(device_type)
+            .await
+            .context("failed to get device")?;
+        Ok(device.availability == "ACTIVE")
     }
 
     async fn acquire(&mut self) -> Result<String> {
@@ -239,44 +246,29 @@ impl QuantumResource for PasqalCloud {
             "Starting task on PasqalCloud QRMI (backend '{}')",
             self.backend_name
         );
-        if let Payload::PasqalCloud { sequence, job_runs } = payload {
-            let device_type = self.parse_device_type()?;
+        let Payload::PasqalCloud { sequence, job_runs } = payload else {
+            return Err(QrmiError::UnsupportedPayload(format!("{payload:?}")));
+        };
+        let device_type = self.parse_device_type()?;
 
-            if Self::is_cudaq_sequence(&sequence) {
-                let sequence_value: serde_json::Value = match serde_json::from_str(&sequence) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return Err(anyhow!("Failed to parse CUDA-Q sequence payload: {err}"));
-                    }
-                };
-                match self
-                    .api_client
-                    .create_cudaq_job(sequence_value, job_runs, device_type)
-                    .await
-                {
-                    Ok(job) => {
-                        self.task_kinds
-                            .insert(job.data.id.clone(), PasqalTaskKind::Cudaq);
-                        Ok(job.data.id)
-                    }
-                    Err(err) => Err(err),
-                }
-            } else {
-                match self
-                    .api_client
-                    .create_batch(sequence, job_runs, device_type)
-                    .await
-                {
-                    Ok(batch) => {
-                        self.task_kinds
-                            .insert(batch.data.id.clone(), PasqalTaskKind::Pulser);
-                        Ok(batch.data.id)
-                    }
-                    Err(err) => Err(err),
-                }
-            }
+        if Self::is_cudaq_sequence(&sequence) {
+            let sequence_value: serde_json::Value = serde_json::from_str(&sequence)
+                .map_err(|err| PasqalError::InvalidCudaqSequence(err.to_string()))?;
+            let job = self
+                .api_client
+                .create_cudaq_job(sequence_value, job_runs, device_type)
+                .await?;
+            self.task_kinds
+                .insert(job.data.id.clone(), PasqalTaskKind::Cudaq);
+            Ok(job.data.id)
         } else {
-            bail!(format!("Payload type is not supported. {:?}", payload))
+            let batch = self
+                .api_client
+                .create_batch(sequence, job_runs, device_type)
+                .await?;
+            self.task_kinds
+                .insert(batch.data.id.clone(), PasqalTaskKind::Pulser);
+            Ok(batch.data.id)
         }
     }
 
@@ -285,10 +277,8 @@ impl QuantumResource for PasqalCloud {
             "Stopping task '{}' on PasqalCloud QRMI (backend '{}')",
             task_id, self.backend_name
         );
-        match self.api_client.cancel_batch(task_id).await {
-            Ok(_) => Ok(()),
-            Err(err) => Err(err),
-        }
+        self.api_client.cancel_batch(task_id).await?;
+        Ok(())
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
@@ -297,14 +287,11 @@ impl QuantumResource for PasqalCloud {
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         match self.task_kind(task_id) {
-            PasqalTaskKind::Pulser => match self.api_client.get_batch_results(task_id).await {
-                Ok(resp) => Ok(TaskResult { value: resp }),
-                Err(err) => Err(err),
-            },
-            PasqalTaskKind::Cudaq => match self.task_result_from_cudaq(task_id).await {
-                Ok(result) => Ok(result),
-                Err(err) => Err(err),
-            },
+            PasqalTaskKind::Pulser => {
+                let resp = self.api_client.get_batch_results(task_id).await?;
+                Ok(TaskResult { value: resp })
+            }
+            PasqalTaskKind::Cudaq => self.task_result_from_cudaq(task_id).await,
         }
     }
 
@@ -318,10 +305,8 @@ impl QuantumResource for PasqalCloud {
             self.backend_name
         );
         let device_type = self.parse_device_type()?;
-        match self.api_client.get_device_specs(device_type).await {
-            Ok(resp) => Ok(Target { value: resp }),
-            Err(err) => Err(err),
-        }
+        let resp = self.api_client.get_device_specs(device_type).await?;
+        Ok(Target { value: resp })
     }
 
     async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
