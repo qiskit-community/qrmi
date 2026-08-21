@@ -9,7 +9,7 @@ Slurm QRMI plugin would set -- and exposes the ones that are currently
 accessible.
 
 This is the same `QRMIService` used by `qrmi.primitives` (see
-[`../../qiskit_primitives`](../../qiskit_primitives)); this example just
+[`../../../qiskit_primitives`](../../../qiskit_primitives)); this example just
 uses it directly, without a Qiskit primitive on top.
 
 ## Prerequisites
