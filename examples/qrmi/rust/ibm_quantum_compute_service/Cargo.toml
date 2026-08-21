@@ -1,10 +1,10 @@
 [package]
 name = "qrmi-example-ibm-quantum-compute-service"
 version = "0.1.0"
-edition = "2026"
+edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/qiskit-community/qrmi"
-rust-version = "1.86" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
+rust-version = "1.91" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
 
 
 [dependencies]
