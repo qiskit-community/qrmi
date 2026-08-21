@@ -50,7 +50,7 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{QRMIService, QuantumResource};
+use qrmi::QRMIService;
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]
