@@ -11,15 +11,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::alice_bob::AliceBobFelis;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
-use crate::iqm::IQMServer;
 use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
-use crate::pasqal::PasqalCloud;
-use crate::pasqal::PasqalLocal;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
@@ -36,6 +31,23 @@ pub enum ResourceType {
     PasqalLocal,
     AliceBobFelis,
     IQMServer,
+}
+impl From<ResourceType> for crate::models::ResourceType {
+    fn from(value: ResourceType) -> Self {
+        match value {
+            ResourceType::IBMQuantumSystem => crate::models::ResourceType::IBMQuantumSystem,
+            ResourceType::IBMQiskitRuntimeService => {
+                crate::models::ResourceType::QiskitRuntimeService
+            }
+            ResourceType::IBMQuantumComputeService => {
+                crate::models::ResourceType::IBMQuantumComputeService
+            }
+            ResourceType::PasqalCloud => crate::models::ResourceType::PasqalCloud,
+            ResourceType::PasqalLocal => crate::models::ResourceType::PasqalLocal,
+            ResourceType::AliceBobFelis => crate::models::ResourceType::AliceBobFelis,
+            ResourceType::IQMServer => crate::models::ResourceType::IQMServer,
+        }
+    }
 }
 
 #[gen_stub_pyclass]
@@ -89,7 +101,7 @@ impl PyQuantumResource {
     pub fn new(resource_id: &str, resource_type: ResourceType) -> PyResult<Self> {
         crate::common::initialize();
 
-        let qrmi = crate::common::create_resource(&resource_type, resource_id)
+        let qrmi = crate::common::create_resource(&resource_type.into(), resource_id)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
 
         Ok(Self {
