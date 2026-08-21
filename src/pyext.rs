@@ -176,7 +176,7 @@ impl PyQuantumResource {
                 match IBMQuantumComputeService::new(resource_id) {
                     Ok(v) => Box::new(v),
                     Err(e) => {
-                        return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
+                        return Err(to_py_err(e));
                     }
                 }
             }
@@ -468,7 +468,7 @@ impl PyResourceProvider {
             ResourceType::IBMQuantumComputeService => {
                 match IBMQuantumComputeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),
-                    Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
+                    Err(e) => return Err(to_py_err(e)),
                 }
             }
             ResourceType::IBMQuantumSystem => match IBMQuantumSystemProvider::new(&environment) {

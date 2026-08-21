@@ -1765,7 +1765,7 @@ pub unsafe extern "C" fn qrmi_provider_new(
             match IBMQuantumComputeServiceProvider::new(&env_map) {
                 Ok(inner) => Box::new(inner),
                 Err(err) => {
-                    _set_last_error(format!("{:?}", err));
+                    _record_error(err);
                     return std::ptr::null_mut();
                 }
             }
