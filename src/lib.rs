@@ -32,7 +32,6 @@ use async_trait::async_trait;
 /// Defines interfaces to quantum resources.
 #[async_trait]
 pub trait QuantumResource: Send + Sync {
-    async fn resource_id(&mut self) -> Result<String>;
     /// Returns resource identifier of this quantum resource.
     ///
     /// # Example
@@ -48,8 +47,8 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn resource_type(&mut self) -> Result<ResourceType>;
-    ///
+    async fn resource_id(&mut self) -> Result<String>;
+
     /// Returns resource type of this quantum resource.
     ///
     /// # Example
@@ -65,6 +64,9 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
+    async fn resource_type(&mut self) -> Result<ResourceType>;
+
+    /// Asynchronously checks if a backend is accessible.
     async fn is_accessible(&mut self) -> Result<bool>;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
