@@ -142,7 +142,7 @@ Build the python wheels:
 
 ```shell-session
 source ~/py312_qrmi_venv/bin/activate
-CARGO_TARGET_DIR=./target/release/maturin maturin build --release --features pyo3/extension-module,munge,pyo3/abi3,qrmi/pyo3
+CARGO_TARGET_DIR=./target/release/maturin maturin build --release --features munge,pyo3/abi3,qrmi/pyo3
 ```
 
 ## Other
