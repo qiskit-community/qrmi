@@ -745,7 +745,10 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.py().get_type::<UnsupportedPayloadError>(),
     )?;
     m.add("TaskNotReadyError", m.py().get_type::<TaskNotReadyError>())?;
-    m.add("InvalidFilterError", m.py().get_type::<InvalidFilterError>())?;
+    m.add(
+        "InvalidFilterError",
+        m.py().get_type::<InvalidFilterError>(),
+    )?;
 
     Ok(())
 }
