@@ -38,7 +38,7 @@ Supported values for `QRMI_JOB_QPU_TYPES` entries: `ibm-quantum-system`,
 
 Each resource named in `QRMI_JOB_QPU_RESOURCES` also needs its own
 vendor-specific environment variables set -- see the other examples in this
-directory (e.g. [`../qiskit_runtime_service`](../qiskit_runtime_service) or
+directory (e.g. [`../ibm_quantum_compute_service`](../ibm_quantum_compute_service) or
 [`../pasqal_cloud`](../pasqal_cloud)) for what those are per vendor. This
 example assumes a `.env` file with all of the above is available in the
 current directory.
