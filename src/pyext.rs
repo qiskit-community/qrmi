@@ -23,52 +23,52 @@ use crate::pasqal::PasqalCloud;
 use crate::pasqal::PasqalLocal;
 use crate::QuantumResource;
 use pyo3::prelude::*;
-use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
+use pyo3_stub_gen::{create_exception, define_stub_info_gatherer, derive::*};
 use tokio::runtime::Runtime;
 
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     QrmiError_,
     pyo3::exceptions::PyRuntimeError,
     "Base class for all QRMI-specific errors. Catching this catches any \
      error QRMI itself raises (as opposed to errors surfaced verbatim from \
      an underlying vendor library)."
 );
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     EnvVarNotSetError,
     QrmiError_,
     "A required environment variable was not set."
 );
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     ConfigError,
     QrmiError_,
     "A configuration value was missing or could not be parsed (covers both \
      `QrmiError::ParseError` and `QrmiError::MissingConfigKey`)."
 );
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     UnsupportedResourceTypeError,
     QrmiError_,
     "Dynamic discovery was requested for an unsupported resource type."
 );
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     UnsupportedPayloadError,
     QrmiError_,
     "The payload (or a value within it, such as a program ID) is not \
      supported by this backend."
 );
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     TaskNotReadyError,
     QrmiError_,
     "The task is not in a state that allows the requested operation \
      (e.g. its result was requested while it is still running)."
 );
-pyo3::create_exception!(
-    qrmi,
+create_exception!(
+    qrmi._core,
     InvalidFilterError,
     QrmiError_,
     "A `filters` string was malformed or contained an invalid value."
