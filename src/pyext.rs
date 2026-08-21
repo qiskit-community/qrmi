@@ -728,6 +728,25 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyResourceDef>()?;
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
+
+    // Register the QrmiError exception hierarchy so Python code can catch
+    // them by name (e.g. `except qrmi.TaskNotReadyError`). `create_exception!`
+    // only defines the Rust-side type; it does not make it importable on its
+    // own.
+    m.add("QrmiError", m.py().get_type::<QrmiError_>())?;
+    m.add("EnvVarNotSetError", m.py().get_type::<EnvVarNotSetError>())?;
+    m.add("ConfigError", m.py().get_type::<ConfigError>())?;
+    m.add(
+        "UnsupportedResourceTypeError",
+        m.py().get_type::<UnsupportedResourceTypeError>(),
+    )?;
+    m.add(
+        "UnsupportedPayloadError",
+        m.py().get_type::<UnsupportedPayloadError>(),
+    )?;
+    m.add("TaskNotReadyError", m.py().get_type::<TaskNotReadyError>())?;
+    m.add("InvalidFilterError", m.py().get_type::<InvalidFilterError>())?;
+
     Ok(())
 }
 define_stub_info_gatherer!(stub_info);
