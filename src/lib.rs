@@ -29,6 +29,25 @@ use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 
+/// Version of this QRMI library, as a semantic version string such as `"0.22.0"`.
+///
+/// Callers can compare this against the version they were built against to detect
+/// incompatibilities at runtime, for example after a system upgrade replaced the
+/// shared library underneath them.
+///
+/// Note that versions below `1.0.0` are considered unstable, so a mismatch in the
+/// minor component is enough to signal a potentially breaking change.
+///
+/// # Example
+///
+/// ```
+/// let version = qrmi::get_version();
+/// println!("{version}"); // prints e.g. "0.22.0"
+/// ```
+pub fn get_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
 /// Defines interfaces to quantum resources.
 #[async_trait]
 pub trait QuantumResource: Send + Sync {

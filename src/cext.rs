@@ -263,6 +263,29 @@ pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> Ret
 }
 
 /// @ingroup Qrmi
+/// Returns the version of this QRMI library as a semantic version string.
+///
+/// Callers can compare this against the version they were built against to detect
+/// incompatibilities at runtime, for example after a system upgrade replaced the
+/// shared library underneath them.
+///
+/// The returned pointer refers to a string with static lifetime owned by the
+/// library. It must NOT be passed to `qrmi_string_free()`.
+///
+/// # Example
+///
+/// @code
+///   printf("QRMI version = %s\n", qrmi_get_version());
+/// @endcode
+///
+/// @return pointer to a NUL-terminated version string such as "0.22.0". Never NULL.
+/// @version 0.23.0
+#[no_mangle]
+pub extern "C" fn qrmi_get_version() -> *const c_char {
+    concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr() as *const c_char
+}
+
+/// @ingroup Qrmi
 /// Free a string allocated by C API
 ///
 /// # Safety

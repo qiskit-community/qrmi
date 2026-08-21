@@ -643,6 +643,17 @@ fn set_log_callback(callback: Option<Py<PyAny>>) -> PyResult<()> {
         .map_err(|()| pyo3::exceptions::PyRuntimeError::new_err("Failed to set log callback"))
 }
 
+/// Returns the version of this QRMI library as a semantic version string.
+///
+/// Callers can compare this against the version they were built against to detect
+/// incompatibilities at runtime, for example after a system upgrade replaced the
+/// native extension underneath them.
+#[gen_stub_pyfunction]
+#[pyfunction]
+fn get_version() -> &'static str {
+    crate::get_version()
+}
+
 /// A Python module implemented in Rust.
 #[pymodule(name = "_core")]
 fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -650,6 +661,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let _ = crate::common::set_log_sink(Some(std::sync::Arc::new(python_log_sink)));
 
     m.add_function(wrap_pyfunction!(set_log_callback, m)?)?;
+    m.add_function(wrap_pyfunction!(get_version, m)?)?;
     m.add_class::<PyQuantumResource>()?;
     m.add_class::<ResourceType>()?;
     m.add_class::<crate::models::TaskStatus>()?;
