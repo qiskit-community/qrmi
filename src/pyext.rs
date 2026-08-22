@@ -39,8 +39,9 @@ create_exception!(
     qrmi._core,
     ConfigError,
     QrmiError_,
-    "A configuration value was missing or could not be parsed (covers both \
-     `QrmiError::ParseError` and `QrmiError::MissingConfigKey`)."
+    "A configuration value was missing, could not be parsed, or was \
+     otherwise invalid (covers `QrmiError::ParseError`, \
+     `QrmiError::MissingConfigKey`, and `QrmiError::InvalidConfig`)."
 );
 create_exception!(
     qrmi._core,
@@ -76,7 +77,9 @@ fn to_py_err(err: QrmiError) -> PyErr {
     let msg = err.to_string();
     match err.kind() {
         QrmiErrorKind::EnvVarNotSet => EnvVarNotSetError::new_err(msg),
-        QrmiErrorKind::ParseError | QrmiErrorKind::MissingConfigKey => ConfigError::new_err(msg),
+        QrmiErrorKind::ParseError
+        | QrmiErrorKind::MissingConfigKey
+        | QrmiErrorKind::InvalidConfig => ConfigError::new_err(msg),
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
         QrmiErrorKind::UnknownProgramId | QrmiErrorKind::UnsupportedPayload => {
             UnsupportedPayloadError::new_err(msg)
@@ -583,7 +586,7 @@ impl PyQRMIService {
         let rt = Runtime::new().expect("Failed to create a new tokio runtime.");
         let inner = py
             .detach(|| rt.block_on(async { crate::QRMIService::new().await }))
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+            .map_err(to_py_err)?;
 
         let qrmi_resources = inner
             .into_resource_map()

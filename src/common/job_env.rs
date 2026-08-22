@@ -9,7 +9,7 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-use anyhow::{bail, Result};
+use crate::error::QrmiError;
 
 /// Reads `name` (falling back to `legacy_name` if `name` is unset) and
 /// splits it into a list using the delimiter specified by the
@@ -17,15 +17,11 @@ use anyhow::{bail, Result};
 ///
 /// Returns an empty `Vec` if the resolved value is an empty string, and an
 /// error if neither `name` nor `legacy_name` is set.
-fn job_env_list(name: &str, legacy_name: &str) -> Result<Vec<String>> {
+fn job_env_list(name: &str, legacy_name: &str) -> Result<Vec<String>, QrmiError> {
     let values = match std::env::var(name).or_else(|_| std::env::var(legacy_name)) {
         Ok(v) => v,
         Err(_) => {
-            bail!(
-                "The environment variable `{}` is not set and as such configuration \
-                 could not be loaded.",
-                name
-            );
+            return Err(QrmiError::EnvVarNotSet(name.to_string()));
         }
     };
     if values.is_empty() {
@@ -40,15 +36,13 @@ fn job_env_list(name: &str, legacy_name: &str) -> Result<Vec<String>> {
 /// Reads `QRMI_JOB_QPU_RESOURCES`/`QRMI_JOB_QPU_TYPES`, falling back to the
 /// legacy `SLURM_JOB_QPU_RESOURCES`/`SLURM_JOB_QPU_TYPES` names. Fails if the
 /// two lists have different lengths.
-pub(crate) fn get_job_qpu_resources_and_types() -> Result<(Vec<String>, Vec<String>)> {
+pub(crate) fn get_job_qpu_resources_and_types() -> Result<(Vec<String>, Vec<String>), QrmiError> {
     let qpus = job_env_list("QRMI_JOB_QPU_RESOURCES", "SLURM_JOB_QPU_RESOURCES")?;
     let qpu_types = job_env_list("QRMI_JOB_QPU_TYPES", "SLURM_JOB_QPU_TYPES")?;
     if qpus.len() != qpu_types.len() {
-        bail!(
-            "Inconsistent specifications of QPU resources and types. {:?} vs {:?}",
-            qpus,
-            qpu_types
-        );
+        return Err(QrmiError::InvalidConfig(format!(
+            "inconsistent number of QPU resources and types: {qpus:?} vs {qpu_types:?}"
+        )));
     }
     if qpus.is_empty() {
         log::warn!("No QPU resources or types specified.");

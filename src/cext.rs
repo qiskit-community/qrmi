@@ -51,6 +51,8 @@ pub enum ReturnCode {
     InvalidFilterError = 109,
     /// A value was invalid for a reason not covered by a more specific code.
     InvalidValueError = 110,
+    /// A configuration value (or combination of values) was invalid.
+    InvalidConfigError = 111,
 }
 
 impl From<QrmiErrorKind> for ReturnCode {
@@ -63,6 +65,7 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::UnsupportedPayload => ReturnCode::UnsupportedPayloadError,
             QrmiErrorKind::TaskNotReady => ReturnCode::TaskNotReadyError,
             QrmiErrorKind::MissingConfigKey => ReturnCode::MissingConfigKeyError,
+            QrmiErrorKind::InvalidConfig => ReturnCode::InvalidConfigError,
             QrmiErrorKind::InvalidFilter => ReturnCode::InvalidFilterError,
             QrmiErrorKind::InvalidValue => ReturnCode::InvalidValueError,
             QrmiErrorKind::Other => ReturnCode::Error,
@@ -2103,10 +2106,7 @@ pub unsafe extern "C" fn qrmi_service_resources(
             (*resources_out).length = count;
             ReturnCode::Success
         }
-        Err(err) => {
-            _set_last_error(format!("{:?}", err));
-            ReturnCode::Error
-        }
+        Err(err) => _fail(err),
     }
 }
 

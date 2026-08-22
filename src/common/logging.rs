@@ -9,7 +9,6 @@
 // Any modifications or derivative works of this code must retain this
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
-use anyhow::Result;
 use std::io::Write;
 use std::sync::{Arc, Once, RwLock};
 
