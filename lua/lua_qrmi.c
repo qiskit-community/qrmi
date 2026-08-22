@@ -74,6 +74,7 @@ static int push_qrmi_error(lua_State *L, QrmiReturnCode rc) {
 /** @brief All QrmiResourceType variants, used to drive the string <-> enum lookup below. */
 static const QrmiResourceType g_all_resource_types[] = {
     QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM,
+    QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE,
     QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE,
     QRMI_RESOURCE_TYPE_PASQAL_CLOUD,
     QRMI_RESOURCE_TYPE_PASQAL_LOCAL,
