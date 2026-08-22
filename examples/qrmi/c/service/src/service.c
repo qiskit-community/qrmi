@@ -42,8 +42,8 @@ extern void load_dotenv();
  * by default, overridable via QRMI_LIST_DELIMITER). The two lists must be
  * the same length and pair up positionally, e.g.:
  *
- *   export QRMI_JOB_QPU_RESOURCES=ibm_torino,my_pasqal_qpu
- *   export QRMI_JOB_QPU_TYPES=qiskit-runtime-service,pasqal-cloud
+ *   export QRMI_JOB_QPU_RESOURCES=ibm_torino,FRESNEL
+ *   export QRMI_JOB_QPU_TYPES=ibm-quantum-compute-service,pasqal-cloud
  *
  * Each resource named above also needs its own vendor-specific environment
  * variables set (see the other examples in this directory for what those
@@ -60,7 +60,8 @@ int main(int argc, char *argv[]) {
   QrmiReturnCode rc = qrmi_service_resources(&resources);
   if (rc != QRMI_RETURN_CODE_SUCCESS) {
     const char *last_error = qrmi_get_last_error();
-    fprintf(stderr, "qrmi_service_resources() failed. %s\n", last_error);
+    fprintf(stderr, "qrmi_service_resources() failed. %s(%d)\n", last_error,
+            qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
     return EXIT_FAILURE;
   }
@@ -103,7 +104,8 @@ int main(int argc, char *argv[]) {
   }
 
   if (selected == NULL) {
-    fprintf(stderr, "'%s' was not found among this job's accessible resources\n",
+    fprintf(stderr,
+            "'%s' was not found among this job's accessible resources\n",
             resource_name);
     qrmi_service_resources_free(&resources);
     return EXIT_FAILURE;
@@ -114,7 +116,8 @@ int main(int argc, char *argv[]) {
   rc = qrmi_resource_acquire(selected, &acquisition_token);
   if (rc != QRMI_RETURN_CODE_SUCCESS) {
     const char *last_error = qrmi_get_last_error();
-    fprintf(stderr, "qrmi_resource_acquire() failed. %s\n", last_error);
+    fprintf(stderr, "qrmi_resource_acquire() failed. %s(%d)\n", last_error,
+            qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
     qrmi_service_resources_free(&resources);
     return EXIT_FAILURE;
@@ -146,7 +149,11 @@ int main(int argc, char *argv[]) {
   }
 
   rc = qrmi_resource_release(selected, acquisition_token);
-  fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
+  if (rc != QRMI_RETURN_CODE_SUCCESS) {
+    const char *last_error = qrmi_get_last_error();
+    fprintf(stderr, "qrmi_resource_release() failed. %s(%d)\n", last_error,
+            qrmi_get_last_error_kind());
+  }
   qrmi_string_free(acquisition_token);
 
   // Individual handles inside `resources` (including `selected`, which
