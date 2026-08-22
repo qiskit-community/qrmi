@@ -513,8 +513,8 @@ impl ClientBuilder {
             ReqwestClientBuilder::new(reqwest_plain_client_builder.build()?);
 
         if let Some(v) = self.retry_policy {
-            middleware_plain_client_builder =
-                middleware_plain_client_builder.with(TransparentRetryMiddleware::new_with_policy(v));
+            middleware_plain_client_builder = middleware_plain_client_builder
+                .with(TransparentRetryMiddleware::new_with_policy(v));
         };
 
         #[cfg(feature = "ibmcloud_appid_auth")]

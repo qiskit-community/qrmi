@@ -69,8 +69,7 @@ impl TokenManager {
         let mut reqwest_builder =
             reqwest_middleware::ClientBuilder::new(reqwest_client_builder.build()?);
         if let Some(v) = retry_policy {
-            reqwest_builder =
-                reqwest_builder.with(TransparentRetryMiddleware::new_with_policy(v))
+            reqwest_builder = reqwest_builder.with(TransparentRetryMiddleware::new_with_policy(v))
         } else {
             let default_policy = ExponentialBackoff::builder()
                 .retry_bounds(
@@ -80,9 +79,8 @@ impl TokenManager {
                 .jitter(Jitter::Bounded)
                 .base(DEFAULT_EXPONENTIAL_BASE)
                 .build_with_max_retries(DEFAULT_RETRIES);
-            reqwest_builder = reqwest_builder.with(
-                TransparentRetryMiddleware::new_with_policy(default_policy),
-            )
+            reqwest_builder =
+                reqwest_builder.with(TransparentRetryMiddleware::new_with_policy(default_policy))
         }
         Ok(Self {
             access_token: None,
