@@ -245,7 +245,6 @@ fn _fail(err: QrmiError) -> ReturnCode {
 /// value directly.
 fn _record_error(err: QrmiError) {
     let kind = err.kind();
-    eprintln!("[DEBUG] _record_error kind={:?}", kind); // 一時的に追加
     LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
     _set_last_error(err.to_string());
 }
