@@ -11,8 +11,8 @@
 
 //! Helpers which provide minimum functionalities for operating S3 objects.
 
-use anyhow::{bail, Result};
-use aws_sdk_s3::error::DisplayErrorContext;
+use crate::error::QuantumSystemError;
+use crate::Result;
 use aws_sdk_s3::presigning::PresigningConfig;
 use core::time::Duration;
 
@@ -85,7 +85,8 @@ impl S3Client {
         key_name: impl Into<String>,
         expires_in: u64,
     ) -> Result<String> {
-        let presigned_config = PresigningConfig::expires_in(Duration::from_secs(expires_in))?;
+        let presigned_config = PresigningConfig::expires_in(Duration::from_secs(expires_in))
+            .map_err(|e| QuantumSystemError::other("invalid presigning duration", e))?;
         let presigned_url = match self
             .s3_client
             .get_object()
@@ -96,10 +97,10 @@ impl S3Client {
         {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!(
-                    "An error occurred while generating the presigned URL: {}",
-                    DisplayErrorContext(&err)
-                ));
+                return Err(QuantumSystemError::other(
+                    "An error occurred while generating the presigned URL",
+                    err.into_service_error(),
+                ))
             }
         };
         Ok(presigned_url.uri().to_string())
@@ -126,7 +127,8 @@ impl S3Client {
         key_name: impl Into<String>,
         expires_in: u64,
     ) -> Result<String> {
-        let presigned_config = PresigningConfig::expires_in(Duration::from_secs(expires_in))?;
+        let presigned_config = PresigningConfig::expires_in(Duration::from_secs(expires_in))
+            .map_err(|e| QuantumSystemError::other("invalid presigning duration", e))?;
         let presigned_url = match self
             .s3_client
             .put_object()
@@ -137,10 +139,10 @@ impl S3Client {
         {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!(
-                    "An error occurred while generating the presigned URL: {}",
-                    DisplayErrorContext(&err)
-                ));
+                return Err(QuantumSystemError::other(
+                    "An error occurred while generating the presigned URL",
+                    err.into_service_error(),
+                ))
             }
         };
         Ok(presigned_url.uri().to_string())
@@ -180,10 +182,10 @@ impl S3Client {
         {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!(
-                    "An error occurred while adding an object to S3 bucket: {}",
-                    DisplayErrorContext(&err)
-                ));
+                return Err(QuantumSystemError::other(
+                    "An error occurred while adding an object to S3 bucket",
+                    err.into_service_error(),
+                ))
             }
         };
         Ok(())
@@ -220,15 +222,20 @@ impl S3Client {
         {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!(
-                    "An error occurred while retrieving an object from S3 bucket: {}",
-                    DisplayErrorContext(&err)
-                ));
+                return Err(QuantumSystemError::other(
+                    "An error occurred while retrieving an object from S3 bucket",
+                    err.into_service_error(),
+                ))
             }
         };
 
         let mut data = Vec::<u8>::new();
-        while let Some(bytes) = object.body.try_next().await? {
+        while let Some(bytes) = object
+            .body
+            .try_next()
+            .await
+            .map_err(|e| QuantumSystemError::other("failed to read object body from S3", e))?
+        {
             data.append(&mut bytes.to_vec());
         }
         Ok(data)
@@ -265,10 +272,10 @@ impl S3Client {
         {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!(
-                    "An error occurred while deleting an object from S3 bucket: {}",
-                    DisplayErrorContext(&err)
-                ));
+                return Err(QuantumSystemError::other(
+                    "An error occurred while deleting an object from S3 bucket",
+                    err.into_service_error(),
+                ))
             }
         };
         Ok(())
@@ -319,10 +326,10 @@ impl S3Client {
                     }
                 }
                 Err(err) => {
-                    bail!(format!(
-                        "An error occurred while listing objects in S3 bucket: {}",
-                        DisplayErrorContext(&err)
-                    ));
+                    return Err(QuantumSystemError::other(
+                        "An error occurred while listing objects in S3 bucket",
+                        err.into_service_error(),
+                    ))
                 }
             }
         }

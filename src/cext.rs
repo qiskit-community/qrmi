@@ -56,6 +56,13 @@ pub enum ReturnCode {
     InvalidFilterError = 109,
     /// A value was invalid for a reason not covered by a more specific code.
     InvalidValueError = 110,
+    /// The named resource (e.g. a backend) does not exist.
+    ResourceNotFoundError = 111,
+    /// The named task (e.g. a job) does not exist, or has already been
+    /// removed.
+    TaskNotFoundError = 112,
+    /// The request's credentials were missing or rejected.
+    AuthenticationFailedError = 113,
 }
 
 impl From<QrmiErrorKind> for ReturnCode {
@@ -68,6 +75,9 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::UnsupportedPayload => ReturnCode::UnsupportedPayloadError,
             QrmiErrorKind::TaskNotReady => ReturnCode::TaskNotReadyError,
             QrmiErrorKind::MissingConfigKey => ReturnCode::MissingConfigKeyError,
+            QrmiErrorKind::ResourceNotFound => ReturnCode::ResourceNotFoundError,
+            QrmiErrorKind::TaskNotFound => ReturnCode::TaskNotFoundError,
+            QrmiErrorKind::AuthenticationFailed => ReturnCode::AuthenticationFailedError,
             QrmiErrorKind::InvalidFilter => ReturnCode::InvalidFilterError,
             QrmiErrorKind::InvalidValue => ReturnCode::InvalidValueError,
             QrmiErrorKind::Other => ReturnCode::Error,
@@ -247,7 +257,6 @@ fn _fail(err: QrmiError) -> ReturnCode {
 /// value directly.
 fn _record_error(err: QrmiError) {
     let kind = err.kind();
-    eprintln!("[DEBUG] _record_error kind={:?}", kind); // 一時的に追加
     LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
     _set_last_error(err.to_string());
 }

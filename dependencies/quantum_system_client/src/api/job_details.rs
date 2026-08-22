@@ -9,8 +9,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::Result;
 use crate::{Client, PrimitiveJob};
-use anyhow::Result;
 use serde::de::DeserializeOwned;
 
 impl Client {
@@ -46,7 +46,8 @@ impl Client {
     /// - specified job is not found.
     pub async fn get_job<T: DeserializeOwned>(&self, job_id: &str) -> Result<T> {
         let url = format!("{}/v1/jobs/{}", self.base_url, job_id);
-        self.get::<T>(&url, &self.client).await
+        self.get::<T>(&url, &self.client, crate::error::ResourceKind::Job)
+            .await
     }
 }
 

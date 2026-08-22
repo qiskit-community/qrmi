@@ -19,7 +19,6 @@ use crate::ibm::IBMQuantumSystem;
 use crate::QuantumResource;
 use crate::ResourceProvider;
 use crate::{QrmiError, Result};
-use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
@@ -84,8 +83,7 @@ impl IBMQuantumSystemProvider {
                 service_crn,
                 iam_endpoint_url,
             })
-            .build()
-            .context("failed to build quantum system client")?;
+            .build()?;
 
         Ok(Self {
             client,
@@ -126,11 +124,7 @@ impl ResourceProvider for IBMQuantumSystemProvider {
     ) -> Result<Vec<Box<dyn QuantumResource + Send + Sync>>> {
         let filter = BackendFilter::parse(filters.as_deref().unwrap_or(""))?;
 
-        let backends = self
-            .client
-            .list_backends::<Backends>()
-            .await
-            .context("failed to list backends")?;
+        let backends = self.client.list_backends::<Backends>().await?;
 
         let candidates: Vec<String> = backends
             .backends

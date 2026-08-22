@@ -10,8 +10,8 @@
 // that they have been altered from the originals.
 
 use crate::models::jobs::{Job, JobStatus};
+use crate::Result;
 use crate::{Client, PrimitiveJob};
-use anyhow::Result;
 
 impl Client {
     /// Returns the current status of the specified job.

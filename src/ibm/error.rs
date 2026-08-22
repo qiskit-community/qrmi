@@ -43,3 +43,28 @@ impl IbmError {
         }
     }
 }
+
+/// Maps errors from the `quantum_system_api` crate (used by
+/// [`crate::ibm::IBMQuantumSystem`] and [`crate::ibm::IBMQuantumSystemProvider`])
+/// onto [`crate::QrmiError`]. A few conditions that crate can distinguish
+/// map onto specific `QrmiError` variants (a missing backend or job, a
+/// rejected credential); everything else falls back to
+/// [`crate::QrmiError::Other`], still carrying the original error as
+/// `source` so the message and cause chain aren't lost.
+///
+/// This is a plain `impl From`, not a `#[from]` variant on `IbmError` or
+/// `QrmiError` -- `quantum_system_api::QuantumSystemError` doesn't represent
+/// an IBM-specific *condition* the way `IbmError`'s variants do, it's just
+/// the error type of a dependency we're translating, so it doesn't belong
+/// as a variant of either enum.
+impl From<quantum_system_api::QuantumSystemError> for crate::QrmiError {
+    fn from(err: quantum_system_api::QuantumSystemError) -> Self {
+        use quantum_system_api::QuantumSystemError as QsError;
+        match err {
+            QsError::BackendNotFound(msg) => crate::QrmiError::ResourceNotFound(msg),
+            QsError::JobNotFound(msg) => crate::QrmiError::TaskNotFound(msg),
+            QsError::AuthenticationFailed(msg) => crate::QrmiError::AuthenticationFailed(msg),
+            other => crate::QrmiError::Other(anyhow::Error::new(other)),
+        }
+    }
+}

@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::Client;
-use anyhow::Result;
+use crate::Result;
 use serde::de::DeserializeOwned;
 
 impl Client {
@@ -19,7 +19,6 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use anyhow::Result;
     /// use quantum_system_api::{AuthMethod, ClientBuilder};
     ///
     /// #[tokio::main]
@@ -53,6 +52,7 @@ impl Client {
             "{}/v1/backends/{}/configuration",
             self.base_url, backend_name
         );
-        self.get::<T>(&url, &self.client).await
+        self.get::<T>(&url, &self.client, crate::error::ResourceKind::Backend)
+            .await
     }
 }

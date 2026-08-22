@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
       qrmi_resource_new(argv[1], QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM);
   if (!qrmi) {
     const char* last_error = qrmi_get_last_error();
-    fprintf(stderr, "Failed to create QRMI for %s. %s\n", argv[1], last_error);
+    fprintf(stderr, "Failed to create QRMI for %s. %s (%d)\n", argv[1], last_error, qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
     return EXIT_FAILURE;
   }
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     }
   } else {
     const char* last_error = qrmi_get_last_error();
-    fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
+    fprintf(stderr, "qrmi_resource_is_accessible() failed. %s (%d)\n", last_error, qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
     goto error;
   }
@@ -116,7 +116,9 @@ int main(int argc, char *argv[]) {
   char *job_id = NULL;
   rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
   if (rc != QRMI_RETURN_CODE_SUCCESS) {
-    fprintf(stderr, "failed to start a task.\n");
+    const char* last_error = qrmi_get_last_error();
+    fprintf(stderr, "failed to start a task. %s(%d)\n", last_error, qrmi_get_last_error_kind());
+    qrmi_string_free((char *)last_error);
     free((void *)input);
     goto error;
   }

@@ -9,9 +9,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::error::QuantumSystemError;
 use crate::models::jobs::{Job, JobStatus};
-use crate::{Client, PrimitiveJob};
-use anyhow::{bail, Result};
+use crate::{Client, PrimitiveJob, Result};
 use std::time::{Duration, Instant};
 
 impl Client {
@@ -59,7 +59,9 @@ impl Client {
                 let now = Instant::now();
                 let elapsed = now.duration_since(start_time);
                 if elapsed >= Duration::from_secs_f64(t) {
-                    bail!("timeout occurred while waiting for completion".to_string());
+                    return Err(QuantumSystemError::JobNotReady(
+                        "timeout occurred while waiting for completion".to_string(),
+                    ));
                 }
             }
 
