@@ -11,16 +11,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::alice_bob::AliceBobFelis;
 use crate::error::{QrmiError, QrmiErrorKind};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
-use crate::iqm::IQMServer;
 use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
-use crate::pasqal::PasqalCloud;
-use crate::pasqal::PasqalLocal;
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{create_exception, define_stub_info_gatherer, derive::*};
@@ -44,8 +39,9 @@ create_exception!(
     qrmi._core,
     ConfigError,
     QrmiError_,
-    "A configuration value was missing or could not be parsed (covers both \
-     `QrmiError::ParseError` and `QrmiError::MissingConfigKey`)."
+    "A configuration value was missing, could not be parsed, or was \
+     otherwise invalid (covers `QrmiError::ParseError`, \
+     `QrmiError::MissingConfigKey`, and `QrmiError::InvalidConfig`)."
 );
 create_exception!(
     qrmi._core,
@@ -81,7 +77,9 @@ fn to_py_err(err: QrmiError) -> PyErr {
     let msg = err.to_string();
     match err.kind() {
         QrmiErrorKind::EnvVarNotSet => EnvVarNotSetError::new_err(msg),
-        QrmiErrorKind::ParseError | QrmiErrorKind::MissingConfigKey => ConfigError::new_err(msg),
+        QrmiErrorKind::ParseError
+        | QrmiErrorKind::MissingConfigKey
+        | QrmiErrorKind::InvalidConfig => ConfigError::new_err(msg),
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
         QrmiErrorKind::UnknownProgramId | QrmiErrorKind::UnsupportedPayload => {
             UnsupportedPayloadError::new_err(msg)
@@ -105,6 +103,23 @@ pub enum ResourceType {
     PasqalLocal,
     AliceBobFelis,
     IQMServer,
+}
+impl From<ResourceType> for crate::models::ResourceType {
+    fn from(value: ResourceType) -> Self {
+        match value {
+            ResourceType::IBMQuantumSystem => crate::models::ResourceType::IBMQuantumSystem,
+            ResourceType::IBMQiskitRuntimeService => {
+                crate::models::ResourceType::QiskitRuntimeService
+            }
+            ResourceType::IBMQuantumComputeService => {
+                crate::models::ResourceType::IBMQuantumComputeService
+            }
+            ResourceType::PasqalCloud => crate::models::ResourceType::PasqalCloud,
+            ResourceType::PasqalLocal => crate::models::ResourceType::PasqalLocal,
+            ResourceType::AliceBobFelis => crate::models::ResourceType::AliceBobFelis,
+            ResourceType::IQMServer => crate::models::ResourceType::IQMServer,
+        }
+    }
 }
 
 #[gen_stub_pyclass]
@@ -157,54 +172,8 @@ impl PyQuantumResource {
     #[new]
     pub fn new(resource_id: &str, resource_type: ResourceType) -> PyResult<Self> {
         crate::common::initialize();
-        let qrmi: Box<dyn QuantumResource + Send + Sync> = match resource_type {
-            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(to_py_err(e));
-                }
-            },
-            ResourceType::IBMQiskitRuntimeService => {
-                match IBMQiskitRuntimeService::new(resource_id) {
-                    Ok(v) => Box::new(v),
-                    Err(e) => {
-                        return Err(to_py_err(e));
-                    }
-                }
-            }
-            ResourceType::IBMQuantumComputeService => {
-                match IBMQuantumComputeService::new(resource_id) {
-                    Ok(v) => Box::new(v),
-                    Err(e) => {
-                        return Err(to_py_err(e));
-                    }
-                }
-            }
-            ResourceType::PasqalCloud => match PasqalCloud::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(to_py_err(e));
-                }
-            },
-            ResourceType::PasqalLocal => match PasqalLocal::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(to_py_err(e));
-                }
-            },
-            ResourceType::AliceBobFelis => match AliceBobFelis::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(to_py_err(e));
-                }
-            },
-            ResourceType::IQMServer => match IQMServer::new(resource_id) {
-                Ok(v) => Box::new(v),
-                Err(e) => {
-                    return Err(to_py_err(e));
-                }
-            },
-        };
+        let qrmi = crate::common::create_resource(&resource_type.into(), resource_id)
+            .map_err(to_py_err)?;
 
         Ok(Self {
             qrmi,
@@ -553,6 +522,106 @@ impl PyResourceProvider {
 }
 
 // ---------------------------------------------------------------------------
+// QRMIService Python bindings
+// ---------------------------------------------------------------------------
+
+/// Python wrapper for `QRMIService`.
+///
+/// Discovers the QPU resources assigned to the current job -- read from the
+/// `QRMI_JOB_QPU_RESOURCES` / `QRMI_JOB_QPU_TYPES` environment variables, or
+/// their legacy `SLURM_JOB_QPU_RESOURCES` / `SLURM_JOB_QPU_TYPES`
+/// equivalents -- and exposes the ones that are currently accessible as
+/// `QuantumResource` instances.
+///
+/// This is a thin wrapper around the plain-Rust [`crate::QRMIService`],
+/// which does the actual discovery/filtering and is usable on its own from
+/// Rust (see its docs for a Rust example). This wrapper's job is only to
+/// bridge that to Python: it drives `QRMIService::new()`'s `Future` to
+/// completion on a private tokio `Runtime` (mirroring `PyResourceProvider`
+/// and `PyQuantumResource` elsewhere in this module, since `pyo3` classes
+/// can't themselves be `async`), then moves each resource returned by
+/// `QRMIService::into_resource_map()` into its own, independently owned
+/// `PyQuantumResource` -- exactly as `PyResourceProvider::resources()` does
+/// for each `Box<dyn QuantumResource>` returned by
+/// `ResourceProvider::resources()`.
+///
+/// # Example (Python)
+///
+/// ```python
+/// from qrmi import QRMIService
+///
+/// service = QRMIService()
+/// for resource in service.resources():
+///     print(resource.resource_id())
+///
+/// resource = service.resource("ibm_torino")
+/// ```
+#[gen_stub_pyclass]
+#[pyclass]
+#[pyo3(name = "QRMIService")]
+pub struct PyQRMIService {
+    // Keyed by resource id (i.e. QPU name). Stored as `Py<PyQuantumResource>`
+    // rather than owning `PyQuantumResource` directly so that `resources()`
+    // and `resource()` can hand back the *same* underlying instance on every
+    // call (cheap refcount bump) instead of constructing a fresh one --
+    // `PyQuantumResource` cannot be cloned (it owns a `Box<dyn
+    // QuantumResource>` and its own tokio `Runtime`), and callers may rely
+    // on identity, e.g. having already called `acquire()` on the instance
+    // returned earlier.
+    qrmi_resources: std::collections::HashMap<String, Py<PyQuantumResource>>,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyQRMIService {
+    #[new]
+    pub fn new(py: Python<'_>) -> PyResult<Self> {
+        crate::common::initialize();
+
+        // A short-lived runtime just to drive `QRMIService::new()` -- unlike
+        // `PyQuantumResource`/`PyResourceProvider`, no long-lived async
+        // methods are called after this, so there's no need to keep it
+        // around (or worry about its `Drop` deadlocking; see those types'
+        // `Drop` impls for why that's normally a concern here).
+        let rt = Runtime::new().expect("Failed to create a new tokio runtime.");
+        let inner = py
+            .detach(|| rt.block_on(async { crate::QRMIService::new().await }))
+            .map_err(to_py_err)?;
+
+        let qrmi_resources = inner
+            .into_resource_map()
+            .into_iter()
+            .map(|(id, boxed)| {
+                Py::new(py, PyQuantumResource::from_inner(boxed)).map(|obj| (id, obj))
+            })
+            .collect::<PyResult<std::collections::HashMap<_, _>>>()?;
+
+        Ok(Self { qrmi_resources })
+    }
+
+    /// Returns all accessible QRMI resources.
+    fn resources(&self, py: Python<'_>) -> Vec<Py<PyQuantumResource>> {
+        self.qrmi_resources
+            .values()
+            .map(|r| r.clone_ref(py))
+            .collect()
+    }
+
+    /// Returns a single resource matching the specified resource identifier.
+    ///
+    /// # Arguments
+    ///
+    /// * `resource_id` - A resource identifier, i.e. backend name for IBM Quantum.
+    ///
+    /// Returns `None` if not found.
+    fn resource(&self, py: Python<'_>, resource_id: &str) -> Option<Py<PyQuantumResource>> {
+        self.qrmi_resources
+            .get(resource_id)
+            .map(|r| r.clone_ref(py))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Config Python bindings
 // ---------------------------------------------------------------------------
 
@@ -728,6 +797,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyResourceDef>()?;
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
+    m.add_class::<PyQRMIService>()?;
 
     // Register the QrmiError exception hierarchy so Python code can catch
     // them by name (e.g. `except qrmi.TaskNotReadyError`). `create_exception!`

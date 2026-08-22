@@ -8,6 +8,7 @@ members = [
     "alice_bob_felis",
     "iqm_server",
     "resource_providers",
+    "service",
 ]
 resolver = "2"
 

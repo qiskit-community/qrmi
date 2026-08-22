@@ -80,6 +80,13 @@ pub enum QrmiError {
     #[error("missing '{0}' in environment map")]
     MissingConfigKey(String),
 
+    /// A configuration value (or combination of values) was invalid in a way
+    /// that isn't a simple single-value parse failure -- e.g. two related
+    /// settings that are individually well-formed but inconsistent with each
+    /// other. See [`QrmiError::ParseError`] for the single-value case.
+    #[error("invalid configuration: {0}")]
+    InvalidConfig(String),
+
     /// A `filters` string passed to [`crate::ResourceProvider::resources`] was
     /// malformed or contained an invalid value.
     #[error("invalid filter: {0}")]
@@ -124,6 +131,7 @@ impl QrmiError {
             QrmiError::UnsupportedPayload(_) => QrmiErrorKind::UnsupportedPayload,
             QrmiError::TaskNotReady { .. } => QrmiErrorKind::TaskNotReady,
             QrmiError::MissingConfigKey(_) => QrmiErrorKind::MissingConfigKey,
+            QrmiError::InvalidConfig(_) => QrmiErrorKind::InvalidConfig,
             QrmiError::InvalidFilter(_) => QrmiErrorKind::InvalidFilter,
             QrmiError::InvalidJson(_) => QrmiErrorKind::InvalidValue,
             QrmiError::InvalidUtf8(_) => QrmiErrorKind::InvalidValue,
@@ -159,6 +167,8 @@ pub enum QrmiErrorKind {
     TaskNotReady,
     /// A required key was missing from a provider's environment variable map.
     MissingConfigKey,
+    /// A configuration value (or combination of values) was invalid.
+    InvalidConfig,
     /// A `filters` string was malformed or contained an invalid value.
     InvalidFilter,
     /// A value was invalid for a reason not covered by a more specific kind.
