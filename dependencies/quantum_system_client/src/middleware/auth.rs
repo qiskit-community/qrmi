@@ -9,7 +9,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
 use async_trait::async_trait;
 use http::Extensions;
 #[allow(unused_imports)]
@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, UNIX_EPOCH};
 use tokio::sync::Mutex;
 
+use crate::middleware::retry::TransparentRetryMiddleware;
 use crate::models::{
     auth::GetAccessTokenResponse, errors::ErrorResponse, errors::IAMErrorResponse,
 };
@@ -49,7 +50,7 @@ impl TokenManager {
         connect_timeout: Option<Duration>,
         read_timeout: Option<Duration>,
         retry_policy: Option<reqwest_retry::policies::ExponentialBackoff>,
-    ) -> Result<Self> {
+    ) -> crate::Result<Self> {
         let mut reqwest_client_builder = reqwest::Client::builder();
         if cfg!(debug_assertions) {
             reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
@@ -68,8 +69,7 @@ impl TokenManager {
         let mut reqwest_builder =
             reqwest_middleware::ClientBuilder::new(reqwest_client_builder.build()?);
         if let Some(v) = retry_policy {
-            reqwest_builder =
-                reqwest_builder.with(reqwest_retry::RetryTransientMiddleware::new_with_policy(v))
+            reqwest_builder = reqwest_builder.with(TransparentRetryMiddleware::new_with_policy(v))
         } else {
             let default_policy = ExponentialBackoff::builder()
                 .retry_bounds(
@@ -79,9 +79,8 @@ impl TokenManager {
                 .jitter(Jitter::Bounded)
                 .base(DEFAULT_EXPONENTIAL_BASE)
                 .build_with_max_retries(DEFAULT_RETRIES);
-            reqwest_builder = reqwest_builder.with(
-                reqwest_retry::RetryTransientMiddleware::new_with_policy(default_policy),
-            )
+            reqwest_builder =
+                reqwest_builder.with(TransparentRetryMiddleware::new_with_policy(default_policy))
         }
         Ok(Self {
             access_token: None,
@@ -219,10 +218,14 @@ impl Middleware for AuthMiddleware {
             .run(cloned_req.try_clone().unwrap(), extensions)
             .await;
 
-        // retry if token is expired.
-        if response.is_err()
-            || response.as_ref().unwrap().status() == reqwest::StatusCode::UNAUTHORIZED
-        {
+        // Retry with a freshly-renewed token only if the *actual API*
+        // rejected the current one (401) -- not on `response.is_err()`,
+        // which also covers things entirely unrelated to the token (a
+        // connection timeout, DNS failure, ...). Retrying those here would
+        // silently run the *entire* inner retry chain (see
+        // `crate::middleware::retry`) a second time for a problem that
+        // renewing the token can't possibly fix.
+        if matches!(&response, Ok(resp) if resp.status() == reqwest::StatusCode::UNAUTHORIZED) {
             debug!("renew access token");
             token_manager.get_access_token().await?;
             let token = token_manager.get_token().await?;

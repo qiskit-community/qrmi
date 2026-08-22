@@ -11,7 +11,7 @@
 
 use crate::models::version::ServiceVersion;
 use crate::Client;
-use anyhow::Result;
+use crate::Result;
 
 impl Client {
     /// Returns the latest supported API version.
@@ -38,7 +38,9 @@ impl Client {
     ///
     pub async fn get_service_version(&self) -> Result<String> {
         let url = format!("{}/version", self.base_url,);
-        let json_data = self.get::<ServiceVersion>(&url, &self.plain_client).await?;
+        let json_data = self
+            .get::<ServiceVersion>(&url, &self.plain_client, crate::error::ResourceKind::Other)
+            .await?;
         Ok(json_data.version)
     }
 }

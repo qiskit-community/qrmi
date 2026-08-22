@@ -9,11 +9,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::errors::ExtendedErrorResponse;
-use crate::Client;
-use anyhow::{bail, Result};
+use crate::error::QuantumSystemError;
+use crate::{Client, Result};
 use http::StatusCode;
-use log::error;
 
 impl Client {
     /// Run a job. Refer Quantum System API specifications for more details of the payload format.
@@ -89,39 +87,16 @@ impl Client {
                 if status_code == StatusCode::NO_CONTENT {
                     Ok(payload["id"].as_str().unwrap().to_string())
                 } else {
-                    match resp.json::<ExtendedErrorResponse>().await {
-                        Ok(ExtendedErrorResponse::Json(error)) => {
-                            let serialized = serde_json::to_value(&error).unwrap();
-                            error!("{}", &serialized);
-                            bail!(format!(
-                                "An error occurred while sending the request to run the job to the API. {}",
-                                serialized
-                            ));
-                        }
-                        Ok(ExtendedErrorResponse::Text(message)) => {
-                            error!("{}", message);
-                            bail!(format!(
-                                "An error occurred while sending the request to run the job to the API. {} ({})",
-                                status_code, message
-                            ));
-                        }
-                        Err(_) => {
-                            error!("{} {}", status_code, url);
-                            bail!(format!(
-                                "An error occurred while sending the request to run the job to the API. {} {}",
-                                status_code, url
-                            ));
-                        }
-                    }
+                    Err(QuantumSystemError::from_response(
+                        status_code,
+                        resp,
+                        &url,
+                        crate::error::ResourceKind::Job,
+                    )
+                    .await)
                 }
             }
-            Err(e) => {
-                let err_msg = Client::explain_reqwest_middleware_error(&e);
-                bail!(format!(
-                    "An error occurred while sending the request to run the job to the API. {}",
-                    err_msg
-                ));
-            }
+            Err(e) => Err(QuantumSystemError::from_middleware_error(&e)),
         }
     }
 }

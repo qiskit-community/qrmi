@@ -37,6 +37,7 @@
 
 mod api;
 mod client;
+pub mod error;
 #[allow(dead_code)]
 #[allow(unused_imports)]
 mod middleware;
@@ -45,3 +46,4 @@ mod storages;
 pub mod utils;
 
 pub use client::{AuthMethod, Client, ClientBuilder, PrimitiveJob};
+pub use error::{QuantumSystemError, Result};

@@ -9,12 +9,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use anyhow::{bail, Result};
+use crate::error::QuantumSystemError;
+use crate::Result;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::Client;
 use core::time::Duration;
-
-use aws_sdk_s3::error::ProvideErrorMetadata;
 
 /// Returns S3 presigned URL for GET operation
 ///
@@ -30,7 +29,8 @@ pub async fn get_presigned_url(
     expiration: u64,
 ) -> Result<String> {
     let expires_in = Duration::from_secs(expiration);
-    let presigned_config = PresigningConfig::expires_in(expires_in)?;
+    let presigned_config = PresigningConfig::expires_in(expires_in)
+        .map_err(|e| QuantumSystemError::other("invalid presigning duration", e))?;
     let presigned_url = match client
         .get_object()
         .bucket(bucket_name)
@@ -40,8 +40,10 @@ pub async fn get_presigned_url(
     {
         Ok(val) => val,
         Err(err) => {
-            let err = err.into_service_error();
-            bail!(format!("{}", err.message().unwrap()));
+            return Err(QuantumSystemError::other(
+                "failed to presign GET request",
+                err.into_service_error(),
+            ))
         }
     };
     Ok(presigned_url.uri().to_string())
@@ -61,7 +63,8 @@ pub async fn get_presigned_url_for_put(
     expiration: u64,
 ) -> Result<String> {
     let expires_in = Duration::from_secs(expiration);
-    let presigned_config = PresigningConfig::expires_in(expires_in)?;
+    let presigned_config = PresigningConfig::expires_in(expires_in)
+        .map_err(|e| QuantumSystemError::other("invalid presigning duration", e))?;
     let presigned_url = match client
         .put_object()
         .bucket(bucket_name)
@@ -71,8 +74,10 @@ pub async fn get_presigned_url_for_put(
     {
         Ok(val) => val,
         Err(err) => {
-            let err = err.into_service_error();
-            bail!(format!("{}", err.message().unwrap()));
+            return Err(QuantumSystemError::other(
+                "failed to presign PUT request",
+                err.into_service_error(),
+            ))
         }
     };
     Ok(presigned_url.uri().to_string())

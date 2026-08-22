@@ -9,11 +9,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::errors::ExtendedErrorResponse;
-use crate::{Client, PrimitiveJob};
-use anyhow::{bail, Result};
+use crate::error::QuantumSystemError;
+use crate::{Client, PrimitiveJob, Result};
 use http::StatusCode;
-use log::error;
 
 impl Client {
     /// Cancels the specified job if it has not yet terminated. Also deletes the job
@@ -61,39 +59,16 @@ impl Client {
                     }
                     self.delete_job(job_id).await
                 } else {
-                    match resp.json::<ExtendedErrorResponse>().await {
-                        Ok(ExtendedErrorResponse::Json(error)) => {
-                            let serialized = serde_json::to_value(&error).unwrap();
-                            error!("{}", &serialized);
-                            bail!(format!(
-                                "An error occurred while sending the job cancellation request to the API. {}",
-                                serialized
-                            ));
-                        }
-                        Ok(ExtendedErrorResponse::Text(message)) => {
-                            error!("{}", message);
-                            bail!(format!(
-                                "An error occurred while sending the job cancellation request to the API. {} ({})",
-                                status_code, message
-                            ));
-                        }
-                        Err(_) => {
-                            error!("{} {}", status_code, url);
-                            bail!(format!(
-                                "An error occurred while sending the job cancellation request to the API. {} {}",
-                                status_code, url
-                            ));
-                        }
-                    }
+                    Err(QuantumSystemError::from_response(
+                        status_code,
+                        resp,
+                        &url,
+                        crate::error::ResourceKind::Job,
+                    )
+                    .await)
                 }
             }
-            Err(e) => {
-                let err_msg = Client::explain_reqwest_middleware_error(&e);
-                bail!(format!(
-                    "An error occurred while sending the job cancellation request to the API. {}",
-                    err_msg
-                ));
-            }
+            Err(e) => Err(QuantumSystemError::from_middleware_error(&e)),
         }
     }
 }
