@@ -94,10 +94,23 @@ pub enum QrmiError {
     #[error("authentication failed: {0}")]
     AuthenticationFailed(String),
 
-    /// A `filters` string passed to [`crate::ResourceProvider::resources`] was
-    /// malformed or contained an invalid value.
-    #[error("invalid filter: {0}")]
-    InvalidFilter(String),
+    /// A value read from configuration or supplied by the caller (a
+    /// `filters` string, a payload, ...) was invalid in a way QRMI itself
+    /// rejected before making any request -- as opposed to
+    /// [`QrmiError::InvalidRequest`], which is rejected by the vendor's API
+    /// after actually receiving it.
+    #[error("invalid value: {0}")]
+    InvalidValue(String),
+
+    /// A vendor's API rejected a request as malformed after actually
+    /// receiving it (e.g. HTTP 400/409/413/422) -- as opposed to
+    /// [`QrmiError::InvalidValue`], which is rejected locally, before any
+    /// request is sent. This distinction matters to callers: this kind
+    /// means the vendor itself didn't like the request, which may point to
+    /// a vendor-specific constraint or version skew rather than a plain
+    /// input mistake.
+    #[error("invalid request: {0}")]
+    InvalidRequest(String),
 
     /// A payload, or a piece of it, was not valid JSON.
     #[error("invalid JSON: {0}")]
@@ -141,7 +154,8 @@ impl QrmiError {
             QrmiError::ResourceNotFound(_) => QrmiErrorKind::ResourceNotFound,
             QrmiError::TaskNotFound(_) => QrmiErrorKind::TaskNotFound,
             QrmiError::AuthenticationFailed(_) => QrmiErrorKind::AuthenticationFailed,
-            QrmiError::InvalidFilter(_) => QrmiErrorKind::InvalidFilter,
+            QrmiError::InvalidValue(_) => QrmiErrorKind::InvalidValue,
+            QrmiError::InvalidRequest(_) => QrmiErrorKind::InvalidRequest,
             QrmiError::InvalidJson(_) => QrmiErrorKind::InvalidValue,
             QrmiError::InvalidUtf8(_) => QrmiErrorKind::InvalidValue,
             QrmiError::Ibm(e) => e.kind(),
@@ -181,9 +195,15 @@ pub enum QrmiErrorKind {
     TaskNotFound,
     /// The request's credentials were missing or rejected.
     AuthenticationFailed,
-    /// A `filters` string was malformed or contained an invalid value.
-    InvalidFilter,
-    /// A value was invalid for a reason not covered by a more specific kind.
+    /// A vendor's API rejected a request as malformed after actually
+    /// receiving it, as opposed to `InvalidValue`, which is rejected
+    /// locally before any request is sent.
+    InvalidRequest,
+    /// A value was invalid for a reason not covered by a more specific kind
+    /// (this covers both a value QRMI itself rejected before making any
+    /// request -- e.g. a malformed `filters` string, JSON, or UTF-8 -- and
+    /// a vendor-specific value like an unrecognized program ID or device
+    /// type).
     InvalidValue,
     /// Everything else (vendor API failures, I/O, ...).
     Other,

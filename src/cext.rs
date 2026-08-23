@@ -50,9 +50,14 @@ pub enum ReturnCode {
     TaskNotReadyError = 107,
     /// A required key was missing from a provider's environment variable map.
     MissingConfigKeyError = 108,
-    /// A `filters` string was malformed or contained an invalid value.
-    InvalidFilterError = 109,
-    /// A value was invalid for a reason not covered by a more specific code.
+    /// A vendor's API rejected a request as malformed after actually
+    /// receiving it, as opposed to `InvalidValueError`, which is rejected
+    /// locally before any request is sent.
+    InvalidRequestError = 109,
+    /// A value was invalid for a reason not covered by a more specific
+    /// code (this covers both a value QRMI itself rejected before making
+    /// any request, and a vendor-specific value like an unrecognized
+    /// program ID or device type).
     InvalidValueError = 110,
     /// The named resource (e.g. a backend) does not exist.
     ResourceNotFoundError = 111,
@@ -75,7 +80,7 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::ResourceNotFound => ReturnCode::ResourceNotFoundError,
             QrmiErrorKind::TaskNotFound => ReturnCode::TaskNotFoundError,
             QrmiErrorKind::AuthenticationFailed => ReturnCode::AuthenticationFailedError,
-            QrmiErrorKind::InvalidFilter => ReturnCode::InvalidFilterError,
+            QrmiErrorKind::InvalidRequest => ReturnCode::InvalidRequestError,
             QrmiErrorKind::InvalidValue => ReturnCode::InvalidValueError,
             QrmiErrorKind::Other => ReturnCode::Error,
         }
@@ -703,21 +708,24 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 /// # Example
 ///
 /// @code
-///   const char * last_error = qrmi_get_last_error();
+///   char * last_error = qrmi_get_last_error();
 ///   if (last_error != NULL) {
 ///     printf("last error = %s\n", last_error);
 ///     qrmi_string_free(last_error);
 ///   }
 /// @endcode
 ///
-/// @return message text of the most recent error
+/// @return message text of the most recent error. The caller takes
+/// ownership of the returned string and must release it with
+/// `qrmi_string_free()` once done with it (or it will leak). Returns NULL
+/// if no error has been recorded yet.
 /// @version 0.8.0
 #[no_mangle]
-pub unsafe extern "C" fn qrmi_get_last_error() -> *const c_char {
+pub unsafe extern "C" fn qrmi_get_last_error() -> *mut c_char {
     crate::common::initialize();
     LAST_ERROR.with(|cell| match &*cell.borrow() {
         Some(cstr) => cstr.clone().into_raw(),
-        None => std::ptr::null(),
+        None => std::ptr::null_mut(),
     })
 }
 
@@ -1726,9 +1734,9 @@ pub struct ResourceProvider {
 ///   QrmiResourceDef *def = qrmi_config_resource_def_get(config, "ibm_inst1");
 ///   QrmiResourceProvider *provider = qrmi_provider_new(def->type, &def->environments);
 ///   if (provider == NULL) {
-///     const char *err = qrmi_get_last_error();
+///     char *err = qrmi_get_last_error();
 ///     printf("error: %s\n", err);
-///     qrmi_string_free((char *)err);
+///     qrmi_string_free(err);
 ///   }
 /// @endcode
 ///
