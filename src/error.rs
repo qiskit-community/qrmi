@@ -86,6 +86,19 @@ pub enum QrmiError {
     /// other. See [`QrmiError::ParseError`] for the single-value case.
     #[error("invalid configuration: {0}")]
     InvalidConfig(String),
+    /// The named resource (e.g. a backend) does not exist.
+    #[error("resource not found: {0}")]
+    ResourceNotFound(String),
+
+    /// The named task (e.g. a job) does not exist, or has already been
+    /// removed.
+    #[error("task not found: {0}")]
+    TaskNotFound(String),
+
+    /// The request's credentials were missing or rejected by the vendor's
+    /// API.
+    #[error("authentication failed: {0}")]
+    AuthenticationFailed(String),
 
     /// A `filters` string passed to [`crate::ResourceProvider::resources`] was
     /// malformed or contained an invalid value.
@@ -132,6 +145,9 @@ impl QrmiError {
             QrmiError::TaskNotReady { .. } => QrmiErrorKind::TaskNotReady,
             QrmiError::MissingConfigKey(_) => QrmiErrorKind::MissingConfigKey,
             QrmiError::InvalidConfig(_) => QrmiErrorKind::InvalidConfig,
+            QrmiError::ResourceNotFound(_) => QrmiErrorKind::ResourceNotFound,
+            QrmiError::TaskNotFound(_) => QrmiErrorKind::TaskNotFound,
+            QrmiError::AuthenticationFailed(_) => QrmiErrorKind::AuthenticationFailed,
             QrmiError::InvalidFilter(_) => QrmiErrorKind::InvalidFilter,
             QrmiError::InvalidJson(_) => QrmiErrorKind::InvalidValue,
             QrmiError::InvalidUtf8(_) => QrmiErrorKind::InvalidValue,
@@ -159,8 +175,6 @@ pub enum QrmiErrorKind {
     ParseError,
     /// Dynamic discovery was requested for an unsupported resource type.
     UnsupportedResourceType,
-    /// An unrecognized program/primitive ID was supplied.
-    UnknownProgramId,
     /// The payload variant is not supported by this backend.
     UnsupportedPayload,
     /// The task is not in a state that allows the requested operation.
@@ -169,6 +183,13 @@ pub enum QrmiErrorKind {
     MissingConfigKey,
     /// A configuration value (or combination of values) was invalid.
     InvalidConfig,
+    /// The named resource (e.g. a backend) does not exist.
+    ResourceNotFound,
+    /// The named task (e.g. a job) does not exist, or has already been
+    /// removed.
+    TaskNotFound,
+    /// The request's credentials were missing or rejected.
+    AuthenticationFailed,
     /// A `filters` string was malformed or contained an invalid value.
     InvalidFilter,
     /// A value was invalid for a reason not covered by a more specific kind.

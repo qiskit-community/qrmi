@@ -9,12 +9,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::error::QuantumSystemError;
 use crate::Client;
-use anyhow::{bail, Context, Result};
+use crate::Result;
 use log::debug;
 use uuid::Uuid;
 
-use aws_sdk_s3::error::DisplayErrorContext;
 use serde::de::DeserializeOwned;
 
 use crate::models::jobs::{JobStatus, LogLevel, ProgramId};
@@ -95,9 +95,12 @@ impl Client {
         payload: &serde_json::Value,
         job_id: Option<String>,
     ) -> Result<PrimitiveJob> {
-        let s3_config = self.s3_config.clone().context(
-            "S3 bucket is not configured. Use ClientBuilder.with_s3_bucket() to use this function.",
-        )?;
+        let s3_config = self.s3_config.clone().ok_or_else(|| {
+            QuantumSystemError::Other {
+                message: "S3 bucket is not configured. Use ClientBuilder.with_s3_bucket() to use this function.".to_string(),
+                source: None,
+            }
+        })?;
 
         let s3_config_remote: aws_sdk_s3::Config;
         if let Some(v) = self.s3_config_for_qsapi.clone() {
@@ -128,9 +131,9 @@ impl Client {
         {
             Ok(val) => val,
             Err(err) => {
-                bail!(format!(
-                    "An error occurred during upload to S3: {}",
-                    DisplayErrorContext(&err)
+                return Err(QuantumSystemError::other(
+                    "failed to upload to S3",
+                    err.into_service_error(),
                 ));
             }
         };
@@ -251,9 +254,13 @@ impl PrimitiveJob {
     pub async fn get_result<T: DeserializeOwned>(&self) -> Result<T> {
         let status = self.get_status().await?;
         if JobStatus::Cancelled == status || JobStatus::Failed == status {
-            bail!("Result is not available since job was not succeeded.".to_string());
+            return Err(QuantumSystemError::JobNotReady(
+                "result is not available since job was not succeeded".to_string(),
+            ));
         } else if JobStatus::Running == status {
-            bail!("Result is not available until the job is completed.".to_string());
+            return Err(QuantumSystemError::JobNotReady(
+                "result is not available until the job is completed".to_string(),
+            ));
         }
 
         let key = format!("{}{}.json", S3KEY_RESULTS_PREFIX, self.job_id);
@@ -268,13 +275,18 @@ impl PrimitiveJob {
             .get(presigned_url)
             .header("Content-Type", "application/json")
             .send()
-            .await?;
-        if resp.status().is_success() {
+            .await
+            .map_err(|e| QuantumSystemError::from_middleware_error(&e))?;
+        let status = resp.status();
+        if status.is_success() {
             let json_data = resp.json::<T>().await?;
             Ok(json_data)
         } else {
             let json_data = resp.json::<serde_json::Value>().await?;
-            bail!(format!("{:?}", json_data))
+            Err(QuantumSystemError::Api {
+                status,
+                body: format!("{json_data:?}"),
+            })
         }
     }
 
@@ -334,7 +346,9 @@ impl PrimitiveJob {
     pub async fn get_logs(&self) -> Result<String> {
         let in_final_state = self.is_in_final_state().await?;
         if !in_final_state {
-            bail!("Logs are not available until the job is in its final state.".to_string());
+            return Err(QuantumSystemError::JobNotReady(
+                "logs are not available until the job is in its final state".to_string(),
+            ));
         }
 
         let key = format!("{}{}.json", S3KEY_LOGS_PREFIX, self.job_id);
@@ -349,13 +363,17 @@ impl PrimitiveJob {
             .get(presigned_url)
             .header("Content-Type", "application/json")
             .send()
-            .await?;
+            .await
+            .map_err(|e| QuantumSystemError::from_middleware_error(&e))?;
         let status = resp.status();
         let text_data = resp.text().await?;
         if status.is_success() {
             Ok(text_data)
         } else {
-            bail!(text_data)
+            Err(QuantumSystemError::Api {
+                status,
+                body: text_data,
+            })
         }
     }
 }

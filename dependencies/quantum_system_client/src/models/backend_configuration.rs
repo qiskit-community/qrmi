@@ -102,7 +102,6 @@ pub struct TimingConstraints {
 /// # Example
 ///
 /// ```no_run
-/// use anyhow::Result;
 /// use quantum_system_api::{AuthMethod, ClientBuilder};
 ///
 /// #[tokio::main]

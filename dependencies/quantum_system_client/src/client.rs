@@ -11,15 +11,16 @@
 
 //! Quantum System API Client
 
-use anyhow::{bail, Result};
+use crate::error::QuantumSystemError;
+use crate::middleware::retry::TransparentRetryMiddleware;
+use crate::Result;
 use std::time::Duration;
 
 #[allow(unused_imports)]
-use log::{error, info, warn};
+use log::warn;
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
-use reqwest_retry::RetryTransientMiddleware;
 #[cfg(feature = "iqp_retry_policy")]
 use reqwest_retry::{
     default_on_request_failure, default_on_request_success, Jitter, Retryable, RetryableStrategy,
@@ -36,7 +37,6 @@ use std::error::Error;
 use std::env;
 
 use crate::middleware::auth::{AuthMiddleware, TokenManager};
-use crate::models::errors::ExtendedErrorResponse;
 
 #[cfg(feature = "iqp_retry_policy")]
 struct RetryStrategyExcept429;
@@ -44,7 +44,7 @@ struct RetryStrategyExcept429;
 impl RetryableStrategy for RetryStrategyExcept429 {
     fn handle(
         &self,
-        res: &Result<reqwest::Response, reqwest_middleware::Error>,
+        res: &std::result::Result<reqwest::Response, reqwest_middleware::Error>,
     ) -> Option<Retryable> {
         match res {
             Ok(success) if success.status() == 429 || success.status() == 423 => None,
@@ -60,15 +60,23 @@ struct RetryStrategy429;
 impl RetryableStrategy for RetryStrategy429 {
     fn handle(
         &self,
-        res: &Result<reqwest::Response, reqwest_middleware::Error>,
+        res: &std::result::Result<reqwest::Response, reqwest_middleware::Error>,
     ) -> Option<Retryable> {
         match res {
             Ok(success) if success.status() == 429 || success.status() == 423 => {
                 Some(Retryable::Transient)
             }
-            Ok(_success) => None,
-            // but maybe retry a request failure
-            Err(error) => default_on_request_failure(error),
+            // Everything else -- including a network-level failure -- is
+            // not this layer's concern. Returning `None` (rather than
+            // delegating to `default_on_request_failure`, as before) lets
+            // it fall through untouched to the `RetryStrategyExcept429`
+            // layer wrapping this one, which retries it with the normal,
+            // *bounded* policy. Without this, a plain connection/DNS
+            // failure would also be retried here under `retry_policy_429`,
+            // whose retry count is deliberately unlimited (appropriate for
+            // "keep waiting out a rate limit", not for "keep redialing an
+            // address that will never resolve").
+            _ => None,
         }
     }
 }
@@ -127,6 +135,7 @@ impl Client {
         &self,
         url: &str,
         client: &reqwest_middleware::ClientWithMiddleware,
+        resource_kind: crate::error::ResourceKind,
     ) -> Result<T> {
         let resp_ = client.get(url).send().await;
         match resp_ {
@@ -136,39 +145,10 @@ impl Client {
                     let json_text = resp.text().await?;
                     Ok(serde_json::from_str::<T>(&json_text)?)
                 } else {
-                    match resp.json::<ExtendedErrorResponse>().await {
-                        Ok(ExtendedErrorResponse::Json(error)) => {
-                            let serialized = serde_json::to_value(&error).unwrap();
-                            error!("{}", &serialized);
-                            bail!(format!(
-                                "An error occurred while fetching data from API. {}",
-                                &serialized
-                            ));
-                        }
-                        Ok(ExtendedErrorResponse::Text(message)) => {
-                            error!("{}", message);
-                            bail!(format!(
-                                "An error occurred while fetching data from API. {} ({})",
-                                status, message
-                            ));
-                        }
-                        Err(_) => {
-                            error!("{} {}", status, url);
-                            bail!(format!(
-                                "An error occurred while fetching data from API. {} {}",
-                                status, url
-                            ));
-                        }
-                    }
+                    Err(QuantumSystemError::from_response(status, resp, url, resource_kind).await)
                 }
             }
-            Err(e) => {
-                let err_msg = Client::explain_reqwest_middleware_error(&e);
-                bail!(format!(
-                    "An error occurred while fetching data from API. {}",
-                    err_msg
-                ));
-            }
+            Err(e) => Err(QuantumSystemError::from_middleware_error(&e)),
         }
     }
 
@@ -498,11 +478,13 @@ impl ClientBuilder {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::ACCEPT,
-            header::HeaderValue::from_str("application/json")?,
+            header::HeaderValue::from_str("application/json")
+                .map_err(|e| QuantumSystemError::other("invalid header value", e))?,
         );
         #[cfg(feature = "api_version")]
         if let Some(api_ver_value) = &self.api_version {
-            let api_ver_value = header::HeaderValue::from_str(api_ver_value.as_str())?;
+            let api_ver_value = header::HeaderValue::from_str(api_ver_value.as_str())
+                .map_err(|e| QuantumSystemError::other("invalid header value", e))?;
             headers.insert("IBM-API-Version", api_ver_value);
         }
         #[cfg(feature = "internal_shared_key_auth")]
@@ -512,13 +494,15 @@ impl ClientBuilder {
         } = self.auth_method.clone()
         {
             let auth_str = format!("apikey {}:{}", client_id, shared_token);
-            let mut auth_value = header::HeaderValue::from_str(auth_str.as_str())?;
+            let mut auth_value = header::HeaderValue::from_str(auth_str.as_str())
+                .map_err(|e| QuantumSystemError::other("invalid header value", e))?;
             auth_value.set_sensitive(true);
             headers.insert(header::AUTHORIZATION, auth_value);
         }
 
         if let AuthMethod::IbmCloudIam { service_crn, .. } = self.auth_method.clone() {
-            let service_crn_value = header::HeaderValue::from_str(&service_crn)?;
+            let service_crn_value = header::HeaderValue::from_str(&service_crn)
+                .map_err(|e| QuantumSystemError::other("invalid header value", e))?;
             headers.insert("Service-CRN", service_crn_value);
         }
 
@@ -529,31 +513,8 @@ impl ClientBuilder {
             ReqwestClientBuilder::new(reqwest_plain_client_builder.build()?);
 
         if let Some(v) = self.retry_policy {
-            #[cfg(feature = "iqp_retry_policy")]
-            {
-                let mut retry_policy_429 = ExponentialBackoff::builder()
-                    .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
-                    .jitter(Jitter::Bounded)
-                    .base(2)
-                    .build_with_max_retries(1);
-                retry_policy_429.max_n_retries = None;
-                middleware_client_builder = middleware_client_builder
-                    .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-                        v,
-                        RetryStrategyExcept429,
-                    ))
-                    .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-                        retry_policy_429,
-                        RetryStrategy429,
-                    ))
-            }
-            #[cfg(not(feature = "iqp_retry_policy"))]
-            {
-                middleware_client_builder =
-                    middleware_client_builder.with(RetryTransientMiddleware::new_with_policy(v));
-            }
-            middleware_plain_client_builder =
-                middleware_plain_client_builder.with(RetryTransientMiddleware::new_with_policy(v));
+            middleware_plain_client_builder = middleware_plain_client_builder
+                .with(TransparentRetryMiddleware::new_with_policy(v));
         };
 
         #[cfg(feature = "ibmcloud_appid_auth")]
@@ -588,6 +549,45 @@ impl ClientBuilder {
             let auth_middleware = AuthMiddleware::new(token_manager.clone());
             middleware_client_builder = middleware_client_builder.with(auth_middleware);
         }
+
+        // Attached *after* (and so, since middleware runs in attachment
+        // order, *inside* -- see `TransparentRetryMiddleware`'s docs)
+        // both `auth_middleware` blocks above. This matters: if retry
+        // instead wrapped auth (as it did previously), a transient failure
+        // on the actual request would cause the *whole*
+        // `AuthMiddleware::handle()` call to be retried, including
+        // redundantly re-running its own internal, already-retried token
+        // acquisition every single time -- turning what should be a
+        // handful of attempts into a multiplicative explosion (outer
+        // retries x inner retries). With retry innermost, it only ever
+        // retries the actual request send, while token acquisition (with
+        // its own independent retry policy, see `TokenManager::new`)
+        // happens exactly once per call.
+        if let Some(v) = self.retry_policy {
+            #[cfg(feature = "iqp_retry_policy")]
+            {
+                let mut retry_policy_429 = ExponentialBackoff::builder()
+                    .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
+                    .jitter(Jitter::Bounded)
+                    .base(2)
+                    .build_with_max_retries(1);
+                retry_policy_429.max_n_retries = None;
+                middleware_client_builder = middleware_client_builder
+                    .with(TransparentRetryMiddleware::new_with_policy_and_strategy(
+                        v,
+                        RetryStrategyExcept429,
+                    ))
+                    .with(TransparentRetryMiddleware::new_with_policy_and_strategy(
+                        retry_policy_429,
+                        RetryStrategy429,
+                    ))
+            }
+            #[cfg(not(feature = "iqp_retry_policy"))]
+            {
+                middleware_client_builder =
+                    middleware_client_builder.with(TransparentRetryMiddleware::new_with_policy(v));
+            }
+        };
 
         let client = middleware_client_builder.build();
         let plain_client = middleware_plain_client_builder.build();

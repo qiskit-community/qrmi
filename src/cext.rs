@@ -39,8 +39,6 @@ pub enum ReturnCode {
     ParseError = 103,
     /// Dynamic discovery was requested for an unsupported resource type.
     UnsupportedResourceTypeError = 104,
-    /// An unrecognized program/primitive ID was supplied.
-    UnknownProgramIdError = 105,
     /// The payload variant is not supported by this backend.
     UnsupportedPayloadError = 106,
     /// The task is not in a state that allows the requested operation.
@@ -53,6 +51,13 @@ pub enum ReturnCode {
     InvalidValueError = 110,
     /// A configuration value (or combination of values) was invalid.
     InvalidConfigError = 111,
+    /// The named resource (e.g. a backend) does not exist.
+    ResourceNotFoundError = 111,
+    /// The named task (e.g. a job) does not exist, or has already been
+    /// removed.
+    TaskNotFoundError = 112,
+    /// The request's credentials were missing or rejected.
+    AuthenticationFailedError = 113,
 }
 
 impl From<QrmiErrorKind> for ReturnCode {
@@ -61,11 +66,13 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::EnvVarNotSet => ReturnCode::EnvVarNotSetError,
             QrmiErrorKind::ParseError => ReturnCode::ParseError,
             QrmiErrorKind::UnsupportedResourceType => ReturnCode::UnsupportedResourceTypeError,
-            QrmiErrorKind::UnknownProgramId => ReturnCode::UnknownProgramIdError,
             QrmiErrorKind::UnsupportedPayload => ReturnCode::UnsupportedPayloadError,
             QrmiErrorKind::TaskNotReady => ReturnCode::TaskNotReadyError,
             QrmiErrorKind::MissingConfigKey => ReturnCode::MissingConfigKeyError,
             QrmiErrorKind::InvalidConfig => ReturnCode::InvalidConfigError,
+            QrmiErrorKind::ResourceNotFound => ReturnCode::ResourceNotFoundError,
+            QrmiErrorKind::TaskNotFound => ReturnCode::TaskNotFoundError,
+            QrmiErrorKind::AuthenticationFailed => ReturnCode::AuthenticationFailedError,
             QrmiErrorKind::InvalidFilter => ReturnCode::InvalidFilterError,
             QrmiErrorKind::InvalidValue => ReturnCode::InvalidValueError,
             QrmiErrorKind::Other => ReturnCode::Error,

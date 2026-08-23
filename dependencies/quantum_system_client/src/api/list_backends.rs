@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::Client;
-use anyhow::Result;
+use crate::Result;
 use serde::de::DeserializeOwned;
 
 impl Client {
@@ -45,6 +45,7 @@ impl Client {
     /// - authentication failed.
     pub async fn list_backends<T: DeserializeOwned>(&self) -> Result<T> {
         let url = format!("{}/v1/backends", self.base_url);
-        self.get::<T>(&url, &self.client).await
+        self.get::<T>(&url, &self.client, crate::error::ResourceKind::Other)
+            .await
     }
 }

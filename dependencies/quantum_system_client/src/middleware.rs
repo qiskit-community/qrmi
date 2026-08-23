@@ -10,3 +10,4 @@
 // that they have been altered from the originals.
 
 pub mod auth;
+pub(crate) mod retry;

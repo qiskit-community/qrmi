@@ -69,6 +69,24 @@ create_exception!(
     QrmiError_,
     "A `filters` string was malformed or contained an invalid value."
 );
+create_exception!(
+    qrmi._core,
+    ResourceNotFoundError,
+    QrmiError_,
+    "The named resource (e.g. a backend) does not exist."
+);
+create_exception!(
+    qrmi._core,
+    TaskNotFoundError,
+    QrmiError_,
+    "The named task (e.g. a job) does not exist, or has already been removed."
+);
+create_exception!(
+    qrmi._core,
+    AuthenticationFailedError,
+    QrmiError_,
+    "The request's credentials were missing or rejected by the vendor's API."
+);
 
 /// Converts a [`QrmiError`] into the [`PyErr`] subclass matching its kind,
 /// so Python code can `except qrmi.TaskNotReadyError` instead of parsing
@@ -81,13 +99,14 @@ fn to_py_err(err: QrmiError) -> PyErr {
         | QrmiErrorKind::MissingConfigKey
         | QrmiErrorKind::InvalidConfig => ConfigError::new_err(msg),
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
-        QrmiErrorKind::UnknownProgramId | QrmiErrorKind::UnsupportedPayload => {
-            UnsupportedPayloadError::new_err(msg)
-        }
+        QrmiErrorKind::UnsupportedPayload => UnsupportedPayloadError::new_err(msg),
         QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
         QrmiErrorKind::InvalidFilter | QrmiErrorKind::InvalidValue => {
             InvalidFilterError::new_err(msg)
         }
+        QrmiErrorKind::ResourceNotFound => ResourceNotFoundError::new_err(msg),
+        QrmiErrorKind::TaskNotFound => TaskNotFoundError::new_err(msg),
+        QrmiErrorKind::AuthenticationFailed => AuthenticationFailedError::new_err(msg),
         QrmiErrorKind::Other => QrmiError_::new_err(msg),
     }
 }
@@ -818,6 +837,15 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
         "InvalidFilterError",
         m.py().get_type::<InvalidFilterError>(),
+    )?;
+    m.add(
+        "ResourceNotFoundError",
+        m.py().get_type::<ResourceNotFoundError>(),
+    )?;
+    m.add("TaskNotFoundError", m.py().get_type::<TaskNotFoundError>())?;
+    m.add(
+        "AuthenticationFailedError",
+        m.py().get_type::<AuthenticationFailedError>(),
     )?;
 
     Ok(())
