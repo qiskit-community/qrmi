@@ -101,9 +101,7 @@ fn to_py_err(err: QrmiError) -> PyErr {
         QrmiErrorKind::EnvVarNotSet => EnvVarNotSetError::new_err(msg),
         QrmiErrorKind::ParseError | QrmiErrorKind::MissingConfigKey => ConfigError::new_err(msg),
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
-        QrmiErrorKind::UnknownProgramId | QrmiErrorKind::UnsupportedPayload => {
-            UnsupportedPayloadError::new_err(msg)
-        }
+        QrmiErrorKind::UnsupportedPayload => UnsupportedPayloadError::new_err(msg),
         QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
         QrmiErrorKind::InvalidFilter | QrmiErrorKind::InvalidValue => {
             InvalidFilterError::new_err(msg)

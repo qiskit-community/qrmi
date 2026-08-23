@@ -168,8 +168,6 @@ pub enum QrmiErrorKind {
     ParseError,
     /// Dynamic discovery was requested for an unsupported resource type.
     UnsupportedResourceType,
-    /// An unrecognized program/primitive ID was supplied.
-    UnknownProgramId,
     /// The payload variant is not supported by this backend.
     UnsupportedPayload,
     /// The task is not in a state that allows the requested operation.

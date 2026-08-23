@@ -38,7 +38,7 @@ pub enum IbmError {
 impl IbmError {
     pub(crate) fn kind(&self) -> QrmiErrorKind {
         match self {
-            IbmError::UnknownProgramId(_) => QrmiErrorKind::UnknownProgramId,
+            IbmError::UnknownProgramId(_) => QrmiErrorKind::InvalidValue,
             IbmError::InvalidSessionMode(_) => QrmiErrorKind::InvalidValue,
         }
     }

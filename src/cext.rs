@@ -44,8 +44,6 @@ pub enum ReturnCode {
     ParseError = 103,
     /// Dynamic discovery was requested for an unsupported resource type.
     UnsupportedResourceTypeError = 104,
-    /// An unrecognized program/primitive ID was supplied.
-    UnknownProgramIdError = 105,
     /// The payload variant is not supported by this backend.
     UnsupportedPayloadError = 106,
     /// The task is not in a state that allows the requested operation.
@@ -71,7 +69,6 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::EnvVarNotSet => ReturnCode::EnvVarNotSetError,
             QrmiErrorKind::ParseError => ReturnCode::ParseError,
             QrmiErrorKind::UnsupportedResourceType => ReturnCode::UnsupportedResourceTypeError,
-            QrmiErrorKind::UnknownProgramId => ReturnCode::UnknownProgramIdError,
             QrmiErrorKind::UnsupportedPayload => ReturnCode::UnsupportedPayloadError,
             QrmiErrorKind::TaskNotReady => ReturnCode::TaskNotReadyError,
             QrmiErrorKind::MissingConfigKey => ReturnCode::MissingConfigKeyError,
