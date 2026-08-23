@@ -716,7 +716,7 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 pub unsafe extern "C" fn qrmi_get_last_error() -> *const c_char {
     crate::common::initialize();
     LAST_ERROR.with(|cell| match &*cell.borrow() {
-        Some(cstr) => cstr.as_ptr(),
+        Some(cstr) => cstr.clone().into_raw(),
         None => std::ptr::null(),
     })
 }
