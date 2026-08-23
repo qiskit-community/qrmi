@@ -2581,6 +2581,7 @@ dependencies = [
  "ffi_helpers",
  "futures",
  "glob",
+ "http 1.4.0",
  "iqm-server-api",
  "libc",
  "log",
