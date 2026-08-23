@@ -49,8 +49,6 @@ pub enum ReturnCode {
     InvalidFilterError = 109,
     /// A value was invalid for a reason not covered by a more specific code.
     InvalidValueError = 110,
-    /// A configuration value (or combination of values) was invalid.
-    InvalidConfigError = 111,
     /// The named resource (e.g. a backend) does not exist.
     ResourceNotFoundError = 111,
     /// The named task (e.g. a job) does not exist, or has already been
@@ -58,6 +56,8 @@ pub enum ReturnCode {
     TaskNotFoundError = 112,
     /// The request's credentials were missing or rejected.
     AuthenticationFailedError = 113,
+    /// A configuration value (or combination of values) was invalid.
+    InvalidConfigError = 114,
 }
 
 impl From<QrmiErrorKind> for ReturnCode {
