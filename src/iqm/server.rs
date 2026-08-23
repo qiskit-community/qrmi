@@ -121,7 +121,7 @@ impl QuantumResource for IQMServer {
         let health = get_qc_health_v1(&self.config, &self.backend_name)
             .await
             .map_err(|e| classify(e, ResourceKind::Backend))?;
-        Ok(health.healthy)
+        Ok(health.health.healthy)
     }
 
     /// IQM Server has no session concept. This does not contact the
@@ -166,10 +166,31 @@ impl QuantumResource for IQMServer {
 
     /// Stops a running job.
     ///
+    /// Fetches the job's current status first, and only actually asks the
+    /// server to cancel it if that status is `Waiting` or `Processing` --
+    /// a job already in a terminal state (`Completed`/`Failed`/`Cancelled`)
+    /// can't be cancelled again, and the server rejects that with 403
+    /// (`IllegalJobStatus`, see `crate::iqm::error`'s docs on why that
+    /// status isn't otherwise classified). Mirrors
+    /// `crate::ibm::quantum_compute_service::QuantumComputeService::task_stop`'s
+    /// same guard for the same reason.
+    ///
+    /// The cancel call's own result is deliberately discarded, same as
+    /// that implementation: even after checking, the job could still
+    /// finish on its own in the moment between the status check and this
+    /// call, and that race isn't an error worth surfacing to the caller.
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
-        cancel_job_v1(&self.config, task_id)
+        let job = get_job_v1(&self.config, task_id, Some(true), Some(30))
             .await
             .map_err(|e| classify(e, ResourceKind::Job))?;
+        if matches!(
+            job.status,
+            IqmServerJobStatus::Waiting | IqmServerJobStatus::Processing
+        ) {
+            cancel_job_v1(&self.config, task_id)
+                .await
+                .map_err(|e| classify(e, ResourceKind::Job))?;
+        }
         Ok(())
     }
 
