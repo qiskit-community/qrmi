@@ -12,6 +12,7 @@
 
 //! QRMI implementations for IQM
 
+pub(crate) mod error;
 mod server;
 
 pub use self::server::IQMServer;

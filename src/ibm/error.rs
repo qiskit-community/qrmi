@@ -38,8 +38,8 @@ pub enum IbmError {
 impl IbmError {
     pub(crate) fn kind(&self) -> QrmiErrorKind {
         match self {
-            IbmError::UnknownProgramId(_) => QrmiErrorKind::InvalidValue,
-            IbmError::InvalidSessionMode(_) => QrmiErrorKind::InvalidValue,
+            IbmError::UnknownProgramId(_) => QrmiErrorKind::InvalidInput,
+            IbmError::InvalidSessionMode(_) => QrmiErrorKind::InvalidInput,
         }
     }
 }
@@ -64,6 +64,7 @@ impl From<quantum_system_api::QuantumSystemError> for crate::QrmiError {
             QsError::BackendNotFound(msg) => crate::QrmiError::ResourceNotFound(msg),
             QsError::JobNotFound(msg) => crate::QrmiError::TaskNotFound(msg),
             QsError::AuthenticationFailed(msg) => crate::QrmiError::AuthenticationFailed(msg),
+            QsError::InvalidJobInput(msg) => crate::QrmiError::InvalidInput(msg),
             other => crate::QrmiError::Other(anyhow::Error::new(other)),
         }
     }

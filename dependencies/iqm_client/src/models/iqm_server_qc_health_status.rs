@@ -15,9 +15,43 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// IqmServerQcHealthStatus : The current computer health status
+/// IqmServerQcHealthStatus : The current computer health status.
+///
+/// NOTE: hand-patched, not regenerated from the OpenAPI spec. The live IQM
+/// Server API wraps the health details one level deeper than what this
+/// crate was originally generated against --
+/// `{"operational": "online", "health": {"healthy": true, "updated_at":
+/// "..."}}` -- instead of the flat `{"healthy": ..., "updated_at": ...}`
+/// this struct used to be. `get_qc_health_v1` (in
+/// `src/apis/quantum_computers_api.rs`) deserializes the whole response
+/// body directly into this type, unchanged, so fixing the shape here was
+/// enough without touching that function. Revert this patch once the crate
+/// is regenerated from an OpenAPI spec that reflects the server's current
+/// response shape.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct IqmServerQcHealthStatus {
+    /// Whether the quantum computer is currently accepting jobs.
+    #[serde(rename = "operational")]
+    pub operational: String,
+    #[serde(rename = "health")]
+    pub health: Box<models::QcHealthDetail>,
+}
+
+impl IqmServerQcHealthStatus {
+    /// The current computer health status
+    pub fn new(operational: String, health: models::QcHealthDetail) -> IqmServerQcHealthStatus {
+        IqmServerQcHealthStatus {
+            operational,
+            health: Box::new(health),
+        }
+    }
+}
+
+/// The nested `health` object inside [`IqmServerQcHealthStatus`]. This is
+/// what the *old*, flat `IqmServerQcHealthStatus` used to look like before
+/// the hand-patch described on that struct's docs.
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct QcHealthDetail {
     /// Boolean indicating whether the Quantum computer is healthy or not
     #[serde(rename = "healthy")]
     pub healthy: bool,
@@ -26,13 +60,9 @@ pub struct IqmServerQcHealthStatus {
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
 
-impl IqmServerQcHealthStatus {
-    /// The current computer health status
-    pub fn new(
-        healthy: bool,
-        updated_at: chrono::DateTime<chrono::FixedOffset>,
-    ) -> IqmServerQcHealthStatus {
-        IqmServerQcHealthStatus {
+impl QcHealthDetail {
+    pub fn new(healthy: bool, updated_at: chrono::DateTime<chrono::FixedOffset>) -> QcHealthDetail {
+        QcHealthDetail {
             healthy,
             updated_at,
         }

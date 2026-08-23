@@ -69,9 +69,11 @@ create_exception!(
 );
 create_exception!(
     qrmi._core,
-    InvalidFilterError,
+    InvalidInputError,
     QrmiError_,
-    "A `filters` string was malformed or contained an invalid value."
+    "A value QRMI was given was invalid, whether QRMI itself rejected it \\
+     locally (e.g. a malformed `filters` string, JSON, or UTF-8) or a \\
+     vendor's API rejected the resulting request after receiving it."
 );
 create_exception!(
     qrmi._core,
@@ -103,9 +105,7 @@ fn to_py_err(err: QrmiError) -> PyErr {
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
         QrmiErrorKind::UnsupportedPayload => UnsupportedPayloadError::new_err(msg),
         QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
-        QrmiErrorKind::InvalidFilter | QrmiErrorKind::InvalidValue => {
-            InvalidFilterError::new_err(msg)
-        }
+        QrmiErrorKind::InvalidInput => InvalidInputError::new_err(msg),
         QrmiErrorKind::ResourceNotFound => ResourceNotFoundError::new_err(msg),
         QrmiErrorKind::TaskNotFound => TaskNotFoundError::new_err(msg),
         QrmiErrorKind::AuthenticationFailed => AuthenticationFailedError::new_err(msg),
@@ -764,10 +764,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.py().get_type::<UnsupportedPayloadError>(),
     )?;
     m.add("TaskNotReadyError", m.py().get_type::<TaskNotReadyError>())?;
-    m.add(
-        "InvalidFilterError",
-        m.py().get_type::<InvalidFilterError>(),
-    )?;
+    m.add("InvalidInputError", m.py().get_type::<InvalidInputError>())?;
     m.add(
         "ResourceNotFoundError",
         m.py().get_type::<ResourceNotFoundError>(),
