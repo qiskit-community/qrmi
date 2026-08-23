@@ -39,10 +39,7 @@ pub struct IqmServerQcHealthStatus {
 
 impl IqmServerQcHealthStatus {
     /// The current computer health status
-    pub fn new(
-        operational: String,
-        health: models::QcHealthDetail,
-    ) -> IqmServerQcHealthStatus {
+    pub fn new(operational: String, health: models::QcHealthDetail) -> IqmServerQcHealthStatus {
         IqmServerQcHealthStatus {
             operational,
             health: Box::new(health),
@@ -64,10 +61,7 @@ pub struct QcHealthDetail {
 }
 
 impl QcHealthDetail {
-    pub fn new(
-        healthy: bool,
-        updated_at: chrono::DateTime<chrono::FixedOffset>,
-    ) -> QcHealthDetail {
+    pub fn new(healthy: bool, updated_at: chrono::DateTime<chrono::FixedOffset>) -> QcHealthDetail {
         QcHealthDetail {
             healthy,
             updated_at,
