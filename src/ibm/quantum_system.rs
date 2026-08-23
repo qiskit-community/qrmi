@@ -14,7 +14,6 @@ use crate::error::{required_env, QrmiError};
 use crate::ibm::error::IbmError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
-use anyhow::Context;
 use log::info;
 use quantum_system_api::utils::s3::S3Client;
 use quantum_system_api::{
@@ -154,8 +153,7 @@ impl QuantumResource for IBMQuantumSystem {
         let backend = self
             .api_client
             .get_backend::<Backend>(&self.backend_name)
-            .await
-            .context("failed to get backend details")?;
+            .await?;
         Ok(matches!(backend.status, BackendStatus::Online))
     }
 
@@ -198,8 +196,7 @@ impl QuantumResource for IBMQuantumSystem {
                 &job_input,
                 None,
             )
-            .await
-            .context("failed to start task")?;
+            .await?;
         Ok(job.job_id)
     }
 

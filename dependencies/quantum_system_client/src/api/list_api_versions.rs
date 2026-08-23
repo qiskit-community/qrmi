@@ -11,7 +11,7 @@
 
 use crate::models::versions::ListAPIVersions;
 use crate::Client;
-use anyhow::Result;
+use crate::Result;
 
 impl Client {
     /// Returns the list of supported API versions.
@@ -39,7 +39,7 @@ impl Client {
     pub async fn list_api_versions(&self) -> Result<Vec<String>> {
         let url = format!("{}/versions", self.base_url,);
         let json_data = self
-            .get::<ListAPIVersions>(&url, &self.plain_client)
+            .get::<ListAPIVersions>(&url, &self.plain_client, crate::error::ResourceKind::Other)
             .await?;
         Ok(json_data.versions.unwrap_or_default())
     }

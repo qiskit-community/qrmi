@@ -536,6 +536,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bs58"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
+dependencies = [
+ "tinyvec",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2113,7 +2122,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2135,6 +2144,7 @@ dependencies = [
  "reqwest-retry",
  "serde",
  "serde_json",
+ "thiserror 2.0.20",
  "tokio",
  "uuid",
 ]
@@ -2229,7 +2239,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-system-api"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2865,6 +2875,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee78f1fbe43ac4a0e47aadb3dbd357b69eb0d3793e948624cd03dd2750ab1c0a"
 dependencies = [
  "base64",
+ "bs58",
  "chrono",
  "hex",
  "indexmap 1.9.3",

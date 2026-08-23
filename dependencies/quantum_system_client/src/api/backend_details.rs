@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::Client;
-use anyhow::Result;
+use crate::Result;
 use serde::de::DeserializeOwned;
 
 impl Client {
@@ -46,6 +46,7 @@ impl Client {
     /// - specified backend is not found.
     pub async fn get_backend<T: DeserializeOwned>(&self, backend_name: &str) -> Result<T> {
         let url = format!("{}/v1/backends/{}", self.base_url, backend_name);
-        self.get::<T>(&url, &self.client).await
+        self.get::<T>(&url, &self.client, crate::error::ResourceKind::Backend)
+            .await
     }
 }
