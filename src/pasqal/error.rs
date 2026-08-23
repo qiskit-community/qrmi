@@ -37,8 +37,8 @@ pub enum PasqalError {
 impl PasqalError {
     pub(crate) fn kind(&self) -> QrmiErrorKind {
         match self {
-            PasqalError::InvalidDeviceType(_) => QrmiErrorKind::InvalidValue,
-            PasqalError::InvalidCudaqSequence(_) => QrmiErrorKind::InvalidValue,
+            PasqalError::InvalidDeviceType(_) => QrmiErrorKind::InvalidInput,
+            PasqalError::InvalidCudaqSequence(_) => QrmiErrorKind::InvalidInput,
         }
     }
 }

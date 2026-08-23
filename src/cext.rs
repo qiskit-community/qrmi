@@ -50,15 +50,9 @@ pub enum ReturnCode {
     TaskNotReadyError = 107,
     /// A required key was missing from a provider's environment variable map.
     MissingConfigKeyError = 108,
-    /// A vendor's API rejected a request as malformed after actually
-    /// receiving it, as opposed to `InvalidValueError`, which is rejected
-    /// locally before any request is sent.
-    InvalidRequestError = 109,
-    /// A value was invalid for a reason not covered by a more specific
-    /// code (this covers both a value QRMI itself rejected before making
-    /// any request, and a vendor-specific value like an unrecognized
-    /// program ID or device type).
-    InvalidValueError = 110,
+    /// A value was invalid, whether QRMI itself rejected it locally or a
+    /// vendor's API rejected the resulting request after receiving it.
+    InvalidInputError = 109,
     /// The named resource (e.g. a backend) does not exist.
     ResourceNotFoundError = 111,
     /// The named task (e.g. a job) does not exist, or has already been
@@ -80,8 +74,7 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::ResourceNotFound => ReturnCode::ResourceNotFoundError,
             QrmiErrorKind::TaskNotFound => ReturnCode::TaskNotFoundError,
             QrmiErrorKind::AuthenticationFailed => ReturnCode::AuthenticationFailedError,
-            QrmiErrorKind::InvalidRequest => ReturnCode::InvalidRequestError,
-            QrmiErrorKind::InvalidValue => ReturnCode::InvalidValueError,
+            QrmiErrorKind::InvalidInput => ReturnCode::InvalidInputError,
             QrmiErrorKind::Other => ReturnCode::Error,
         }
     }

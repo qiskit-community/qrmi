@@ -80,28 +80,28 @@ impl BackendFilter {
                 continue;
             }
             let (key, value) = pair.split_once('=').ok_or_else(|| {
-                QrmiError::InvalidValue(format!(
+                QrmiError::InvalidInput(format!(
                     "invalid filter segment {pair:?}: expected 'key=value'"
                 ))
             })?;
             match key.trim() {
                 "num_qubits" => {
                     f.num_qubits = Some(value.trim().parse::<u64>().map_err(|_| {
-                        QrmiError::InvalidValue(format!(
+                        QrmiError::InvalidInput(format!(
                             "invalid value for filter 'num_qubits': {value:?} (expected a non-negative integer)"
                         ))
                     })?);
                 }
                 "max_shots" => {
                     f.max_shots = Some(value.trim().parse::<u64>().map_err(|_| {
-                        QrmiError::InvalidValue(format!(
+                        QrmiError::InvalidInput(format!(
                             "invalid value for filter 'max_shots': {value:?} (expected a non-negative integer)"
                         ))
                     })?);
                 }
                 "name" => {
                     f.name_pattern = Some(Pattern::new(value.trim()).map_err(|e| {
-                        QrmiError::InvalidValue(format!(
+                        QrmiError::InvalidInput(format!(
                             "invalid glob pattern for 'name' filter {value:?}: {e}"
                         ))
                     })?);
@@ -111,7 +111,7 @@ impl BackendFilter {
                         "true" => true,
                         "false" => false,
                         _ => {
-                            return Err(QrmiError::InvalidValue(format!(
+                            return Err(QrmiError::InvalidInput(format!(
                                 "invalid value for filter 'is_simulator': {value:?} (expected 'true' or 'false')"
                             )))
                         }
@@ -121,7 +121,7 @@ impl BackendFilter {
                     f.status = match value.trim() {
                         "online" => StatusFilter::Online,
                         _ => {
-                            return Err(QrmiError::InvalidValue(format!(
+                            return Err(QrmiError::InvalidInput(format!(
                                 "invalid value for filter 'status': {value:?} (supported: 'online')"
                             )))
                         }

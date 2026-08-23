@@ -69,21 +69,11 @@ create_exception!(
 );
 create_exception!(
     qrmi._core,
-    InvalidValueError,
+    InvalidInputError,
     QrmiError_,
-    "A value was invalid for a reason not covered by a more specific \\
-     exception (this covers both a value QRMI itself rejected before \\
-     making any request -- e.g. a malformed `filters` string, JSON, or \\
-     UTF-8 -- and a vendor-specific value like an unrecognized program ID \\
-     or device type)."
-);
-create_exception!(
-    qrmi._core,
-    InvalidRequestError,
-    QrmiError_,
-    "A vendor's API rejected a request as malformed after actually \\
-     receiving it, as opposed to `InvalidValueError`, which is rejected \\
-     locally before any request is sent."
+    "A value QRMI was given was invalid, whether QRMI itself rejected it \\
+     locally (e.g. a malformed `filters` string, JSON, or UTF-8) or a \\
+     vendor's API rejected the resulting request after receiving it."
 );
 create_exception!(
     qrmi._core,
@@ -115,8 +105,7 @@ fn to_py_err(err: QrmiError) -> PyErr {
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
         QrmiErrorKind::UnsupportedPayload => UnsupportedPayloadError::new_err(msg),
         QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
-        QrmiErrorKind::InvalidValue => InvalidValueError::new_err(msg),
-        QrmiErrorKind::InvalidRequest => InvalidRequestError::new_err(msg),
+        QrmiErrorKind::InvalidInput => InvalidInputError::new_err(msg),
         QrmiErrorKind::ResourceNotFound => ResourceNotFoundError::new_err(msg),
         QrmiErrorKind::TaskNotFound => TaskNotFoundError::new_err(msg),
         QrmiErrorKind::AuthenticationFailed => AuthenticationFailedError::new_err(msg),
@@ -775,11 +764,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.py().get_type::<UnsupportedPayloadError>(),
     )?;
     m.add("TaskNotReadyError", m.py().get_type::<TaskNotReadyError>())?;
-    m.add("InvalidValueError", m.py().get_type::<InvalidValueError>())?;
-    m.add(
-        "InvalidRequestError",
-        m.py().get_type::<InvalidRequestError>(),
-    )?;
+    m.add("InvalidInputError", m.py().get_type::<InvalidInputError>())?;
     m.add(
         "ResourceNotFoundError",
         m.py().get_type::<ResourceNotFoundError>(),

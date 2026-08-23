@@ -94,23 +94,18 @@ pub enum QrmiError {
     #[error("authentication failed: {0}")]
     AuthenticationFailed(String),
 
-    /// A value read from configuration or supplied by the caller (a
-    /// `filters` string, a payload, ...) was invalid in a way QRMI itself
-    /// rejected before making any request -- as opposed to
-    /// [`QrmiError::InvalidRequest`], which is rejected by the vendor's API
-    /// after actually receiving it.
-    #[error("invalid value: {0}")]
-    InvalidValue(String),
-
-    /// A vendor's API rejected a request as malformed after actually
-    /// receiving it (e.g. HTTP 400/409/413/422) -- as opposed to
-    /// [`QrmiError::InvalidValue`], which is rejected locally, before any
-    /// request is sent. This distinction matters to callers: this kind
-    /// means the vendor itself didn't like the request, which may point to
-    /// a vendor-specific constraint or version skew rather than a plain
-    /// input mistake.
-    #[error("invalid request: {0}")]
-    InvalidRequest(String),
+    /// A value QRMI was given -- as a parameter (a `filters` string, a
+    /// payload, a program ID, ...) or ultimately rejected by a vendor's API
+    /// after actually receiving a request built from it -- was invalid.
+    /// Deliberately doesn't distinguish "QRMI rejected this locally, before
+    /// sending anything" from "the vendor's API rejected the request after
+    /// receiving it" (e.g. HTTP 400/409/413/422): both mean the same thing
+    /// to a caller -- the input was bad -- and in practice callers want to
+    /// handle both the same way, so splitting them into separate variants
+    /// only added a distinction to check for no corresponding difference in
+    /// what to do about it.
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
 
     /// A payload, or a piece of it, was not valid JSON.
     #[error("invalid JSON: {0}")]
@@ -154,10 +149,9 @@ impl QrmiError {
             QrmiError::ResourceNotFound(_) => QrmiErrorKind::ResourceNotFound,
             QrmiError::TaskNotFound(_) => QrmiErrorKind::TaskNotFound,
             QrmiError::AuthenticationFailed(_) => QrmiErrorKind::AuthenticationFailed,
-            QrmiError::InvalidValue(_) => QrmiErrorKind::InvalidValue,
-            QrmiError::InvalidRequest(_) => QrmiErrorKind::InvalidRequest,
-            QrmiError::InvalidJson(_) => QrmiErrorKind::InvalidValue,
-            QrmiError::InvalidUtf8(_) => QrmiErrorKind::InvalidValue,
+            QrmiError::InvalidInput(_) => QrmiErrorKind::InvalidInput,
+            QrmiError::InvalidJson(_) => QrmiErrorKind::InvalidInput,
+            QrmiError::InvalidUtf8(_) => QrmiErrorKind::InvalidInput,
             QrmiError::Ibm(e) => e.kind(),
             QrmiError::Pasqal(e) => e.kind(),
             QrmiError::Other(_) => QrmiErrorKind::Other,
@@ -195,16 +189,10 @@ pub enum QrmiErrorKind {
     TaskNotFound,
     /// The request's credentials were missing or rejected.
     AuthenticationFailed,
-    /// A vendor's API rejected a request as malformed after actually
-    /// receiving it, as opposed to `InvalidValue`, which is rejected
-    /// locally before any request is sent.
-    InvalidRequest,
-    /// A value was invalid for a reason not covered by a more specific kind
-    /// (this covers both a value QRMI itself rejected before making any
-    /// request -- e.g. a malformed `filters` string, JSON, or UTF-8 -- and
-    /// a vendor-specific value like an unrecognized program ID or device
-    /// type).
-    InvalidValue,
+    /// A value QRMI was given was invalid, whether QRMI itself rejected it
+    /// locally or a vendor's API rejected the resulting request after
+    /// receiving it.
+    InvalidInput,
     /// Everything else (vendor API failures, I/O, ...).
     Other,
 }

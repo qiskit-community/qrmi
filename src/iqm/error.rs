@@ -50,7 +50,7 @@ pub(crate) enum ResourceKind {
 /// "the request itself was malformed" (`InvalidInput`, or -- for
 /// `job_submit` specifically -- one of `InvalidJobPayload` /
 /// `UnsupportedJobType` / `InvalidInput`), so it maps to
-/// [`QrmiError::InvalidRequest`]. 403, by contrast, means something
+/// [`QrmiError::InvalidInput`]. 403, by contrast, means something
 /// different per endpoint in this API -- e.g. `cancel_job_v1`'s 403 is
 /// `IllegalJobStatus` (the job's current state doesn't allow cancelling
 /// it), which has nothing to do with authentication -- so it's deliberately
@@ -73,7 +73,7 @@ where
     if let iqm_server_api::apis::Error::ResponseError(ref content) = err {
         let body = content.content.clone();
         match content.status {
-            StatusCode::BAD_REQUEST => return QrmiError::InvalidRequest(body),
+            StatusCode::BAD_REQUEST => return QrmiError::InvalidInput(body),
             StatusCode::UNAUTHORIZED => return QrmiError::AuthenticationFailed(body),
             StatusCode::NOT_FOUND => {
                 return match resource_kind {
