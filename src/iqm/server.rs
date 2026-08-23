@@ -121,7 +121,7 @@ impl QuantumResource for IQMServer {
         let health = get_qc_health_v1(&self.config, &self.backend_name)
             .await
             .map_err(|e| classify(e, ResourceKind::Backend))?;
-        Ok(health.health.healthy)
+        Ok(health.operational == "online" && health.health.healthy)
     }
 
     /// IQM Server has no session concept. This does not contact the
