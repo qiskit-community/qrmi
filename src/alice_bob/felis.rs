@@ -12,6 +12,7 @@
 
 //! QRMI implementation for Alice and Bob Felis
 
+use crate::alice_bob::error::{classify, ResourceKind};
 use crate::error::QrmiError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
@@ -19,7 +20,6 @@ use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
 use alice_bob_felis::helpers::decode_api_key;
 use alice_bob_felis::models;
 use alice_bob_felis::models::{create_external_job, EventType};
-use anyhow::Context;
 use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
@@ -71,7 +71,7 @@ impl AliceBobFelis {
     pub async fn list_backends(&mut self) -> Result<Vec<String>> {
         let targets = targets_service::list_targets(&self.config)
             .await
-            .context("failed to list targets")?;
+            .map_err(|e| classify(e, ResourceKind::Backend))?;
         let names: Vec<String> = targets
             .iter()
             .map(|t| target_to_device(&t.name.clone()))
@@ -82,7 +82,7 @@ impl AliceBobFelis {
     async fn most_recent_event(&mut self, task_id: &str) -> Result<models::EventType> {
         let job = jobs_service::get_job(&self.config, task_id, None)
             .await
-            .with_context(|| format!("failed to get job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         // Can safely assume events is non-empty
         let event = job.events.last().unwrap().r#type;
         Ok(event)
@@ -143,10 +143,10 @@ impl QuantumResource for AliceBobFelis {
 
             let external_job = jobs_service::create_job(&self.config, job, None)
                 .await
-                .context("failed to create job")?;
+                .map_err(|e| classify(e, ResourceKind::Backend))?;
             jobs_service::upload_input(&self.config, &external_job.id, human_qir, None)
                 .await
-                .context("failed to upload job input")?;
+                .map_err(|e| classify(e, ResourceKind::Job))?;
             // If here we can assume all went well
             Ok(external_job.id)
         } else {
@@ -160,7 +160,7 @@ impl QuantumResource for AliceBobFelis {
         if *event != EventType::Succeeded && *event != EventType::Cancelled {
             jobs_service::cancel_job(&self.config, task_id, None)
                 .await
-                .with_context(|| format!("failed to cancel job {task_id}"))?;
+                .map_err(|e| classify(e, ResourceKind::Job))?;
         }
         Ok(())
     }
@@ -189,7 +189,7 @@ impl QuantumResource for AliceBobFelis {
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         let output_csv = jobs_service::download_output(&self.config, task_id, None)
             .await
-            .with_context(|| format!("failed to download output for job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         Ok(TaskResult { value: output_csv })
     }
 
@@ -201,7 +201,7 @@ impl QuantumResource for AliceBobFelis {
     async fn target(&mut self) -> Result<Target> {
         let targets = targets_service::list_targets(&self.config)
             .await
-            .context("failed to list targets")?;
+            .map_err(|e| classify(e, ResourceKind::Backend))?;
 
         let target = targets
             .iter()

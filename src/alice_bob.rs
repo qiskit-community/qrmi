@@ -12,6 +12,7 @@
 
 //! QRMI implementation for Alice and Bob Felis
 
+pub(crate) mod error;
 mod felis;
 
 pub use self::felis::AliceBobFelis;
