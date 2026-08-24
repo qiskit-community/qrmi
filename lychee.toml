@@ -15,6 +15,18 @@ no_progress = true
 # Check the specified file extensions
 extensions = ["md","txt","html", "rst"]
 
+# Website timeout in seconds
+timeout = 30
+
+# Maximum number of retries for a request before failing
+max_retries = 5
+
+# Inter-request delay in seconds to avoid rate limiting
+retry_wait_time = 10
+
+# Accept timeouts as successful (useful for CI/CD)
+accept_timeouts = true
+
 # Exclude URLs and mail addresses from checking. The values are treated as regular expressions
 exclude = [
     '^http://localhost*',
