@@ -12,13 +12,12 @@
 // that they have been altered from the originals.
 
 use crate::error::{required_env, QrmiError};
-use crate::ibm::error::IbmError;
+use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::quantum_compute_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
-use anyhow::Context;
 use log::error;
 use quantum_compute_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
 use quantum_compute_client::models;
@@ -127,7 +126,7 @@ impl QuantumResource for IBMQuantumComputeService {
         let status_response =
             backends_api::get_backend_status(&self.config, &self.backend_name, None)
                 .await
-                .context("failed to get backend status")?;
+                .map_err(|e| classify(e, ResourceKind::Backend))?;
         // Print the status, using "unknown" if no status is available
         let status_str = status_response
             .status
@@ -157,7 +156,7 @@ impl QuantumResource for IBMQuantumComputeService {
         if let Some(existing_session_id) = self.session_id.clone() {
             let response = sessions_api::get_session(&self.config, &existing_session_id, None)
                 .await
-                .context("failed to get session")?;
+                .map_err(|e| classify(e, ResourceKind::Session))?;
             let active_ttl = response.active_ttl.unwrap_or(1);
             let max_ttl = response.max_ttl.unwrap_or(1);
 
@@ -185,7 +184,7 @@ impl QuantumResource for IBMQuantumComputeService {
         let response =
             sessions_api::create_session(&self.config, None, Some(create_session_request))
                 .await
-                .context("failed to create session")?;
+                .map_err(|e| classify(e, ResourceKind::Session))?;
 
         self.session_id = Some(response.id.clone());
         Ok(response.id)
@@ -227,7 +226,7 @@ impl QuantumResource for IBMQuantumComputeService {
             None,
         )
         .await
-        .context("failed to list jobs")?;
+        .map_err(|e| classify(e, ResourceKind::Session))?;
 
         if let Some(pending_jobs) = jobs_resp.jobs {
             if !pending_jobs.is_empty() {
@@ -242,7 +241,7 @@ impl QuantumResource for IBMQuantumComputeService {
             // in the session appearing as “Cancelled” on the IQP web interface
             sessions_api::delete_session_close(&self.config, acquisition_token, None)
                 .await
-                .context("failed to close session")?;
+                .map_err(|e| classify(e, ResourceKind::Session))?;
         } else {
             // Close this session as is — the behavior is consistent with the implementation in qiskit-ibm-runtim.
             // Displays “Completed” on the IQP web.
@@ -253,7 +252,7 @@ impl QuantumResource for IBMQuantumComputeService {
                 Some(models::UpdateSessionRequest::new(false)),
             )
             .await
-            .context("failed to update session")?;
+            .map_err(|e| classify(e, ResourceKind::Session))?;
         }
         self.session_id = None;
         Ok(())
@@ -312,7 +311,7 @@ impl QuantumResource for IBMQuantumComputeService {
             ));
             let response = jobs_api::create_job(&self.config, None, None, Some(create_job_request))
                 .await
-                .context("failed to create job")?;
+                .map_err(|e| classify(e, ResourceKind::Backend))?;
 
             Ok(response.id)
         } else {
@@ -339,7 +338,7 @@ impl QuantumResource for IBMQuantumComputeService {
         }
         let job_details = jobs_api::get_job(&self.config, task_id, None, None)
             .await
-            .with_context(|| format!("failed to get job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         let status = job_details.status;
         if status == models::job_response::Status::Running
             || status == models::job_response::Status::Queued
@@ -369,7 +368,7 @@ impl QuantumResource for IBMQuantumComputeService {
         }
         let job_details = jobs_api::get_job(&self.config, task_id, None, None)
             .await
-            .with_context(|| format!("failed to get job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         let status = job_details.status;
         match status {
             models::job_response::Status::Running => Ok(TaskStatus::Running),
@@ -399,7 +398,7 @@ impl QuantumResource for IBMQuantumComputeService {
         } // Check if the task is completed before fetching the results.
         let job_details = jobs_api::get_job(&self.config, task_id, None, None)
             .await
-            .with_context(|| format!("failed to get job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         let status = job_details.status;
         if status != models::job_response::Status::Completed {
             return Err(QrmiError::TaskNotReady {
@@ -409,7 +408,7 @@ impl QuantumResource for IBMQuantumComputeService {
         }
         let results = jobs_api::get_job_results_jid(&self.config, task_id, None)
             .await
-            .with_context(|| format!("failed to get results for job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         Ok(TaskResult { value: results })
     }
 
@@ -418,7 +417,7 @@ impl QuantumResource for IBMQuantumComputeService {
     async fn task_logs(&mut self, task_id: &str) -> Result<String> {
         let logs = jobs_api::get_job_logs_jid(&self.config, task_id, None)
             .await
-            .with_context(|| format!("failed to get logs for job {task_id}"))?;
+            .map_err(|e| classify(e, ResourceKind::Job))?;
         Ok(logs)
     }
 

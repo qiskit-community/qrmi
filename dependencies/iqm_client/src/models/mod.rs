@@ -81,7 +81,7 @@ pub use self::iqm_server_job_sweep_progress::IqmServerJobSweepProgress;
 pub mod iqm_server_job_timeline_event;
 pub use self::iqm_server_job_timeline_event::IqmServerJobTimelineEvent;
 pub mod iqm_server_qc_health_status;
-pub use self::iqm_server_qc_health_status::IqmServerQcHealthStatus;
+pub use self::iqm_server_qc_health_status::{IqmServerQcHealthStatus, QcHealthDetail};
 pub mod iqm_server_qc_limits;
 pub use self::iqm_server_qc_limits::IqmServerQcLimits;
 pub mod iqm_server_qc_queue_overview;
