@@ -15,7 +15,8 @@
 //! generic across every vendor. Values of this type reach callers wrapped in
 //! `QrmiError::Ibm(_)` via `?` (see the `#[from]` on that variant).
 
-use crate::error::QrmiErrorKind;
+use crate::error::{QrmiError, QrmiErrorKind};
+use http::StatusCode;
 use thiserror::Error;
 
 /// Errors that only make sense in the context of IBM's backends (IBM Quantum
@@ -68,4 +69,78 @@ impl From<quantum_system_api::QuantumSystemError> for crate::QrmiError {
             other => crate::QrmiError::Other(anyhow::Error::new(other)),
         }
     }
+}
+
+/// Disambiguates a 404 from `quantum_compute_client` (used by
+/// [`crate::ibm::IBMQiskitRuntimeService`] and
+/// [`crate::ibm::IBMQuantumComputeService`]): on its own, the status code
+/// doesn't say whether it was a job, a session, or a backend that wasn't
+/// found.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum ResourceKind {
+    Backend,
+    Job,
+    Session,
+}
+
+/// Maps a failed `quantum_compute_client` call onto [`QrmiError`].
+/// `resource_kind` disambiguates a 404 (see [`ResourceKind`]).
+///
+/// Unlike `iqm_server_api` (see [`crate::iqm::error`]), every operation in
+/// this API reuses the same generic error body model (`ListJobs400Response`
+/// -- just a `trace`/`errors` pair) regardless of status, rather than a
+/// distinct *named* model per status the way IQM's `Unauthorized`/
+/// `JobNotFound` were. So there's nothing in the type system here to
+/// confirm what a given status actually means beyond the bare status code
+/// itself.
+///
+/// Classified conservatively as a result: 400 is consistently "the request
+/// itself was malformed" (`InvalidInput` -- literally what the reused
+/// model's name suggests it was originally modeled for), 401 is
+/// consistently "credentials missing or rejected" (`AuthenticationFailed`),
+/// and 404 maps to `ResourceNotFound`/`TaskNotFound` for a
+/// [`ResourceKind::Backend`]/[`ResourceKind::Job`] respectively. A 404 for
+/// [`ResourceKind::Session`] falls through to the generic case below
+/// instead: a session isn't a compute resource the way a backend is, and
+/// `QrmiError` doesn't have a variant that means "this session/acquisition
+/// doesn't exist" -- forcing it into `ResourceNotFound` would misrepresent
+/// what was actually missing, so it's left unclassified rather than
+/// mislabeled. 403 shows up on almost every endpoint here too, right
+/// alongside 401 -- but with no distinguishing model, and IQM having
+/// already taught us not to assume 403 means "access denied" without real
+/// evidence (see [`crate::iqm::error`]'s docs), it's deliberately left
+/// unclassified rather than guessed at.
+///
+/// Falls through to [`QrmiError::Other`] for a status this function
+/// doesn't otherwise recognize (403 and a `Session` 404 included), or for
+/// a transport-level failure (connection, TLS, JSON decoding, ...) that
+/// has no status at all. Either way `err` is kept as `source`; for the
+/// former, the response body is also attached via `.context(...)`, since
+/// `Error<T>`'s own `Display` only shows the bare status (e.g. `"status
+/// code 403 Forbidden"`), dropping whatever the server actually said.
+pub(crate) fn classify<T>(
+    err: quantum_compute_client::apis::Error<T>,
+    resource_kind: ResourceKind,
+) -> QrmiError
+where
+    T: std::fmt::Debug + Send + Sync + 'static,
+{
+    if let quantum_compute_client::apis::Error::ResponseError(ref content) = err {
+        let status = content.status;
+        let body = content.content.clone();
+        match (status, resource_kind) {
+            (StatusCode::BAD_REQUEST, _) => return QrmiError::InvalidInput(body),
+            (StatusCode::UNAUTHORIZED, _) => return QrmiError::AuthenticationFailed(body),
+            (StatusCode::NOT_FOUND, ResourceKind::Backend) => {
+                return QrmiError::ResourceNotFound(body)
+            }
+            (StatusCode::NOT_FOUND, ResourceKind::Job) => return QrmiError::TaskNotFound(body),
+            _ => {
+                return QrmiError::Other(
+                    anyhow::Error::new(err).context(format!("response body: {status} {body}")),
+                );
+            }
+        }
+    }
+    QrmiError::Other(anyhow::Error::new(err))
 }
