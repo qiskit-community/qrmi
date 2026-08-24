@@ -80,6 +80,12 @@ pub enum QrmiError {
     #[error("missing '{0}' in environment map")]
     MissingConfigKey(String),
 
+    /// A configuration value (or combination of values) was invalid in a way
+    /// that isn't a simple single-value parse failure -- e.g. two related
+    /// settings that are individually well-formed but inconsistent with each
+    /// other. See [`QrmiError::ParseError`] for the single-value case.
+    #[error("invalid configuration: {0}")]
+    InvalidConfig(String),
     /// The named resource (e.g. a backend) does not exist.
     #[error("resource not found: {0}")]
     ResourceNotFound(String),
@@ -146,6 +152,7 @@ impl QrmiError {
             QrmiError::UnsupportedPayload(_) => QrmiErrorKind::UnsupportedPayload,
             QrmiError::TaskNotReady { .. } => QrmiErrorKind::TaskNotReady,
             QrmiError::MissingConfigKey(_) => QrmiErrorKind::MissingConfigKey,
+            QrmiError::InvalidConfig(_) => QrmiErrorKind::InvalidConfig,
             QrmiError::ResourceNotFound(_) => QrmiErrorKind::ResourceNotFound,
             QrmiError::TaskNotFound(_) => QrmiErrorKind::TaskNotFound,
             QrmiError::AuthenticationFailed(_) => QrmiErrorKind::AuthenticationFailed,
@@ -182,6 +189,8 @@ pub enum QrmiErrorKind {
     TaskNotReady,
     /// A required key was missing from a provider's environment variable map.
     MissingConfigKey,
+    /// A configuration value (or combination of values) was invalid.
+    InvalidConfig,
     /// The named resource (e.g. a backend) does not exist.
     ResourceNotFound,
     /// The named task (e.g. a job) does not exist, or has already been

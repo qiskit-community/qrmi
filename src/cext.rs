@@ -11,16 +11,11 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 #![allow(dead_code)]
-use crate::alice_bob::AliceBobFelis;
 use crate::error::{QrmiError, QrmiErrorKind};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
-use crate::iqm::IQMServer;
 use crate::models::{Config, ResourceType, TaskStatus};
-use crate::pasqal::PasqalCloud;
-use crate::pasqal::PasqalLocal;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
@@ -60,6 +55,8 @@ pub enum ReturnCode {
     TaskNotFoundError = 112,
     /// The request's credentials were missing or rejected.
     AuthenticationFailedError = 113,
+    /// A configuration value (or combination of values) was invalid.
+    InvalidConfigError = 114,
 }
 
 impl From<QrmiErrorKind> for ReturnCode {
@@ -71,6 +68,7 @@ impl From<QrmiErrorKind> for ReturnCode {
             QrmiErrorKind::UnsupportedPayload => ReturnCode::UnsupportedPayloadError,
             QrmiErrorKind::TaskNotReady => ReturnCode::TaskNotReadyError,
             QrmiErrorKind::MissingConfigKey => ReturnCode::MissingConfigKeyError,
+            QrmiErrorKind::InvalidConfig => ReturnCode::InvalidConfigError,
             QrmiErrorKind::ResourceNotFound => ReturnCode::ResourceNotFoundError,
             QrmiErrorKind::TaskNotFound => ReturnCode::TaskNotFoundError,
             QrmiErrorKind::AuthenticationFailed => ReturnCode::AuthenticationFailedError,
@@ -213,7 +211,7 @@ pub struct ResourceMetadata {
 
 /// Quantum resource handle
 pub struct QuantumResource {
-    inner: Box<dyn crate::QuantumResource>,
+    inner: Box<dyn crate::QuantumResource + Send + Sync>,
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
@@ -773,57 +771,14 @@ pub unsafe extern "C" fn qrmi_resource_new(
     ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
 
     if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
-        let res: Box<dyn crate::QuantumResource> = match resource_type {
-            ResourceType::IBMQuantumSystem => match IBMQuantumSystem::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::QiskitRuntimeService => match IBMQiskitRuntimeService::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::IBMQuantumComputeService => match IBMQuantumComputeService::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::PasqalCloud => match PasqalCloud::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::PasqalLocal => match PasqalLocal::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::AliceBobFelis => match AliceBobFelis::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
-            ResourceType::IQMServer => match IQMServer::new(id_str) {
-                Ok(v) => Box::new(v),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            },
+        let res = match crate::common::create_resource(&resource_type, id_str) {
+            Ok(v) => v,
+            Err(err) => {
+                _record_error(err);
+                return std::ptr::null_mut();
+            }
         };
+
         let qrmi = Box::new(QuantumResource {
             inner: res,
             runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
@@ -2062,4 +2017,138 @@ pub unsafe extern "C" fn qrmi_provider_least_busy(
         }
         Err(err) => _fail(err),
     }
+}
+
+// ---------------------------------------------------------------------------
+// QRMIService C bindings
+// ---------------------------------------------------------------------------
+
+/// @ingroup QrmiService
+/// Discovers the QPU resources assigned to the current job -- read from the
+/// `QRMI_JOB_QPU_RESOURCES` / `QRMI_JOB_QPU_TYPES` environment variables, or
+/// their legacy `SLURM_JOB_QPU_RESOURCES` / `SLURM_JOB_QPU_TYPES`
+/// equivalents -- and returns the ones that are currently accessible.
+///
+/// This is the C counterpart of `qrmi.QRMIService` (Python) and
+/// `qrmi::QRMIService` (Rust); all three share the same underlying
+/// discovery/filtering logic.
+///
+/// Unlike qrmi_provider_resources(), which is called against a persistent
+/// QrmiResourceProvider handle (and can be called repeatedly, e.g. with
+/// different filters), this function takes no arguments and is a one-shot
+/// operation: there is no separate "service" handle to create or free.
+/// Discovery happens inline, and each QrmiQuantumResource handle placed in
+/// `resources_out` is independently owned by the caller from that point on
+/// -- usable with the same qrmi_resource_*() functions as a handle returned
+/// by qrmi_resource_new(), just not individually freed (see
+/// qrmi_service_resources_free() below).
+///
+/// The caller is responsible for freeing the returned struct with
+/// qrmi_service_resources_free(). Individual handles inside the struct must
+/// NOT be freed separately.
+///
+/// # Safety
+///
+/// * `resources_out` must be non-null and point to a zero-initialized
+///   QrmiQuantumResources.
+///
+/// # Example
+///
+/// @code
+///   QrmiQuantumResources resources = {0};
+///   QrmiReturnCode rc = qrmi_service_resources(&resources);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     for (size_t i = 0; i < resources.length; i++) {
+///       char *id = NULL;
+///       qrmi_resource_id(resources.resources[i], &id);
+///       printf("resource: %s\n", id);
+///       qrmi_string_free(id);
+///     }
+///     qrmi_service_resources_free(&resources);
+///   } else {
+///     const char *err = qrmi_get_last_error();
+///     printf("error: %s\n", err);
+///   }
+/// @endcode
+///
+/// @param (resources_out) [out] Pointer to a QrmiQuantumResources struct to populate
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.23.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_service_resources(
+    resources_out: *mut QuantumResources,
+) -> ReturnCode {
+    crate::common::initialize();
+    if resources_out.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    // One `Runtime`, shared (via `Arc`) across every `QuantumResource`
+    // handle this call produces -- same approach `qrmi_provider_resources`
+    // takes for the handles it produces, rather than each handle getting
+    // its own `Runtime` (contrast `PyQuantumResource` in `pyext.rs`, where
+    // each Python-visible object needs to be independently droppable and
+    // so does own its own).
+    let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
+    let result = runtime.block_on(async { crate::QRMIService::new().await });
+
+    match result {
+        Ok(service) => {
+            let resource_map = service.into_resource_map();
+            let count = resource_map.len();
+            let mut raw_ptrs: Vec<*mut QuantumResource> = resource_map
+                .into_values()
+                .map(|r| {
+                    Box::into_raw(Box::new(QuantumResource {
+                        inner: r,
+                        runtime: runtime.clone(),
+                    }))
+                })
+                .collect();
+
+            let ptr = raw_ptrs.as_mut_ptr();
+            std::mem::forget(raw_ptrs);
+
+            (*resources_out).resources = ptr;
+            (*resources_out).length = count;
+            ReturnCode::Success
+        }
+        Err(err) => _fail(err),
+    }
+}
+
+/// @ingroup QrmiService
+/// Frees a QrmiQuantumResources struct populated by qrmi_service_resources().
+///
+/// This frees both the individual QrmiQuantumResource handles and the
+/// internal array. After calling this, the struct's fields are zeroed.
+/// Do NOT call qrmi_resource_free() on individual elements after calling
+/// this.
+///
+/// # Safety
+///
+/// * `resources` must have been populated by a previous call to
+///   qrmi_service_resources().
+///
+/// # Example
+///
+/// @code
+///   qrmi_service_resources_free(&resources);
+/// @endcode
+///
+/// @param (resources) [in] Pointer to a QrmiQuantumResources struct to free
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.23.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_service_resources_free(
+    resources: *mut QuantumResources,
+) -> ReturnCode {
+    // Identical shape and freeing logic to `qrmi_provider_resources_free`
+    // (same `QuantumResources` struct, same ownership rules) -- delegate to
+    // it rather than duplicating the unsafe pointer-walking code. A
+    // separate function (rather than just telling callers to reuse
+    // `qrmi_provider_resources_free`) exists so the name at the call site
+    // matches the `qrmi_service_*` family it was populated by, and so it
+    // shows up under this file's `QrmiService` Doxygen group.
+    unsafe { qrmi_provider_resources_free(resources) }
 }
