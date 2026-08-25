@@ -39,7 +39,6 @@ pub type Result<T> = std::result::Result<T, QrmiError>;
 /// Defines interfaces to quantum resources.
 #[async_trait]
 pub trait QuantumResource: Send + Sync {
-    async fn resource_id(&mut self) -> Result<String>;
     /// Returns resource identifier of this quantum resource.
     ///
     /// # Example
@@ -55,7 +54,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn resource_type(&mut self) -> Result<ResourceType>;
+    async fn resource_id(&mut self) -> Result<String>;
     ///
     /// Returns resource type of this quantum resource.
     ///
@@ -64,11 +63,30 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let resource_type = qrmi.resource_type().await?;
-    ///     println!("{}", resource_type.as_str()); // prints "qiskit_runtime_service"
+    ///     println!("{}", resource_type.as_str()); // prints "ibm-quantum-compute-service"
+    ///     Ok(())
+    /// }
+    /// ```
+    async fn resource_type(&mut self) -> Result<ResourceType>;
+
+    /// Returns true if device is accessible, otherwise false. A target quantum resource is not considered accessible if quantum workloads cannot be executed, even when the system itself is reachable, for example due to maintenance.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
+    ///
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
+    ///     let accessible = qrmi.is_accessible().await?;
+    ///     if !accessible {
+    ///         println!("ibm_torino is not accessible");
+    ///     }
     ///     Ok(())
     /// }
     /// ```
