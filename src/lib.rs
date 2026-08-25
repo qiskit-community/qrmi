@@ -46,16 +46,16 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let resource_id = qrmi.resource_id().await?;
     ///     println!("{resource_id}"); // prints "ibm_torino"
     ///     Ok(())
     /// }
     /// ```
     async fn resource_id(&mut self) -> Result<String>;
-    ///
+
     /// Returns resource type of this quantum resource.
     ///
     /// # Example
@@ -99,8 +99,8 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let token = qrmi.acquire().await?;
     ///     println!("acquisition token = {}", token);
     ///     Ok(())
@@ -115,8 +115,8 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     qrmi.release("your_acquisition_token").await?;
     ///     Ok(())
     /// }
@@ -137,9 +137,9 @@ pub trait QuantumResource: Send + Sync {
     ///     use std::fs::File;
     ///     use std::io::prelude::*;
     ///     use std::io::BufReader;
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///
     ///     let f = File::open("sampler_input.json").expect("file not found");
     ///     let mut buf_reader = BufReader::new(f);
@@ -168,9 +168,9 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     qrmi.task_stop("your_task_id").await?;
     ///     Ok(())
     /// }
@@ -188,9 +188,9 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let status = qrmi.task_status("your_task_id").await?;
     ///     println!("{:?}", status);
     ///     Ok(())
@@ -209,10 +209,10 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
     ///     let job_id = "4EAAA9E2-AD53-4C5C-8EF1-C1A3F219C427";
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let result = qrmi.task_result(&job_id).await?;
     ///     println!("{:?}", result.value);
     ///     Ok(())
@@ -231,10 +231,10 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
     ///     let job_id = "4EAAA9E2-AD53-4C5C-8EF1-C1A3F219C427";
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let log = qrmi.task_logs(&job_id).await?;
     ///     println!("{:?}", log);
     ///     Ok(())
@@ -247,9 +247,9 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let target = qrmi.target().await?;
     ///     println!("{:?}", target.value);
     ///     Ok(())
@@ -264,9 +264,9 @@ pub trait QuantumResource: Send + Sync {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use qrmi::{ibm::IBMQiskitRuntimeService, QuantumResource};
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///
-    ///     let mut qrmi = IBMQiskitRuntimeService::new("ibm_torino")?;
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let metadata = qrmi.metadata().await;
     ///     println!("{:?}", metadata);
     ///     Ok(())
