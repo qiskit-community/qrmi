@@ -15,7 +15,7 @@
 # review/merging of PRs in different subsections of the repository.
 
 # Global rule
-* @ohtanim @awennersteen @OkuyanBoga
+* @ohtanim @awennersteen @OkuyanBoga @MatthieuMoreau0 @badtst
 
 # QRMI folders (also their corresponding tests)
 /src/pasqal/                                    @awennersteen @MatthieuMoreau0
@@ -37,11 +37,12 @@
 /dependencies/iqm_client/                       @ohtanim @yoonho
 /examples/qiskit_primitives/ibm/                @ohtanim @OkuyanBoga
 /examples/qiskit_primitives/iqm/                @ohtanim @yoonho
-/examples/**/quantum_compute_service/            @OkuyanBoga @ohtanim
+/examples/**/quantum_compute_service/           @OkuyanBoga @ohtanim
 /examples/**/ibm_quantum_system/                @ohtanim @yoonho
 /examples/**/iqm_server/                        @ohtanim @yoonho
 /examples/task_runner/qiskit/                   @ohtanim @OkuyanBoga
 /examples/task_runner/iqm/                      @ohtanim @yoonho
+/lua                                            @ohtanim @yoonho
 
 /src/alice_bob/                                 @machjn
 /dependencies/alice_bob_felis_client/           @machjn
