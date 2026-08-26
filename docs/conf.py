@@ -85,9 +85,6 @@ linkcheck_ignore = [
     r"https://crates.io/crates/log",
     r"https://github.com/Qiskit/ibm-quantum-schemas/.*",
     r"https://resonance.iqm.tech/",
-    # r"https://qisk.it/.*",
-    # r"https://github.com/.*/tree/.*",
-    # r"https://github.com/.*/blob/.*",
 ]
 
 # Optional but recommended

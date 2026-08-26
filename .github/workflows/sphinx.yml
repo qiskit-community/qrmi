@@ -15,6 +15,7 @@ on:
       - 'Cargo.toml'
       - 'pyproject.toml'
       - 'Doxyfile'
+
   pull_request:  
     branches:
     - main
@@ -26,7 +27,14 @@ on:
       - 'Cargo.toml'
       - 'pyproject.toml'
       - 'Doxyfile'
+
   workflow_dispatch:
+
+  release:
+    type:
+      - published
+
+  merge_group:
 
 permissions:
   contents: read
@@ -34,7 +42,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -57,11 +65,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[docs]
+          pip install -e ".[all, docs]"
 
       - name: Build Python API documentation
         run: |
-          pip install -e .[all]
           sphinx-apidoc --no-toc -o docs/_api/python/ python/qrmi/
 
       - name: Verify Python API documentation
@@ -95,6 +102,14 @@ jobs:
       - name: Verify Doxygen HTML
         run: |
           test -s build/doxygen/html/index.html
+
+      - name: Cache Sphinx doctrees
+        uses: actions/cache@v4
+        with:
+          path: docs/_build/.doctrees
+          key: sphinx-${{runner.os}}-${{hashFiles('docs/**/*.rst', 'docs/**/*.md', 'docs/conf.py', 'python/**/*.py')}}
+          restore-keys: |
+            sphinx-${{runner.os}}-
 
       - name: Build Sphinx documentation
         run: |
