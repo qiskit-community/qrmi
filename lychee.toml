@@ -27,6 +27,17 @@ retry_wait_time = 10
 # Exclude URLs and mail addresses from checking. The values are treated as regular expressions
 exclude = [
     '^http://localhost*',
+
+    # GitHub Pages links that may not exist in PR builds
+    "https://qiskit-community.github.io/qrmi/.*",
+
+    # Provider authenticated/API endpoints
+    "https://iam.cloud.ibm.com/.*",
+    "https://quantum.cloud.ibm.com/.*",
+    "https://s3.us-east.cloud-object-storage.appdomain.cloud/.*",
+    "https://resonance.meetiqm.com/.*",
+    "https://api.alice-bob.com/.*",
+
     'dependencies/alice_bob_felis_client/felis_generated/docs/*',
     'dependencies/alice_bob_felis_client/felis_generated/src/*',
     'dependencies/alice_bob_felis_client/felis_generated/.openapi-generator/*',
