@@ -25,7 +25,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dynamic = ["version"]
-license = {file = "LICENSE.txt"}
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
 readme = "README.md"
 description = "Quantum Resource Management Interface(QRMI)"
 description_content_type = "text/markdown"
