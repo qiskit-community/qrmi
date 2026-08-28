@@ -30,6 +30,57 @@ pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
 
+// Everything below runs entirely INSIDE THE COMPILER (rustc), while it
+// is compiling this crate. None of it produces runtime instructions in
+// the final binary — only the final, already-computed byte array is
+// emitted into the `.version_info` ELF section. When spank_qrmi loads
+// this library and runs, none of this code executes again; there is
+// nothing left to execute, only static data sitting in the binary.
+
+// `env!` and `concat!` are macros: they are expanded by the compiler's
+// macro expansion pass, long before any type-checking or codegen. This
+// is NOT the same as calling `std::env::var(...)` at runtime — the
+// value of GIT_HASH (set by build.rs above) is baked into the source
+// text itself as if you had typed the literal string by hand.
+const VERSION_STR: &str = concat!(
+    "QRMI_BUILD_VERSION:", env!("CARGO_PKG_VERSION"),
+    ";QRMI_GIT_HASH:", env!("GIT_HASH"),
+);
+
+// A `const` is evaluated by the compiler's constant evaluator (CTFE —
+// Compile-Time Function Evaluation) at compile time. `.len()` on a
+// `&'static str` is computed here, not when the plugin runs.
+const VERSION_LEN: usize = VERSION_STR.len() + 1;
+
+// A `const fn` can be called from a `const` context, in which case the
+// compiler runs its body through CTFE — effectively a small interpreter
+// built into rustc — during compilation, not at runtime. The `while`
+// loop below never becomes a real loop in the compiled machine code;
+// rustc executes it once, internally, while compiling, and only the
+// resulting array of bytes is kept.
+const fn str_to_array<const N: usize>(s: &str) -> [u8; N] {
+    let bytes = s.as_bytes();
+    let mut arr = [0u8; N];
+    let mut i = 0;
+    while i < bytes.len() {
+        arr[i] = bytes[i];
+        i += 1;
+    }
+    arr
+}
+
+// By the time we reach this line, `str_to_array(VERSION_STR)` has
+// ALREADY been fully evaluated by the compiler; VERSION_INFO's contents
+// are a fixed, known byte sequence baked directly into the binary's
+// `.version_info` section (see #[link_section] below). `#[used]` and
+// `#[no_mangle]` are linker/codegen directives, not runtime behavior:
+// they only affect whether/how the linker keeps and names this data —
+// they do not cause any code to run when the plugin is loaded.
+#[no_mangle]
+#[used]
+#[link_section = ".version_info"]
+pub static VERSION_INFO: [u8; VERSION_LEN] = str_to_array(VERSION_STR);
+
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use async_trait::async_trait;
 
