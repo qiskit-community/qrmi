@@ -125,6 +125,11 @@ the same `.version_info` section:
 $ strings spank_qrmi.so | grep -E "SPANK_QRMI|QRMI_BUILD"
 SPANK_QRMI_VERSION=0.11.0;SPANK_QRMI_GIT_HASH=0dac1793b013
 QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:0dac1793b013
+
+$ readelf -p .version_info spank_qrmi.so
+String dump of section '.version_info':
+  [     0]  SPANK_QRMI_VERSION=0.11.0;SPANK_QRMI_GIT_HASH=3845dd911381
+  [    3b]  QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:7a9573703ac4
 ```
 
 The two are independent: `SPANK_QRMI_*` describes the plugin binary
