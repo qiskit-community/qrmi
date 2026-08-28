@@ -128,13 +128,13 @@ QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:0dac1793b013
 ```
 
 The two are independent: `SPANK_QRMI_*` describes the plugin binary
-itself, `QRMI_BUILD_VERSION`/`GIT_HASH` describes the QRMI crate it was
-linked against. See the spank_qrmi plugin's own FAQ for details on the
+itself, `QRMI_BUILD_VERSION`/`QRMI_GIT_HASH` describes the QRMI crate it was
+linked against. See the spank_qrmi plugin's own [FAQ](https://github.com/qiskit-community/spank-plugins/blob/main/docs/FAQ.md) for details on the
 former.
 
 #### Notes
 
-- If `GIT_HASH` shows `unknown`, QRMI was most likely built from a source
+- If `QRMI_GIT_HASH` shows `unknown`, QRMI was most likely built from a source
   tree without a `.git` directory (e.g. an extracted release tarball, or a
   local checkout pointed at via `QRMI_ROOT` in the consuming project's
   build).
