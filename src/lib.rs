@@ -43,8 +43,10 @@ pub mod pyext;
 // value of GIT_HASH (set by build.rs above) is baked into the source
 // text itself as if you had typed the literal string by hand.
 const VERSION_STR: &str = concat!(
-    "QRMI_BUILD_VERSION:", env!("CARGO_PKG_VERSION"),
-    ";QRMI_GIT_HASH:", env!("GIT_HASH"),
+    "QRMI_BUILD_VERSION:",
+    env!("CARGO_PKG_VERSION"),
+    ";QRMI_GIT_HASH:",
+    env!("GIT_HASH"),
 );
 
 // A `const` is evaluated by the compiler's constant evaluator (CTFE —
