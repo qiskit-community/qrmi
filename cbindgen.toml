@@ -64,3 +64,14 @@ rename_variants = "ScreamingSnakeCase"
 "ResourceDef" = "QrmiResourceDef"
 "Payload" = "QrmiPayload"
 "ReturnCode" = "QrmiReturnCode"
+
+[export]
+# VERSION_INFO is a build-time marker embedded into the `.version_info` ELF
+# section for offline inspection via `strings`/`readelf` (see lib.rs). It is
+# not a real part of the public C API and isn't meant to be called or read
+# from C code, so we exclude it from the generated header. Without this,
+# cbindgen emits `extern const uint8_t VERSION_INFO[VERSION_LEN];`, but
+# VERSION_LEN is a private (non-`pub`) const that cbindgen silently skips,
+# leaving VERSION_LEN undeclared in the generated qrmi.h and breaking the C
+# build with "'VERSION_LEN' undeclared here".
+exclude = ["VERSION_INFO"]
