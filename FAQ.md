@@ -87,14 +87,14 @@ any binary that links it), so you can check it without running the code.
 #### Using `strings`
 
 ```shell-session
-$ strings /path/to/spank_qrmi.so | grep QRMI_BUILD_VERSION
+$ strings /path/to/libqrmi.so | grep QRMI_BUILD_VERSION
 QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:0dac1793b013
 ```
 
 #### Using `readelf`
 
 ```shell-session
-$ readelf -p .version_info /path/to/spank_qrmi.so
+$ readelf -p .version_info /path/to/libqrmi.so
 
 String dump of section '.version_info':
   [    4f]  QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:0dac1793b013
