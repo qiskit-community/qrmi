@@ -147,7 +147,7 @@ class QRMIBackend(BackendV2):
             )
             self._target = convert_to_target(
                 configuration=self._configuration,  # type: ignore[arg-type]
-                prperties=self._properties,
+                properties=self._properties,
             )
 
     @property
