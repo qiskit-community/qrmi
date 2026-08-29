@@ -80,6 +80,9 @@ You are not authorized to run a session when using the open plan.
 
 ### How can I check which version of QRMI is linked into a binary?
 
+> [!NOTE]
+> Linux only.
+
 Every build of QRMI embeds its own crate version and git commit hash
 directly into the compiled artifact (shared library, static library, or
 any binary that links it), so you can check it without running the code.
