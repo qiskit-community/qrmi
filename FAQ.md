@@ -80,6 +80,9 @@ You are not authorized to run a session when using the open plan.
 
 ### How can I check which version of QRMI is linked into a binary?
 
+> [!NOTE]
+> Linux only.
+
 Every build of QRMI embeds its own crate version and git commit hash
 directly into the compiled artifact (shared library, static library, or
 any binary that links it), so you can check it without running the code.
@@ -122,13 +125,13 @@ rebuilding or adding logging.
 the same `.version_info` section:
 
 ```shell-session
-$ strings spank_qrmi.so | grep -E "SPANK_QRMI|QRMI_BUILD"
-SPANK_QRMI_VERSION=0.11.0;SPANK_QRMI_GIT_HASH=0dac1793b013
+$ strings /path/to/spank_qrmi.so | grep -E "SPANK_QRMI|QRMI_BUILD"
+SPANK_QRMI_BUILD_VERSION=0.11.0;SPANK_QRMI_GIT_HASH=0dac1793b013
 QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:0dac1793b013
 
-$ readelf -p .version_info spank_qrmi.so
+$ readelf -p .version_info /path/to/spank_qrmi.so
 String dump of section '.version_info':
-  [     0]  SPANK_QRMI_VERSION=0.11.0;SPANK_QRMI_GIT_HASH=3845dd911381
+  [     0]  SPANK_QRMI_BUILD_VERSION=0.11.0;SPANK_QRMI_GIT_HASH=3845dd911381
   [    3b]  QRMI_BUILD_VERSION:0.24.0;QRMI_GIT_HASH:7a9573703ac4
 ```
 
