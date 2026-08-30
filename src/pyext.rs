@@ -28,12 +28,12 @@ use tokio::runtime::Runtime;
 // `pyext::ResourceType`, `pyext::EnvVarNotSetError`, etc. keep working
 // unchanged.
 pub(crate) mod common;
+use common::to_py_err;
 pub use common::{
     AuthenticationFailedError, ConfigError, EnvVarNotSetError, InvalidInputError, QrmiError_,
     ResourceNotFoundError, ResourceType, TaskNotFoundError, TaskNotReadyError,
     UnsupportedPayloadError, UnsupportedResourceTypeError,
 };
-use common::to_py_err;
 
 #[gen_stub_pyclass]
 #[pyclass]
