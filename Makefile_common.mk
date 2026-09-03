@@ -33,6 +33,8 @@ CMAKE_BUILD_TYPE = Release
 endif
 
 LIBQRMI_SO_PATH = target/$(CARGO_PROFILE_DIR)/libqrmi.so
+QRMI_SOURCE_TARBALL_PATH = $(DIST_DIR)/qrmi-$(QRMI_VERSION).tar.gz
+QRMI_VENDOR_TARBALL_PATH = $(DIST_DIR)/qrmi-vendor-$(QRMI_VERSION).tar.gz
 
 ifeq ($(INSIDE_CONTAINER),1)
 CONTAINER_ENGINE = inside_container

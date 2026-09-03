@@ -13,6 +13,7 @@ ENV INSIDE_CONTAINER=1
 WORKDIR ${QRMI_DIR}
 
 RUN \
+  dnf install -y rpm-build gcc gcc-c++ make cmake openssl-devel zlib-devel pkg-config && \
   curl -sSf https://sh.rustup.rs | sh -s -- -y && \
   source ~/.cargo/env && \
   make build && \
