@@ -48,7 +48,8 @@ dependencies = [
 
 [project.optional-dependencies]
 ibm = [
-  "qiskit_ibm_runtime>=0.30.0",
+  # 0.46+ requires Qiskit/Pydantic versions incompatible with IQM Client 35.x.
+  "qiskit_ibm_runtime>=0.30.0,<0.46.0",
   "qiskit_qasm3_import",
 ]
 pasqal = [
@@ -56,7 +57,9 @@ pasqal = [
   "pulser>=1.9.0",
 ]
 iqm = [
-  "iqm-client[qiskit]",
+  # Keep IQM's client, pulse, and station-control packages on the co-released
+  # 35.x line.  QRMIBackend imports APIs introduced by that SDK generation.
+  "iqm-client[qiskit-pin-iqm]>=35.0.1,<36.0.0",
 ]
 alice-bob = [
   "qiskit-alice-bob-provider",
