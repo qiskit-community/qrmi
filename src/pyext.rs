@@ -11,135 +11,29 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{QrmiError, QrmiErrorKind};
+use crate::error::QrmiError;
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
 use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use pyo3::prelude::*;
-use pyo3_stub_gen::{create_exception, define_stub_info_gatherer, derive::*};
+use pyo3_stub_gen::{define_stub_info_gatherer, derive::*};
 use tokio::runtime::Runtime;
 
-create_exception!(
-    qrmi._core,
-    QrmiError_,
-    pyo3::exceptions::PyRuntimeError,
-    "Base class for all QRMI-specific errors. Catching this catches any \
-     error QRMI itself raises (as opposed to errors surfaced verbatim from \
-     an underlying vendor library)."
-);
-create_exception!(
-    qrmi._core,
-    EnvVarNotSetError,
-    QrmiError_,
-    "A required environment variable was not set."
-);
-create_exception!(
-    qrmi._core,
-    ConfigError,
-    QrmiError_,
-    "A configuration value was missing, could not be parsed, or was \
-     otherwise invalid (covers `QrmiError::ParseError`, \
-     `QrmiError::MissingConfigKey`, and `QrmiError::InvalidConfig`)."
-);
-create_exception!(
-    qrmi._core,
-    UnsupportedResourceTypeError,
-    QrmiError_,
-    "Dynamic discovery was requested for an unsupported resource type."
-);
-create_exception!(
-    qrmi._core,
-    UnsupportedPayloadError,
-    QrmiError_,
-    "The payload (or a value within it, such as a program ID) is not \
-     supported by this backend."
-);
-create_exception!(
-    qrmi._core,
-    TaskNotReadyError,
-    QrmiError_,
-    "The task is not in a state that allows the requested operation \
-     (e.g. its result was requested while it is still running)."
-);
-create_exception!(
-    qrmi._core,
-    InvalidInputError,
-    QrmiError_,
-    "A value QRMI was given was invalid, whether QRMI itself rejected it \\
-     locally (e.g. a malformed `filters` string, JSON, or UTF-8) or a \\
-     vendor's API rejected the resulting request after receiving it."
-);
-create_exception!(
-    qrmi._core,
-    ResourceNotFoundError,
-    QrmiError_,
-    "The named resource (e.g. a backend) does not exist."
-);
-create_exception!(
-    qrmi._core,
-    TaskNotFoundError,
-    QrmiError_,
-    "The named task (e.g. a job) does not exist, or has already been removed."
-);
-create_exception!(
-    qrmi._core,
-    AuthenticationFailedError,
-    QrmiError_,
-    "The request's credentials were missing or rejected by the vendor's API."
-);
-
-/// Converts a [`QrmiError`] into the [`PyErr`] subclass matching its kind,
-/// so Python code can `except qrmi.TaskNotReadyError` instead of parsing
-/// `RuntimeError` message text. See `QrmiError::kind` for the mapping.
-fn to_py_err(err: QrmiError) -> PyErr {
-    let msg = err.to_string();
-    match err.kind() {
-        QrmiErrorKind::EnvVarNotSet => EnvVarNotSetError::new_err(msg),
-        QrmiErrorKind::ParseError
-        | QrmiErrorKind::MissingConfigKey
-        | QrmiErrorKind::InvalidConfig => ConfigError::new_err(msg),
-        QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
-        QrmiErrorKind::UnsupportedPayload => UnsupportedPayloadError::new_err(msg),
-        QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
-        QrmiErrorKind::InvalidInput => InvalidInputError::new_err(msg),
-        QrmiErrorKind::ResourceNotFound => ResourceNotFoundError::new_err(msg),
-        QrmiErrorKind::TaskNotFound => TaskNotFoundError::new_err(msg),
-        QrmiErrorKind::AuthenticationFailed => AuthenticationFailedError::new_err(msg),
-        QrmiErrorKind::Other => QrmiError_::new_err(msg),
-    }
-}
-
-#[pyclass(eq, eq_int, hash, frozen, from_py_object)]
-#[gen_stub_pyclass_enum]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ResourceType {
-    IBMQuantumSystem,
-    IBMQiskitRuntimeService,
-    IBMQuantumComputeService,
-    PasqalCloud,
-    PasqalLocal,
-    AliceBobFelis,
-    IQMServer,
-}
-impl From<ResourceType> for crate::models::ResourceType {
-    fn from(value: ResourceType) -> Self {
-        match value {
-            ResourceType::IBMQuantumSystem => crate::models::ResourceType::IBMQuantumSystem,
-            ResourceType::IBMQiskitRuntimeService => {
-                crate::models::ResourceType::QiskitRuntimeService
-            }
-            ResourceType::IBMQuantumComputeService => {
-                crate::models::ResourceType::IBMQuantumComputeService
-            }
-            ResourceType::PasqalCloud => crate::models::ResourceType::PasqalCloud,
-            ResourceType::PasqalLocal => crate::models::ResourceType::PasqalLocal,
-            ResourceType::AliceBobFelis => crate::models::ResourceType::AliceBobFelis,
-            ResourceType::IQMServer => crate::models::ResourceType::IQMServer,
-        }
-    }
-}
+// Cross-cutting pieces (the `QrmiError` exception hierarchy, `to_py_err`,
+// and the `ResourceType` <-> `crate::models::ResourceType` conversions)
+// live in `pyext::common` so `pyext_async` can reuse them via `pub(crate)`
+// instead of duplicating them. Re-exported here so existing references to
+// `pyext::ResourceType`, `pyext::EnvVarNotSetError`, etc. keep working
+// unchanged.
+pub(crate) mod common;
+use common::to_py_err;
+pub use common::{
+    AuthenticationFailedError, ConfigError, EnvVarNotSetError, InvalidInputError, QrmiError_,
+    ResourceNotFoundError, ResourceType, TaskNotFoundError, TaskNotReadyError,
+    UnsupportedPayloadError, UnsupportedResourceTypeError,
+};
 
 #[gen_stub_pyclass]
 #[pyclass]
@@ -223,22 +117,7 @@ impl PyQuantumResource {
     fn resource_type(&mut self, py: Python<'_>) -> PyResult<ResourceType> {
         crate::common::initialize();
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.resource_type().await }));
-        match result {
-            Ok(v) => Ok(match v {
-                crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
-                crate::models::ResourceType::QiskitRuntimeService => {
-                    ResourceType::IBMQiskitRuntimeService
-                }
-                crate::models::ResourceType::IBMQuantumComputeService => {
-                    ResourceType::IBMQuantumComputeService
-                }
-                crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
-                crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
-                crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
-                crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
-            }),
-            Err(e) => Err(to_py_err(e)),
-        }
+        result.map(ResourceType::from).map_err(to_py_err)
     }
 
     fn acquire(&mut self, py: Python<'_>) -> PyResult<String> {
@@ -360,19 +239,7 @@ impl PyResourceDef {
     /// Resource type.
     #[getter]
     pub fn resource_type(&self) -> ResourceType {
-        match self.inner.r#type {
-            crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
-            crate::models::ResourceType::QiskitRuntimeService => {
-                ResourceType::IBMQiskitRuntimeService
-            }
-            crate::models::ResourceType::IBMQuantumComputeService => {
-                ResourceType::IBMQuantumComputeService
-            }
-            crate::models::ResourceType::PasqalCloud => ResourceType::PasqalCloud,
-            crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
-            crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
-            crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
-        }
+        ResourceType::from(self.inner.r#type.clone())
     }
 
     /// Whether this resource definition is dynamic.
@@ -817,6 +684,8 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
     m.add_class::<PyQRMIService>()?;
+    #[cfg(feature = "pyo3-async")]
+    m.add_class::<crate::pyext_async::PyAsyncQuantumResource>()?;
 
     // Register the QrmiError exception hierarchy so Python code can catch
     // them by name (e.g. `except qrmi.TaskNotReadyError`). `create_exception!`
