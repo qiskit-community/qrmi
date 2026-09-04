@@ -184,7 +184,8 @@ clean-c-examples:
 
 clean-tarballs:
 	rm -f $(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-x86_64.tar.gz
-	rm -f $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz
+	rm -f $(QRMI_SOURCE_TARBALL_PATH)
+	rm -f $(QRMI_VENDOR_TARBALL_PATH)
 
 clean-wheels:
 	rm -rf $(DIST_DIR)/wheelhouse
@@ -216,14 +217,24 @@ doc-c: check-doxygen-installed
 # Packaging targets
 # ------------------------------------------------
 
-.PHONY: vendor-tarball libqrmi-tarball pypi-sdist
+.PHONY: source-tarball vendor-tarball libqrmi-tarball pypi-sdist
 
-vendor-tarball:
+vendor-tarball: $(QRMI_VENDOR_TARBALL_PATH)
+
+$(QRMI_VENDOR_TARBALL_PATH):
 	cargo vendor $(DIST_DIR)/vendor
-	@tar czf $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz vendor/
+	@tar czf $(QRMI_VENDOR_TARBALL_PATH) vendor/
 	@rm -rf $(DIST_DIR)/vendor
 	@echo
-	@echo "Created: $(DIST_DIR)/qrmi-$(QRMI_VERSION)-vendor.tar.gz"
+	@echo "Created: $(QRMI_VENDOR_TARBALL_PATH)"
+
+source-tarball: $(QRMI_SOURCE_TARBALL_PATH)
+
+$(QRMI_SOURCE_TARBALL_PATH):
+	git archive --format=tar.gz \
+	  --prefix=qrmi-$(QRMI_VERSION)/ \
+	  HEAD \
+	  -o $(QRMI_SOURCE_TARBALL_PATH)
 
 libqrmi-tarball: $(LIBQRMI_SO_PATH)
 	@TARBALL="$(DIST_DIR)/libqrmi-$(QRMI_VERSION)-el8-$(ARCH).tar.gz" && \
@@ -234,6 +245,19 @@ libqrmi-tarball: $(LIBQRMI_SO_PATH)
 	cp LICENSE.txt $$WORKDIR && \
 	tar czf $$TARBALL -C $(DIST_DIR) libqrmi-$(QRMI_VERSION) && \
 	rm -rf $$WORKDIR
+
+libqrmi-rpm: $(QRMI_SOURCE_TARBALL_PATH) $(QRMI_VENDOR_TARBALL_PATH)
+	mkdir -p ./rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+	cp $(QRMI_SOURCE_TARBALL_PATH) ./rpmbuild/SOURCES/
+	cp $(QRMI_VENDOR_TARBALL_PATH) ./rpmbuild/SOURCES/
+	cp packaging/rpm/libqrmi.spec  ./rpmbuild/SPECS/
+	rpmbuild -ba \
+	  --define "_topdir $$PWD/rpmbuild" \
+	  --define "version $(QRMI_VERSION)" \
+	  ./rpmbuild/SPECS/libqrmi.spec
+	rm -rf ./rpmbuild/BUILD ./rpmbuild/BUILDROOT
+	@echo
+	@echo "libqrmi rpm file created in ./rpmbuild/RPMS"
 
 pypi-sdist: $(PYTHON_VENV_DIR)
 	@source $(PYTHON_VENV_ACTIVATE) && \
@@ -312,6 +336,8 @@ Setup targets:
 
 Packaging targets:
     [./run_in_container.sh] libqrmi-tarball      - Create versioned libqrmi tarball with libqrmi.so and qrmi.h
+                                                   for RHEL8 compatible distributions
+    [./run_in_container.sh] libqrmi-rpm          - Create versioned libqrmi rpm with libqrmi.so and qrmi.h
                                                    for RHEL8 compatible distributions
     [./run_in_container.sh] vendor-tarball       - Create versioned vendor tarball in DIST_DIR (default: ./).
                                                    It can be used to build the qrmi version locally without
