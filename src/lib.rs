@@ -25,8 +25,6 @@ pub use resource_provider::ResourceProvider;
 pub mod service;
 pub use service::QRMIService;
 
-use uuid::Uuid;
-
 mod cext;
 pub mod models;
 #[cfg(feature = "pyo3")]
