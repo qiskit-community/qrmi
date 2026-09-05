@@ -58,6 +58,12 @@ create_exception!(
 );
 create_exception!(
     qrmi._core,
+    UnsupportedFunctionError,
+    QrmiError_,
+    "The requested operation is not supported by this resource."
+);
+create_exception!(
+    qrmi._core,
     TaskNotReadyError,
     QrmiError_,
     "The task is not in a state that allows the requested operation \
@@ -102,6 +108,7 @@ fn to_py_err(err: QrmiError) -> PyErr {
         | QrmiErrorKind::InvalidConfig => ConfigError::new_err(msg),
         QrmiErrorKind::UnsupportedResourceType => UnsupportedResourceTypeError::new_err(msg),
         QrmiErrorKind::UnsupportedPayload => UnsupportedPayloadError::new_err(msg),
+        QrmiErrorKind::UnsupportedFunction => UnsupportedFunctionError::new_err(msg),
         QrmiErrorKind::TaskNotReady => TaskNotReadyError::new_err(msg),
         QrmiErrorKind::InvalidInput => InvalidInputError::new_err(msg),
         QrmiErrorKind::ResourceNotFound => ResourceNotFoundError::new_err(msg),

@@ -69,6 +69,11 @@ pub enum QrmiError {
     #[error("payload type is not supported: {0}")]
     UnsupportedPayload(String),
 
+    /// The requested operation is not supported by this backend's
+    /// implementation of `QuantumResource`.
+    #[error("unsupported function: {0}")]
+    UnsupportedFunction(String),
+
     /// The task is not in a state that allows the requested operation
     /// (e.g. asking for the result of a task that is still running).
     #[error("unable to retrieve result for task {task_id}: {reason}")]
@@ -150,6 +155,7 @@ impl QrmiError {
             QrmiError::ParseError { .. } => QrmiErrorKind::ParseError,
             QrmiError::UnsupportedResourceType(_) => QrmiErrorKind::UnsupportedResourceType,
             QrmiError::UnsupportedPayload(_) => QrmiErrorKind::UnsupportedPayload,
+            QrmiError::UnsupportedFunction(_) => QrmiErrorKind::UnsupportedFunction,
             QrmiError::TaskNotReady { .. } => QrmiErrorKind::TaskNotReady,
             QrmiError::MissingConfigKey(_) => QrmiErrorKind::MissingConfigKey,
             QrmiError::InvalidConfig(_) => QrmiErrorKind::InvalidConfig,
@@ -185,6 +191,8 @@ pub enum QrmiErrorKind {
     UnsupportedResourceType,
     /// The payload variant is not supported by this backend.
     UnsupportedPayload,
+    /// The requested operation is not supported by this resource.
+    UnsupportedFunction,
     /// The task is not in a state that allows the requested operation.
     TaskNotReady,
     /// A required key was missing from a provider's environment variable map.
