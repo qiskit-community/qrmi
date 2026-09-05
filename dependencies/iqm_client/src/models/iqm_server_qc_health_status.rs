@@ -15,6 +15,16 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
+/// Returns the fallback value for the operational field when the key is
+/// absent from the response payload entirely.
+/// Older IQM server versions predate the introduction of operational/operational_status
+/// and never include either key. In that case we assume the quantum computer
+/// is operational, since these older servers did not expose a mechanism to
+/// report otherwise.
+fn default_operational() -> String {
+    "online".to_string()
+}
+
 /// IqmServerQcHealthStatus : The current computer health status.
 ///
 /// NOTE: hand-patched, not regenerated from the OpenAPI spec. The live IQM
@@ -31,7 +41,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct IqmServerQcHealthStatus {
     /// Whether the quantum computer is currently accepting jobs.
-    #[serde(rename = "operational")]
+    #[serde(
+        rename = "operational",
+        alias = "operational_status",
+        default = "default_operational"
+    )]
     pub operational: String,
     #[serde(rename = "health")]
     pub health: Box<models::QcHealthDetail>,
