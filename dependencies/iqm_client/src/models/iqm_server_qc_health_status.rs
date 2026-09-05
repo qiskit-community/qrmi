@@ -28,10 +28,19 @@ use serde::{Deserialize, Serialize};
 /// enough without touching that function. Revert this patch once the crate
 /// is regenerated from an OpenAPI spec that reflects the server's current
 /// response shape.
+
+fn default_operational() -> String {
+    "online".to_string()
+}
+
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct IqmServerQcHealthStatus {
     /// Whether the quantum computer is currently accepting jobs.
-    #[serde(rename = "operational")]
+    #[serde(
+        rename = "operational",
+        alias = "operational_status",
+        default = "default_operational"
+    )]
     pub operational: String,
     #[serde(rename = "health")]
     pub health: Box<models::QcHealthDetail>,
