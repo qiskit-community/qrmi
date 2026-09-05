@@ -29,6 +29,13 @@ use serde::{Deserialize, Serialize};
 /// is regenerated from an OpenAPI spec that reflects the server's current
 /// response shape.
 
+/// Returns the fallback value for the operational field when the key is
+/// absent from the response payload entirely.
+///
+/// Older IQM server versions predate the introduction of operational/operational_status
+/// and never include either key. In that case we assume the quantum computer
+/// is operational, since these older servers did not expose a mechanism to
+/// report otherwise.
 fn default_operational() -> String {
     "online".to_string()
 }
