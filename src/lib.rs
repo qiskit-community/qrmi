@@ -109,11 +109,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn resource_id(&mut self) -> Result<String> {
-        Err(QrmiError::UnsupportedFunction(
-            "qrmi::QuantumResource::resource_id".to_string(),
-        ))
-    }
+    async fn resource_id(&mut self) -> Result<String>;
 
     /// Returns resource type of this quantum resource.
     ///
@@ -130,11 +126,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn resource_type(&mut self) -> Result<ResourceType> {
-        Err(QrmiError::UnsupportedFunction(
-            "qrmi::QuantumResource::resource_type".to_string(),
-        ))
-    }
+    async fn resource_type(&mut self) -> Result<ResourceType>;
 
     /// Returns true if device is accessible, otherwise false. A target quantum resource is not considered accessible if quantum workloads cannot be executed, even when the system itself is reachable, for example due to maintenance.
     ///
