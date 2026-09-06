@@ -26,7 +26,6 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
-use uuid::Uuid;
 
 /// QRMI implementation for IQM Server API
 pub struct IQMServer {
@@ -122,19 +121,6 @@ impl QuantumResource for IQMServer {
             .await
             .map_err(|e| classify(e, ResourceKind::Backend))?;
         Ok(health.operational == "online" && health.health.healthy)
-    }
-
-    /// IQM Server has no session concept. This does not contact the
-    /// provider; it returns a generated id so callers written against the
-    /// trait do not need a special case for this backend.
-    async fn acquire(&mut self) -> Result<String> {
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    /// IQM Server has no session concept, so this is a no-op: nothing is
-    /// contacted and nothing is released. See `acquire()`.
-    async fn release(&mut self, _acquisition_token: &str) -> Result<()> {
-        Ok(())
     }
 
     /// Starts a job task.

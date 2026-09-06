@@ -25,6 +25,8 @@ pub use resource_provider::ResourceProvider;
 pub mod service;
 pub use service::QRMIService;
 
+use uuid::Uuid;
+
 mod cext;
 pub mod models;
 #[cfg(feature = "pyo3")]
@@ -145,11 +147,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn is_accessible(&mut self) -> Result<bool> {
-        Err(QrmiError::UnsupportedFunction(
-            "qrmi::QuantumResource::is_accessible".to_string(),
-        ))
-    }
+    async fn is_accessible(&mut self) -> Result<bool>;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
     ///
@@ -166,9 +164,13 @@ pub trait QuantumResource: Send + Sync {
     /// }
     /// ```
     async fn acquire(&mut self) -> Result<String> {
-        Err(QrmiError::UnsupportedFunction(
-            "qrmi::QuantumResource::acquire".to_string(),
-        ))
+        let resource_type = std::any::type_name::<Self>();
+        log::warn!(
+            "acquiring resource is not implemented by this resource({}); \
+             a dummy acquisition ID has been generated for backward compatibility.",
+            resource_type
+        );
+        Ok(Uuid::new_v4().to_string())
     }
 
     /// Releases quantum resource
@@ -185,9 +187,13 @@ pub trait QuantumResource: Send + Sync {
     /// }
     /// ```
     async fn release(&mut self, id: &str) -> Result<()> {
-        Err(QrmiError::UnsupportedFunction(
-            "qrmi::QuantumResource::release".to_string(),
-        ))
+        let resource_type = std::any::type_name::<Self>();
+        log::warn!(
+            "releasing resource is not implemented by this resource({}); \
+             this call is a no-op, so no resource was actually released.",
+            resource_type
+        );
+        Ok(())
     }
 
     /// Start a task and returns an identifier of this task if succeeded.
