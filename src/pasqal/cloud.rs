@@ -190,10 +190,6 @@ impl PasqalCloud {
         })
     }
 
-    async fn task_logs(&mut self, _task_id: &str) -> Result<String> {
-        Ok("There are no logs for this job.".to_string())
-    }
-
     fn task_kind(&self, task_id: &str) -> PasqalTaskKind {
         match self.task_kinds.get(task_id).copied() {
             Some(kind) => kind,
@@ -284,6 +280,10 @@ impl QuantumResource for PasqalCloud {
             }
             PasqalTaskKind::Cudaq => self.task_result_from_cudaq(task_id).await,
         }
+    }
+
+    async fn task_logs(&mut self, _task_id: &str) -> Result<String> {
+        Ok("There are no logs for this job.".to_string())
     }
 
     async fn target(&mut self) -> Result<Target> {
