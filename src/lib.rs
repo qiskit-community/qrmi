@@ -370,6 +370,12 @@ pub trait QuantumResource: Send + Sync {
     /// }
     /// ```
     async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
+        let resource_type = std::any::type_name::<Self>();
+        log::warn!(
+            "metadata() is not implemented by this resource({}); \
+             an empty hashmap has been generated.",
+            resource_type
+        );
         std::collections::HashMap::<String, String>::new()
     }
 }
