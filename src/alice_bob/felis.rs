@@ -118,15 +118,6 @@ impl QuantumResource for AliceBobFelis {
         Ok(true)
     }
 
-    async fn acquire(&mut self) -> Result<String> {
-        // Felis has no such concept, so we return a random UUID
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        Ok(())
-    }
-
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         if let Payload::AliceBobFelis {
             human_qir,
@@ -191,10 +182,6 @@ impl QuantumResource for AliceBobFelis {
             .await
             .map_err(|e| classify(e, ResourceKind::Job))?;
         Ok(TaskResult { value: output_csv })
-    }
-
-    async fn task_logs(&mut self, _task_id: &str) -> Result<String> {
-        Ok("Logging not implemented for this QuantumResource".to_string())
     }
 
     #[allow(clippy::expect_fun_call)]

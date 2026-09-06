@@ -229,18 +229,6 @@ impl QuantumResource for PasqalCloud {
         Ok(device.availability == "ACTIVE")
     }
 
-    async fn acquire(&mut self) -> Result<String> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply returns dummy ID for now.
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply ignores
-        Ok(())
-    }
-
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         debug!(
             "Starting task on PasqalCloud QRMI (backend '{}')",
@@ -293,10 +281,6 @@ impl QuantumResource for PasqalCloud {
             }
             PasqalTaskKind::Cudaq => self.task_result_from_cudaq(task_id).await,
         }
-    }
-
-    async fn task_logs(&mut self, _task_id: &str) -> Result<String> {
-        Ok("There are no logs for this job.".to_string())
     }
 
     async fn target(&mut self) -> Result<Target> {
