@@ -24,7 +24,6 @@ use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
 use std::env;
-use uuid::Uuid;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
 pub struct AliceBobFelis {

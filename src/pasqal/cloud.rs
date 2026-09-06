@@ -17,7 +17,6 @@ use anyhow::Context;
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use super::cloud_config::PasqalConfig;
 use async_trait::async_trait;
