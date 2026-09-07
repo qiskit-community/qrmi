@@ -69,7 +69,7 @@ repository = "https://github.com/qiskit-community/qrmi"
 [tool.maturin]
 python-source = "python"
 module-name   = "qrmi._core" 
-features = ["pyo3/abi3", "qrmi/pyo3"]
+features = ["pyo3/abi3", "qrmi/pyo3", "qrmi/pyo3-async"]
 python-packages = [
     "qrmi",
 ]

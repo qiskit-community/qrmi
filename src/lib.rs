@@ -29,6 +29,8 @@ mod cext;
 pub mod models;
 #[cfg(feature = "pyo3")]
 pub mod pyext;
+#[cfg(feature = "pyo3-async")]
+pub mod pyext_async;
 
 // Embeds QRMI's version/git-hash into a `.version_info` ELF section for
 // offline inspection via `strings`/`readelf`. Linux (ELF) only: macOS
