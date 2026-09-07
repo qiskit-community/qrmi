@@ -840,6 +840,10 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "UnsupportedPayloadError",
         m.py().get_type::<UnsupportedPayloadError>(),
     )?;
+    m.add(
+        "UnsupportedFunctionError",
+        m.py().get_type::<UnsupportedFunctionError>(),
+    )?;
     m.add("TaskNotReadyError", m.py().get_type::<TaskNotReadyError>())?;
     m.add("InvalidInputError", m.py().get_type::<InvalidInputError>())?;
     m.add(
