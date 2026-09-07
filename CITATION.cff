@@ -141,7 +141,7 @@ references:
         given-names: "Aleksander"
     year: 2025
     journal: "arXiv preprint"
-    identifiers
+    identifiers:
       - type: other
         value: "arXiv:2506.10052"
     url: "https://arxiv.org/abs/2506.10052"
