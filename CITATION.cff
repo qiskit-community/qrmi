@@ -2,6 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "QRMI"
 type: software
+repository-code: "https://github.com/qiskit-community/qrmi"
+url: "https://github.com/qiskit-community/qrmi"
 authors:
   - family-names: "Bacher"
     given-names: "Utz"
