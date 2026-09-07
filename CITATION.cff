@@ -87,6 +87,8 @@ references:
   - type: article
     title: "Examining QRMI as a Unified Interface for Quantum-HPC Integration"
     authors:
+      - family-names: "Park"
+        given-names: "Yoonho"
       - family-names: "Badts"
         given-names: "Thomas"
       - family-names: "Boyle"
@@ -123,8 +125,6 @@ references:
         given-names: "Elisabeth"
       - family-names: "Oucharek"
         given-names: "Doug"
-      - family-names: "Park"
-        given-names: "Yoonho"
       - family-names: "Patil"
         given-names: "Adarsh"
       - family-names: "Sahin"
