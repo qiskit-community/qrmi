@@ -5,7 +5,7 @@ Contributing to QRMI
 
 .. rst-class:: lead
 
-Outlines the process for contributing code, documentation, tests, and other improvements to QRMI.
+   Outlines the process for contributing code, documentation, tests, and other improvements to QRMI.
 
 --------------
 
@@ -15,8 +15,8 @@ Outlines the process for contributing code, documentation, tests, and other impr
 
 --------------
 
-.. _contributing_prereq:
 
+.. _contributing_prereq:
 
 Prerequisites
 -------------
@@ -25,47 +25,110 @@ If you are new to contributing to Qiskit, we recommend you do the following
 before diving into the code:
 
 -  Read the :ref:`Code of Conduct <code_of_conduct>`
-
 -  Familiarise yourself with the Qiskit community (via
-   `Slack`_, .. container:: buttons
-
-   `GitHub`_, etc.)
+   `Slack`_, `GitHub`_, etc.)
 
 .. _Slack: https://qisk.it/join-slack
 .. _GitHub: https://github.com/qiskit-community/feedback/discussions
 
-.. _contributing_cla:
+
+.. _contributing_quick_start:
+
+Quick Start
+-----------
+
+The steps below provide the fastest path to making and submitting a
+contribution to QRMI.
+
+#. :ref:`Fork the QRMI repository and clone your fork <contributing_fork>`:
+
+   .. code-block:: bash
+
+      git clone https://github.com/<your-username>/qrmi.git
+      cd qrmi
+
+#. :ref:`Create and activate a Python virtual environment <contributing_venv>`:
+
+   .. code-block:: bash
+
+      python3 -m venv ~/.venvs/qrmi-dev
+      source ~/.venvs/qrmi-dev/bin/activate
+
+#. Install the development dependencies:
+
+   .. code-block:: bash
+
+      pip install --upgrade pip
+      pip install -r requirements-dev.txt
+
+#. Build QRMI locally:
+
+   .. code-block:: bash
+
+      . ~/.cargo/env
+      cargo build --locked --release
+
+#. Create a branch for your work:
+
+   .. code-block:: bash
+
+      git checkout -b fix/my-change
+
+#. Make your changes and add any necessary updates to :ref:`tests <contributing_testing>` or :ref:`documentation <contributing_docs>`.
+
+#. Run the :ref:`formatting, linting <contributing_style>`, and :ref:`test <contributing_unit_tests>` checks before submitting:
+
+   .. code-block:: bash
+
+      make fmt-rust
+      make fmt-python
+      make lint-wheels
+      make lint-rust-all
+      make test
+
+#. Commit your changes:
+
+   .. code-block:: bash
+
+      git commit -m "Add tests for QRMIService"
+
+#. Push your branch and open a pull request:
+
+   .. code-block:: bash
+
+      git push origin fix/my-change
+
+#. Complete the pull request template and ensure all CI checks pass.
+
+For additional information and more detail, explore the sections below.
+
+--------------
 
 
-Contributor Licensing Agreement
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _contributing_fork:
 
-- `Individual CLA`_
-- `Corporate CLA`_
+Forking the QRMI repository
+---------------------------
 
-.. _Individual CLA: https://qisk.it/cla
-.. _Corporate CLA: https://qisk.it/corporate-cla
+It is recommended that contributors `fork the QRMI repository`_.
+This allows contributors to make changes in their own forked repository, any branches on the fork can be submitted as pull requests to the main QRMI repository.
 
-Before you can submit any code, all contributors must sign a **contributor
-license agreement** (CLA). By signing a CLA, you are attesting that you are
-the author of the contribution, and that you're freely contributing it
-under the terms of the Apache-2.0 license.
+.. _fork the QRMI repository: https://docs.github.com/en/pull-requests/how-tos/work-with-forks/fork-a-repo
 
-When you contribute to the Qiskit project with a new pull request, a bot
-will evaluate whether you have signed the CLA. If required, the bot will
-comment on the pull request, including a link to accept the agreement.
-The `Individual CLA`_ document is available for review as a PDF.
+Once the forked repository is set up, you can clone it to your local machine and create a new branch for your changes.
 
-.. note::
+   .. code-block:: bash
 
-   If your contribution is part of your employment or your contribution is the 
-   property of your employer, then you likely need to sign a `Corporate CLA`_ too.
-   Please email this to us at qiskit@us.ibm.com.
+      git clone https://github.com/<your-username>/qrmi.git
+      cd qrmi
+      git checkout -b fix/my-change
 
 
 Setting up the developer environment
 ------------------------------------
 
+
+.. _contributing_venv:
 
 Create a virtual environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,8 +215,8 @@ Install QRMI from source
 
 Refer to :ref:`install`.
 
-.. _contributing_issues:
 
+.. _contributing_issues:
 
 Issues and pull requests
 ------------------------
@@ -176,18 +239,16 @@ discussion with the community about your work:
 If you've written some code but need help finishing it, want to get
 initial feedback on it prior to finishing it, or want to share it and
 discuss prior to finishing the implementation, you can open a **Draft
-pull request** and prepend the title with the **[WIP]** tag (for Work In
-Progress). This indicates to reviewers that the code in the PR isn't final
-and will change. The branch will not be merged until it is finished.
-You, or a reviewer, can remove the [WIP] tag when the code is ready to be
-reviewed for merging.
+pull request**. This indicates to reviewers that the code in the PR isn't final
+and will change. Once the PR is finalised, click ``Ready for review`` to convert 
+the draft into a review-ready PR.
 
 Before marking your PR as "ready for review", make sure you
 have followed the PR checklist below. PRs that adhere to this list are
 more likely to be reviewed and merged in a timely manner.
 
-.. _pull_request_checklist:
 
+.. _pull_request_checklist:
 
 Pull request checklist
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -216,7 +277,7 @@ When submitting a pull request for review, please ensure that:
    removal, etc.) include a Reno release note for that change and that
    the PR is tagged for the changelog.
 
-#. All contributors have signed the :ref:`CLA <contributing_cla>`.
+#. All contributors have signed the :ref:`CLA <cla>`.
 
 #. The PR has a concise and descriptive title.
 
@@ -259,7 +320,7 @@ Find ``.pre-commit-config.yaml`` for the initial setup.
 
    detect-secrets scan --force-use-all-plugins > .secrets.baseline
 
-This file maximises the detection coverage.
+The baseline records known false positives so future scans focus on newly introduced secrets.
 
 
 Handling false positives
@@ -326,14 +387,19 @@ Please also make sure to always be kind and respectful in your interactions with
 maintainers and other contributors, in line with the :ref:`QRMI Code of Conduct <code_of_conduct>`.
 
 
+.. _contributing_docs:
+
 Documentation
 -------------
 
-Please ensure any code changes are reflected in the documentation. 
+Documentation contributions are welcome. When modifying public APIs,
+examples, configuration files, or user-facing behaviour, please update
+the relevant documentation as part of the same pull request.
+
 Refer to :ref:`adding_documentation` for further guidance.
 
-.. _contributing_testing:
 
+.. _contributing_testing:
 
 Testing
 -------
@@ -343,6 +409,10 @@ any existing tests and that newly added tests run successfully. Before
 you open a new pull request for your change, run QRMI's Python test suite. If you've
 modified native code, you should also run its Rust-based unit tests.
 
+More information about QRMI's testing suite is available in our :ref:`testing documentation <testing>`.
+
+
+.. _contributing_unit_tests:
 
 Running unit tests
 ~~~~~~~~~~~~~~~~~~
@@ -430,39 +500,39 @@ Running unit tests
 .. .. _miri.yml: https://github.com/Qiskit/qiskit/blob/main/.github/workflows/miri.yml
 
 
-Testing the C API
-~~~~~~~~~~~~~~~~~
+.. Testing the C API
+.. ~~~~~~~~~~~~~~~~~
 
-TBD
+.. TBD
 
 
-Writing C API tests
-^^^^^^^^^^^^^^^^^^^
+.. Writing C API tests
+.. ^^^^^^^^^^^^^^^^^^^
 
-TBD
+.. TBD
+
 
 .. _contributing_style:
-
 
 Style and linting
 -----------------
 
-Contributors must run the below commands to fix any formatting issues prior to submitting a PR.
+Contributors must run the below commands to fix and verify any formatting issues prior to submitting a PR:
 
 .. tabs::
 
    .. tab:: Rust
 
-      Execute the following commands:
+      Fix any formatting issues:
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
-         $ . ~/.cargo/env
-         $ cargo fmt --all -- --check
-         $ cargo clippy --all-targets -- -D warnings
-         $ cd examples/rust
-         $ cargo fmt --all -- --check
-         $ cargo clippy --all-targets -- -D warnings
+         . ~/.cargo/env
+         cargo fmt --all -- --check
+         cargo clippy --all-targets -- -D warnings
+         cd examples/rust
+         cargo fmt --all -- --check
+         cargo clippy --all-targets -- -D warnings
 
       QRMI uses `rustfmt`_ for Rust formatting and linting. You can run ``cargo fmt``
       (if you installed Rust with the default settings using ``rustup``), and it will
@@ -485,12 +555,12 @@ Contributors must run the below commands to fix any formatting issues prior to s
 
       Execute the following commands:
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
-         $ source ~/py312_qrmi_venv/bin/activate
-         $ cd examples
-         $ pylint ./python
-         $ black --check ./python
+         source ~/py312_qrmi_venv/bin/activate
+         cd examples
+         pylint ./python
+         black --check ./python
 
       QRMI uses two tools for Python code formatting and lint checking. The
       first tool is `black`_ which is a code formatting tool that will automatically
@@ -504,37 +574,14 @@ Contributors must run the below commands to fix any formatting issues prior to s
 
       .. _pylint: https://pypi.org/project/pylint/
 
+
 .. _contributing_release:
 
+Preparing a new release
+-----------------------
 
-Updating files for new release
-------------------------------
-
-To create a new release, the following files must be updated:
-
--  ``Cargo.toml``
-
-.. code-block:: toml
-
-     [package]
-     name = "qrmi"
-     version = "0.14.1"
-
--  ``Cargo.lock``
-
-.. code-block:: toml
-
-     [[package]]
-     name = "qrmi"
-     version = "0.14.1"
-
--  ``cbindgen.toml``
-
-.. code-block:: toml
-
-     #define QRMI_VERSION_MAJOR 0
-     #define QRMI_VERSION_MINOR 14
-     #define QRMI_VERSION_PATCH 1
+Certain files will need to be updated for a new release. Please
+refer to our :ref:`release and deploymeny guide <release_deployment>` for guidance on preparing a new release.
 
 
 Help and Support

@@ -21,10 +21,10 @@ Install dependencies
 Assuming your python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``,
 
-.. code-block:: shell-session
+.. code-block:: bash
 
-   $ source ~/py311venv_qrmi_primitives/bin/activate
-   $ pip install -r requirements.txt
+   source ~/py311venv_qrmi_primitives/bin/activate
+   pip install -r requirements.txt
 
 Set environment variables
 -------------------------
@@ -96,6 +96,6 @@ Run `sampler.py`_:
 
 .. _sampler.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qiskit_primitives/pasqal/sampler.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
-   $ python sampler.py
+   python sampler.py

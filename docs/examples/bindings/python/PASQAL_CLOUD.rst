@@ -22,7 +22,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311_qrmi_venv/bin/activate
    pip install -r ../requirements.txt
@@ -138,7 +138,7 @@ Run `example.py`_:
 
 .. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/pasqal_cloud/example.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py -h
    usage: example.py [-h] input backend
@@ -154,6 +154,6 @@ Run `example.py`_:
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py FRESNEL input.json

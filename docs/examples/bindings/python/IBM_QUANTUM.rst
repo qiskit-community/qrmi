@@ -22,7 +22,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311_qrmi_venv/bin/activate
    pip install -r ../requirements.txt
@@ -102,7 +102,7 @@ Run `example.py`_:
 
 .. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/ibm_quantum_system/example.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py -h
    usage: example.py [-h] backend input program_id
@@ -119,7 +119,7 @@ Run `example.py`_:
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
    export test_eagle_QRMI_IBM_QS_IAM_ENDPOINT=https://iam.cloud.ibm.com

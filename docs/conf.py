@@ -163,6 +163,8 @@ ANNOUNCEMENT = """
 html_theme_options = {
     # "discussion_url": "",
     "announcement": ANNOUNCEMENT,
+    # "light_logo": "qrmi_logo_light.png",
+    # "dark_logo": "qrmi_logo_dark.png",
     "nav_links": [
         {
             "title": "SPANK Plugins",

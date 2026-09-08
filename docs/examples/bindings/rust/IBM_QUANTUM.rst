@@ -87,7 +87,7 @@ generate. You can customize quantum circuits by editing the code.
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    cargo build --release
@@ -96,7 +96,7 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-ibm-quantum-system --help
    QRMI for IBM Quantum System - Example
@@ -112,7 +112,7 @@ How to run `this example`_
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
    export test_eagle_QRMI_IBM_QS_IAM_ENDPOINT=https://iam.cloud.ibm.com

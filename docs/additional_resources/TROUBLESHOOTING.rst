@@ -74,9 +74,9 @@ This will fail due to the error:
 **Solution:**
 
 -  Use a Premium Plan account, or
--  Use `Batch`_ execution mode
+-  Use `Batch execution mode`_`
 
-.. _Batch: https://quantum.cloud.ibm.com/docs/en/guides/execution-modes#batch-mode
+.. _Batch execution mode: https://quantum.cloud.ibm.com/docs/en/guides/execution-modes#batch-mode
 
    -  Add ``QRMI_IBM_QRS_SESSION_MODE`` environment variable with
       "batch" in your ``qrmi_config.json``

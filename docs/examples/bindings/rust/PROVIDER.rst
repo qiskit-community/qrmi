@@ -23,7 +23,7 @@ How to build `this example`_
 
 .. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/resource_providers
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    cargo build --release
@@ -32,7 +32,7 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    QRMI Provider Example
 
@@ -49,7 +49,7 @@ How to run `this example`_
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-provider /etc/slurm/qrmi_config.json ibm_inst1 -f "num_qubits=127&max_shots=10000"
    Filters: num_qubits=127&max_shots=10000

@@ -24,7 +24,7 @@ Install dependencies
 Assuming your Python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311venv_qrmi_primitives/bin/activate
    pip install -r requirements.txt
@@ -77,6 +77,6 @@ Run `pulser_qrmi.py`_:
 
 .. _pulser_qrmi.py: https://github.com/qiskit-community/qrmi/blob/main/examples/pulser/pasqal/pulser_qrmi.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python pulser_qrmi.py

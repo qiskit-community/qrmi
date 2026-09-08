@@ -20,7 +20,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    pip install -f requirements.txt
 

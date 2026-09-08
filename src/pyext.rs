@@ -40,8 +40,8 @@ create_exception!(
     ConfigError,
     QrmiError_,
     "A configuration value was missing, could not be parsed, or was \
-     otherwise invalid (covers `QrmiError::ParseError`, \
-     `QrmiError::MissingConfigKey`, and `QrmiError::InvalidConfig`)."
+     otherwise invalid (covers ``QrmiError::ParseError``, \
+     ``QrmiError::MissingConfigKey``, and ``QrmiError::InvalidConfig``)."
 );
 create_exception!(
     qrmi._core,
@@ -74,7 +74,7 @@ create_exception!(
     InvalidInputError,
     QrmiError_,
     "A value QRMI was given was invalid, whether QRMI itself rejected it \\
-     locally (e.g. a malformed `filters` string, JSON, or UTF-8) or a \\
+     locally (e.g. a malformed ``filters`` string, JSON, or UTF-8) or a \\
      vendor's API rejected the resulting request after receiving it."
 );
 create_exception!(
@@ -96,9 +96,9 @@ create_exception!(
     "The request's credentials were missing or rejected by the vendor's API."
 );
 
-/// Converts a [`QrmiError`] into the [`PyErr`] subclass matching its kind,
-/// so Python code can `except qrmi.TaskNotReadyError` instead of parsing
-/// `RuntimeError` message text. See `QrmiError::kind` for the mapping.
+/// Converts a [``QrmiError``] into the [``PyErr``] subclass matching its kind,
+/// so Python code can ``except qrmi.TaskNotReadyError`` instead of parsing
+/// ``RuntimeError`` message text. See ``QrmiError::kind`` for the mapping.
 fn to_py_err(err: QrmiError) -> PyErr {
     let msg = err.to_string();
     match err.kind() {
@@ -153,27 +153,27 @@ impl From<ResourceType> for crate::models::ResourceType {
 #[pyo3(name = "QuantumResource")]
 pub struct PyQuantumResource {
     qrmi: Box<dyn QuantumResource + Send + Sync>,
-    // `ManuallyDrop`, not a plain `Runtime`, so `Drop` below can take
-    // ownership and call `shutdown_background()` instead of letting the
-    // field's own destructor run. Existing `self.rt.block_on(...)` call
-    // sites are unaffected: `ManuallyDrop<T>` derefs to `T` transparently.
+    // ``ManuallyDrop``, not a plain ``Runtime``, so ``Drop`` below can take
+    // ownership and call ``shutdown_background()`` instead of letting the
+    // field's own destructor run. Existing ``self.rt.block_on(...)`` call
+    // sites are unaffected: ``ManuallyDrop<T>`` derefs to ``T`` transparently.
     rt: std::mem::ManuallyDrop<Runtime>,
 }
 
 impl Drop for PyQuantumResource {
     fn drop(&mut self) {
-        // `Runtime`'s own `Drop` blocks the current thread indefinitely
+        // ``Runtime``'s own ``Drop`` blocks the current thread indefinitely
         // until every spawned task finishes. That is a problem here
         // specifically: Python drops objects while holding the GIL, and
         // if a worker thread needs the GIL to log something (e.g. an
-        // in-flight HTTP request logged at `RUST_LOG=trace`) before it can
+        // in-flight HTTP request logged at ``RUST_LOG=trace``) before it can
         // finish, that worker waits for the GIL forever while this thread
-        // waits for that worker forever. `shutdown_background()` discards
+        // waits for that worker forever. ``shutdown_background()`` discards
         // the runtime without waiting for anything, which avoids the
         // deadlock entirely (in exchange for not waiting for in-flight
         // background work to finish cleanly on drop).
         //
-        // SAFETY: `self.rt` is only ever taken here, in `Drop::drop`,
+        // SAFETY: ``self.rt`` is only ever taken here, in ``Drop::drop``,
         // which runs at most once per instance.
         let rt = unsafe { std::mem::ManuallyDrop::take(&mut self.rt) };
         rt.shutdown_background();
@@ -181,7 +181,7 @@ impl Drop for PyQuantumResource {
 }
 
 impl PyQuantumResource {
-    /// Internal constructor used by `PyResourceProvider::backends()`.
+    /// Internal constructor used by ``PyResourceProvider::backends()``.
     pub(crate) fn from_inner(qrmi: Box<dyn QuantumResource + Send + Sync>) -> Self {
         Self {
             qrmi,
@@ -399,39 +399,40 @@ impl PyResourceDef {
 // ResourceProvider Python bindings
 // ---------------------------------------------------------------------------
 
-/// Python wrapper for `ResourceProvider`.
+/// Python wrapper for ``ResourceProvider``.
 ///
 /// # Example (Python)
 ///
-/// ```python
-/// from qrmi import Config, ResourceProvider, ResourceType
+/// .. code-block:: python
 ///
-/// config = Config.load("/path/to/qrmi_config.json")
-/// resource_def = config.resource_map["ibm_inst1"]
+///     from qrmi import Config, ResourceProvider, ResourceType
 ///
-/// provider = ResourceProvider(ResourceType.IBMQuantumComputeService, resource_def.environment)
-/// resources = provider.resources()
-/// resources = provider.resources("num_qubits=127&name=ibm_*&status=online")
-/// resource  = provider.least_busy()
+///     config = Config.load("/path/to/qrmi_config.json")
+///     resource_def = config.resource_map["ibm_inst1"]
 ///
-/// for r in resources:
-///     print(r.resource_id())
-/// ```
+///     provider = ResourceProvider(ResourceType.IBMQuantumComputeService, resource_def.environment)
+///     resources = provider.resources()
+///     resources = provider.resources("num_qubits=127&name=ibm_*&status=online")
+///     resource  = provider.least_busy()
+///
+///     for r in resources:
+///         print(r.resource_id())
+///
 #[gen_stub_pyclass]
 #[pyclass]
 #[pyo3(name = "ResourceProvider")]
 pub struct PyResourceProvider {
     inner: Box<dyn crate::ResourceProvider>,
-    // See `PyQuantumResource`'s `rt` field and `Drop` impl for why this is
-    // `ManuallyDrop` rather than a plain `Runtime`.
+    // See ``PyQuantumResource``'s ``rt`` field and ``Drop`` impl for why this is
+    // ``ManuallyDrop`` rather than a plain ``Runtime``.
     rt: std::mem::ManuallyDrop<Runtime>,
 }
 
 impl Drop for PyResourceProvider {
     fn drop(&mut self) {
-        // See `PyQuantumResource`'s `Drop` impl for why.
+        // See ``PyQuantumResource``'s ``Drop`` impl for why.
         //
-        // SAFETY: `self.rt` is only ever taken here, in `Drop::drop`,
+        // SAFETY: ``self.rt`` is only ever taken here, in ``Drop::drop``,
         // which runs at most once per instance.
         let rt = unsafe { std::mem::ManuallyDrop::take(&mut self.rt) };
         rt.shutdown_background();
@@ -444,9 +445,9 @@ impl PyResourceProvider {
     /// Constructs a new provider from a resource type and environment variable map.
     ///
     /// Currently supported resource types:
-    /// - `ResourceType.IBMQiskitRuntimeService`(deprecated)
-    /// - `ResourceType.IBMQuantumComputeService`
-    /// - `ResourceType.IBMQuantumSystem`
+    /// - ``ResourceType.IBMQiskitRuntimeService``(deprecated)
+    /// - ``ResourceType.IBMQuantumComputeService``
+    /// - ``ResourceType.IBMQuantumSystem``
     #[new]
     pub fn new(
         resource_type: ResourceType,
@@ -488,17 +489,18 @@ impl PyResourceProvider {
     ///
     /// # Arguments
     ///
-    /// * `filters` - Filter string of the form `key=value&key=value`, or `None`.
+    /// * ``filters`` - Filter string of the form ``key=value&key=value``, or ``None``.
     ///
     /// Filter specifications (constraints) are defined by each resource provider's implementation.
     /// Results are expected to be sorted in least-busy order.
     ///
     /// # Example (Python)
     ///
-    /// ```python
-    /// resources = provider.resources()
-    /// resources = provider.resources("num_qubits=127&name=ibm_*")
-    /// ```
+    /// .. code-block:: python
+    ///
+    ///     resources = provider.resources()
+    ///     resources = provider.resources("num_qubits=127&name=ibm_*")
+    ///
     #[pyo3(signature = (filters=None))]
     pub fn resources(
         &self,
@@ -521,14 +523,15 @@ impl PyResourceProvider {
 
     /// Returns the least busy available quantum resource, optionally filtered.
     ///
-    /// Equivalent to `resources(filters)[0]` but returns `None` if no resources match.
+    /// Equivalent to ``resources(filters)[0]`` but returns ``None`` if no resources match.
     ///
     /// # Example (Python)
     ///
-    /// ```python
-    /// resource = provider.least_busy()
-    /// resource = provider.least_busy("num_qubits=127&status=online")
-    /// ```
+    /// .. code-block:: python
+    ///
+    ///     resource = provider.least_busy()
+    ///     resource = provider.least_busy("num_qubits=127&status=online")
+    ///
     #[pyo3(signature = (filters=None))]
     pub fn least_busy(
         &self,
@@ -551,48 +554,49 @@ impl PyResourceProvider {
 // QRMIService Python bindings
 // ---------------------------------------------------------------------------
 
-/// Python wrapper for `QRMIService`.
+/// Python wrapper for ``QRMIService``.
 ///
 /// Discovers the QPU resources assigned to the current job -- read from the
-/// `QRMI_JOB_QPU_RESOURCES` / `QRMI_JOB_QPU_TYPES` environment variables, or
-/// their legacy `SLURM_JOB_QPU_RESOURCES` / `SLURM_JOB_QPU_TYPES`
+/// ``QRMI_JOB_QPU_RESOURCES`` / ``QRMI_JOB_QPU_TYPES`` environment variables, or
+/// their legacy ``SLURM_JOB_QPU_RESOURCES`` / ``SLURM_JOB_QPU_TYPES``
 /// equivalents -- and exposes the ones that are currently accessible as
-/// `QuantumResource` instances.
+/// ``QuantumResource`` instances.
 ///
-/// This is a thin wrapper around the plain-Rust [`crate::QRMIService`],
+/// This is a thin wrapper around the plain-Rust [``crate::QRMIService``],
 /// which does the actual discovery/filtering and is usable on its own from
 /// Rust (see its docs for a Rust example). This wrapper's job is only to
-/// bridge that to Python: it drives `QRMIService::new()`'s `Future` to
-/// completion on a private tokio `Runtime` (mirroring `PyResourceProvider`
-/// and `PyQuantumResource` elsewhere in this module, since `pyo3` classes
-/// can't themselves be `async`), then moves each resource returned by
-/// `QRMIService::into_resource_map()` into its own, independently owned
-/// `PyQuantumResource` -- exactly as `PyResourceProvider::resources()` does
-/// for each `Box<dyn QuantumResource>` returned by
-/// `ResourceProvider::resources()`.
+/// bridge that to Python: it drives ``QRMIService::new()``'s ``Future`` to
+/// completion on a private tokio ``Runtime`` (mirroring ``PyResourceProvider``
+/// and ``PyQuantumResource`` elsewhere in this module, since ``pyo3`` classes
+/// can't themselves be ``async``), then moves each resource returned by
+/// ``QRMIService::into_resource_map()`` into its own, independently owned
+/// ``PyQuantumResource`` -- exactly as ``PyResourceProvider::resources()`` does
+/// for each ``Box<dyn QuantumResource>`` returned by
+/// ``ResourceProvider::resources()``.
 ///
 /// # Example (Python)
 ///
-/// ```python
-/// from qrmi import QRMIService
+/// .. code-block:: python
 ///
-/// service = QRMIService()
-/// for resource in service.resources():
-///     print(resource.resource_id())
+///     from qrmi import QRMIService
 ///
-/// resource = service.resource("ibm_torino")
-/// ```
+///     service = QRMIService()
+///     for resource in service.resources():
+///         print(resource.resource_id())
+///
+///     resource = service.resource("ibm_torino")
+///
 #[gen_stub_pyclass]
 #[pyclass]
 #[pyo3(name = "QRMIService")]
 pub struct PyQRMIService {
-    // Keyed by resource id (i.e. QPU name). Stored as `Py<PyQuantumResource>`
-    // rather than owning `PyQuantumResource` directly so that `resources()`
-    // and `resource()` can hand back the *same* underlying instance on every
+    // Keyed by resource id (i.e. QPU name). Stored as ``Py<PyQuantumResource>``
+    // rather than owning ``PyQuantumResource`` directly so that ``resources()``
+    // and ``resource()`` can hand back the *same* underlying instance on every
     // call (cheap refcount bump) instead of constructing a fresh one --
-    // `PyQuantumResource` cannot be cloned (it owns a `Box<dyn
-    // QuantumResource>` and its own tokio `Runtime`), and callers may rely
-    // on identity, e.g. having already called `acquire()` on the instance
+    // ``PyQuantumResource`` cannot be cloned (it owns a ``Box<dyn
+    // QuantumResource>`` and its own tokio ``Runtime``), and callers may rely
+    // on identity, e.g. having already called ``acquire()`` on the instance
     // returned earlier.
     qrmi_resources: std::collections::HashMap<String, Py<PyQuantumResource>>,
 }
@@ -604,11 +608,11 @@ impl PyQRMIService {
     pub fn new(py: Python<'_>) -> PyResult<Self> {
         crate::common::initialize();
 
-        // A short-lived runtime just to drive `QRMIService::new()` -- unlike
-        // `PyQuantumResource`/`PyResourceProvider`, no long-lived async
+        // A short-lived runtime just to drive ``QRMIService::new()`` -- unlike
+        // ``PyQuantumResource``/``PyResourceProvider``, no long-lived async
         // methods are called after this, so there's no need to keep it
-        // around (or worry about its `Drop` deadlocking; see those types'
-        // `Drop` impls for why that's normally a concern here).
+        // around (or worry about its ``Drop`` deadlocking; see those types'
+        // ``Drop`` impls for why that's normally a concern here).
         let rt = Runtime::new().expect("Failed to create a new tokio runtime.");
         let inner = py
             .detach(|| rt.block_on(async { crate::QRMIService::new().await }))
@@ -637,9 +641,9 @@ impl PyQRMIService {
     ///
     /// # Arguments
     ///
-    /// * `resource_id` - A resource identifier, i.e. backend name for IBM Quantum.
+    /// * ``resource_id`` - A resource identifier, i.e. backend name for IBM Quantum.
     ///
-    /// Returns `None` if not found.
+    /// Returns ``None`` if not found.
     fn resource(&self, py: Python<'_>, resource_id: &str) -> Option<Py<PyQuantumResource>> {
         self.qrmi_resources
             .get(resource_id)
@@ -655,18 +659,19 @@ impl PyQRMIService {
 ///
 /// # Example (Python)
 ///
-/// ```python
-/// from qrmi import Config, ResourceProvider
+/// .. code-block:: python
 ///
-/// config = Config.load("/path/to/qrmi_config.json")
+///     from qrmi import Config, ResourceProvider
 ///
-/// # Iterate over all resource definitions
-/// for name, resource_def in config.resource_map.items():
-///     print(f"{name}: is_dynamic={resource_def.is_dynamic}")
-///     if resource_def.is_dynamic:
-///         provider = ResourceProvider(resource_def.resource_type, resource_def.environment)
-///         resources = provider.resources()
-/// ```
+///     config = Config.load("/path/to/qrmi_config.json")
+///
+///     # Iterate over all resource definitions
+///     for name, resource_def in config.resource_map.items():
+///         print(f"{name}: is_dynamic={resource_def.is_dynamic}")
+///         if resource_def.is_dynamic:
+///             provider = ResourceProvider(resource_def.resource_type, resource_def.environment)
+///             resources = provider.resources()
+///
 #[gen_stub_pyclass]
 #[pyclass]
 #[pyo3(name = "Config")]
@@ -697,44 +702,44 @@ impl PyConfig {
     }
 }
 
-/// Bridges QRMI's `log` records into Python's `logging` module.
+/// Bridges QRMI's ``log`` records into Python's ``logging`` module.
 ///
-/// Registered once via `crate::common::set_log_sink` from the
-/// `#[pymodule]` init function below, using the same `LogSink` extension
-/// point `cext::qrmi_log_callback_set` also adapts a C callback into,
+/// Registered once via ``crate::common::set_log_sink`` from the
+/// ``#[pymodule]`` init function below, using the same ``LogSink`` extension
+/// point ``cext::qrmi_log_callback_set`` also adapts a C callback into,
 /// rather than installing a second, separate logging backend. This avoids
-/// ever having two loggers registered in the same process (the `log`
-/// crate only allows one), which matters because `cext` is always
-/// compiled in alongside `pyext` when the `pyo3` feature is enabled.
+/// ever having two loggers registered in the same process (the ``log``
+/// crate only allows one), which matters because ``cext`` is always
+/// compiled in alongside ``pyext`` when the ``pyo3`` feature is enabled.
 ///
-/// The `env_logger` filter in `common::initialize` (default `RUST_LOG`
-/// level: `warn`) still runs first and decides what reaches this sink at
+/// The ``env_logger`` filter in ``common::initialize`` (default ``RUST_LOG``
+/// level: ``warn``) still runs first and decides what reaches this sink at
 /// all; what changes here is only where an accepted record goes
 /// afterwards. A record that passes that filter is forwarded to
-/// `logging.getLogger(target)`, so Python-side configuration
-/// (`logging.basicConfig()`, per-logger levels, handlers) governs it from
+/// ``logging.getLogger(target)``, so Python-side configuration
+/// (``logging.basicConfig()``, per-logger levels, handlers) governs it from
 /// there same as any other Python log record.
 ///
-/// This is a plain Rust closure over `common::LogSink` -- no C ABI, no raw
-/// pointers, no `unsafe`. `common.rs` doesn't know or care that this
+/// This is a plain Rust closure over ``common::LogSink`` -- no C ABI, no raw
+/// pointers, no ``unsafe``. ``common.rs`` doesn't know or care that this
 /// particular sink happens to call into Python; that's this module's
-/// business alone. Compare `cext::qrmi_log_callback_set`, which adapts a
-/// C function pointer into the same `LogSink` shape at its own boundary.
+/// business alone. Compare ``cext::qrmi_log_callback_set``, which adapts a
+/// C function pointer into the same ``LogSink`` shape at its own boundary.
 ///
-/// Uses `Python::try_attach`, not `Python::attach`: a log record can be
-/// emitted from a `__del__` running during CPython interpreter
-/// finalization (`Py_FinalizeEx`) -- attempting to (re-)acquire the GIL
-/// in that window is a known hazard (documented on `Python::attach`
+/// Uses ``Python::try_attach``, not ``Python::attach``: a log record can be
+/// emitted from a ``__del__`` running during CPython interpreter
+/// finalization (``Py_FinalizeEx``) -- attempting to (re-)acquire the GIL
+/// in that window is a known hazard (documented on ``Python::attach``
 /// itself, and the subject of e.g. PyO3#5317: repeatedly attaching during
-/// finalization has hung or segfaulted). `try_attach` returns `None`
+/// finalization has hung or segfaulted). ``try_attach`` returns ``None``
 /// instead in that case; we simply drop the record rather than risk
 /// hanging the interpreter shutdown to deliver a log line.
 fn python_log_sink(level: log::Level, target: &str, message: &str) {
-    // Python's `logging` module level numbers (see Python's `logging`
-    // module docs / `Lib/logging/__init__.py`: CRITICAL=50, ERROR=40,
+    // Python's ``logging`` module level numbers (see Python's ``logging``
+    // module docs / ``Lib/logging/__init__.py``: CRITICAL=50, ERROR=40,
     // WARNING=30, INFO=20, DEBUG=10, NOTSET=0). Hardcoded rather than
-    // looked up via `logging.ERROR` etc. because these values are part of
-    // `logging`'s documented, long-stable public API and are very unlikely
+    // looked up via ``logging.ERROR`` etc. because these values are part of
+    // ``logging``'s documented, long-stable public API and are very unlikely
     // to change.
     // TRACE has no Python equivalent, so it is folded into DEBUG.
     let py_level: i32 = match level {
@@ -756,38 +761,38 @@ fn python_log_sink(level: log::Level, target: &str, message: &str) {
 }
 
 /// Registers a user-supplied Python callable as the destination for
-/// QRMI's `log` records, replacing whatever sink is currently active --
+/// QRMI's ``log`` records, replacing whatever sink is currently active --
 /// including the default one installed at import time (see
-/// `python_log_sink` above). This is the Python-facing equivalent of the
-/// C API's `qrmi_log_callback_set`.
+/// ``python_log_sink`` above). This is the Python-facing equivalent of the
+/// C API's ``qrmi_log_callback_set``.
 ///
-/// `callback` is called as `callback(level, target, message)`, all three
-/// arguments `str`. `level` is one of `"ERROR"`, `"WARN"`, `"INFO"`,
-/// `"DEBUG"`, `"TRACE"`. Pass `None` to clear it, which reverts to plain
-/// stderr output -- the same fallback the C API's `NULL` reverts to --
-/// rather than back to the built-in `logging`-forwarding sink. Once you
-/// take over logging, where it goes (including back to `logging`, if
+/// ``callback`` is called as ``callback(level, target, message)``, all three
+/// arguments ``str``. ``level`` is one of ``"ERROR"``, ``"WARN"``, ``"INFO"``,
+/// ``"DEBUG"``, ``"TRACE"``. Pass ``None`` to clear it, which reverts to plain
+/// stderr output -- the same fallback the C API's ``NULL`` reverts to --
+/// rather than back to the built-in ``logging``-forwarding sink. Once you
+/// take over logging, where it goes (including back to ``logging``, if
 /// that's what you want) is entirely your callback's responsibility.
 ///
 /// # Notes
 ///
-/// - `callback` may run on any thread, including a tokio worker thread
+/// - ``callback`` may run on any thread, including a tokio worker thread
 ///   unrelated to whichever Python thread called into QRMI. This is safe
 ///   as long as every blocking QRMI call keeps releasing the GIL for its
-///   duration (see the `py.detach(...)` calls throughout this module) --
+///   duration (see the ``py.detach(...)`` calls throughout this module) --
 ///   that is what lets a worker thread acquire the GIL here without
 ///   deadlocking against a QRMI call that is still holding it.
-/// - `callback` runs synchronously and holds the GIL while it runs; a slow
+/// - ``callback`` runs synchronously and holds the GIL while it runs; a slow
 ///   callback delays whichever QRMI call happened to trigger the log
 ///   record it's handling. Keep it fast -- e.g. hand off to a queue --
 ///   if you need to do anything slow with a record.
-/// - If `callback` raises, the exception is printed (as an unhandled
+/// - If ``callback`` raises, the exception is printed (as an unhandled
 ///   exception would be) and otherwise discarded; it cannot propagate
 ///   back into the Rust code that logged in the first place.
-/// - Like `python_log_sink`, this uses `Python::try_attach`: if a record
-///   is emitted while the interpreter is finalizing, `callback` is simply
+/// - Like ``python_log_sink``, this uses ``Python::try_attach``: if a record
+///   is emitted while the interpreter is finalizing, ``callback`` is simply
 ///   not called for it rather than risking the same hang/segfault hazard
-///   `Python::attach` has in that window.
+///   ``Python::attach`` has in that window.
 #[gen_stub_pyfunction]
 #[pyfunction]
 fn set_log_callback(callback: Option<Py<PyAny>>) -> PyResult<()> {
@@ -826,7 +831,7 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyQRMIService>()?;
 
     // Register the QrmiError exception hierarchy so Python code can catch
-    // them by name (e.g. `except qrmi.TaskNotReadyError`). `create_exception!`
+    // them by name (e.g. ``except qrmi.TaskNotReadyError``). ``create_exception!``
     // only defines the Rust-side type; it does not make it importable on its
     // own.
     m.add("QrmiError", m.py().get_type::<QrmiError_>())?;

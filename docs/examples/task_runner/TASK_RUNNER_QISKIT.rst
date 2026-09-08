@@ -24,7 +24,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    pip install -f requirements.txt
 
@@ -43,7 +43,7 @@ Generates EstimatorV2 input for the circuit introduced in IBM's `Get Started wit
 
 Usage:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    usage: gen_estimator_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
 
@@ -93,7 +93,7 @@ Generates SamplerV2 input for the circuit introduced in IBM's `Get Started with 
 
 Usage:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    usage: gen_sampler_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
 

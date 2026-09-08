@@ -21,28 +21,64 @@ Quantum Resource Management Interface (QRMI)
 
     .. grid-item::
 
-        .. image:: /_static/images/ibm-quantum-logo.png
+        .. figure:: /_static/images/ibm-quantum-logo-light.png
+           :figclass: light-only
            :width: 90%
            :target: https://www.ibm.com/quantum
            :align: center
 
     .. grid-item::
 
-        .. image:: /_static/images/pasqal-logo.png
+        .. figure:: /_static/images/pasqal-logo-light.png
+           :figclass: light-only
            :width: 70%
            :target: https://www.pasqal.com/
            :align: center
 
     .. grid-item::
 
-        .. image:: /_static/images/alice-and-bob-logo.png
+        .. figure:: /_static/images/alice-and-bob-logo-light.png
+           :figclass: light-only
            :width: 100%
            :target: https://alice-bob.com/
            :align: center
 
     .. grid-item::
 
-        .. image:: /_static/images/iqm-logo.png
+        .. figure:: /_static/images/iqm-logo-light.png
+           :figclass: light-only
+           :width: 50%
+           :target: https://iqm.tech/
+           :align: center
+
+    .. grid-item::
+
+        .. figure:: /_static/images/ibm-quantum-logo-dark.png
+           :figclass: dark-only
+           :width: 90%
+           :target: https://www.ibm.com/quantum
+           :align: center
+
+    .. grid-item::
+
+        .. figure:: /_static/images/pasqal-logo-dark.png
+           :figclass: dark-only
+           :width: 70%
+           :target: https://www.pasqal.com/
+           :align: center
+
+    .. grid-item::
+
+        .. figure:: /_static/images/alice-and-bob-logo-dark.png
+           :figclass: dark-only
+           :width: 100%
+           :target: https://alice-bob.com/
+           :align: center
+
+    .. grid-item::
+
+        .. figure:: /_static/images/iqm-logo-dark.png
+           :figclass: dark-only
            :width: 50%
            :target: https://iqm.tech/
            :align: center
@@ -91,12 +127,12 @@ Quantum Resource Management Interface (QRMI)
    have changed accordingly. Legacy names remain supported until November 
    21, 2026. See the :ref:`migration guide<v0.23.0>` for details.
 
-The *Quantum Resource Management Interface* (QRMI) is a vendor-agnostic
+The :ref:`Quantum Resource Management Interface <qrmi_overview>` (QRMI) is a vendor-agnostic
 library for high-performance compute (HPC) systems to access, control,
 and monitor the behavior of quantum computational resources. It acts as
 a thin middleware layer that abstracts away the complexities associated
 with controlling quantum resources through a set of simple APIs. Written
-in Rust, this interface also exposes Python and C APIs for ease of
+in Rust, this interface also exposes Python, C and Lua APIs for ease of
 integration into nearly any computational environment.
 
 The source code to build and deploy QRMI is available
@@ -186,11 +222,11 @@ References and Acknowledgements
    :caption: Additional Resources
    :hidden:
    
-   additional_resources/FAQ
+   FAQ <additional_resources/FAQ>
    additional_resources/TROUBLESHOOTING
    migration/index
    additional_resources/CODE_OF_CONDUCT
-   additional_resources/CITATION
+   Citations <additional_resources/CITATION>
 
 .. toctree::
    :maxdepth: 2
@@ -200,10 +236,9 @@ References and Acknowledgements
    development/CONTRIBUTING
    development/TESTING
    development/DOCUMENTATION
-   development/RUST_API
-   development/PYTHON_API
-   development/C_API
-   development/LUA_API
+   development/RELEASE_DEPLOYMENT
+   Contributor Licensing Agreement <development/CLA>
+   development/api_references/index
 
 .. toctree::
    :maxdepth: 2

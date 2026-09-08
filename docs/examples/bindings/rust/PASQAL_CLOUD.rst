@@ -94,7 +94,7 @@ and write it to a file like this:
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    cargo build --release
@@ -103,7 +103,7 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-pasqal-cloud --help
    QRMI for Pasqal Cloud - Example
@@ -118,6 +118,6 @@ How to run `this example`_
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-pasqal-cloud -b FRESNEL -i input.json

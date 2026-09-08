@@ -1,7 +1,7 @@
 .. _testing:
 
-Testing QRMI
-============
+Testing
+=======
 
 .. rst-class:: lead
 
@@ -91,7 +91,7 @@ Running Rust Tests
 
 Rust built-in test framework can be executed using the ``cargo test`` command in the terminal:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo test
 
@@ -134,19 +134,19 @@ Following these principles allows for:
 -  Local ``conftest.py`` files per submodule when needed.
 -  Vendor-specific utilities without cross-contamination.
 
-Python Integration Tests
-~~~~~~~~~~~~~~~~~~~~~~~~
+.. Python Integration Tests
+.. ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. -  May require network access, services, or real backends.
+.. .. -  May require network access, services, or real backends.
 
-TBD
+.. TBD
 
 Running Python Tests
 ~~~~~~~~~~~~~~~~~~~~
 
 Python tests can be executed using the ``pytest`` command in the terminal:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    pytest
 

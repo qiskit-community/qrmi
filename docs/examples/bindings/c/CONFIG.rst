@@ -23,7 +23,7 @@ How to build `this example`_
 
 .. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/config
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    mkdir build
    cd build
@@ -34,13 +34,13 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./build/
    qrmi_config <qrmi_config.json file> <resource name>
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./build/qrmi_config /etc/slurm/qrmi_config.json ibm_fez

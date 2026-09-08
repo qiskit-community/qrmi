@@ -23,7 +23,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311_qrmi_venv/bin/activate
    pip install -r ../requirements.txt
@@ -114,7 +114,7 @@ How to run `this example`_
 
 All information is baked into the Python script. Run `pasqal.py`_:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python pasqal.py
 

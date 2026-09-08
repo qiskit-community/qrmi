@@ -46,7 +46,7 @@ Prerequisites
 How to run
 ----------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py312_qrmi_venv/bin/activate
    task_runner -h
@@ -123,7 +123,7 @@ IBM Quantum System or Quantum Compute Service
 
 Run estimator primitive on ibm_marrakesh.
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    #!/bin/bash
 
@@ -142,7 +142,7 @@ Pasqal Cloud
 Run Pulser sequence on FRESNEL. This sequence can also be generated via
 the Qiskit Pasqal Provider, as shown in the examples.
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    #!/bin/bash
 
@@ -210,7 +210,7 @@ IBM Quantum System
 
 Example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py312_qrmi_venv/bin/activate
 
@@ -263,7 +263,7 @@ Quantum Compute Service
 
 Example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py312_qrmi_venv/bin/activate
 
@@ -328,7 +328,7 @@ Example:
 
 Example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py312_qrmi_venv/bin/activate
 
@@ -354,7 +354,7 @@ Environment variables                           Descriptions
 
 Example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py312_qrmi_venv/bin/activate
 

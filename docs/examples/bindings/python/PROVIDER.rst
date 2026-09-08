@@ -22,7 +22,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311_qrmi_venv/bin/activate
    pip install qrmi[ibm]
@@ -37,7 +37,7 @@ Run `example.py`_:
 
 .. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/resource_providers/example.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    usage: example.py [-h] [--filters FILTERS] config_file resource_name
 
@@ -53,6 +53,6 @@ Run `example.py`_:
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py /etc/slurm/qrmi_config.json ibm_inst1 --filters "num_qubits=127&max_shots=10000"

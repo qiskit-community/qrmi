@@ -81,7 +81,7 @@ generate. You can customise quantum circuits by editing the code.
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    cargo build --example qrmi-example-quantum-compute-service --release
@@ -90,7 +90,7 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-quantum-compute-service --help
 
@@ -107,7 +107,7 @@ How to run `this example`_
 
 For example, using the :ref:`generated input file <task_runner_qiskit>`, run the package:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export ibm_torino_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
    export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com

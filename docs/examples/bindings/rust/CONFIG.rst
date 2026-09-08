@@ -23,7 +23,7 @@ How to build `this example`_
 
 .. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/qrmi_config
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    cargo build --release
@@ -32,7 +32,7 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-config --help
    Parsing qrmi_config.json file
@@ -46,6 +46,6 @@ How to run `this example`_
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-config -f /etc/slurm/qrmi_config.json

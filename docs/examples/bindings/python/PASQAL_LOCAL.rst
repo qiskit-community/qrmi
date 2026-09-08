@@ -25,7 +25,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311_qrmi_venv/bin/activate
    pip install -r ../requirements.txt
@@ -77,7 +77,7 @@ Run `example.py`_:
 
 .. _example.py: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/python/pasqal_local
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py -h
    usage: example.py [-h] --backend BACKEND input
@@ -94,6 +94,6 @@ Run `example.py`_:
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py --backend BACKEND_NAME input.json

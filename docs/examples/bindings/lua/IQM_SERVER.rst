@@ -20,14 +20,14 @@ Prerequisites
 Setup
 -----
 
-.. code:: shell-session
+.. code:: bash
 
    export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
 
 Example:
 
-.. code:: shell-session
+.. code:: bash
 
    export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
@@ -43,7 +43,7 @@ required environment variables are listed below.
 Environment variables                     Descriptions
 ========================================= =======================
 ``{qc_alias_name}_QRMI_IQM_ISA_ENDPOINT`` IQM Server API endpoint
-``{qc_alias_name}_QRMI_IBM_ISA_TOKEN``    IQM Server API token
+``{qc_alias_name}_QRMI_IQM_ISA_TOKEN``    IQM Server API token
 ========================================= =======================
 
 .. note::
@@ -72,13 +72,13 @@ Run `example.lua`_:
 
 .. _example.lua: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/iqm/example.lua
 
-.. code:: shell-session
+.. code:: bash
 
    lua example.lua <qc_alias> <IQM JSON> <job_type('circuit','run' or 'sweep')>
 
 For example:
 
-.. code:: shell-session
+.. code:: bash
 
    export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
    export garnet_mock_QRMI_IQM_ISA_TOKEN=your api token

@@ -56,7 +56,7 @@ generate. You can customise quantum circuits by editing the code.
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    mkdir build
    cd build
@@ -67,14 +67,14 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./build/iqm_server
    iqm_server <qc_alias> <IQM JSON> <job_type('circuit','run' or 'sweep')
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export garnet_mock_QRMI_IQM_ISA_ENDPOINT=https://resonance.meetiqm.com
    export garnet_mock_QRMI_IQM_ISA_TOKEN=your api token

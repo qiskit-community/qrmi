@@ -64,7 +64,7 @@ and write it to a file like this:
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    cargo build --release --features=qrmi/munge
@@ -73,7 +73,7 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-pasqal-local --help
    QRMI for Pasqal Local - Example
@@ -88,6 +88,6 @@ How to run `this example`_
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ../target/release/qrmi-example-pasqal-local -b PASQAL_LOCAL -i input.json

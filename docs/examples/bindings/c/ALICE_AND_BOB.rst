@@ -36,7 +36,7 @@ How to build `this example`_
 
 .. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/alice_bob_felis
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    mkdir build
    cd build
@@ -47,6 +47,6 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./felis <backend_name> <input file>

@@ -24,7 +24,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    pip install -f requirements.txt
 
@@ -42,7 +42,7 @@ provided by IQM.
 
 Usage:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    usage: gen_iqm_json.py [-h] qc_alias base_url token
 

@@ -21,14 +21,14 @@ Prerequisites
 Setup
 -----
 
-.. code:: shell-session
+.. code:: bash
 
    export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
 
 Example:
 
-.. code:: shell-session
+.. code:: bash
 
    export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
@@ -114,12 +114,12 @@ Run `example.lua`_:
 
 .. _example.lua: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/pasqal/example.lua
 
-.. code:: shell-session
+.. code:: bash
 
    lua example.lua <backend name> <resource type> <input file>
 
 For example:
 
-.. code:: shell-session
+.. code:: bash
 
    lua example.lua FRESNEL pasqal-cloud input.json

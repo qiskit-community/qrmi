@@ -22,14 +22,14 @@ Prerequisites
 Setup
 -----
 
-.. code:: shell-session
+.. code:: bash
 
    export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
 
 Example:
 
-.. code:: shell-session
+.. code:: bash
 
    export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
@@ -96,12 +96,12 @@ How to build `this example`_
 
 .. _this  example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/ibm
 
-.. code:: shell-session
+.. code:: bash
 
-   $ mkdir build
-   $ cd build
-   $ cmake ..
-   $ make
+   mkdir build
+   cd build
+   cmake ..
+   make
 
 
 How to run `this example`_
@@ -111,13 +111,13 @@ Run `example.lua`_:
 
 .. _example.lua: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/ibm/example.lua
 
-.. code:: shell-session
+.. code:: bash
 
    lua example.lua <backend_name> <resource_type> <program type> <input filename>
 
 For example:
 
-.. code:: shell-session
+.. code:: bash
 
    export ibm_torino_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
    export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com

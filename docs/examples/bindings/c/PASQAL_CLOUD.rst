@@ -94,7 +94,7 @@ and write it to a file like this:
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    mkdir build
    cd build
@@ -105,13 +105,13 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./build/pasqal-cloud
    pasqal-cloud <backend_name> <input file>
 
 For example,
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./build/pasqal-cloud FRESNEL input.json

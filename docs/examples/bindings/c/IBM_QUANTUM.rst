@@ -86,7 +86,7 @@ generate. You can customise quantum circuits by editing the code.
 How to build `this example`_
 ----------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    mkdir build
    cd build
@@ -97,14 +97,14 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    ./build/quantum_system
    quantum_system <backend_name> <primitive input file> <program id>
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export test_eagle_QRMI_IBM_QS_ENDPOINT=http://localhost:8080
    export test_eagle_QRMI_IBM_QS_IAM_ENDPOINT=https://iam.cloud.ibm.com

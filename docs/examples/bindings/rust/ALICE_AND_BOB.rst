@@ -37,7 +37,7 @@ How to build `this example`_
 
 .. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/alice_bob_felis
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cargo clean
    CARGO_TARGET_DIR=./target cargo build --release
@@ -46,12 +46,12 @@ How to build `this example`_
 How to run `this example`_
 --------------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    qrmi-example-alice-bob-felis --backend <BACKEND> --input <INPUT>
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
     ./target/debug/qrmi-example-alice-bob-felis --backend 'ab_emu_1q_lescanne_2020' --input ./generated_circuit.ll

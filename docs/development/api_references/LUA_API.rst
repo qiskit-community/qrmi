@@ -18,9 +18,9 @@ a Lua consumer's point of view (for C-level implementation details, see
 
 The module provides two independent object types:
 
--  **``qrmi.resource``** — a handle to a single quantum resource
+-  ``qrmi.resource`` — a handle to a single quantum resource
    (created via ``qrmi.new()``)
--  **``qrmi.config``** — a handle to a ``qrmi_config.json`` config file
+-  ``qrmi.config`` — a handle to a ``qrmi_config.json`` config file
    (created via ``qrmi.load_config()``) Completely independent lifecycle
    from ``qrmi.resource``
 

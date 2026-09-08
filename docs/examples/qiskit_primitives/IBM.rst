@@ -24,7 +24,7 @@ Install dependencies
 Assuming your Python virtual environment is located at
 ``~/py311venv_qrmi_primitives/bin/activate``:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py311venv_qrmi_primitives/bin/activate
    pip install -r requirements.txt
@@ -112,7 +112,7 @@ set by users or administrator.
 Example
 ^^^^^^^
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export QRMI_JOB_QPU_RESOURCES=test_eagle
    export QRMI_JOB_QPU_TYPES=ibm-quantum-system
@@ -171,7 +171,7 @@ set by users or administrator.
 Example
 ^^^^^^^
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export QRMI_JOB_QPU_RESOURCES=ibm_torino,ibm_marrakesh
    export QRMI_JOB_QPU_TYPES=ibm-quantum-compute-service,ibm-quantum-compute-service
@@ -199,7 +199,7 @@ Run `sampler.py`_:
 
 .. _sampler.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qiskit_primitives/ibm/sampler.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python sampler.py
 
@@ -215,7 +215,7 @@ Run `estimator.py`_:
 
 .. _estimator.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qiskit_primitives/ibm/estimator.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python estimator.py
 

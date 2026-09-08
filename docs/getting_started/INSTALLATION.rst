@@ -20,13 +20,13 @@ Quick Start
 
 We encourage installing QRMI via ``pip``:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    pip install qrmi
 
 To use a specific quantum resource, install QRMI with the corresponding optional dependencies:
 
-.. code-block:: shell-session 
+.. code-block:: bash 
 
    pip install "qrmi[ibm]"       # Include dependencies for IBM
    pip install "qrmi[iqm]"       # Include dependencies for IQM
@@ -36,7 +36,7 @@ To use a specific quantum resource, install QRMI with the corresponding optional
 
 Or combine multiple resources:
 
-.. code-block:: shell-session 
+.. code-block:: bash 
 
    pip install "qrmi[ibm,pasqal]"
 
@@ -52,6 +52,7 @@ Pip will handle all dependencies automatically and you will always install the l
 
 
 .. _install_source:
+
 
 Installing from Source
 ----------------------
@@ -94,19 +95,44 @@ Prerequisites
    -  ``apt install doxygen`` for Linux(Ubuntu etc.)
    -  ``brew install doxygen`` for MacOS
 
+
 .. _building_core_qrmi_libraries:
 
 Building Core QRMI Libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Core QRMI is a set of libraries to control the state of quantum
-resources. It is written in Rust with C and Python APIs exposed for ease
+resources. It is written in Rust with C, Python and Lua APIs exposed for ease
 of integration into any compute infrastructure.
 
-Prebuilt binaries for Linux (glibc 2.28 compatible) on x86_64, ppc64le, and aarch64
+
+QRMI Source Code
+^^^^^^^^^^^^^^^^
+
+QRMI's source code can be cloned from the GitHub repository using the following command:
+
+.. tabs::
+
+   .. tab:: HTTPS
+
+      .. code-block:: bash
+
+         git clone https://github.com/qiskit-community/qrmi.git
+
+   .. tab:: SSH
+
+      .. code-block:: bash
+   
+         git clone git@github.com:qiskit-community/qrmi.git
+
+Alternatively, the latest prebuilt binaries for Linux (glibc 2.28 compatible) on x86_64, ppc64le, and aarch64
 platforms are available for download from the repository's `Releases tab`_.
 
 .. _Releases tab: https://github.com/qiskit-community/qrmi/releases/latest
+
+
+Building from Source
+^^^^^^^^^^^^^^^^^^^^
 
 This section will guide you through building QRMI for C, Python and Lua.
 
@@ -114,7 +140,7 @@ This section will guide you through building QRMI for C, Python and Lua.
 
    .. tab:: Rust/C
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
          . ~/.cargo/env
          cargo clean
@@ -124,7 +150,7 @@ This section will guide you through building QRMI for C, Python and Lua.
 
       1. Setup a Python virtual environment
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
          . ~/.cargo/env
          cargo clean
@@ -135,21 +161,21 @@ This section will guide you through building QRMI for C, Python and Lua.
 
       2. Create stub file for Python code
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
          . ~/.cargo/env
          cargo run --bin stubgen --features=pyo3
 
       3. Create a wheel for distribution
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
          source ~/py312_qrmi_venv/bin/activate
          CARGO_TARGET_DIR=./target/release/maturin maturin build --release
 
       For example,
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
          CARGO_TARGET_DIR=./target/release/maturin maturin build --release
 
@@ -167,10 +193,11 @@ This section will guide you through building QRMI for C, Python and Lua.
       Wheel is created under the ``./target/release/maturin/wheels`` directory.
       You can distribute and install on your hosts using ``pip install <wheel>``.
 
-      .. code-block:: shell-session
+      .. code-block:: bash
 
          source ~/py312_qrmi_venv/bin/activate
          pip install /shared/qrmi/target/release/maturin/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
+
 
 .. _installing_lua_bindings:
 
@@ -248,8 +275,11 @@ Once installed, the Lua binding can be built using either gcc or cmake:
          <QRMI_ROOT>/qrmi.h
          <QRMI_ROOT>/libqrmi.so
 
+      Create a build directory inside the Lua bindings directory and run cmake:
+
       .. code:: bash
 
+         cd lua/
          mkdir build && cd build
          cmake -DQRMI_ROOT=/path/to/qrmi/install ..
          cmake --build .
@@ -295,14 +325,14 @@ enable the ``munge`` feature during the build process.
 
 #. Build the Rust library:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    . ~/.cargo/env
    cargo build --release --features munge
 
 #. Build the Python wheels:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    source ~/py312_qrmi_venv/bin/activate
    CARGO_TARGET_DIR=./target/release/maturin maturin build --release --features munge,pyo3/abi3,qrmi/pyo3
@@ -344,11 +374,11 @@ environment variable with log level. Supported levels are ``error``,
 
 If you specify ``trace``, you can find underlying HTTP transaction logs.
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    RUST_LOG=trace <YOUR QRMI EXECUTABLE>
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    [2025-08-16T03:47:38Z DEBUG reqwest::connect] starting new connection: https://iam.cloud.ibm.com/
    [2025-08-16T03:47:38Z DEBUG direct_access_api::middleware::auth] current token ...
@@ -364,7 +394,7 @@ Links to the Python, Rust, C and Lua API documentation are available here:
 -  :ref:`c_api`
 -  :ref:`lua_api`
 
-The Python, Rust and C API documentation can be built locally using our :ref:`API documentation guide <api_docs>`.
+The Python, Rust and C API documentation can be built locally using our :ref:`API references guide <api_refs>`.
 
 
 Contributing

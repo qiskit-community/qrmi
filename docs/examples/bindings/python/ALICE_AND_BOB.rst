@@ -22,7 +22,7 @@ Prerequisites
 Install dependencies
 --------------------
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    pip install -r requirements.txt
 
@@ -69,7 +69,7 @@ You can optionally modify the Qiskit circuit in
 `generate_input_generic.py`_ before generating it in QIR form as
 follows:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export QRMI_AB_FELIS_BASE_ENDPOINT='<felis endpoint>'
    export QRMI_AB_FELIS_API_KEY='<your felis api key>'
@@ -86,7 +86,7 @@ like ``measure_x``. To do so:
 .. _qiskit-alice-bob-provider: https://github.com/Alice-Bob-SW/qiskit-alice-bob-provider
 .. _generate_input_generic.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/alice_bob_felis/generate_input_generic.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    cd examples/qrmi/python/alice_bob/
    python generate_input_generic.py > generated_circuit.ll
@@ -101,7 +101,7 @@ Run `example.py`_:
 
 .. _example.py: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/python/alice_bob_felis/example.py
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    python example.py -h
    usage: example.py [-h] target qir_file
@@ -117,7 +117,7 @@ Run `example.py`_:
 
 For example:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_BASE_ENDPOINT='https://api.alice-bob.com/'
    export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_API_KEY='<your felis api key>'
