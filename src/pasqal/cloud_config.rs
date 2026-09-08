@@ -41,7 +41,7 @@ impl PasqalConfig {
     /// used as-is with no environment variable override.
     pub(crate) fn from_config(config: HashMap<String, String>) -> Result<Self> {
         let mut cfg = PasqalConfig {
-            from_env: true,
+            from_env: false,
             ..Default::default()
         };
         for (k, v) in &config {
