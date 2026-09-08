@@ -1,4 +1,4 @@
-# python/tests/unit/primitives/iqm/test_iqm_job.py
+"""Unit tests for the Qiskit backend provider."""
 
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
@@ -20,6 +20,7 @@ from qrmi import TaskStatus, ResourceType
 
 
 def test_submit_not_supported():
+    """Verify that submit() raises NotImplementedError, as jobs are submitted automatically."""
     backend = MagicMock()
     job = IQMJobCustom(
         backend=backend,
@@ -46,6 +47,7 @@ def test_submit_not_supported():
     ],
 )
 def test_status(task_status, expected):
+    """Verify that the job status is correctly mapped from QRMI task status to Qiskit JobStatus."""
     qrmi = MagicMock()
     qrmi.task_status.return_value = task_status
 
@@ -68,6 +70,7 @@ def test_result_completed(
     mock_json_loads,
     mock_format_results,
 ):
+    """Verify that the result() method correctly retrieves and formats the results of a completed job."""
     measurements = {"m": [["0"], ["1"]]}
 
     mock_json_loads.return_value = {
@@ -117,6 +120,7 @@ def test_result_uses_cache(
     mock_json_loads,
     mock_format_results,
 ):
+    """Verify that the result() method uses cached results on subsequent calls."""
     mock_json_loads.return_value = {"measurements": {}}
 
     mock_format_results.return_value = [("circ", ["0"], {"0": 1})]
@@ -149,6 +153,7 @@ def test_result_uses_cache(
 
 @patch("qrmi.qiskit_iqm.iqm_provider.time.sleep")
 def test_result_timeout(mock_sleep):
+    """Verify that the result() method raises a TimeoutError if the job does not complete within the specified timeout."""
     qrmi = MagicMock()
     qrmi.task_status.return_value = TaskStatus.Running
 
@@ -170,6 +175,7 @@ def test_result_timeout(mock_sleep):
 
 
 def test_result_failed_job():
+    """Verify that the result() method returns an empty result for failed jobs."""
     qrmi = MagicMock()
     qrmi.task_status.return_value = TaskStatus.Failed
 
@@ -196,12 +202,14 @@ def test_result_includes_metadata(
     mock_json_loads,
     mock_format_results,
 ):
+    """Verify that the result() method includes circuit metadata in the results."""
     mock_json_loads.return_value = {
         "measurements",
     }
 
 
 def test_cancel_warns():
+    """Verify that the cancel() method raises a warning and returns False, as cancellation is not supported."""
     backend = MagicMock()
 
     job = IQMJobCustom(
@@ -222,6 +230,7 @@ def test_cancel_warns():
 
 @pytest.fixture
 def qrmi_backend():
+    """Verify that a QRMIBackend instance can be created with the necessary attributes."""
     backend = QRMIBackend.__new__(QRMIBackend)
 
     backend._idx_to_qb = {0: "QB1"}
@@ -234,12 +243,14 @@ def qrmi_backend():
 
 
 def test_default_options():
+    """Verify that the default options for QRMIBackend are of type Options."""
     opts = QRMIBackend._default_options()
 
     assert isinstance(opts, Options)
 
 
 def test_max_circuits_property(qrmi_backend):
+    """Verify that the max_circuits property can be set and retrieved correctly."""
     assert qrmi_backend.max_circuits is None
 
     qrmi_backend.max_circuits = 25
@@ -249,6 +260,7 @@ def test_max_circuits_property(qrmi_backend):
 
 @patch("qrmi.qiskit_iqm.iqm_provider.IQMJobCustom")
 def test_run_submits_job(mock_job):
+    """Verify that the run() method submits a job and returns an IQMJobCustom instance."""
     backend = MagicMock(spec=QRMIBackend)
 
     run_request = MagicMock()
@@ -270,6 +282,7 @@ def test_run_submits_job(mock_job):
 
 
 def test_create_run_request_empty_list(qrmi_backend):
+    """Verify that create_run_request raises a ValueError when given an empty list of circuits."""
     with pytest.raises(
         ValueError,
         match="Empty list of circuits",
@@ -278,6 +291,7 @@ def test_create_run_request_empty_list(qrmi_backend):
 
 
 def test_create_run_request_callback_called(qrmi_backend):
+    """Verify that the circuit_callback is called when provided to create_run_request."""
     circuit = QuantumCircuit(1)
 
     callback = MagicMock()
@@ -297,6 +311,7 @@ def test_create_run_request_callback_called(qrmi_backend):
 
 
 def test_create_run_request_unknown_option_warning(qrmi_backend):
+    """Verify that a warning is raised when an unknown option is passed to create_run_request."""
     circuit = QuantumCircuit(1)
 
     with (
@@ -313,6 +328,7 @@ def test_create_run_request_unknown_option_warning(qrmi_backend):
 
 
 def test_create_run_request_deprecated_option_warning(qrmi_backend):
+    """Verify that a deprecation warning is raised when a deprecated option is passed to create_run_request."""
     circuit = QuantumCircuit(1)
 
     with (
@@ -329,6 +345,7 @@ def test_create_run_request_deprecated_option_warning(qrmi_backend):
 
 
 def test_calibration_change_warning(qrmi_backend):
+    """Verify that a warning is raised when the calibration set changes between runs."""
     circuit = QuantumCircuit(1)
 
     qrmi_backend._use_default_calibration_set = True
@@ -356,6 +373,7 @@ def test_create_run_request_wraps_validation_error(
     mock_build,
     qrmi_backend,
 ):
+    """Verify that a CircuitValidationError is raised when _build_run_request raises a CircuitValidationError."""
     from iqm.iqm_client import CircuitValidationError
 
     circuit = QuantumCircuit(1)
@@ -373,6 +391,7 @@ def test_create_run_request_wraps_validation_error(
 
 
 def test_serialize_circuit_uses_default_mapping(qrmi_backend):
+    """Verify that the _serialize_circuit method uses the default qubit mapping when no mapping is provided."""
     circuit = QuantumCircuit(1)
 
     with patch.object(
@@ -399,6 +418,7 @@ def test_serialize_circuit_success(
     mock_circuit_cls,
     qrmi_backend,
 ):
+    """Verify that the _serialize_circuit method correctly serializes a circuit and constructs a Circuit object."""
     circuit = QuantumCircuit(1, name="test")
 
     mock_serialize.return_value = ["instr"]
@@ -421,6 +441,7 @@ def test_serialize_circuit_invalid_metadata(
     mock_circuit_cls,
     qrmi_backend,
 ):
+    """Verify that the _serialize_circuit method raises a warning when circuit metadata cannot be serialized."""
     circuit = QuantumCircuit(1, name="test")
     circuit.metadata = {}
 
@@ -447,6 +468,7 @@ def test_serialize_circuit_invalid_metadata(
 
 @patch("qrmi.qiskit_iqm.iqm_provider.get_job_qpu_resources_and_types")
 def test_init_filters_iqm_resources(mock_resources):
+    """Verify that the IQMProvider filters and stores only IQM resources during initialization."""
     mock_resources.return_value = (
         [
             "iqm:garnet",
@@ -474,6 +496,7 @@ def test_get_backend_default(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method retrieves the default backend when no name is specified."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = ["iqm:garnet"]
 
@@ -493,6 +516,7 @@ def test_get_backend_named_backend(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method retrieves the specified backend when a name is provided."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = [
         "iqm:garnet",
@@ -515,6 +539,7 @@ def test_get_backend_invalid_name_warns(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method raises a warning when an invalid backend name is provided."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = ["iqm:garnet"]
 
@@ -536,6 +561,7 @@ def test_get_backend_with_calibration_set(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method correctly forwards the calibration_set_id to the QuantumResource."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = ["iqm:garnet"]
 
@@ -557,6 +583,7 @@ def test_get_backend_forwards_calibration_set(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method correctly forwards the calibration_set_id to the QRMIBackend."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = ["iqm:garnet"]
 
@@ -582,6 +609,7 @@ def test_get_backend_forwards_use_metrics(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method correctly forwards the use_metrics flag to the QRMIBackend."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = ["iqm:garnet"]
 
@@ -603,6 +631,7 @@ def test_get_backend_returns_backend(
     mock_resource,
     mock_backend,
 ):
+    """Verify that the get_backend method returns the QRMIBackend instance created by the QRMIBackend constructor."""
     provider = IQMProvider.__new__(IQMProvider)
     provider._iqm_resources = ["iqm:garnet"]
 

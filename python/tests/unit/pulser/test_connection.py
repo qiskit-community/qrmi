@@ -4,7 +4,9 @@ import json
 
 import pulser
 import pytest
+from unittest.mock import Mock
 from pulser.backend.remote import RemoteResultsError
+from pulser.exceptions.serialization import DeserializeDeviceError
 from pulser.backend.results import Results
 from qrmi import (
     ResourceType,
@@ -186,6 +188,23 @@ def test_init_without_qrmi_raises_for_many_resources(monkeypatch) -> None:
         PulserQRMIConnection()
 
 
+def test_init_with_incompatible_resource_type() -> None:
+    """Raise if the connection is initialized with an incompatible resource type."""
+
+    class _FakeResource(_FakeQRMI):
+        def __init__(self) -> None:
+            super().__init__()
+
+        def resource_type(self) -> ResourceType:
+            """Return a non-Pasqal resource type."""
+            return ResourceType.IBMQuantumSystem
+
+    with pytest.raises(
+        ValueError, match="PulserQRMIConnection can only be used with 'PasqalLocal'"
+    ):
+        PulserQRMIConnection(_FakeResource())
+
+
 def test_submit_wait_false_returns_remote_results() -> None:
     """Return a remote-results handler with QRMI task IDs."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
@@ -280,13 +299,52 @@ def test_wrong_device_type() -> None:
 
 
 def test_fetch_available_devices() -> None:
-    """Test the parsing from the qrmi.target interface to the Connexion.fetch_available_devices method"""
+    """Test the parsing from the qrmi.target interface to the Connection.fetch_available_devices method"""
 
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
     devices = connection.fetch_available_devices()
     assert len(devices) == 1
     assert "DUMMY" in devices
     assert isinstance(devices["DUMMY"], pulser.devices.VirtualDevice)
+
+
+def test_fetch_available_devices_load_json_fail(monkeypatch) -> None:
+    """Test method raises a JSONDecodeError when the qrmi.target payload is not valid JSON."""
+
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(_FakeQRMI, "target", lambda self: _TaskResult("not-json"))
+
+    result = connection.fetch_available_devices()
+
+    assert not result
+
+
+def test_fetch_available_devices_skips_invalid_device(monkeypatch):
+    """Test method skips invalid devices when deserialization fails."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    payload = json.dumps(
+        [
+            {"device_type": "bad", "specs": {}},
+            {"device_type": "good", "specs": {"foo": "bar"}},
+        ]
+    )
+
+    monkeypatch.setattr(_FakeQRMI, "target", lambda self: _TaskResult(payload))
+
+    mock_device = Mock(name="device")
+
+    def fake_deserialize(specs):
+        if specs == {}:
+            raise DeserializeDeviceError("bad device")
+        return mock_device
+
+    monkeypatch.setattr(PulserQRMIConnection, "deserialize_device", fake_deserialize)
+
+    devices = connection.fetch_available_devices()
+
+    assert devices == {"good": mock_device}
 
 
 def test_get_batch_status_running_any_job_is_running() -> None:
