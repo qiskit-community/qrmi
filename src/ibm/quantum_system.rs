@@ -28,6 +28,7 @@ use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
+use std::unimplemented;
 
 use async_trait::async_trait;
 
@@ -115,7 +116,7 @@ impl IBMQuantumSystem {
         })
     }
 
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
         unimplemented!()
     }
 }

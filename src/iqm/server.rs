@@ -27,6 +27,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
 use uuid::Uuid;
+use std::unimplemented;
 
 /// QRMI implementation for IQM Server API
 pub struct IQMServer {
@@ -74,7 +75,7 @@ impl IQMServer {
             calibration_set_id: calset_id.to_string(),
         })
     }
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
         unimplemented!()
     }
 

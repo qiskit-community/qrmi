@@ -16,7 +16,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::unimplemented;
 
 const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
 
@@ -29,6 +28,7 @@ pub(crate) struct PasqalConfig {
     pub(crate) token: Option<String>,
     pub(crate) project_id: Option<String>,
     pub(crate) auth_endpoint: Option<String>,
+    pub(crate) from_env: bool,
 }
 
 impl PasqalConfig {
@@ -36,31 +36,69 @@ impl PasqalConfig {
         read_pasqal_config(backend_name)
     }
 
+    /// Same fields as [`Self::read`], but read from a config map instead of
+    /// the `~/.pasqal/config` file. Unlike [`Self::read`]'s fields, these are
+    /// used as-is with no environment variable override.
     pub(crate) fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        unimplemented!()
+        let mut cfg = PasqalConfig { from_env: true, ..Default::default() };
+        for (k, v) in &config {
+            match k.to_ascii_lowercase().as_str() {
+                "username" => cfg.username = Some(v.clone()),
+                "password" => cfg.password = Some(v.clone()),
+                "client_id" => cfg.client_id = Some(v.clone()),
+                "client_secret" => cfg.client_secret = Some(v.clone()),
+                "token" => cfg.token = Some(v.clone()),
+                "project_id" => cfg.project_id = Some(v.clone()),
+                "auth_endpoint" => cfg.auth_endpoint = Some(v.clone()),
+                _ => {}
+            }
+        }
+        Ok(cfg)
     }
 
     pub(crate) fn project_id(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID")
-            .or(self.project_id.clone().filter(|v| !v.trim().is_empty()))
+        if self.from_env {
+            env_config_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID")
+                .or(self.project_id.clone().filter(|v| !v.trim().is_empty()))
+        } else {
+            self.project_id.clone().filter(|v| !v.trim().is_empty())
+        }
     }
 
     pub(crate) fn auth_token(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_TOKEN")
-            .or(self.token.clone().filter(|v| !v.trim().is_empty()))
+        if self.from_env {
+            env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_TOKEN")
+                .or(self.token.clone().filter(|v| !v.trim().is_empty()))
+        } else {
+            self.token.clone().filter(|v| !v.trim().is_empty())
+        }
     }
 
     pub(crate) fn auth_endpoint(&self, backend_name: &str) -> String {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT")
-            .or(self.auth_endpoint.clone().filter(|v| !v.trim().is_empty()))
-            .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string())
+        let configured = if self.from_env {
+            env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT")
+                .or(self.auth_endpoint.clone().filter(|v| !v.trim().is_empty()))
+        } else {
+            self.auth_endpoint.clone().filter(|v| !v.trim().is_empty())
+        };
+        configured.unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string())
     }
 
     pub(crate) fn base_url(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_BASE_URL")
+        if self.from_env {
+            env_config_value(backend_name, "QRMI_PASQAL_CLOUD_BASE_URL")
+        } else {
+            None
+        }
     }
 
     pub(crate) fn credentials(&self) -> (Option<String>, Option<String>) {
+        if !self.from_env {
+            return (
+                self.username.clone().filter(|v| !v.trim().is_empty()),
+                self.password.clone().filter(|v| !v.trim().is_empty()),
+            );
+        }
         let username = env::var("PASQAL_USERNAME")
             .ok()
             .filter(|v| !v.trim().is_empty())
@@ -76,6 +114,12 @@ impl PasqalConfig {
         &self,
         backend_name: &str,
     ) -> (Option<String>, Option<String>) {
+        if !self.from_env {
+            return (
+                self.client_id.clone().filter(|v| !v.trim().is_empty()),
+                self.client_secret.clone().filter(|v| !v.trim().is_empty()),
+            );
+        }
         let client_id = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_ID")
             .or(self.client_id.clone().filter(|v| !v.trim().is_empty()));
         let client_secret = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_SECRET")
@@ -229,11 +273,13 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
                     path.display()
                 );
             }
-            return Ok(PasqalConfig::default());
+            let mut config = PasqalConfig { from_env: true, ..Default::default() };
+            config.from_env = true;
+            return Ok(config);
         }
     };
 
-    let mut config = PasqalConfig::default();
+    let mut config = PasqalConfig { from_env: true, ..Default::default() };
 
     for line in content.lines() {
         let line = line.trim();

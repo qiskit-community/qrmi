@@ -25,6 +25,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::env;
 use uuid::Uuid;
+use std::unimplemented;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
 pub struct AliceBobFelis {
@@ -67,7 +68,7 @@ impl AliceBobFelis {
             felis_target: device_to_target(backend_name),
         })
     }
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
         unimplemented!()
     }
 

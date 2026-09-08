@@ -27,6 +27,7 @@ use quantum_compute_client::models::create_session_request_one_of::Mode;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
+use std::unimplemented;
 
 use async_trait::async_trait;
 
@@ -96,7 +97,7 @@ impl IBMQuantumComputeService {
             token_lifetime: 0,
         })
     }
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
         unimplemented!()
     }
 }

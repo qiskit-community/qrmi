@@ -89,6 +89,7 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
         token: None,
         project_id: None,
         auth_endpoint: None,
+        from_env: true,
     };
     let (username, password) = cfg.credentials();
 
@@ -116,6 +117,7 @@ fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
         token: None,
         project_id: None,
         auth_endpoint: None,
+        from_env: true,
     };
     let (client_id, client_secret) = cfg.service_account_credentials("EMU_FREE");
 

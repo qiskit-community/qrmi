@@ -17,7 +17,6 @@ use anyhow::Context;
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
-use std::unimplemented;
 use uuid::Uuid;
 
 use super::cloud_config::PasqalConfig;
@@ -60,8 +59,24 @@ impl PasqalCloud {
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
-
         let cfg = PasqalConfig::read(backend_name)?;
+        Self::from_pasqal_config(backend_name, cfg)
+    }
+
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        let backend_name = config
+            .get("backend_name")
+            .cloned()
+            .ok_or_else(|| QrmiError::MissingConfigKey("backend_name".to_string()))?;
+        let cfg = PasqalConfig::from_config(config)?;
+        Self::from_pasqal_config(&backend_name, cfg)
+    }
+
+    /// Builds the Pasqal Cloud API client from an already-resolved
+    /// [`PasqalConfig`], shared by [`Self::new`] (resolved from env/file) and
+    /// [`Self::from_config`] (resolved from a config map) so the credential
+    /// precedence, client construction, and logging stay in one place.
+    fn from_pasqal_config(backend_name: &str, cfg: PasqalConfig) -> Result<Self> {
         let project_id = cfg.project_id(backend_name).unwrap_or_default();
         let auth_token = cfg.auth_token(backend_name);
         let auth_endpoint = cfg.auth_endpoint(backend_name);
@@ -108,10 +123,6 @@ impl PasqalCloud {
             backend_name: backend_name.to_string(),
             task_kinds: HashMap::new(),
         })
-    }
-
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        unimplemented!()
     }
 
     fn parse_device_type(&self) -> Result<DeviceType> {
