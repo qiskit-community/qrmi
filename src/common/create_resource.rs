@@ -46,7 +46,9 @@ pub(crate) fn create_resource_from_config(
 ) -> Result<Box<dyn QuantumResource + Send + Sync>> {
     Ok(match resource_type {
         ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::from_config(config)?),
-        ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::from_config(config)?),
+        ResourceType::QiskitRuntimeService => {
+            Box::new(IBMQiskitRuntimeService::from_config(config)?)
+        }
         ResourceType::IBMQuantumComputeService => {
             Box::new(IBMQuantumComputeService::from_config(config)?)
         }

@@ -27,8 +27,8 @@ use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
 use std::time::Duration;
-use uuid::Uuid;
 use std::unimplemented;
+use uuid::Uuid;
 
 use async_trait::async_trait;
 

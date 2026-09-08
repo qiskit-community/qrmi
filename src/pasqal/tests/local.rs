@@ -5,7 +5,10 @@ use std::collections::HashMap;
 fn valid_config() -> HashMap<String, String> {
     HashMap::from([
         ("backend_name".to_string(), "FRESNEL".to_string()),
-        ("warden_url".to_string(), "http://localhost:8080".to_string()),
+        (
+            "warden_url".to_string(),
+            "http://localhost:8080".to_string(),
+        ),
         ("job_uid".to_string(), "42".to_string()),
         ("job_id".to_string(), "job-123".to_string()),
     ])

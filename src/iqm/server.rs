@@ -26,8 +26,8 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
-use uuid::Uuid;
 use std::unimplemented;
+use uuid::Uuid;
 
 /// QRMI implementation for IQM Server API
 pub struct IQMServer {

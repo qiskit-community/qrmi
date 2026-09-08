@@ -12,10 +12,10 @@
 
 use anyhow::{anyhow, Result};
 use log::{debug, warn};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use std::collections::HashMap;
 
 const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
 
@@ -40,7 +40,10 @@ impl PasqalConfig {
     /// the `~/.pasqal/config` file. Unlike [`Self::read`]'s fields, these are
     /// used as-is with no environment variable override.
     pub(crate) fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let mut cfg = PasqalConfig { from_env: true, ..Default::default() };
+        let mut cfg = PasqalConfig {
+            from_env: true,
+            ..Default::default()
+        };
         for (k, v) in &config {
             match k.to_ascii_lowercase().as_str() {
                 "username" => cfg.username = Some(v.clone()),
@@ -273,13 +276,19 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
                     path.display()
                 );
             }
-            let mut config = PasqalConfig { from_env: true, ..Default::default() };
+            let mut config = PasqalConfig {
+                from_env: true,
+                ..Default::default()
+            };
             config.from_env = true;
             return Ok(config);
         }
     };
 
-    let mut config = PasqalConfig { from_env: true, ..Default::default() };
+    let mut config = PasqalConfig {
+        from_env: true,
+        ..Default::default()
+    };
 
     for line in content.lines() {
         let line = line.trim();
