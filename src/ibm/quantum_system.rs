@@ -114,6 +114,10 @@ impl IBMQuantumSystem {
             backend_name: resource_id.to_string(),
         })
     }
+
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        unimplemented!()
+    }
 }
 
 /// S3 connection details, read from the `<backend_name>_QRMI_IBM_QS_*` environment

@@ -96,6 +96,9 @@ impl IBMQuantumComputeService {
             token_lifetime: 0,
         })
     }
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        unimplemented!()
+    }
 }
 
 // Implement the QuantumResource trait using the asynchronous wrappers.

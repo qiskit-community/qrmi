@@ -202,6 +202,26 @@ impl PyQuantumResource {
         })
     }
 
+    /// Constructs a `QuantumResource` from a config map, instead of
+    /// environment variables. Only some resource types support this so far;
+    /// others raise `UnsupportedResourceTypeError`.
+    #[staticmethod]
+    pub fn from_config(
+        resource_type: ResourceType,
+        config: std::collections::HashMap<String, String>,
+    ) -> PyResult<Self> {
+        crate::common::initialize();
+        let qrmi = crate::common::create_resource_from_config(&resource_type.into(), config)
+            .map_err(to_py_err)?;
+
+        Ok(Self {
+            qrmi,
+            rt: std::mem::ManuallyDrop::new(
+                Runtime::new().expect("Failed to create a new tokio runtime."),
+            ),
+        })
+    }
+
     fn is_accessible(&mut self, py: Python<'_>) -> PyResult<bool> {
         crate::common::initialize();
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.is_accessible().await }));

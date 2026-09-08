@@ -17,6 +17,7 @@ use anyhow::Context;
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
+use std::unimplemented;
 use uuid::Uuid;
 
 use super::cloud_config::PasqalConfig;
@@ -107,6 +108,10 @@ impl PasqalCloud {
             backend_name: backend_name.to_string(),
             task_kinds: HashMap::new(),
         })
+    }
+
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        unimplemented!()
     }
 
     fn parse_device_type(&self) -> Result<DeviceType> {

@@ -63,6 +63,43 @@ impl PasqalLocal {
             job_id,
         })
     }
+
+    /// Constructs a QRMI to access Pasqal on prem QPU from a config map, instead
+    /// of environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `backend_name` - The name of the backend/device to use
+    /// * `warden_url` - URL of the pasqd middleware (warden)
+    /// * `job_uid` - uid of the slurm job
+    /// * `job_id` - id of the slurm job
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        let get = |key: &str| -> Result<String> {
+            config
+                .get(key)
+                .cloned()
+                .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
+        };
+
+        let backend_name = get("backend_name")?;
+        let url = get("warden_url")?;
+        let job_uid_str = get("job_uid")?;
+        let job_uid: i32 = job_uid_str
+            .parse()
+            .map_err(|source| QrmiError::ParseError {
+                name: "job_uid".to_string(),
+                value: job_uid_str,
+                source: Box::new(source),
+            })?;
+        let job_id = get("job_id")?;
+
+        Ok(Self {
+            api_client: ClientBuilder::new(url).build().unwrap(),
+            backend_name,
+            job_uid,
+            job_id,
+        })
+    }
 }
 
 #[async_trait]
@@ -152,3 +189,7 @@ impl QuantumResource for PasqalLocal {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/local.rs"]
+mod tests;

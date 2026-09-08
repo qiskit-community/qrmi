@@ -10,6 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 use crate::Result;
+use std::collections::HashMap;
 
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
@@ -32,5 +33,26 @@ pub(crate) fn create_resource(
         ResourceType::PasqalLocal => Box::new(PasqalLocal::new(resource_id)?),
         ResourceType::AliceBobFelis => Box::new(AliceBobFelis::new(resource_id)?),
         ResourceType::IQMServer => Box::new(IQMServer::new(resource_id)?),
+    })
+}
+
+/// Same as [`create_resource`], but builds the resource from a config map
+/// instead of environment variables. Only backends with a `from_config`
+/// constructor are supported so far; the rest fall through to
+/// [`QrmiError::UnsupportedResourceType`] until they get one too.
+pub(crate) fn create_resource_from_config(
+    resource_type: &ResourceType,
+    config: HashMap<String, String>,
+) -> Result<Box<dyn QuantumResource + Send + Sync>> {
+    Ok(match resource_type {
+        ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::from_config(config)?),
+        ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::from_config(config)?),
+        ResourceType::IBMQuantumComputeService => {
+            Box::new(IBMQuantumComputeService::from_config(config)?)
+        }
+        ResourceType::PasqalLocal => Box::new(PasqalLocal::from_config(config)?),
+        ResourceType::PasqalCloud => Box::new(PasqalCloud::from_config(config)?),
+        ResourceType::AliceBobFelis => Box::new(AliceBobFelis::from_config(config)?),
+        ResourceType::IQMServer => Box::new(IQMServer::from_config(config)?),
     })
 }

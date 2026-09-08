@@ -789,6 +789,54 @@ pub unsafe extern "C" fn qrmi_resource_new(
 }
 
 /// @ingroup QrmiQuantumResource
+/// Constructs a QrmiQuantumResource from a config map, instead of environment
+/// variables. Only some resource types support this so far; others fail with
+/// @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_RESOURCE_TYPE_ERROR.
+///
+/// Created QrmiQuantumResource instance needs to be removed by qrmi_resource_free() call if
+/// no longer needed.
+///
+/// # Safety
+///
+/// * `environments` must be a valid pointer to a QrmiEnvironmentVariables struct.
+///
+/// @param (resource_type) [in] QrmiResourceType variant
+/// @param (config) [in] Pointer to QrmiEnvironmentVariables holding the config map
+/// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_new_from_config(
+    resource_type: ResourceType,
+    config: *const EnvironmentVariables,
+) -> *mut QuantumResource {
+    crate::common::initialize();
+    if config.is_null() {
+        _set_last_error("config is NULL".to_string());
+        return std::ptr::null_mut();
+    }
+
+    let config_map = match envvars_to_hashmap(&*config) {
+        Ok(m) => m,
+        Err(e) => {
+            _set_last_error(format!("{:?}", e));
+            return std::ptr::null_mut();
+        }
+    };
+
+    let res = match crate::common::create_resource_from_config(&resource_type, config_map) {
+        Ok(v) => v,
+        Err(err) => {
+            _record_error(err);
+            return std::ptr::null_mut();
+        }
+    };
+
+    Box::into_raw(Box::new(QuantumResource {
+        inner: res,
+        runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+    }))
+}
+
+/// @ingroup QrmiQuantumResource
 /// Frees the memory space pointed to by `ptr`, which must have been returned by a previous call to qrmi_resource_new(). Otherwise, or if ptr has already been freed, segmentation fault occurs.  If `ptr` is NULL, returns < 0.
 /// # Safety
 ///

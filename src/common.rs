@@ -14,6 +14,6 @@ mod create_resource;
 mod job_env;
 mod logging;
 
-pub(crate) use create_resource::create_resource;
+pub(crate) use create_resource::{create_resource, create_resource_from_config};
 pub(crate) use job_env::get_job_qpu_resources_and_types;
 pub(crate) use logging::{initialize, set_log_sink, LogSink};

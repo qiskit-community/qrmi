@@ -74,6 +74,9 @@ impl IQMServer {
             calibration_set_id: calset_id.to_string(),
         })
     }
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        unimplemented!()
+    }
 
     /// Interprets the result of an artifact fetch -- `job_get_artifacts` or
     /// `qc_get_artifacts` -- as JSON.

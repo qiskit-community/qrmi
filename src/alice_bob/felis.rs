@@ -67,6 +67,9 @@ impl AliceBobFelis {
             felis_target: device_to_target(backend_name),
         })
     }
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        unimplemented!()
+    }
 
     pub async fn list_backends(&mut self) -> Result<Vec<String>> {
         let targets = targets_service::list_targets(&self.config)

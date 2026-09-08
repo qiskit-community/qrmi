@@ -15,6 +15,8 @@ use log::{debug, warn};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::collections::HashMap;
+use std::unimplemented;
 
 const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
 
@@ -32,6 +34,10 @@ pub(crate) struct PasqalConfig {
 impl PasqalConfig {
     pub(crate) fn read(backend_name: &str) -> Result<Self> {
         read_pasqal_config(backend_name)
+    }
+
+    pub(crate) fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        unimplemented!()
     }
 
     pub(crate) fn project_id(&self, backend_name: &str) -> Option<String> {
