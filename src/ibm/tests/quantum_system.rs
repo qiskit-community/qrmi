@@ -12,8 +12,9 @@
 
 use super::super::IBMQuantumSystem;
 use crate::models::ResourceType;
-use crate::QuantumResource;
+use crate::{QrmiError, QuantumResource};
 use quantum_system_api::ClientBuilder;
+use std::collections::HashMap;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
@@ -37,4 +38,55 @@ async fn resource_id_and_type_match_backend() {
 
     assert_eq!(resource_id, BACKEND_NAME);
     assert_eq!(resource_type, ResourceType::IBMQuantumSystem);
+}
+
+fn valid_config() -> HashMap<String, String> {
+    HashMap::from([
+        ("backend_name".to_string(), "test_eagle".to_string()),
+        ("endpoint".to_string(), "http://localhost:8080".to_string()),
+        ("iam_api_key".to_string(), "dummy".to_string()),
+        ("service_crn".to_string(), "crn:test".to_string()),
+        (
+            "iam_endpoint".to_string(),
+            "http://localhost:8081".to_string(),
+        ),
+    ])
+}
+
+#[test]
+fn from_config_builds_resource_from_map() {
+    let qrmi = IBMQuantumSystem::from_config(valid_config()).expect("from_config should succeed");
+    assert_eq!(qrmi.backend_name, "test_eagle");
+}
+
+#[test]
+fn from_config_missing_endpoint() {
+    let mut config = valid_config();
+    config.remove("endpoint");
+    let err = IBMQuantumSystem::from_config(config)
+        .map(|_| ())
+        .unwrap_err();
+    assert!(matches!(err, QrmiError::MissingConfigKey(key) if key == "endpoint"));
+}
+
+#[test]
+fn from_config_partial_s3_keys_are_ignored() {
+    // S3 access is only enabled when all required S3 keys are present; a
+    // partial set should be silently dropped rather than erroring.
+    let mut config = valid_config();
+    config.insert("s3_bucket".to_string(), "my-bucket".to_string());
+    let qrmi = IBMQuantumSystem::from_config(config).expect("from_config should succeed");
+    assert_eq!(qrmi.backend_name, "test_eagle");
+}
+
+#[test]
+fn from_config_full_s3_keys_are_accepted() {
+    let mut config = valid_config();
+    config.insert("aws_access_key_id".to_string(), "AKIA".to_string());
+    config.insert("aws_secret_access_key".to_string(), "secret".to_string());
+    config.insert("s3_endpoint".to_string(), "http://s3.example".to_string());
+    config.insert("s3_bucket".to_string(), "my-bucket".to_string());
+    config.insert("s3_region".to_string(), "eu-west-1".to_string());
+    let qrmi = IBMQuantumSystem::from_config(config).expect("from_config should succeed");
+    assert_eq!(qrmi.backend_name, "test_eagle");
 }

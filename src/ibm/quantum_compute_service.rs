@@ -11,7 +11,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::error::{required_config, required_env, QrmiError};
 use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::quantum_compute_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
@@ -27,7 +27,6 @@ use quantum_compute_client::models::create_session_request_one_of::Mode;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::env;
-use std::unimplemented;
 
 use async_trait::async_trait;
 
@@ -97,8 +96,61 @@ impl IBMQuantumComputeService {
             token_lifetime: 0,
         })
     }
-    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
-        unimplemented!()
+    /// Constructs a QRS service instance from a config map, instead of
+    /// environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `backend_name` - The name of the backend/device to use
+    /// * `endpoint` - QRS endpoint URL
+    /// * `iam_endpoint` - IAM endpoint URL
+    /// * `iam_api_key` - IAM API key for QRS
+    /// * `service_crn` - QRS service instance CRN
+    ///
+    /// # Optional keys
+    ///
+    /// * `session_mode` - Session mode (default: "dedicated")
+    /// * `session_max_ttl` - Session max_ttl (default: 28800)
+    /// * `timeout_secs` - Cost for the job (seconds)
+    /// * `session_id` - pre-set session ID
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        let backend_name = required_config(&config, "backend_name")?;
+        let qrs_endpoint = required_config(&config, "endpoint")?;
+        let iam_endpoint = required_config(&config, "iam_endpoint")?;
+        let api_key = required_config(&config, "iam_api_key")?;
+        let service_crn = required_config(&config, "service_crn")?;
+
+        let session_mode = config
+            .get("session_mode")
+            .cloned()
+            .unwrap_or_else(|| "dedicated".to_string());
+        let session_max_ttl = config
+            .get("session_max_ttl")
+            .and_then(|v| v.parse::<i32>().ok())
+            .unwrap_or(28800);
+        let timeout_secs = config
+            .get("timeout_secs")
+            .and_then(|v| v.parse::<i32>().ok());
+        let session_id = config.get("session_id").cloned();
+
+        let mut config = configuration::Configuration::new();
+        config.base_path = qrs_endpoint;
+        config.bearer_access_token = None;
+        config.crn = Some(service_crn);
+
+        Ok(Self {
+            config,
+            backend_name,
+            session_id,
+            calibration_id: None,
+            timeout_secs,
+            session_mode,
+            session_max_ttl,
+            api_key,
+            iam_endpoint,
+            token_expiration: 0,
+            token_lifetime: 0,
+        })
     }
 }
 

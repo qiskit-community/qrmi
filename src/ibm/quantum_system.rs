@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::error::{required_config, required_env, QrmiError};
 use crate::ibm::error::IbmError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
@@ -27,7 +27,6 @@ use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
 use std::time::Duration;
-use std::unimplemented;
 use uuid::Uuid;
 
 use async_trait::async_trait;
@@ -57,20 +56,120 @@ impl IBMQuantumSystem {
     pub fn new(resource_id: &str) -> Result<Self> {
         // Check to see if the environment variables required to run this program are set.
         let daapi_endpoint = required_env(format!("{resource_id}_QRMI_IBM_QS_ENDPOINT"))?;
-
-        let binding = ClientBuilder::new(daapi_endpoint);
-        let mut builder = binding;
-
         let apikey = required_env(format!("{resource_id}_QRMI_IBM_QS_IAM_APIKEY"))?;
         let service_crn = required_env(format!("{resource_id}_QRMI_IBM_QS_SERVICE_CRN"))?;
         let iam_endpoint_url = required_env(format!("{resource_id}_QRMI_IBM_QS_IAM_ENDPOINT"))?;
 
-        let auth_method = AuthMethod::IbmCloudIam {
+        let s3_endpoint_for_daapi =
+            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT_FOR_QSAPI")).ok();
+        let s3 = if let (
+            Ok(access_key_id),
+            Ok(secret_access_key),
+            Ok(endpoint),
+            Ok(bucket),
+            Ok(region),
+        ) = (
+            env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID")),
+            env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY")),
+            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT")),
+            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_BUCKET")),
+            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_REGION")),
+        ) {
+            Some(S3BuilderParams {
+                access_key_id,
+                secret_access_key,
+                endpoint,
+                endpoint_for_daapi: s3_endpoint_for_daapi,
+                bucket,
+                region,
+            })
+        } else {
+            None
+        };
+
+        Self::from_parts(
+            resource_id,
+            daapi_endpoint,
             apikey,
             service_crn,
             iam_endpoint_url,
+            s3,
+        )
+    }
+
+    /// Constructs a QRMI to access IBM Quantum System API Service from a
+    /// config map, instead of environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `backend_name` - The name of the backend/device to use
+    /// * `endpoint` - IBM Quantum System API endpoint URL
+    /// * `iam_api_key` - IBM Cloud API Key
+    /// * `service_crn` - Provisioned Quantum System API Service instance
+    /// * `iam_endpoint` - IBM Cloud IAM API endpoint URL
+    ///
+    /// # Optional keys (all required together to enable S3 access)
+    ///
+    /// * `aws_access_key_id`, `aws_secret_access_key`, `s3_endpoint`, `s3_bucket`, `s3_region`
+    /// * `s3_endpoint_for_qsapi` - Optional override of `s3_endpoint` as seen from the service
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        let backend_name = required_config(&config, "backend_name")?;
+        let daapi_endpoint = required_config(&config, "endpoint")?;
+        let apikey = required_config(&config, "iam_api_key")?;
+        let service_crn = required_config(&config, "service_crn")?;
+        let iam_endpoint_url = required_config(&config, "iam_endpoint")?;
+
+        let s3 = match (
+            config.get("aws_access_key_id").cloned(),
+            config.get("aws_secret_access_key").cloned(),
+            config.get("s3_endpoint").cloned(),
+            config.get("s3_bucket").cloned(),
+            config.get("s3_region").cloned(),
+        ) {
+            (
+                Some(access_key_id),
+                Some(secret_access_key),
+                Some(endpoint),
+                Some(bucket),
+                Some(region),
+            ) => Some(S3BuilderParams {
+                access_key_id,
+                secret_access_key,
+                endpoint,
+                endpoint_for_daapi: config.get("s3_endpoint_for_qsapi").cloned(),
+                bucket,
+                region,
+            }),
+            _ => None,
         };
-        builder.with_auth(auth_method);
+
+        Self::from_parts(
+            &backend_name,
+            daapi_endpoint,
+            apikey,
+            service_crn,
+            iam_endpoint_url,
+            s3,
+        )
+    }
+
+    /// Builds the IBM Quantum System API client from already-resolved
+    /// connection details, shared by [`Self::new`] (resolved from env vars)
+    /// and [`Self::from_config`] (resolved from a config map).
+    fn from_parts(
+        backend_name: &str,
+        daapi_endpoint: String,
+        apikey: String,
+        service_crn: String,
+        iam_endpoint_url: String,
+        s3: Option<S3BuilderParams>,
+    ) -> Result<Self> {
+        let mut builder = ClientBuilder::new(daapi_endpoint);
+        builder.with_auth(AuthMethod::IbmCloudIam {
+            apikey,
+            service_crn,
+            iam_endpoint_url,
+        });
 
         let retry_policy = ExponentialBackoff::builder()
             .retry_bounds(Duration::from_secs(1), Duration::from_secs(5))
@@ -82,43 +181,37 @@ impl IBMQuantumSystem {
             .with_timeout(Duration::from_secs(60))
             .with_retry_policy(retry_policy);
 
-        let s3_endpoint_for_daapi =
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT_FOR_QSAPI")).ok();
-
-        if let (
-            Ok(aws_access_key_id),
-            Ok(aws_secret_access_key),
-            Ok(s3_endpoint),
-            Ok(s3_bucket),
-            Ok(s3_region),
-        ) = (
-            env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_BUCKET")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_REGION")),
-        ) {
-            builder.with_s3bucket(
-                &aws_access_key_id,
-                &aws_secret_access_key,
-                &s3_endpoint,
-                &s3_bucket,
-                &s3_region,
-                s3_endpoint_for_daapi,
-            );
-        } else {
-            info!("No S3 bucket configured.");
+        match s3 {
+            Some(s3) => {
+                builder.with_s3bucket(
+                    &s3.access_key_id,
+                    &s3.secret_access_key,
+                    &s3.endpoint,
+                    &s3.bucket,
+                    &s3.region,
+                    s3.endpoint_for_daapi,
+                );
+            }
+            None => info!("No S3 bucket configured."),
         }
 
         Ok(Self {
             api_client: builder.build().unwrap(),
-            backend_name: resource_id.to_string(),
+            backend_name: backend_name.to_string(),
         })
     }
+}
 
-    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
-        unimplemented!()
-    }
+/// S3 bucket connection details for the job-execution client, resolved
+/// either from env vars ([`IBMQuantumSystem::new`]) or a config map
+/// ([`IBMQuantumSystem::from_config`]).
+struct S3BuilderParams {
+    access_key_id: String,
+    secret_access_key: String,
+    endpoint: String,
+    endpoint_for_daapi: Option<String>,
+    bucket: String,
+    region: String,
 }
 
 /// S3 connection details, read from the `<backend_name>_QRMI_IBM_QS_*` environment

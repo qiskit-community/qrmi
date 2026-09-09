@@ -10,6 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::error::required_config;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::pasqal::error::PasqalError;
 use crate::{QrmiError, QuantumResource, Result};
@@ -64,10 +65,7 @@ impl PasqalCloud {
     }
 
     pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let backend_name = config
-            .get("backend_name")
-            .cloned()
-            .ok_or_else(|| QrmiError::MissingConfigKey("backend_name".to_string()))?;
+        let backend_name = required_config(&config, "backend_name")?;
         let cfg = PasqalConfig::from_config(config)?;
         Self::from_pasqal_config(&backend_name, cfg)
     }

@@ -12,8 +12,9 @@
 
 use super::super::IQMServer;
 use crate::models::ResourceType;
-use crate::QuantumResource;
+use crate::{QrmiError, QuantumResource};
 use iqm_server_api::apis::configuration;
+use std::collections::HashMap;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
@@ -41,4 +42,42 @@ async fn resource_id_and_type_match_backend() {
 
     assert_eq!(resource_id, BACKEND_NAME);
     assert_eq!(resource_type, ResourceType::IQMServer);
+}
+
+fn valid_config() -> HashMap<String, String> {
+    HashMap::from([
+        ("backend_name".to_string(), "sirius_mock".to_string()),
+        (
+            "isa_endpoint".to_string(),
+            "http://localhost:8080".to_string(),
+        ),
+        ("isa_token".to_string(), "test-token".to_string()),
+    ])
+}
+
+#[test]
+fn from_config_builds_resource_from_map() {
+    let qrmi = IQMServer::from_config(valid_config()).expect("from_config should succeed");
+    assert_eq!(qrmi.backend_name, "sirius:mock");
+    assert_eq!(qrmi.calibration_set_id, "default");
+    assert_eq!(qrmi.acquisition_token, None);
+}
+
+#[test]
+fn from_config_honors_optional_keys() {
+    let mut config = valid_config();
+    config.insert("calibration_set_id".to_string(), "custom".to_string());
+    config.insert("acquisition_token".to_string(), "tok-123".to_string());
+
+    let qrmi = IQMServer::from_config(config).expect("from_config should succeed");
+    assert_eq!(qrmi.calibration_set_id, "custom");
+    assert_eq!(qrmi.acquisition_token, Some("tok-123".to_string()));
+}
+
+#[test]
+fn from_config_missing_isa_endpoint() {
+    let mut config = valid_config();
+    config.remove("isa_endpoint");
+    let err = IQMServer::from_config(config).map(|_| ()).unwrap_err();
+    assert!(matches!(err, QrmiError::MissingConfigKey(key) if key == "isa_endpoint"));
 }

@@ -214,3 +214,15 @@ pub(crate) fn required_env(name: impl Into<String>) -> Result<String, QrmiError>
     let name = name.into();
     std::env::var(&name).map_err(|_| QrmiError::EnvVarNotSet(name))
 }
+
+/// Reads a required key from a `from_config` map, returning a
+/// [`QrmiError::MissingConfigKey`] with the key's name if it isn't present.
+pub(crate) fn required_config(
+    config: &std::collections::HashMap<String, String>,
+    key: &str,
+) -> Result<String, QrmiError> {
+    config
+        .get(key)
+        .cloned()
+        .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
+}

@@ -13,7 +13,7 @@
 //! QRMI implementation for Alice and Bob Felis
 
 use crate::alice_bob::error::{classify, ResourceKind};
-use crate::error::QrmiError;
+use crate::error::{required_config, QrmiError};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
 use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
@@ -24,7 +24,6 @@ use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
 use std::env;
-use std::unimplemented;
 use uuid::Uuid;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
@@ -59,6 +58,27 @@ impl AliceBobFelis {
                     "{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT (or QRMI_AB_FELIS_BASE_ENDPOINT)"
                 ))
             })?;
+        Self::from_credentials(backend_name, api_key, endpoint)
+    }
+
+    /// Constructs a Felis QR from a config map, instead of environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `backend_name` - The name of the backend/device to use
+    /// * `api_key` - API key obtained from the Felis web console
+    /// * `base_endpoint` - URL for Felis API base endpoint
+    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
+        let backend_name = required_config(&config, "backend_name")?;
+        let api_key = required_config(&config, "api_key")?;
+        let endpoint = required_config(&config, "base_endpoint")?;
+        Self::from_credentials(&backend_name, api_key, endpoint)
+    }
+
+    /// Builds the Felis client from already-resolved credentials, shared by
+    /// [`Self::new`] (resolved from env vars) and [`Self::from_config`]
+    /// (resolved from a config map).
+    fn from_credentials(backend_name: &str, api_key: String, endpoint: String) -> Result<Self> {
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
         config.basic_auth = decode_api_key(&api_key).unwrap();
@@ -67,9 +87,6 @@ impl AliceBobFelis {
             backend_name: backend_name.to_string(),
             felis_target: device_to_target(backend_name),
         })
-    }
-    pub fn from_config(_config: HashMap<String, String>) -> Result<Self> {
-        unimplemented!()
     }
 
     pub async fn list_backends(&mut self) -> Result<Vec<String>> {
@@ -226,3 +243,7 @@ impl QuantumResource for AliceBobFelis {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/felis.rs"]
+mod tests;

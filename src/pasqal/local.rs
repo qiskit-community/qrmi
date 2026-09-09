@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::required_env;
+use crate::error::{required_config, required_env};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
@@ -74,16 +74,9 @@ impl PasqalLocal {
     /// * `job_uid` - uid of the slurm job
     /// * `job_id` - id of the slurm job
     pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let get = |key: &str| -> Result<String> {
-            config
-                .get(key)
-                .cloned()
-                .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
-        };
-
-        let backend_name = get("backend_name")?;
-        let url = get("warden_url")?;
-        let job_uid_str = get("job_uid")?;
+        let backend_name = required_config(&config, "backend_name")?;
+        let url = required_config(&config, "warden_url")?;
+        let job_uid_str = required_config(&config, "job_uid")?;
         let job_uid: i32 = job_uid_str
             .parse()
             .map_err(|source| QrmiError::ParseError {
@@ -91,7 +84,7 @@ impl PasqalLocal {
                 value: job_uid_str,
                 source: Box::new(source),
             })?;
-        let job_id = get("job_id")?;
+        let job_id = required_config(&config, "job_id")?;
 
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),

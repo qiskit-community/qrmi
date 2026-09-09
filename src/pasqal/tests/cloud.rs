@@ -165,7 +165,7 @@ fn from_config_ignores_environment_variables() {
             "client_secret".to_string(),
             "config-client-secret".to_string(),
         ),
-        ("token".to_string(), "config-token".to_string()),
+        ("auth_token".to_string(), "config-token".to_string()),
         ("project_id".to_string(), "config-project-id".to_string()),
         (
             "auth_endpoint".to_string(),
