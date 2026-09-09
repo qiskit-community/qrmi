@@ -36,23 +36,36 @@ impl PasqalConfig {
         read_pasqal_config(backend_name)
     }
 
-    /// Same fields as [`Self::read`], but read from a config map instead of
-    /// the `~/.pasqal/config` file. Unlike [`Self::read`]'s fields, these are
-    /// used as-is with no environment variable override.
     pub(crate) fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let mut cfg = PasqalConfig {
-            from_env: false,
-            ..Default::default()
+        // Parsing from config file
+        let config_root_path = match config.get("config_root") {
+            Some(config_root) => pasqal_config_path_from_root(config_root)?,
+            None => None,
         };
+        let mut cfg = match config_root_path.as_ref().and_then(load_pasqal_config_file) {
+            Some(cfg) => cfg,
+            None => {
+                if let Some(path) = &config_root_path {
+                    warn!(
+                        "Pasqal config_root is set but no config file was found. Checked: {}",
+                        path.display()
+                    );
+                }
+                PasqalConfig::default()
+            }
+        };
+
+        // Overwriting with explicit parameters
+        cfg.from_env = false;
         for (k, v) in &config {
             match k.to_ascii_lowercase().as_str() {
-                "username" => cfg.username = Some(v.clone()),
-                "password" => cfg.password = Some(v.clone()),
+                "project_id" => cfg.project_id = Some(v.clone()),
+                "auth_token" => cfg.token = Some(v.clone()),
                 "client_id" => cfg.client_id = Some(v.clone()),
                 "client_secret" => cfg.client_secret = Some(v.clone()),
-                "token" => cfg.token = Some(v.clone()),
-                "project_id" => cfg.project_id = Some(v.clone()),
                 "auth_endpoint" => cfg.auth_endpoint = Some(v.clone()),
+                "username" => cfg.username = Some(v.clone()),
+                "password" => cfg.password = Some(v.clone()),
                 _ => {}
             }
         }
@@ -261,34 +274,38 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         config_path_candidates.push(path);
     }
 
-    let content = match config_path_candidates
-        .iter()
-        .find_map(|path| fs::read_to_string(path).ok().map(|content| (path, content)))
-    {
-        Some((path, content)) => {
-            debug!("Reading Pasqal config file: {}", path.display());
-            content
-        }
+    let mut config = resolve_pasqal_config(&config_path_candidates, config_root_path.as_ref());
+    config.from_env = true;
+
+    Ok(config)
+}
+
+// Loads the config from the first readable path in `candidates`. If none is readable and
+// `explicit_root` was set, warns that the explicitly configured root had no config file.
+fn resolve_pasqal_config(candidates: &[PathBuf], explicit_root: Option<&PathBuf>) -> PasqalConfig {
+    match candidates.iter().find_map(load_pasqal_config_file) {
+        Some(config) => config,
         None => {
-            if let Some(path) = config_root_path {
+            if let Some(path) = explicit_root {
                 warn!(
                     "Pasqal config root is set but no config file was found. Checked: {}",
                     path.display()
                 );
             }
-            let mut config = PasqalConfig {
-                from_env: true,
-                ..Default::default()
-            };
-            config.from_env = true;
-            return Ok(config);
+            PasqalConfig::default()
         }
-    };
+    }
+}
 
-    let mut config = PasqalConfig {
-        from_env: true,
-        ..Default::default()
-    };
+// Reads and parses the Pasqal config file at `path`, or returns `None` if it can't be read.
+fn load_pasqal_config_file(path: &PathBuf) -> Option<PasqalConfig> {
+    let content = fs::read_to_string(path).ok()?;
+    debug!("Reading Pasqal config file: {}", path.display());
+    Some(parse_pasqal_config_content(&content))
+}
+
+fn parse_pasqal_config_content(content: &str) -> PasqalConfig {
+    let mut config = PasqalConfig::default();
 
     for line in content.lines() {
         let line = line.trim();
@@ -315,7 +332,7 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         }
     }
 
-    Ok(config)
+    config
 }
 
 fn env_config_value(backend_name: &str, key: &str) -> Option<String> {
