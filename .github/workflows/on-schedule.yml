@@ -32,6 +32,7 @@ jobs:
       lint-target: 'all'
       format-check: true
       libqrmi-tarball: true
+      libqrmi-rpm-x86: true
       vendor-tarball: true
       artifact-prefix: 'schedule'
 
