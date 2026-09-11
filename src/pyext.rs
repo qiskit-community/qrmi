@@ -202,8 +202,7 @@ impl PyQuantumResource {
         })
     }
 
-    /// Constructs a `QuantumResource` from a config map, instead of
-    /// environment variables.
+    /// Constructs a `QuantumResource` from a config of type `dict[str, str]`
     #[staticmethod]
     pub fn from_config(
         resource_id: &str,
