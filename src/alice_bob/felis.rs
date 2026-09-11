@@ -65,14 +65,12 @@ impl AliceBobFelis {
     ///
     /// # Required keys
     ///
-    /// * `backend_name` - The name of the backend/device to use
     /// * `api_key` - API key obtained from the Felis web console
     /// * `base_endpoint` - URL for Felis API base endpoint
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let backend_name = required_config(&config, "backend_name")?;
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         let api_key = required_config(&config, "api_key")?;
         let endpoint = required_config(&config, "base_endpoint")?;
-        Self::from_credentials(&backend_name, api_key, endpoint)
+        Self::from_credentials(backend_name, api_key, endpoint)
     }
 
     /// Builds the Felis client from already-resolved credentials

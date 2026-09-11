@@ -69,12 +69,10 @@ impl PasqalLocal {
     ///
     /// # Required keys
     ///
-    /// * `backend_name` - The name of the backend/device to use
     /// * `warden_url` - URL of the pasqd middleware (warden)
     /// * `job_uid` - uid of the slurm job
     /// * `job_id` - id of the slurm job
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let backend_name = required_config(&config, "backend_name")?;
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         let url = required_config(&config, "warden_url")?;
         let job_uid_str = required_config(&config, "job_uid")?;
         let job_uid: i32 = job_uid_str
@@ -88,7 +86,7 @@ impl PasqalLocal {
 
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
-            backend_name,
+            backend_name: backend_name.to_string(),
             job_uid,
             job_id,
         })

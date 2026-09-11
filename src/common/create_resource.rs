@@ -40,19 +40,22 @@ pub(crate) fn create_resource(
 /// instead of environment variables.
 pub(crate) fn create_resource_from_config(
     resource_type: &ResourceType,
+    resource_id: &str,
     config: HashMap<String, String>,
 ) -> Result<Box<dyn QuantumResource + Send + Sync>> {
     Ok(match resource_type {
-        ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::from_config(config)?),
+        ResourceType::IBMQuantumSystem => {
+            Box::new(IBMQuantumSystem::from_config(resource_id, config)?)
+        }
         ResourceType::QiskitRuntimeService => {
-            Box::new(IBMQiskitRuntimeService::from_config(config)?)
+            Box::new(IBMQiskitRuntimeService::from_config(resource_id, config)?)
         }
         ResourceType::IBMQuantumComputeService => {
-            Box::new(IBMQuantumComputeService::from_config(config)?)
+            Box::new(IBMQuantumComputeService::from_config(resource_id, config)?)
         }
-        ResourceType::PasqalLocal => Box::new(PasqalLocal::from_config(config)?),
-        ResourceType::PasqalCloud => Box::new(PasqalCloud::from_config(config)?),
-        ResourceType::AliceBobFelis => Box::new(AliceBobFelis::from_config(config)?),
-        ResourceType::IQMServer => Box::new(IQMServer::from_config(config)?),
+        ResourceType::PasqalLocal => Box::new(PasqalLocal::from_config(resource_id, config)?),
+        ResourceType::PasqalCloud => Box::new(PasqalCloud::from_config(resource_id, config)?),
+        ResourceType::AliceBobFelis => Box::new(AliceBobFelis::from_config(resource_id, config)?),
+        ResourceType::IQMServer => Box::new(IQMServer::from_config(resource_id, config)?),
     })
 }

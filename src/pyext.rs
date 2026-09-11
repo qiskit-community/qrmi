@@ -206,12 +206,14 @@ impl PyQuantumResource {
     /// environment variables.
     #[staticmethod]
     pub fn from_config(
+        resource_id: &str,
         resource_type: ResourceType,
         config: std::collections::HashMap<String, String>,
     ) -> PyResult<Self> {
         crate::common::initialize();
-        let qrmi = crate::common::create_resource_from_config(&resource_type.into(), config)
-            .map_err(to_py_err)?;
+        let qrmi =
+            crate::common::create_resource_from_config(&resource_type.into(), resource_id, config)
+                .map_err(to_py_err)?;
 
         Ok(Self {
             qrmi,

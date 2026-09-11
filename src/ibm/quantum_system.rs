@@ -102,7 +102,6 @@ impl IBMQuantumSystem {
     ///
     /// # Required keys
     ///
-    /// * `backend_name` - The name of the backend/device to use
     /// * `endpoint` - IBM Quantum System API endpoint URL
     /// * `iam_apikey` - IBM Cloud API Key
     /// * `service_crn` - Provisioned Quantum System API Service instance
@@ -116,8 +115,7 @@ impl IBMQuantumSystem {
     /// * `s3_bucket`
     /// * `s3_region`
     /// * `s3_endpoint_for_qsapi` - Optional override of `s3_endpoint` as seen from the service
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let backend_name = required_config(&config, "backend_name")?;
+    pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {
         let daapi_endpoint = required_config(&config, "endpoint")?;
         let apikey = required_config(&config, "iam_apikey")?;
         let service_crn = required_config(&config, "service_crn")?;
@@ -148,7 +146,7 @@ impl IBMQuantumSystem {
         };
 
         Self::from_parts(
-            &backend_name,
+            resource_id,
             daapi_endpoint,
             apikey,
             service_crn,
@@ -161,7 +159,7 @@ impl IBMQuantumSystem {
     /// connection details, shared by [`Self::new`] (resolved from env vars)
     /// and [`Self::from_config`] (resolved from a config map).
     fn from_parts(
-        backend_name: &str,
+        resource_id: &str,
         daapi_endpoint: String,
         apikey: String,
         service_crn: String,
@@ -201,7 +199,7 @@ impl IBMQuantumSystem {
 
         Ok(Self {
             api_client: builder.build().unwrap(),
-            backend_name: backend_name.to_string(),
+            backend_name: resource_id.to_string(),
         })
     }
 }

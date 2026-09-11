@@ -46,7 +46,6 @@ async fn resource_id_and_type_match_backend() {
 
 fn valid_config() -> HashMap<String, String> {
     HashMap::from([
-        ("backend_name".to_string(), "sirius_mock".to_string()),
         (
             "isa_endpoint".to_string(),
             "http://localhost:8080".to_string(),
@@ -57,18 +56,18 @@ fn valid_config() -> HashMap<String, String> {
 
 #[test]
 fn from_config_builds_resource_from_map() {
-    let qrmi = IQMServer::from_config(valid_config()).expect("from_config should succeed");
-    assert_eq!(qrmi.backend_name, "sirius:mock");
+    let qrmi =
+        IQMServer::from_config("sirius_mock", valid_config()).expect("from_config should succeed");
     assert_eq!(qrmi.calibration_set_id, "default");
     assert_eq!(qrmi.acquisition_token, None);
 }
 
 #[test]
 fn from_config_parses_calibration_set_id_from_backend_name() {
-    let mut config = valid_config();
-    config.insert("backend_name".to_string(), "sirius_mock,custom".to_string());
+    let config = valid_config();
 
-    let qrmi = IQMServer::from_config(config).expect("from_config should succeed");
+    let qrmi =
+        IQMServer::from_config("sirius_mock,custom", config).expect("from_config should succeed");
     assert_eq!(qrmi.backend_name, "sirius:mock");
     assert_eq!(qrmi.calibration_set_id, "custom");
 }
@@ -78,7 +77,7 @@ fn from_config_honors_acquisition_token() {
     let mut config = valid_config();
     config.insert("acquisition_token".to_string(), "tok-123".to_string());
 
-    let qrmi = IQMServer::from_config(config).expect("from_config should succeed");
+    let qrmi = IQMServer::from_config("sirius_mock", config).expect("from_config should succeed");
     assert_eq!(qrmi.acquisition_token, Some("tok-123".to_string()));
 }
 
@@ -86,6 +85,8 @@ fn from_config_honors_acquisition_token() {
 fn from_config_missing_isa_endpoint() {
     let mut config = valid_config();
     config.remove("isa_endpoint");
-    let err = IQMServer::from_config(config).map(|_| ()).unwrap_err();
+    let err = IQMServer::from_config("sirius_mock", config)
+        .map(|_| ())
+        .unwrap_err();
     assert!(matches!(err, QrmiError::MissingConfigKey(key) if key == "isa_endpoint"));
 }

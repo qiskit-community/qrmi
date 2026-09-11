@@ -157,7 +157,6 @@ fn from_config_ignores_environment_variables() {
     }
 
     let config = HashMap::from([
-        ("backend_name".to_string(), "EMU_FREE".to_string()),
         ("username".to_string(), "config-user".to_string()),
         ("password".to_string(), "config-pass".to_string()),
         ("client_id".to_string(), "config-client-id".to_string()),
@@ -218,16 +217,13 @@ fn pasqal_cloud_from_config_ignores_environment_variables() {
         std::env::set_var(key, value);
     }
 
-    let config = HashMap::from([
-        ("backend_name".to_string(), "EMU_FREE".to_string()),
-        ("project_id".to_string(), "config-project-id".to_string()),
-    ]);
+    let config = HashMap::from([("project_id".to_string(), "config-project-id".to_string())]);
 
     // If `from_config` leaked env vars into `PasqalConfig`, this would still
     // build successfully (env vars here are all well-formed), so the real
     // assertion that env is ignored lives in `from_config_ignores_environment_variables`.
     // This test only pins the public entry point down to the same behavior.
-    let qrmi = PasqalCloud::from_config(config).expect("from_config should succeed");
+    let qrmi = PasqalCloud::from_config("EMU_FREE", config).expect("from_config should succeed");
     assert_eq!(qrmi.backend_name, "EMU_FREE");
 
     for (key, value) in old_vars {

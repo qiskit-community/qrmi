@@ -76,8 +76,6 @@ impl IQMServer {
     ///
     /// # Required keys
     ///
-    /// * `backend_name` - The name of the backend/device to use, optionally
-    ///   followed by `,<calibration_set_id>` (default: "default"), same as
     ///   the `resource_id` accepted by [`Self::new`]
     /// * `isa_endpoint` - IQM Server API endpoint URL
     /// * `isa_token` - IQM Server API token
@@ -85,9 +83,8 @@ impl IQMServer {
     /// # Optional keys
     ///
     /// * `acquisition_token` - pre-set session ID
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let resource_id = required_config(&config, "backend_name")?;
-        let (backend_name, calset_id) = Self::parse_backend_and_calset(&resource_id);
+    pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(resource_id);
         let endpoint = required_config(&config, "isa_endpoint")?;
         let token = required_config(&config, "isa_token")?;
         let acquisition_token = config.get("acquisition_token").cloned();

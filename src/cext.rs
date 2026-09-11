@@ -801,15 +801,18 @@ pub unsafe extern "C" fn qrmi_resource_new(
 ///
 /// * `config` must be a valid pointer to a QrmiConfigMap struct.
 ///
+/// @param (resource_id) [in] A resource identifier, i.e. backend name
 /// @param (resource_type) [in] QrmiResourceType variant
 /// @param (config) [in] Pointer to QrmiConfigMap holding the config map
 /// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_new_from_config(
+    resource_id: *const c_char,
     resource_type: ResourceType,
     config: *const ConfigMap,
 ) -> *mut QuantumResource {
     crate::common::initialize();
+    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
     if config.is_null() {
         _set_last_error("config is NULL".to_string());
         return std::ptr::null_mut();
@@ -823,18 +826,23 @@ pub unsafe extern "C" fn qrmi_resource_new_from_config(
         }
     };
 
-    let res = match crate::common::create_resource_from_config(&resource_type, config_map) {
-        Ok(v) => v,
-        Err(err) => {
-            _record_error(err);
-            return std::ptr::null_mut();
-        }
-    };
+    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+        let res =
+            match crate::common::create_resource_from_config(&resource_type, id_str, config_map) {
+                Ok(v) => v,
+                Err(err) => {
+                    _record_error(err);
+                    return std::ptr::null_mut();
+                }
+            };
 
-    Box::into_raw(Box::new(QuantumResource {
-        inner: res,
-        runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
-    }))
+        let qrmi = Box::new(QuantumResource {
+            inner: res,
+            runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+        });
+        return Box::into_raw(qrmi);
+    }
+    std::ptr::null_mut()
 }
 
 /// @ingroup QrmiQuantumResource

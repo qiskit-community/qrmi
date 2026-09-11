@@ -113,8 +113,7 @@ impl IBMQuantumComputeService {
     /// * `session_max_ttl` - Session max_ttl (default: 28800)
     /// * `timeout_secs` - Cost for the job (seconds)
     /// * `session_id` or `job_acquisition_token` - pre-set session ID
-    pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let backend_name = required_config(&config, "backend_name")?;
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         let qrs_endpoint = required_config(&config, "endpoint")?;
         let iam_endpoint = required_config(&config, "iam_endpoint")?;
         let api_key = required_config(&config, "iam_apikey")?;
@@ -143,7 +142,7 @@ impl IBMQuantumComputeService {
 
         Ok(Self {
             config,
-            backend_name,
+            backend_name: backend_name.to_string(),
             session_id,
             calibration_id: None,
             timeout_secs,
