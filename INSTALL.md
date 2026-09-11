@@ -38,7 +38,7 @@
     - [🦀 Rust API docs](#how-to-generate-rust-api-document)
     - [🐍 Pythoni API docs](#how-to-generate-python-api-document)
     - [©️ C API docs](#how-to-generate-c-api-document)
-  - [ Packaging](#packaging)
+  - [Packaging](#packaging)
   - [Contributing](#contributing)
 
 
