@@ -152,8 +152,11 @@ def test_result_uses_cache(
 
 
 @patch("qrmi.qiskit_iqm.iqm_provider.time.sleep")
-def test_result_timeout(mock_sleep):
-    """Verify that the result() method raises a TimeoutError if the job does not complete within the specified timeout."""
+def test_result_timeout(_mock_sleep):
+    """
+    Verify that the result() method raises a TimeoutError if the job does
+    not complete within the specified timeout.
+    """
     qrmi = MagicMock()
     qrmi.task_status.return_value = TaskStatus.Running
 
@@ -200,7 +203,7 @@ def test_result_failed_job():
 @patch("qrmi.qiskit_iqm.iqm_provider.json.loads")
 def test_result_includes_metadata(
     mock_json_loads,
-    mock_format_results,
+    _mock_format_results,
 ):
     """Verify that the result() method includes circuit metadata in the results."""
     mock_json_loads.return_value = {
@@ -249,7 +252,9 @@ def test_default_options():
     assert isinstance(opts, Options)
 
 
-def test_max_circuits_property(qrmi_backend):
+def test_max_circuits_property(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that the max_circuits property can be set and retrieved correctly."""
     assert qrmi_backend.max_circuits is None
 
@@ -281,7 +286,9 @@ def test_run_submits_job(mock_job):
     mock_job.assert_called_once()
 
 
-def test_create_run_request_empty_list(qrmi_backend):
+def test_create_run_request_empty_list(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that create_run_request raises a ValueError when given an empty list of circuits."""
     with pytest.raises(
         ValueError,
@@ -290,7 +297,9 @@ def test_create_run_request_empty_list(qrmi_backend):
         qrmi_backend.create_run_request([])
 
 
-def test_create_run_request_callback_called(qrmi_backend):
+def test_create_run_request_callback_called(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that the circuit_callback is called when provided to create_run_request."""
     circuit = QuantumCircuit(1)
 
@@ -310,7 +319,9 @@ def test_create_run_request_callback_called(qrmi_backend):
     callback.assert_called_once()
 
 
-def test_create_run_request_unknown_option_warning(qrmi_backend):
+def test_create_run_request_unknown_option_warning(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that a warning is raised when an unknown option is passed to create_run_request."""
     circuit = QuantumCircuit(1)
 
@@ -327,7 +338,9 @@ def test_create_run_request_unknown_option_warning(qrmi_backend):
         )
 
 
-def test_create_run_request_deprecated_option_warning(qrmi_backend):
+def test_create_run_request_deprecated_option_warning(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that a deprecation warning is raised when a deprecated option is passed to create_run_request."""
     circuit = QuantumCircuit(1)
 
@@ -344,7 +357,9 @@ def test_create_run_request_deprecated_option_warning(qrmi_backend):
         )
 
 
-def test_calibration_change_warning(qrmi_backend):
+def test_calibration_change_warning(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that a warning is raised when the calibration set changes between runs."""
     circuit = QuantumCircuit(1)
 
@@ -371,7 +386,7 @@ def test_calibration_change_warning(qrmi_backend):
 @patch("qrmi.qiskit_iqm.iqm_provider._build_run_request")
 def test_create_run_request_wraps_validation_error(
     mock_build,
-    qrmi_backend,
+    qrmi_backend,  # pylint: disable=redefined-outer-name
 ):
     """Verify that a CircuitValidationError is raised when _build_run_request raises a CircuitValidationError."""
     from iqm.iqm_client import CircuitValidationError
@@ -390,7 +405,9 @@ def test_create_run_request_wraps_validation_error(
         qrmi_backend.create_run_request(circuit)
 
 
-def test_serialize_circuit_uses_default_mapping(qrmi_backend):
+def test_serialize_circuit_uses_default_mapping(
+    qrmi_backend,  # pylint: disable=redefined-outer-name
+):
     """Verify that the _serialize_circuit method uses the default qubit mapping when no mapping is provided."""
     circuit = QuantumCircuit(1)
 
@@ -416,7 +433,7 @@ def test_serialize_circuit_success(
     mock_serialize,
     mock_json,
     mock_circuit_cls,
-    qrmi_backend,
+    qrmi_backend,  # pylint: disable=redefined-outer-name
 ):
     """Verify that the _serialize_circuit method correctly serializes a circuit and constructs a Circuit object."""
     circuit = QuantumCircuit(1, name="test")
@@ -439,7 +456,7 @@ def test_serialize_circuit_invalid_metadata(
     mock_serialize,
     mock_json,
     mock_circuit_cls,
-    qrmi_backend,
+    qrmi_backend,  # pylint: disable=redefined-outer-name
 ):
     """Verify that the _serialize_circuit method raises a warning when circuit metadata cannot be serialized."""
     circuit = QuantumCircuit(1, name="test")
@@ -537,7 +554,7 @@ def test_get_backend_named_backend(
 @patch("qrmi.qiskit_iqm.iqm_provider.QuantumResource")
 def test_get_backend_invalid_name_warns(
     mock_resource,
-    mock_backend,
+    _mock_backend,
 ):
     """Verify that the get_backend method raises a warning when an invalid backend name is provided."""
     provider = IQMProvider.__new__(IQMProvider)
@@ -559,7 +576,7 @@ def test_get_backend_invalid_name_warns(
 @patch("qrmi.qiskit_iqm.iqm_provider.QuantumResource")
 def test_get_backend_with_calibration_set(
     mock_resource,
-    mock_backend,
+    _mock_backend,
 ):
     """Verify that the get_backend method correctly forwards the calibration_set_id to the QuantumResource."""
     provider = IQMProvider.__new__(IQMProvider)
@@ -628,7 +645,7 @@ def test_get_backend_forwards_use_metrics(
 @patch("qrmi.qiskit_iqm.iqm_provider.QRMIBackend")
 @patch("qrmi.qiskit_iqm.iqm_provider.QuantumResource")
 def test_get_backend_returns_backend(
-    mock_resource,
+    _mock_resource,
     mock_backend,
 ):
     """Verify that the get_backend method returns the QRMIBackend instance created by the QRMIBackend constructor."""

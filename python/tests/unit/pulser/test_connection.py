@@ -1,10 +1,10 @@
 """Tests for pulser connection integration."""
 
 import json
+from unittest.mock import Mock
 
 import pulser
 import pytest
-from unittest.mock import Mock
 from pulser.backend.remote import RemoteResultsError
 from pulser.exceptions.serialization import DeserializeDeviceError
 from pulser.backend.results import Results
@@ -14,7 +14,8 @@ from qrmi import (
     _get_job_env_list,
     get_job_qpu_resources_and_types,
 )
-from qrmi.pulser.connection import PulserQRMIConnection
+from qrmi.pulser.connection import PulserQRMIConnection, _normalize_json_payload
+import qrmi.pulser.connection as connection_module
 
 
 class _TaskResult:
@@ -43,6 +44,10 @@ class _FakeQRMI:
     def task_status(self, _job_id):
         """Return configured task status."""
         return self._status
+
+    def task_logs(self, _job_id):
+        """Return logs for a specific job."""
+        return ""
 
     @staticmethod
     def target():
@@ -86,6 +91,20 @@ def _clear_job_qpu_env(monkeypatch) -> None:
         "QRMI_LIST_DELIMITER",
     ):
         monkeypatch.delenv(name, raising=False)
+
+
+def test_normalize_json_payload_raises_unsupported() -> None:
+    """Raise when the payload is not a dict or list."""
+    with pytest.raises(
+        TypeError, match="Unsupported payload type. Expected JSON string or dict."
+    ):
+        _normalize_json_payload(42)
+
+
+def test_normalize_json_payload_raises_invalid() -> None:
+    """Raise when the payload is a string but not valid JSON."""
+    with pytest.raises(TypeError, match="Invalid payload. Expected a JSON object."):
+        _normalize_json_payload("[]")
 
 
 def test_job_qpu_env_uses_qrmi_names_first(monkeypatch) -> None:
@@ -237,6 +256,127 @@ def test_submit_wait_true_returns_remote_results() -> None:
     assert remote_results.results[0].final_bitstrings == {"0": 3}
 
 
+def test_submit_open_raises_error() -> None:
+    """Raise when attempting to submit an open batch."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        NotImplementedError, match="Open batches are not implemented in QRMI."
+    ):
+        connection.submit(
+            _build_sequence(),
+            wait=False,
+            job_params=[{"runs": 5}],
+            open=True,
+        )
+
+
+def test_submit_batch_id_raises_error() -> None:
+    """Raise when attempting to submit an open batch."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
+
+    with pytest.raises(
+        NotImplementedError, match="Open batches are not implemented in QRMI."
+    ):
+        connection.submit(
+            _build_sequence(),
+            wait=False,
+            job_params=[{"runs": 5}],
+            batch_id="batch-1",
+        )
+
+
+def test_submit_raises_when_sequence_device_unavailable(monkeypatch):
+    """Test submit raises if the sequence device does not match an available QPU."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    sequence = Mock()
+    sequence.device.name = "SequenceDevice"
+
+    available_device = Mock()
+    available_device.name = "DifferentDevice"
+
+    monkeypatch.setattr(
+        connection,
+        "_add_measurement_to_sequence",
+        lambda seq: seq,
+    )
+
+    monkeypatch.setattr(
+        connection,
+        "fetch_available_devices",
+        lambda: {"qpu": available_device},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"doesn't match the name of a device",
+    ):
+        connection.submit(sequence, wait=False)
+
+
+def test_submit_builds_parametrized_sequence(monkeypatch):
+    """Test submit builds parametrized sequences using job parameters."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    sequence = Mock()
+    sequence.is_parametrized.return_value = True
+    sequence.is_register_mappable.return_value = False
+
+    built_sequence = Mock()
+    built_sequence.is_parametrized.return_value = False
+    built_sequence.is_register_mappable.return_value = False
+    built_sequence.to_abstract_repr.return_value = "abstract-sequence"
+
+    sequence.build.return_value = built_sequence
+
+    monkeypatch.setattr(
+        connection,
+        "_add_measurement_to_sequence",
+        lambda seq: seq,
+    )
+
+    monkeypatch.setattr(
+        connection,
+        "fetch_available_devices",
+        lambda: {},
+    )
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_start",
+        lambda _self, payload: "task-1",
+        raising=False,
+    )
+
+    monkeypatch.setattr(
+        connection,
+        "_batch_id_from_job_ids",
+        lambda ids: "batch-1",
+    )
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["task-1"],
+    )
+
+    connection.submit(
+        sequence,
+        wait=False,
+        job_params=[
+            {
+                "runs": 10,
+                "variables": {"theta": 0.5},
+            }
+        ],
+    )
+
+    sequence.build.assert_called_once_with(theta=0.5)
+    built_sequence.to_abstract_repr.assert_called_once()
+    assert connection._task_sequences["task-1"] is built_sequence
+
+
 def test_remote_results_return_results() -> None:
     """Return results from a completed QRMI task."""
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())  # type: ignore[arg-type]
@@ -287,11 +427,11 @@ def test_get_available_results_ignores_bad_payload() -> None:
 
 
 def test_wrong_device_type() -> None:
-    """Test that the QRMI connection raises a ValueError when the device type is not Pasqal."""
+    """Test that the QRMI connection raises a TypeError when the device type is not Pasqal."""
 
     class _BadDeviceTypeQRMI(_FakeQRMI):
         def resource_type(self):
-            """Return a non Pasqal resource."""
+            """Return a non-Pasqal resource."""
             return ResourceType.IBMQuantumSystem
 
     with pytest.raises(TypeError):
@@ -313,7 +453,7 @@ def test_fetch_available_devices_load_json_fail(monkeypatch) -> None:
 
     connection = PulserQRMIConnection(qrmi=_FakeQRMI())
 
-    monkeypatch.setattr(_FakeQRMI, "target", lambda self: _TaskResult("not-json"))
+    monkeypatch.setattr(_FakeQRMI, "target", lambda _self: _TaskResult("not-json"))
 
     result = connection.fetch_available_devices()
 
@@ -331,7 +471,7 @@ def test_fetch_available_devices_skips_invalid_device(monkeypatch):
         ]
     )
 
-    monkeypatch.setattr(_FakeQRMI, "target", lambda self: _TaskResult(payload))
+    monkeypatch.setattr(_FakeQRMI, "target", lambda _self: _TaskResult(payload))
 
     mock_device = Mock(name="device")
 
@@ -340,11 +480,216 @@ def test_fetch_available_devices_skips_invalid_device(monkeypatch):
             raise DeserializeDeviceError("bad device")
         return mock_device
 
-    monkeypatch.setattr(PulserQRMIConnection, "deserialize_device", fake_deserialize)
+    monkeypatch.setattr(connection_module, "deserialize_device", fake_deserialize)
 
     devices = connection.fetch_available_devices()
 
     assert devices == {"good": mock_device}
+
+
+def test_get_batch_logs_returns_logs(monkeypatch):
+    """Test method returns logs for all jobs in the batch."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["job1", "job2"],
+    )
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_logs",
+        lambda _self, job_id: f"logs-{job_id}",
+    )
+
+    logs = connection.get_batch_logs("batch1")
+
+    assert logs == ("logs-job1", "logs-job2")
+
+
+def test_get_batch_logs_uses_current_batch_id(monkeypatch):
+    """Test method uses current batch when no batch id is provided."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+    connection._current_batch_id = "current-batch"
+
+    batch_ids = []
+
+    def fake_get_job_ids(batch_id):
+        batch_ids.append(batch_id)
+        return []
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        fake_get_job_ids,
+    )
+
+    logs = connection.get_batch_logs()
+
+    assert not logs
+    assert batch_ids == ["current-batch"]
+
+
+def test_get_batch_logs_skips_failed_jobs(monkeypatch):
+    """Test method skips jobs that fail to fetch logs."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["job1", "job2", "job3"],
+    )
+
+    def fake_task_logs(_self, job_id):
+        if job_id == "job2":
+            raise RuntimeError("fetch failed")
+        return f"logs-{job_id}"
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_logs",
+        fake_task_logs,
+    )
+
+    logs = connection.get_batch_logs("batch1")
+
+    assert logs == (
+        "logs-job1",
+        "logs-job3",
+    )
+
+
+def test_get_batch_logs_logs_warning_on_failure(monkeypatch, caplog):
+    """Test method logs a warning when fetching logs for a job fails."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["job1"],
+    )
+
+    def fake_task_logs(self, job_id):
+        raise RuntimeError("error")
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_logs",
+        fake_task_logs,
+    )
+
+    logs = connection.get_batch_logs("batch1")
+
+    assert not logs
+    assert "Failed to fetch logs for job job1" in caplog.text
+
+
+def test_cancel_batch_jobs_stops_all_jobs(monkeypatch):
+    """Test method stops all jobs in the batch."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["job1", "job2", "job3"],
+    )
+
+    stopped_jobs = []
+
+    def fake_task_stop(_self, job_id):
+        stopped_jobs.append(job_id)
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_stop",
+        fake_task_stop,
+        raising=False,
+    )
+
+    connection.cancel_batch_jobs("batch1")
+
+    assert stopped_jobs == ["job1", "job2", "job3"]
+
+
+def test_cancel_batch_jobs_uses_current_batch_id(monkeypatch):
+    """Test method uses current batch when no batch id is provided."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+    connection._current_batch_id = "current-batch"
+
+    batch_ids = []
+
+    def fake_get_job_ids(batch_id):
+        batch_ids.append(batch_id)
+        return []
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        fake_get_job_ids,
+    )
+
+    connection.cancel_batch_jobs()
+
+    assert batch_ids == ["current-batch"]
+
+
+def test_cancel_batch_jobs_continues_after_failure(monkeypatch):
+    """Test method continues stopping jobs after a failure."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["job1", "job2", "job3"],
+    )
+
+    stopped_jobs = []
+
+    def fake_task_stop(_self, job_id):
+        if job_id == "job2":
+            raise RuntimeError("stop failed")
+
+        stopped_jobs.append(job_id)
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_stop",
+        fake_task_stop,
+        raising=False,
+    )
+
+    connection.cancel_batch_jobs("batch1")
+
+    assert stopped_jobs == ["job1", "job3"]
+
+
+def test_cancel_batch_jobs_logs_warning_on_failure(
+    monkeypatch,
+    caplog,
+):
+    """Test method logs a warning when stopping a job fails."""
+    connection = PulserQRMIConnection(qrmi=_FakeQRMI())
+
+    monkeypatch.setattr(
+        connection,
+        "_get_job_ids",
+        lambda batch_id: ["job1"],
+    )
+
+    def fake_task_stop(self, job_id):
+        raise RuntimeError("stop failed")
+
+    monkeypatch.setattr(
+        _FakeQRMI,
+        "task_stop",
+        fake_task_stop,
+        raising=False,
+    )
+
+    connection.cancel_batch_jobs("batch1")
+
+    assert "Failed to stop job job1" in caplog.text
 
 
 def test_get_batch_status_running_any_job_is_running() -> None:
