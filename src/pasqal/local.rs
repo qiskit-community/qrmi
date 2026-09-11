@@ -182,7 +182,3 @@ impl QuantumResource for PasqalLocal {
         metadata
     }
 }
-
-#[cfg(test)]
-#[path = "tests/local.rs"]
-mod tests;

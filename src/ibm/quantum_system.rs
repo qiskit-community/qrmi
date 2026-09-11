@@ -63,11 +63,11 @@ impl IBMQuantumSystem {
         let s3_endpoint_for_daapi =
             env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT_FOR_QSAPI")).ok();
         let s3 = if let (
-            Ok(access_key_id),
-            Ok(secret_access_key),
-            Ok(endpoint),
-            Ok(bucket),
-            Ok(region),
+            Ok(aws_access_key_id),
+            Ok(aws_secret_access_key),
+            Ok(s3_endpoint),
+            Ok(s3_bucket),
+            Ok(s3_region),
         ) = (
             env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID")),
             env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY")),
@@ -76,12 +76,12 @@ impl IBMQuantumSystem {
             env::var(format!("{resource_id}_QRMI_IBM_QS_S3_REGION")),
         ) {
             Some(S3BuilderParams {
-                access_key_id,
-                secret_access_key,
-                endpoint,
-                endpoint_for_daapi: s3_endpoint_for_daapi,
-                bucket,
-                region,
+                aws_access_key_id,
+                aws_secret_access_key,
+                s3_endpoint,
+                s3_endpoint_for_daapi,
+                s3_bucket,
+                s3_region,
             })
         } else {
             None
@@ -104,18 +104,22 @@ impl IBMQuantumSystem {
     ///
     /// * `backend_name` - The name of the backend/device to use
     /// * `endpoint` - IBM Quantum System API endpoint URL
-    /// * `iam_api_key` - IBM Cloud API Key
+    /// * `iam_apikey` - IBM Cloud API Key
     /// * `service_crn` - Provisioned Quantum System API Service instance
     /// * `iam_endpoint` - IBM Cloud IAM API endpoint URL
     ///
     /// # Optional keys (all required together to enable S3 access)
     ///
-    /// * `aws_access_key_id`, `aws_secret_access_key`, `s3_endpoint`, `s3_bucket`, `s3_region`
+    /// * `aws_access_key_id`
+    /// * `aws_secret_access_key`
+    /// * `s3_endpoint`
+    /// * `s3_bucket`
+    /// * `s3_region`
     /// * `s3_endpoint_for_qsapi` - Optional override of `s3_endpoint` as seen from the service
     pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
         let backend_name = required_config(&config, "backend_name")?;
         let daapi_endpoint = required_config(&config, "endpoint")?;
-        let apikey = required_config(&config, "iam_api_key")?;
+        let apikey = required_config(&config, "iam_apikey")?;
         let service_crn = required_config(&config, "service_crn")?;
         let iam_endpoint_url = required_config(&config, "iam_endpoint")?;
 
@@ -127,18 +131,18 @@ impl IBMQuantumSystem {
             config.get("s3_region").cloned(),
         ) {
             (
-                Some(access_key_id),
-                Some(secret_access_key),
-                Some(endpoint),
-                Some(bucket),
-                Some(region),
+                Some(aws_access_key_id),
+                Some(aws_secret_access_key),
+                Some(s3_endpoint),
+                Some(s3_bucket),
+                Some(s3_region),
             ) => Some(S3BuilderParams {
-                access_key_id,
-                secret_access_key,
-                endpoint,
-                endpoint_for_daapi: config.get("s3_endpoint_for_qsapi").cloned(),
-                bucket,
-                region,
+                aws_access_key_id,
+                aws_secret_access_key,
+                s3_endpoint,
+                s3_endpoint_for_daapi: config.get("s3_endpoint_for_qsapi").cloned(),
+                s3_bucket,
+                s3_region,
             }),
             _ => None,
         };
@@ -184,12 +188,12 @@ impl IBMQuantumSystem {
         match s3 {
             Some(s3) => {
                 builder.with_s3bucket(
-                    &s3.access_key_id,
-                    &s3.secret_access_key,
-                    &s3.endpoint,
-                    &s3.bucket,
-                    &s3.region,
-                    s3.endpoint_for_daapi,
+                    &s3.aws_access_key_id,
+                    &s3.aws_secret_access_key,
+                    &s3.s3_endpoint,
+                    &s3.s3_bucket,
+                    &s3.s3_region,
+                    s3.s3_endpoint_for_daapi,
                 );
             }
             None => info!("No S3 bucket configured."),
@@ -206,12 +210,12 @@ impl IBMQuantumSystem {
 /// either from env vars ([`IBMQuantumSystem::new`]) or a config map
 /// ([`IBMQuantumSystem::from_config`]).
 struct S3BuilderParams {
-    access_key_id: String,
-    secret_access_key: String,
-    endpoint: String,
-    endpoint_for_daapi: Option<String>,
-    bucket: String,
-    region: String,
+    aws_access_key_id: String,
+    aws_secret_access_key: String,
+    s3_endpoint: String,
+    s3_endpoint_for_daapi: Option<String>,
+    s3_bucket: String,
+    s3_region: String,
 }
 
 /// S3 connection details, read from the `<backend_name>_QRMI_IBM_QS_*` environment

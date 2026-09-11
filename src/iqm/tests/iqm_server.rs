@@ -64,13 +64,21 @@ fn from_config_builds_resource_from_map() {
 }
 
 #[test]
-fn from_config_honors_optional_keys() {
+fn from_config_parses_calibration_set_id_from_backend_name() {
     let mut config = valid_config();
-    config.insert("calibration_set_id".to_string(), "custom".to_string());
+    config.insert("backend_name".to_string(), "sirius_mock,custom".to_string());
+
+    let qrmi = IQMServer::from_config(config).expect("from_config should succeed");
+    assert_eq!(qrmi.backend_name, "sirius:mock");
+    assert_eq!(qrmi.calibration_set_id, "custom");
+}
+
+#[test]
+fn from_config_honors_acquisition_token() {
+    let mut config = valid_config();
     config.insert("acquisition_token".to_string(), "tok-123".to_string());
 
     let qrmi = IQMServer::from_config(config).expect("from_config should succeed");
-    assert_eq!(qrmi.calibration_set_id, "custom");
     assert_eq!(qrmi.acquisition_token, Some("tok-123".to_string()));
 }
 

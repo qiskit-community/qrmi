@@ -115,7 +115,7 @@ impl IBMQiskitRuntimeService {
     /// * `backend_name` - The name of the backend/device to use
     /// * `endpoint` - QRS endpoint URL
     /// * `iam_endpoint` - IAM endpoint URL
-    /// * `iam_api_key` - IAM API key for QRS
+    /// * `iam_apikey` - IAM API key for QRS
     /// * `service_crn` - QRS service instance CRN
     ///
     /// # Optional keys
@@ -128,7 +128,7 @@ impl IBMQiskitRuntimeService {
         let backend_name = required_config(&config, "backend_name")?;
         let qrs_endpoint = required_config(&config, "endpoint")?;
         let iam_endpoint = required_config(&config, "iam_endpoint")?;
-        let api_key = required_config(&config, "iam_api_key")?;
+        let api_key = required_config(&config, "iam_apikey")?;
         let service_crn = required_config(&config, "service_crn")?;
 
         let session_mode = config

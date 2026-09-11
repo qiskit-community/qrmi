@@ -37,6 +37,18 @@ pub struct IQMServer {
 }
 
 impl IQMServer {
+    /// Splits a `<backend_name>` or `<backend_name>,<calibration_set_id>`
+    /// string into its parts, defaulting the calibration set id to
+    /// `"default"` when omitted.
+    fn parse_backend_and_calset(resource_id: &str) -> (&str, &str) {
+        let buf: Vec<&str> = resource_id.split(",").collect();
+        match buf.as_slice() {
+            [name, id, ..] => (name, id),
+            [name] => (name, "default"),
+            _ => unreachable!("buf should never be empty due to split()"),
+        }
+    }
+
     /// Constructs a IQM Server instance.
     ///
     /// Environment variables used:
@@ -44,12 +56,7 @@ impl IQMServer {
     /// * QRMI_IQM_ISA_TOKEN - IQM Server API token
     /// * QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(resource_id: &str) -> Result<Self> {
-        let buf: Vec<&str> = resource_id.split(",").collect();
-        let (backend_name, calset_id) = match buf.as_slice() {
-            [name, id, ..] => (*name, *id),
-            [name] => (*name, "default"),
-            _ => unreachable!("buf should never be empty due to split()"),
-        };
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(resource_id);
 
         let iqm_endpoint = required_env(format!("{backend_name}_QRMI_IQM_ISA_ENDPOINT"))?;
         let iqm_token = required_env(format!("{backend_name}_QRMI_IQM_ISA_TOKEN"))?;
@@ -69,31 +76,23 @@ impl IQMServer {
     ///
     /// # Required keys
     ///
-    /// * `backend_name` - The name of the backend/device to use
+    /// * `backend_name` - The name of the backend/device to use, optionally
+    ///   followed by `,<calibration_set_id>` (default: "default"), same as
+    ///   the `resource_id` accepted by [`Self::new`]
     /// * `isa_endpoint` - IQM Server API endpoint URL
     /// * `isa_token` - IQM Server API token
     ///
     /// # Optional keys
     ///
-    /// * `calibration_set_id` - Calibration set ID (default: "default")
     /// * `acquisition_token` - pre-set session ID
     pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
-        let backend_name = required_config(&config, "backend_name")?;
+        let resource_id = required_config(&config, "backend_name")?;
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(&resource_id);
         let endpoint = required_config(&config, "isa_endpoint")?;
         let token = required_config(&config, "isa_token")?;
-        let calibration_set_id = config
-            .get("calibration_set_id")
-            .cloned()
-            .unwrap_or_else(|| "default".to_string());
         let acquisition_token = config.get("acquisition_token").cloned();
 
-        Self::from_parts(
-            &backend_name,
-            &calibration_set_id,
-            endpoint,
-            token,
-            acquisition_token,
-        )
+        Self::from_parts(backend_name, calset_id, endpoint, token, acquisition_token)
     }
 
     /// Builds the IQM Server client from already-resolved connection

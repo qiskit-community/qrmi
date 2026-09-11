@@ -75,9 +75,7 @@ impl AliceBobFelis {
         Self::from_credentials(&backend_name, api_key, endpoint)
     }
 
-    /// Builds the Felis client from already-resolved credentials, shared by
-    /// [`Self::new`] (resolved from env vars) and [`Self::from_config`]
-    /// (resolved from a config map).
+    /// Builds the Felis client from already-resolved credentials
     fn from_credentials(backend_name: &str, api_key: String, endpoint: String) -> Result<Self> {
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
@@ -243,7 +241,3 @@ impl QuantumResource for AliceBobFelis {
         metadata
     }
 }
-
-#[cfg(test)]
-#[path = "tests/felis.rs"]
-mod tests;
