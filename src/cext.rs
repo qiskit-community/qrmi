@@ -792,8 +792,7 @@ pub unsafe extern "C" fn qrmi_resource_new(
 }
 
 /// @ingroup QrmiQuantumResource
-/// Constructs a QrmiQuantumResource from a config map, instead of environment
-/// variables.
+/// Constructs a QrmiQuantumResource from a config map.
 ///
 /// Created QrmiQuantumResource instance needs to be removed by qrmi_resource_free() call if
 /// no longer needed.
