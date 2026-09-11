@@ -74,10 +74,12 @@ pub enum QrmiError {
     #[error("unable to retrieve result for task {task_id}: {reason}")]
     TaskNotReady { task_id: String, reason: String },
 
-    /// A required key was missing from a provider's environment variable map
-    /// (as opposed to [`QrmiError::EnvVarNotSet`], which is for real OS
-    /// environment variables).
-    #[error("missing '{0}' in environment map")]
+    /// A required key was missing from a config map -- either a provider's
+    /// environment-variable-style map (e.g. [`crate::resource_provider`]) or
+    /// a `from_config` constructor's generic config map (as opposed to
+    /// [`QrmiError::EnvVarNotSet`], which is for real OS environment
+    /// variables).
+    #[error("missing required config key: '{0}'")]
     MissingConfigKey(String),
 
     /// A configuration value (or combination of values) was invalid in a way
@@ -187,7 +189,7 @@ pub enum QrmiErrorKind {
     UnsupportedPayload,
     /// The task is not in a state that allows the requested operation.
     TaskNotReady,
-    /// A required key was missing from a provider's environment variable map.
+    /// A required key was missing from a config map.
     MissingConfigKey,
     /// A configuration value (or combination of values) was invalid.
     InvalidConfig,
@@ -215,14 +217,15 @@ pub(crate) fn required_env(name: impl Into<String>) -> Result<String, QrmiError>
     std::env::var(&name).map_err(|_| QrmiError::EnvVarNotSet(name))
 }
 
-/// Reads a required key from a `from_config` map, returning a
+/// Reads a required key from a `from_config` config map, returning a
 /// [`QrmiError::MissingConfigKey`] with the key's name if it isn't present.
 pub(crate) fn required_config(
     config: &std::collections::HashMap<String, String>,
-    key: &str,
+    key: impl Into<String>,
 ) -> Result<String, QrmiError> {
+    let key = key.into();
     config
-        .get(key)
+        .get(&key)
         .cloned()
-        .ok_or_else(|| QrmiError::MissingConfigKey(key.to_string()))
+        .ok_or_else(|| QrmiError::MissingConfigKey(key))
 }
