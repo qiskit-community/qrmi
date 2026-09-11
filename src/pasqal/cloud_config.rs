@@ -58,7 +58,7 @@ impl PasqalConfig {
         // Overwriting with explicit parameters
         cfg.from_env = false;
         for (k, v) in &config {
-            match k.to_ascii_lowercase().as_str() {
+            match k.as_str() {
                 "project_id" => cfg.project_id = Some(v.clone()),
                 "auth_token" => cfg.token = Some(v.clone()),
                 "client_id" => cfg.client_id = Some(v.clone()),

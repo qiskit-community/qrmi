@@ -203,8 +203,7 @@ impl PyQuantumResource {
     }
 
     /// Constructs a `QuantumResource` from a config map, instead of
-    /// environment variables. Only some resource types support this so far;
-    /// others raise `UnsupportedResourceTypeError`.
+    /// environment variables.
     #[staticmethod]
     pub fn from_config(
         resource_type: ResourceType,

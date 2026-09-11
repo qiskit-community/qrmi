@@ -112,7 +112,7 @@ impl IBMQuantumComputeService {
     /// * `session_mode` - Session mode (default: "dedicated")
     /// * `session_max_ttl` - Session max_ttl (default: 28800)
     /// * `timeout_secs` - Cost for the job (seconds)
-    /// * `session_id` - pre-set session ID
+    /// * `session_id` or `job_acquisition_token` - pre-set session ID
     pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
         let backend_name = required_config(&config, "backend_name")?;
         let qrs_endpoint = required_config(&config, "endpoint")?;
@@ -131,7 +131,10 @@ impl IBMQuantumComputeService {
         let timeout_secs = config
             .get("timeout_secs")
             .and_then(|v| v.parse::<i32>().ok());
-        let session_id = config.get("session_id").cloned();
+        let session_id = config
+            .get("session_id")
+            .cloned()
+            .or_else(|| config.get("job_acquisition_token").cloned());
 
         let mut config = configuration::Configuration::new();
         config.base_path = qrs_endpoint;

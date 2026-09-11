@@ -64,6 +64,24 @@ impl PasqalCloud {
         Self::from_pasqal_config(backend_name, cfg)
     }
 
+    /// Constructs a QRMI to access Pasqal Cloud Service from a config map,
+    /// instead of environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `backend_name` - The name of the backend/device to use
+    ///
+    /// # Optional keys
+    ///
+    /// * `project_id` - Pasqal Cloud Project ID to access the QPU
+    /// * `auth_token` - Pasqal Cloud Auth Token
+    /// * `client_id` - Pasqal Cloud service account client ID
+    /// * `client_secret` - Pasqal Cloud service account client secret
+    /// * `auth_endpoint` - Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
+    /// * `username` - Pasqal Cloud username
+    /// * `password` - Pasqal Cloud password
+    /// * `config_root` - Optional root containing `.pasqal/config`, used as a fallback
+    ///   for `username`, `password`, `client_id`, `client_secret`, `auth_token`, `project_id`, `auth_endpoint`
     pub fn from_config(config: HashMap<String, String>) -> Result<Self> {
         let backend_name = required_config(&config, "backend_name")?;
         let cfg = PasqalConfig::from_config(config)?;

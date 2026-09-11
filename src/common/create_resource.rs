@@ -37,9 +37,7 @@ pub(crate) fn create_resource(
 }
 
 /// Same as [`create_resource`], but builds the resource from a config map
-/// instead of environment variables. Only backends with a `from_config`
-/// constructor are supported so far; the rest fall through to
-/// [`QrmiError::UnsupportedResourceType`] until they get one too.
+/// instead of environment variables.
 pub(crate) fn create_resource_from_config(
     resource_type: &ResourceType,
     config: HashMap<String, String>,

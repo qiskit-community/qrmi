@@ -790,15 +790,14 @@ pub unsafe extern "C" fn qrmi_resource_new(
 
 /// @ingroup QrmiQuantumResource
 /// Constructs a QrmiQuantumResource from a config map, instead of environment
-/// variables. Only some resource types support this so far; others fail with
-/// @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_RESOURCE_TYPE_ERROR.
+/// variables.
 ///
 /// Created QrmiQuantumResource instance needs to be removed by qrmi_resource_free() call if
 /// no longer needed.
 ///
 /// # Safety
 ///
-/// * `environments` must be a valid pointer to a QrmiEnvironmentVariables struct.
+/// * `config` must be a valid pointer to a QrmiEnvironmentVariables struct.
 ///
 /// @param (resource_type) [in] QrmiResourceType variant
 /// @param (config) [in] Pointer to QrmiEnvironmentVariables holding the config map
