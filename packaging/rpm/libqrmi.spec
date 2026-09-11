@@ -34,6 +34,8 @@ BuildRequires:  make
 BuildRequires:  glibc >= 2.28
 BuildRequires:  pkg-config
 
+Requires:       glibc >= 2.28
+
 %description
 QRMI (Quantum Resource Management Interface) is a vendor-agnostic shared
 library that provides a unified C API (libqrmi.so / qrmi.h) for acquiring,
