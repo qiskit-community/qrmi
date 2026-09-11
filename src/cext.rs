@@ -160,6 +160,9 @@ pub struct ResourceDef {
 /// Type alias for the C ResourceDef struct (used in qrmi_provider_new).
 type CResourceDef = ResourceDef;
 
+/// Type alias for key-value map
+pub type ConfigMap = EnvironmentVariables;
+
 /// Converts a C `EnvironmentVariables` struct to a Rust `HashMap<String, String>`.
 unsafe fn envvars_to_hashmap(
     envvars: &EnvironmentVariables,
@@ -797,15 +800,15 @@ pub unsafe extern "C" fn qrmi_resource_new(
 ///
 /// # Safety
 ///
-/// * `config` must be a valid pointer to a QrmiEnvironmentVariables struct.
+/// * `config` must be a valid pointer to a QrmiConfigMap struct.
 ///
 /// @param (resource_type) [in] QrmiResourceType variant
-/// @param (config) [in] Pointer to QrmiEnvironmentVariables holding the config map
+/// @param (config) [in] Pointer to QrmiConfigMap holding the config map
 /// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_new_from_config(
     resource_type: ResourceType,
-    config: *const EnvironmentVariables,
+    config: *const ConfigMap,
 ) -> *mut QuantumResource {
     crate::common::initialize();
     if config.is_null() {
