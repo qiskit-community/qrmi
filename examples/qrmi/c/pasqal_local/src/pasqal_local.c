@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     }
 
     bool is_accessible = false;
-    rc = qrmi_resource_is_accessible(qrmi, &is_accessible);
+    rc = qrmi_resource_status_is_accessible(qrmi, &is_accessible);
     if (rc == QRMI_RETURN_CODE_SUCCESS) {
         if (is_accessible == false) {
             fprintf(stderr, "%s cannot be accessed.\n", backend_name);
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
         }
     } else {
         const char *last_error = qrmi_get_last_error();
-        fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
+        fprintf(stderr, "qrmi_resource_status_is_accessible() failed. %s\n", last_error);
         qrmi_string_free((char *)last_error);
         goto error;
     }
