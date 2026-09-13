@@ -221,6 +221,8 @@ jobs:
       image: quay.io/pypa/${{ needs.info.outputs.manylinux-version }}
     steps:
     - uses: actions/checkout@v6
+    - name: Fix git dubious ownership in container
+      run: git config --global --add safe.directory /__w/qrmi/qrmi
     - uses: actions-rust-lang/setup-rust-toolchain@v1
     - if: inputs.format-check == true
       name: Format check the Rust code
