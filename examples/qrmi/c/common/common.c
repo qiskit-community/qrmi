@@ -1,6 +1,4 @@
 /*
- * This code is part of Qiskit.
- *
  * (C) Copyright IBM 2025.
  *
  * This code is licensed under the Apache License, Version 2.0. You may
@@ -14,6 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "common.h"
 
 void load_dotenv() {
   FILE *fp;

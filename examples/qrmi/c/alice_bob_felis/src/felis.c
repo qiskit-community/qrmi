@@ -16,9 +16,7 @@
 #include <unistd.h>
 
 #include "qrmi.h"
-
-extern void load_dotenv();
-extern const char *read_file(const char *);
+#include "common.h"
 
 int main(int argc, char *argv[]) {
 
