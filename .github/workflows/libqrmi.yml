@@ -234,6 +234,13 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - uses: actions-rust-lang/setup-rust-toolchain@v1
+    # Prevent git commands from failing by marking the workspace directory
+    # as safe for git.
+    # E.g. "git archive" from "make libqrmi-rpm" would fail because
+    # the workspace is created by the GHA runner user, while "git archive"
+    # is executed within the manylinux container using its root user.
+    - name: Mark workspace directory as safe for git
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
     - if: inputs.format-check == true
       name: Format check the Rust code
       run: make fmt-rust
