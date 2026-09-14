@@ -397,6 +397,37 @@ Links to the Python, Rust, C and Lua API documentation are available here:
 The Python, Rust and C API documentation can be built locally using our :ref:`API references guide <api_refs>`.
 
 
+Packaging
+~~~~~~~~~
+
+How to package libqrmi for RHEL 8 based Linux
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   git clone https://github.com/qiskit-community/qrmi.git
+   cd qrmi
+   ./run_in_container.sh make libqrmi-
+
+The packages below will be created under ``./rpmbuild/RPMS/``:
+
+- ``libqrmi`` — runtime shared library (libqrmi.so.0), needed at runtime
+- ``libqrmi-devel`` — header (qrmi.h) + unversioned symlink (libqrmi.so), needed only when compiling applications against the library
+
+.. note::
+
+   The command above will automatically create the required source and vendor tarballs. If you prefer, you could rather download them 
+   from the latest QRMI release published , renaming them accordingly to ``./qrmi-<version>.tar.gz`` and ``./qrmi-<version>-vendor.tar.gz``.
+
+
+How to install the libqrmi RPMs in a RHEL 8 based Linux system
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   dnf install ./libqrmi-*.rpm
+
+
 Contributing
 ~~~~~~~~~~~~
 
