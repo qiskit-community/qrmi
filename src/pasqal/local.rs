@@ -51,11 +51,15 @@ impl PasqalLocal {
                 url
             }
         };
-        let job_uid: i32 = env::var("QRMI_JOB_UID")
-            .ok()
-            .and_then(|s| s.parse::<i32>().ok())
-            .unwrap();
-        let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
+        let job_uid_str = required_env("QRMI_JOB_UID")?;
+        let job_uid: i32 = job_uid_str
+            .parse()
+            .map_err(|source| QrmiError::ParseError {
+                name: "QRMI_JOB_UID".to_string(),
+                value: job_uid_str,
+                source: Box::new(source),
+            })?;
+        let job_id: String = required_env("QRMI_JOB_ID")?;
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
             backend_name: backend_name.to_string(),
