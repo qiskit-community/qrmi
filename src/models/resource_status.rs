@@ -25,9 +25,9 @@ use {
 )]
 pub struct ResourceCapacity {
     /// Number of slots currently available to be acquired.
-    pub available_slots: u32,
+    pub available_slots: u64,
     /// Maximum number of slots the resource supports.
-    pub max_slots: u32,
+    pub max_slots: u64,
 }
 
 /// Resource statuses.
