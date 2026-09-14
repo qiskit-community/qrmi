@@ -153,6 +153,7 @@ pub async fn cancel_job_jid(
         .client
         .request(reqwest::Method::POST, &uri_str);
     req_builder = req_builder.header(reqwest::header::ACCEPT, "application/json");
+    req_builder = req_builder.header(reqwest::header::CONTENT_LENGTH, "0");
 
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
