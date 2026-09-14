@@ -46,6 +46,30 @@ password=<your password>
 # auth_endpoint=<auth endpoint URL/path>
 ```
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config dict
+instead of environment variables, via `QuantumResource.from_config()`.
+Unlike the environment-variable-driven constructor, this does **not** fall
+back to environment variables or `~/.pasqal/config` unless `config_root` is
+set explicitly:
+
+```python
+from qrmi import QuantumResource, ResourceType
+
+qrmi = QuantumResource.from_config(
+    "FRESNEL",
+    ResourceType.PasqalCloud,
+    {
+        "project_id": "your_project_id",
+        "auth_token": "your_auth_token",
+    },
+)
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Using this backend from CUDA-Q (`pasqal`)
 
 When CUDA-Q is configured with target `pasqal`, QRMI is used as the

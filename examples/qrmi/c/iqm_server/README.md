@@ -17,6 +17,25 @@ Because QRMI is an environment variable driven software library, all configurati
 > [!NOTE]
 > Replace the “:” in the QC alias name with “_” when specifying it. For example, `sirius:mock` -> `sirius_mock`.
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config map
+instead of environment variables, via `qrmi_resource_new_from_config()`:
+
+```c
+QrmiKeyValue variables[] = {
+    {(char *)"isa_endpoint", (char *)"https://resonance.meetiqm.com"},
+    {(char *)"isa_token", (char *)"your api token"},
+};
+QrmiConfigMap config = { .variables = variables, .length = 2 };
+
+QrmiQuantumResource *qrmi = qrmi_resource_new_from_config(
+    "garnet_mock", QRMI_RESOURCE_TYPE_IQM_SERVER, &config);
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Create IQM JSON input file as input
 
 Refer [this tool](../../../task_runner/iqm) to generate. You can customize quantum circuits by editting the code.

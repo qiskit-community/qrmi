@@ -20,6 +20,27 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS | (Optional) Cost of the job as the estimated time it should take to complete (in seconds). Should not exceed the cost of the program, default: `None`. |
 | {resource_name}_QRMI_IBM_QCS_SESSION_ID | (Optional) Session ID, can be obtanied by acquire function. If exists, used in the target functions. |
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config map
+instead of environment variables, via `IBMQuantumComputeService::from_config()`:
+
+```rust
+use qrmi::ibm::IBMQuantumComputeService;
+use std::collections::HashMap;
+
+let config = HashMap::from([
+    ("endpoint".to_string(), "https://quantum.cloud.ibm.com/api/v1".to_string()),
+    ("iam_endpoint".to_string(), "https://iam.cloud.ibm.com".to_string()),
+    ("iam_apikey".to_string(), "your_apikey".to_string()),
+    ("service_crn".to_string(), "your_instance".to_string()),
+]);
+let qrmi = IBMQuantumComputeService::from_config("ibm_torino", config)?;
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Create Qiskit Primitive input file as input
 
 Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can customize quantum circuits by editing the code.
