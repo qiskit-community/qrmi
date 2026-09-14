@@ -99,6 +99,7 @@ int main(int argc, char *argv[]) {
   rc = qrmi_resource_status_capacity(status, &capacity);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
     fprintf(stdout, "available_slots=%u\n", capacity->available_slots);
+    fprintf(stdout, "max_slots=%u\n", capacity->max_slots);
     qrmi_resource_capacity_free(capacity);
   } else {
     const char *last_error = qrmi_get_last_error();
