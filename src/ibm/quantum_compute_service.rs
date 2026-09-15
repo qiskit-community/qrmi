@@ -96,6 +96,7 @@ impl IBMQuantumComputeService {
             token_lifetime: 0,
         })
     }
+
     /// Constructs a QRS service instance from a config map, instead of
     /// environment variables.
     ///
