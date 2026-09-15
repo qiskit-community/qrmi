@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::required_env;
+use crate::error::{required_config, required_env};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
@@ -51,11 +51,43 @@ impl PasqalLocal {
                 url
             }
         };
-        let job_uid: i32 = env::var("QRMI_JOB_UID")
-            .ok()
-            .and_then(|s| s.parse::<i32>().ok())
-            .unwrap();
-        let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
+        let job_uid_str = required_env("QRMI_JOB_UID")?;
+        let job_uid: i32 = job_uid_str
+            .parse()
+            .map_err(|source| QrmiError::ParseError {
+                name: "QRMI_JOB_UID".to_string(),
+                value: job_uid_str,
+                source: Box::new(source),
+            })?;
+        let job_id: String = required_env("QRMI_JOB_ID")?;
+        Ok(Self {
+            api_client: ClientBuilder::new(url).build().unwrap(),
+            backend_name: backend_name.to_string(),
+            job_uid,
+            job_id,
+        })
+    }
+
+    /// Constructs a QRMI to access Pasqal on prem QPU from a config map, instead
+    /// of environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `warden_url` - URL of the pasqd middleware (warden)
+    /// * `job_uid` - uid of the slurm job
+    /// * `job_id` - id of the slurm job
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        let url = required_config(&config, "warden_url")?;
+        let job_uid_str = required_config(&config, "job_uid")?;
+        let job_uid: i32 = job_uid_str
+            .parse()
+            .map_err(|source| QrmiError::ParseError {
+                name: "job_uid".to_string(),
+                value: job_uid_str,
+                source: Box::new(source),
+            })?;
+        let job_id = required_config(&config, "job_id")?;
+
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
             backend_name: backend_name.to_string(),

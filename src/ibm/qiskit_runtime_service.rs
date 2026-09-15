@@ -22,7 +22,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::error::{required_config, required_env, QrmiError};
 use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::qiskit_runtime_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
@@ -88,6 +88,64 @@ impl IBMQiskitRuntimeService {
             .ok()
             .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok());
         // Set up the config
+        let mut config = configuration::Configuration::new();
+        config.base_path = qrs_endpoint;
+        config.bearer_access_token = None;
+        config.crn = Some(service_crn);
+
+        Ok(Self {
+            config,
+            backend_name: backend_name.to_string(),
+            session_id,
+            calibration_id: None,
+            timeout_secs,
+            session_mode,
+            session_max_ttl,
+            api_key,
+            iam_endpoint,
+            token_expiration: 0,
+            token_lifetime: 0,
+        })
+    }
+
+    /// Constructs a QRS service instance from a config map, instead of
+    /// environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `endpoint` - QRS endpoint URL
+    /// * `iam_endpoint` - IAM endpoint URL
+    /// * `iam_apikey` - IAM API key for QRS
+    /// * `service_crn` - QRS service instance CRN
+    ///
+    /// # Optional keys
+    ///
+    /// * `session_mode` - Session mode (default: "dedicated")
+    /// * `session_max_ttl` - Session max_ttl (default: 28800)
+    /// * `timeout_seconds` - Cost for the job (seconds)
+    /// * `session_id` or `job_acquisition_token` - pre-set session ID
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        let qrs_endpoint = required_config(&config, "endpoint")?;
+        let iam_endpoint = required_config(&config, "iam_endpoint")?;
+        let api_key = required_config(&config, "iam_apikey")?;
+        let service_crn = required_config(&config, "service_crn")?;
+
+        let session_mode = config
+            .get("session_mode")
+            .cloned()
+            .unwrap_or_else(|| "dedicated".to_string());
+        let session_max_ttl = config
+            .get("session_max_ttl")
+            .and_then(|v| v.parse::<i32>().ok())
+            .unwrap_or(28800);
+        let timeout_secs = config
+            .get("timeout_seconds")
+            .and_then(|v| v.parse::<i32>().ok());
+        let session_id = config
+            .get("session_id")
+            .cloned()
+            .or_else(|| config.get("job_acquisition_token").cloned());
+
         let mut config = configuration::Configuration::new();
         config.base_path = qrs_endpoint;
         config.bearer_access_token = None;

@@ -13,7 +13,7 @@
 //! QRMI implementation for Alice and Bob Felis
 
 use crate::alice_bob::error::{classify, ResourceKind};
-use crate::error::QrmiError;
+use crate::error::{required_config, QrmiError};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
 use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
@@ -57,6 +57,23 @@ impl AliceBobFelis {
                     "{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT (or QRMI_AB_FELIS_BASE_ENDPOINT)"
                 ))
             })?;
+        Self::from_credentials(backend_name, api_key, endpoint)
+    }
+
+    /// Constructs a Felis QR from a config map, instead of environment variables.
+    ///
+    /// # Required keys
+    ///
+    /// * `api_key` - API key obtained from the Felis web console
+    /// * `base_endpoint` - URL for Felis API base endpoint
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        let api_key = required_config(&config, "api_key")?;
+        let endpoint = required_config(&config, "base_endpoint")?;
+        Self::from_credentials(backend_name, api_key, endpoint)
+    }
+
+    /// Builds the Felis client from already-resolved credentials
+    fn from_credentials(backend_name: &str, api_key: String, endpoint: String) -> Result<Self> {
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
         config.basic_auth = decode_api_key(&api_key).unwrap();

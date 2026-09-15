@@ -37,6 +37,27 @@ Valid values for `resource_type`:
 local resource, err = qrmi.new("ibm_kingston", "ibm-quantum-compute-service")
 ```
 
+### `qrmi.new_from_config(resource_type, config)`
+
+Creates a quantum resource handle from an explicit config map, instead of
+process environment variables.
+
+| Argument | Type | Description |
+|---|---|---|
+| `resource_id` | string | e.g. `"ibm_kingston"` |
+| `resource_type` | string | Same values accepted by `qrmi.new()` |
+| `config` | table | string -> string config map. Required/optional keys are specific to each resource type (see the QRMI Rust crate's `from_config()` doc comments, e.g. `resource_id`, `endpoint`, `session_id`, ...) |
+
+**Returns:** on success, `resource` (a `qrmi.resource`); on failure, `nil, err`
+
+```lua
+local resource, err = qrmi.new_from_config("PASQAL_LOCAL", "pasqal-local", {
+    warden_url = "...",
+    job_uid = "...",
+    job_id = "...",
+})
+```
+
 ### `qrmi.load_config(filename)`
 
 Loads a `qrmi_config.json` file. Entirely independent from `qrmi.resource`.

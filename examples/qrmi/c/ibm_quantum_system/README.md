@@ -23,6 +23,28 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_JOB_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
 
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config map
+instead of environment variables, via `qrmi_resource_new_from_config()`:
+
+```c
+QrmiKeyValue variables[] = {
+    {(char *)"endpoint", (char *)"http://localhost:8080"},
+    {(char *)"iam_endpoint", (char *)"https://iam.cloud.ibm.com"},
+    {(char *)"iam_apikey", (char *)"your_apikey"},
+    {(char *)"service_crn", (char *)"your_instance"},
+};
+QrmiConfigMap config = { .variables = variables, .length = 4 };
+
+QrmiQuantumResource *qrmi = qrmi_resource_new_from_config(
+    "test_eagle", QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM, &config);
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type (including the
+optional S3 keys for this resource type).
+
 ## Create Qiskit Primitive input file as input
 
 Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can customize quantum circuits by editing the code.

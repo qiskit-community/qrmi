@@ -58,8 +58,34 @@ impl PasqalCloud {
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
-
         let cfg = PasqalConfig::read(backend_name)?;
+        Self::from_pasqal_config(backend_name, cfg)
+    }
+
+    /// Constructs a QRMI to access Pasqal Cloud Service from a config map,
+    /// instead of environment variables.
+    ///
+    /// # Optional keys
+    ///
+    /// * `project_id` - Pasqal Cloud Project ID to access the QPU
+    /// * `auth_token` - Pasqal Cloud Auth Token
+    /// * `client_id` - Pasqal Cloud service account client ID
+    /// * `client_secret` - Pasqal Cloud service account client secret
+    /// * `auth_endpoint` - Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
+    /// * `username` - Pasqal Cloud username
+    /// * `password` - Pasqal Cloud password
+    /// * `config_root` - Optional root containing `.pasqal/config`, used as a fallback
+    ///   for `username`, `password`, `client_id`, `client_secret`, `auth_token`, `project_id`, `auth_endpoint`
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        let cfg = PasqalConfig::from_config(config)?;
+        Self::from_pasqal_config(backend_name, cfg)
+    }
+
+    /// Builds the Pasqal Cloud API client from an already-resolved
+    /// [`PasqalConfig`], shared by [`Self::new`] (resolved from env/file) and
+    /// [`Self::from_config`] (resolved from a config map) so the credential
+    /// precedence, client construction, and logging stay in one place.
+    fn from_pasqal_config(backend_name: &str, cfg: PasqalConfig) -> Result<Self> {
         let project_id = cfg.project_id(backend_name).unwrap_or_default();
         let auth_token = cfg.auth_token(backend_name);
         let auth_endpoint = cfg.auth_endpoint(backend_name);

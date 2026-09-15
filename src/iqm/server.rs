@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::error::{required_config, required_env, QrmiError};
 use crate::iqm::error::{classify, ResourceKind};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
@@ -36,6 +36,18 @@ pub struct IQMServer {
 }
 
 impl IQMServer {
+    /// Splits a `<backend_name>` or `<backend_name>,<calibration_set_id>`
+    /// string into its parts, defaulting the calibration set id to
+    /// `"default"` when omitted.
+    fn parse_backend_and_calset(resource_id: &str) -> (&str, &str) {
+        let buf: Vec<&str> = resource_id.split(",").collect();
+        match buf.as_slice() {
+            [name, id, ..] => (name, id),
+            [name] => (name, "default"),
+            _ => unreachable!("buf should never be empty due to split()"),
+        }
+    }
+
     /// Constructs a IQM Server instance.
     ///
     /// Environment variables used:
@@ -43,20 +55,55 @@ impl IQMServer {
     /// * QRMI_IQM_ISA_TOKEN - IQM Server API token
     /// * QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(resource_id: &str) -> Result<Self> {
-        let buf: Vec<&str> = resource_id.split(",").collect();
-        let (backend_name, calset_id) = match buf.as_slice() {
-            [name, id, ..] => (*name, *id),
-            [name] => (*name, "default"),
-            _ => unreachable!("buf should never be empty due to split()"),
-        };
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(resource_id);
 
         let iqm_endpoint = required_env(format!("{backend_name}_QRMI_IQM_ISA_ENDPOINT"))?;
         let iqm_token = required_env(format!("{backend_name}_QRMI_IQM_ISA_TOKEN"))?;
         let acquisition_token = env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok();
-        // Set up the config
+
+        Self::from_parts(
+            backend_name,
+            calset_id,
+            iqm_endpoint,
+            iqm_token,
+            acquisition_token,
+        )
+    }
+
+    /// Constructs a IQM Server instance from a config map, instead of
+    /// environment variables.
+    ///
+    /// # Required keys
+    ///
+    ///   the `resource_id` accepted by [`Self::new`]
+    /// * `isa_endpoint` - IQM Server API endpoint URL
+    /// * `isa_token` - IQM Server API token
+    ///
+    /// # Optional keys
+    ///
+    /// * `acquisition_token` - pre-set session ID
+    pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(resource_id);
+        let endpoint = required_config(&config, "isa_endpoint")?;
+        let token = required_config(&config, "isa_token")?;
+        let acquisition_token = config.get("acquisition_token").cloned();
+
+        Self::from_parts(backend_name, calset_id, endpoint, token, acquisition_token)
+    }
+
+    /// Builds the IQM Server client from already-resolved connection
+    /// details, shared by [`Self::new`] (resolved from env vars) and
+    /// [`Self::from_config`] (resolved from a config map).
+    fn from_parts(
+        backend_name: &str,
+        calibration_set_id: &str,
+        endpoint: String,
+        token: String,
+        acquisition_token: Option<String>,
+    ) -> Result<Self> {
         let mut config = configuration::Configuration::new();
-        config.base_path = iqm_endpoint;
-        config.bearer_access_token = Some(iqm_token);
+        config.base_path = endpoint;
+        config.bearer_access_token = Some(token);
 
         let converted = if let Some(pos) = backend_name.rfind('_') {
             let mut s = backend_name.to_string();
@@ -70,7 +117,7 @@ impl IQMServer {
             config,
             backend_name: converted,
             acquisition_token,
-            calibration_set_id: calset_id.to_string(),
+            calibration_set_id: calibration_set_id.to_string(),
         })
     }
 
