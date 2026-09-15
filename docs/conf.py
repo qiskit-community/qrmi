@@ -1,5 +1,6 @@
 """Sphinx configuration for the QRMI documentation."""
 
+import re
 from pathlib import Path
 import importlib
 from importlib.metadata import version
@@ -138,6 +139,23 @@ def linkcode_resolve(domain, info):
     end_lineno = lineno + len(source) - 1
 
     return f"{GITHUB_REPO}/blob/main/" f"{rel_path}#L{lineno}-L{end_lineno}"
+
+
+# =============================================================================
+# Sphinx event hooks
+# =============================================================================
+
+
+def convert_single_backticks(app, what, name, obj, options, lines):
+    """Converts single backticks to double backticks conforming to ReStructured Text inline literal syntax."""
+    for i, line in enumerate(lines):
+        # Convert `text` -> ``text``
+        lines[i] = re.sub(r"(?<!`)`([^`\n]+)`(?!`)", r"``\1``", line)
+
+
+def setup(app):
+    """Sphinx event hook setup."""
+    app.connect("autodoc-process-docstring", convert_single_backticks)
 
 
 # =============================================================================
