@@ -69,7 +69,7 @@ match status.status:
 logger.info("reason: %s", status.status_reason)
 
 if status.pending_job_count is None:
-    logger.warning("this resource not report pending_job_count")
+    logger.warning("this resource does not report pending_job_count")
 else:
     logger.info("pending job count: %d", status.pending_job_count)
 
