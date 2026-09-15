@@ -292,7 +292,7 @@ fn sanitized_cstring(value: &str) -> CString {
 ///
 /// # Safety
 ///
-/// * If `callback` is non-NULL, it must remain a valid, callable function
+/// * If `callback` is non-null, it must remain a valid, callable function
 ///   pointer for as long as it might still be invoked. Because a
 ///   currently-executing log call may have already captured the previous
 ///   callback pointer, do not unload code backing a callback immediately
@@ -638,7 +638,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_free(ptr: *mut ResourceDef) ->
 ///
 /// * The memory pointed to by `outlen` must have enough room to store size_t value.
 ///
-/// * `names` must be non nul.
+/// * `names` must be non-null.
 ///
 /// # Example
 ///
@@ -889,7 +889,7 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// @code
 ///   QrmiResourceStatus *status = NULL;
@@ -973,7 +973,7 @@ pub unsafe extern "C" fn qrmi_resource_status_free(ptr: *mut ResourceStatus) -> 
 ///
 /// * `status` must have been returned by a previous call to qrmi_resource_status().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// @code
 ///   QrmiResourceStatus *status = NULL;
@@ -1099,7 +1099,7 @@ pub unsafe extern "C" fn qrmi_resource_status_reason(status: *mut ResourceStatus
 ///
 /// * `status` must have been returned by a previous call to qrmi_resource_status().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// @code
 ///   QrmiResourceStatus *status = NULL;
@@ -1151,7 +1151,7 @@ pub unsafe extern "C" fn qrmi_resource_status_healthy(
 ///
 /// * `status` must have been returned by a previous call to qrmi_resource_status().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// @code
 ///   QrmiResourceStatus *status = NULL;
@@ -1203,7 +1203,7 @@ pub unsafe extern "C" fn qrmi_resource_status_pending_job_count(
 ///
 /// * `status` must have been returned by a previous call to qrmi_resource_status().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// @code
 ///   QrmiResourceCapacity *capacity = NULL;
@@ -1285,7 +1285,7 @@ pub unsafe extern "C" fn qrmi_resource_capacity_free(
 ///
 /// * `status` must have been returned by a previous call to qrmi_resource_status().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// @code
 ///   QrmiResourceStatus *status = NULL;
@@ -1324,7 +1324,7 @@ pub unsafe extern "C" fn qrmi_resource_status_is_accessible(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_id(
     qrmi: *mut QuantumResource,
@@ -1358,7 +1358,7 @@ pub unsafe extern "C" fn qrmi_resource_id(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_type(
     qrmi: *mut QuantumResource,
@@ -1389,7 +1389,7 @@ pub unsafe extern "C" fn qrmi_resource_type(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// # Example
 ///
@@ -1748,7 +1748,7 @@ pub unsafe extern "C" fn qrmi_resource_task_status(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// * The memory pointed to by `task_id` must contain a valid nul terminator.
 ///
@@ -1813,7 +1813,7 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// * The memory pointed to by `task_id` must contain a valid nul terminator.
 ///
@@ -1878,7 +1878,7 @@ pub unsafe extern "C" fn qrmi_resource_task_logs(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// # Example
 ///
@@ -1932,7 +1932,7 @@ pub unsafe extern "C" fn qrmi_resource_target(
 ///
 /// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
 ///
-/// * `outp` must be non nul.
+/// * `outp` must be non-null.
 ///
 /// # Example
 ///
@@ -2048,7 +2048,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata_value(
 ///
 /// * `metadata` must have been returned by a previous call to qrmi_resource_metadata().
 ///
-/// * `num_keys` and `key_names` must be non nul.
+/// * `num_keys` and `key_names` must be non-null.
 ///
 /// # Example
 ///
