@@ -121,7 +121,7 @@ impl IBMQiskitRuntimeService {
     ///
     /// * `session_mode` - Session mode (default: "dedicated")
     /// * `session_max_ttl` - Session max_ttl (default: 28800)
-    /// * `timeout_secs` - Cost for the job (seconds)
+    /// * `timeout_seconds` - Cost for the job (seconds)
     /// * `session_id` or `job_acquisition_token` - pre-set session ID
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         let qrs_endpoint = required_config(&config, "endpoint")?;
@@ -138,7 +138,7 @@ impl IBMQiskitRuntimeService {
             .and_then(|v| v.parse::<i32>().ok())
             .unwrap_or(28800);
         let timeout_secs = config
-            .get("timeout_secs")
+            .get("timeout_seconds")
             .and_then(|v| v.parse::<i32>().ok());
         let session_id = config
             .get("session_id")
