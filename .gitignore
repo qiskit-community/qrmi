@@ -1,5 +1,9 @@
 # Prerequisites
-*.d
+*.
+
+# Testing
+*.coverage
+htmlcov/
 
 # Compiled Object files
 *.slo
