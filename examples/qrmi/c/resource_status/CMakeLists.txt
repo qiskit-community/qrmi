@@ -59,4 +59,4 @@ function(add_example TARGET_NAME C_FILE)
   install (TARGETS ${TARGET_NAME} DESTINATION .)
 endfunction()
 
-add_example(iqm_server src/iqm_server.c)
+add_example(resource_status src/resource_status.c)

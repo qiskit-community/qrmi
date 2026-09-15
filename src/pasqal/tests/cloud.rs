@@ -66,9 +66,10 @@ async fn is_accessible_no_authentication() {
     };
 
     let accessible = qrmi
-        .is_accessible()
+        .status()
         .await
-        .expect("is_accessible should succeed");
+        .expect("status() should succeed")
+        .is_accessible();
     mock_server.join().expect("server thread should join");
 
     // Verify that `is_accessible()` returns true

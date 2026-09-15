@@ -53,9 +53,51 @@ local config, err = qrmi.load_config("/etc/slurm/qrmi_config.json")
 
 ### `resource:is_accessible()`
 
+> **Deprecated:** use [`resource:status()`](#resourcestatus) instead
+> (check the returned table's `is_accessible` field). Kept for backward
+> compatibility.
+
 Checks whether the device is reachable.
 
 **Returns:** on success, `accessible` (boolean); on failure, `nil, err`
+
+### `resource:status()`
+
+Fetches detailed status information as a single Lua table (combines
+`qrmi_resource_status` with its field accessors —
+`qrmi_resource_status_code`, `qrmi_resource_status_reason`,
+`qrmi_resource_status_healthy`, `qrmi_resource_status_pending_job_count`,
+`qrmi_resource_status_capacity`, `qrmi_resource_status_is_accessible` —
+into a single call). Fields the vendor does not report are `nil` rather
+than an error.
+
+**Returns:** on success, `status` (table); on failure, `nil, err`
+
+Structure of `status`:
+```lua
+{
+    status = "online",            -- "online" / "offline" / "paused" / "busy"
+    status_reason = nil,          -- string or nil; vendor-specific (e.g. "maintenance")
+    healthy = nil,                -- boolean or nil; nil if the vendor doesn't report it
+    pending_job_count = nil,      -- integer or nil; nil if the vendor doesn't report it
+    capacity = nil,               -- table or nil; nil if the vendor doesn't report it
+    -- capacity, when present:
+    -- { available_slots = 2, max_slots = 4 }
+    is_accessible = true,         -- boolean; true when status is "online" or "busy"
+}
+```
+
+```lua
+local status, err = resource:status()
+if not status then
+    print("status failed:", err)
+else
+    print(status.status, status.is_accessible)
+    if status.capacity then
+        print(status.capacity.available_slots, status.capacity.max_slots)
+    end
+end
+```
 
 ### `resource:id()`
 
@@ -259,7 +301,7 @@ raises a **Lua error** (via `error()`) rather than returning the usual
 value pair:
 
 ```lua
-local ok, err = pcall(function() resource:is_accessible() end)
+local ok, err = pcall(function() resource:status() end)
 -- ok = false, err = "qrmi resource already freed"
 ```
 

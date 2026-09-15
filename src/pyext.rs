@@ -15,7 +15,7 @@ use crate::error::{QrmiError, QrmiErrorKind};
 use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
-use crate::models::{Payload, ResourceDef, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceDef, ResourceStatus, Target, TaskResult, TaskStatus};
 use crate::QuantumResource;
 use pyo3::prelude::*;
 use pyo3_stub_gen::{create_exception, define_stub_info_gatherer, derive::*};
@@ -211,7 +211,25 @@ impl PyQuantumResource {
 
     fn is_accessible(&mut self, py: Python<'_>) -> PyResult<bool> {
         crate::common::initialize();
-        let result = py.detach(|| self.rt.block_on(async { self.qrmi.is_accessible().await }));
+        let warnings = py.import("warnings")?;
+        warnings.call_method1(
+            "warn",
+            (
+                "is_accessible() is deprecated, use status() instead",
+                py.get_type::<pyo3::exceptions::PyDeprecationWarning>(),
+                1, // stacklevel
+            ),
+        )?;
+        let result = py.detach(|| self.rt.block_on(async { self.qrmi.status().await }));
+        match result {
+            Ok(v) => Ok(v.is_accessible()),
+            Err(e) => Err(to_py_err(e)),
+        }
+    }
+
+    fn status(&mut self, py: Python<'_>) -> PyResult<ResourceStatus> {
+        crate::common::initialize();
+        let result = py.detach(|| self.rt.block_on(async { self.qrmi.status().await }));
         match result {
             Ok(v) => Ok(v),
             Err(e) => Err(to_py_err(e)),
@@ -820,6 +838,9 @@ fn qrmi(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<crate::models::Payload>()?;
     m.add_class::<crate::models::Target>()?;
     m.add_class::<crate::models::TaskResult>()?;
+    m.add_class::<crate::models::ResourceStatus>()?;
+    m.add_class::<crate::models::ResourceStatusCode>()?;
+    m.add_class::<crate::models::ResourceCapacity>()?;
     m.add_class::<PyResourceDef>()?;
     m.add_class::<PyResourceProvider>()?;
     m.add_class::<PyConfig>()?;
