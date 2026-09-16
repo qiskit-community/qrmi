@@ -14,7 +14,7 @@ Alice and Bob Felis - Examples in Lua
 Prerequisites
 -------------
 
--  :ref:`QRMI C (libqrmilibrary.so) <building_core_qrmi_libraries>`
+-  :ref:`QRMI C (libqrmi.so) <building_core_qrmi_libraries>`
 -  :ref:`QRMI Lua Module (qrmi.so) <installing_lua_bindings>`
 
 

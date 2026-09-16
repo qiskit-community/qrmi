@@ -36,7 +36,6 @@ version = release
 # =============================================================================
 
 extensions = [
-    "breathe",
     "sphinx.ext.autodoc",
     "sphinx.ext.linkcode",
     "sphinx.ext.napoleon",
@@ -63,17 +62,6 @@ suppress_warnings = [
 autodoc_mock_imports = [
     "iqm",
 ]
-
-
-# =============================================================================
-# Breathe / Doxygen
-# =============================================================================
-
-breathe_projects = {
-    "qrmi": str(REPO_ROOT / "build" / "doxygen" / "xml"),
-}
-
-breathe_default_project = "qrmi"
 
 
 # =============================================================================

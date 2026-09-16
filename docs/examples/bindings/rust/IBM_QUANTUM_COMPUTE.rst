@@ -1,38 +1,21 @@
-.. _quantum_compute_lua:
+.. _ibm_quantum_compute_rust:
 
-
-Quantum Compute Service QRMI - Examples in Lua
-==============================================
+IBM Quantum Compute Service QRMI - Examples in Rust
+===================================================
 
 .. container:: buttons
 
    `GitHub`_
 
-.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/ibm
+.. _GitHub: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/ibm_quantum_compute_service
 
 --------------
 
 Prerequisites
 -------------
 
--  :ref:`QRMI C library (libqrmi.so) <building_core_qrmi_libraries>`
--  :ref:`QRMI Lua Module (qrmi.so) <installing_lua_bindings>`
-
-
-Setup
------
-
-.. code:: bash
-
-   export LUA_CPATH="</path/to/qrmi.so-dir/>?.so;;"
-   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/libqrmi.so-dir
-
-Example:
-
-.. code:: bash
-
-   export LUA_CPATH="/shared/qrmi/lua/build/?.so;;"
-   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/shared/qrmi/target/release
+-  Python 3.11 or 3.12
+-  Build the :ref:`QRMI Rust library <install_source>`
 
 
 Set environment variables
@@ -40,12 +23,15 @@ Set environment variables
 
 Because QRMI is an environment variable driven software library, all
 configuration parameters must be specified in environment variables. The
-required environment variables are listed below.
+required environment variables are listed below. `This example`_ assumes
+that a ``.env`` file is available under the current directory.
+
+.. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/rust/ibm_quantum_compute_service
 
 +--------------------------------------------------+--------------------------------------------------+
 |              Environment variables               |                   Descriptions                   |
 +==================================================+==================================================+
-| ``{resource_name}_QRMI_IBM_QCS_ENDPOINT``        | Quantum Compute Service endpoint                 |
+| ``{resource_name}_QRMI_IBM_QCS_ENDPOINT``        | IBM Quantum Compute Service endpoint             |
 |                                                  | URL (e.g. ``https://quantum.cloud.ibm.com/api``) |
 +--------------------------------------------------+--------------------------------------------------+
 | ``{resource_name}_QRMI_IBM_QCS_IAM_ENDPOINT``    | IBM Cloud IAM endpoint                           |
@@ -83,7 +69,7 @@ Create Qiskit Primitive input file as input
 -------------------------------------------
 
 Refer to :ref:`this tool <task_runner_qiskit>` to
-generate. You can customize quantum circuits by editing the code.
+generate. You can customise quantum circuits by editing the code.
 
 .. note::
 
@@ -94,34 +80,37 @@ generate. You can customize quantum circuits by editing the code.
 How to build `this example`_
 ----------------------------
 
-.. _this  example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/lua/ibm
+.. code-block:: bash
 
-.. code:: bash
-
-   mkdir build
-   cd build
-   cmake ..
-   make
+   cargo clean
+   cargo build --example qrmi-example-quantum-compute-service --release
 
 
 How to run `this example`_
 --------------------------
 
-Run `example.lua`_:
+.. code-block:: bash
 
-.. _example.lua: https://github.com/qiskit-community/qrmi/blob/main/examples/qrmi/lua/ibm/example.lua
+   ../target/release/qrmi-example-quantum-compute-service --help
 
-.. code:: bash
+   QRMI for IBM Quantum Compute Service - Example
 
-   lua example.lua <backend_name> <resource_type> <program type> <input filename>
+   Usage: qrmi-example-quantum_compute_service --backend <BACKEND> --input <INPUT> --program-id <PROGRAM_ID>
 
-For example:
+   Options:
+     -b, --backend <BACKEND>        backend name
+     -i, --input <INPUT>            primitive input file
+     -p, --program-id <PROGRAM_ID>  program id
+     -h, --help                     Print help
+     -V, --version                  Print version
 
-.. code:: bash
+For example, using the :ref:`generated input file <task_runner_qiskit>`, run the package:
+
+.. code-block:: bash
 
    export ibm_torino_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
    export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
    export ibm_torino_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
    export ibm_torino_QRMI_IBM_QCS_SERVICE_CRN=your_instance
 
-   lua example.lua ibm_torino ibm-quantum-compute-service sampler ../../examples/task_runner/qiskit/sampler_input_ibm_torino_params_only.json
+   ../target/release/qrmi-example-quantum-compute-service  -b ibm_torino -i sampler_input.json -p sampler

@@ -8,7 +8,7 @@ QRMI Examples in C
 
     Parsing QRMI Config File <c/CONFIG>
     IBM Quantum System <c/IBM_QUANTUM>
-    Quantum Compute Service <c/QUANTUM_COMPUTE>
+    IBM Quantum Compute Service <c/IBM_QUANTUM_COMPUTE>
     IQM Server <c/IQM_SERVER>
     Pasqal Cloud <c/PASQAL_CLOUD>
     Pasqal Local <c/PASQAL_LOCAL>

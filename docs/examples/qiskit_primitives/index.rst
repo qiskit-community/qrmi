@@ -12,6 +12,6 @@ Qiskit Examples
 .. toctree::
     :maxdepth: 2
     
-    Sampler/Estimator Primitives with IBM Quantum System <IBM>
+    Sampler/Estimator Primitives with IBM Quantum Service & IBM Quantum System <IBM>
     Qiskit Primitives with IQM <IQM>
     Qiskit Primitives with Pasqal Cloud <PASQAL>

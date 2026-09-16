@@ -143,10 +143,10 @@ task_runner test_heron /shared/input/estimator_input.json
 | ---- | ---- |
 | QRMI_JOB_QPU_RESOURCES | Quantum backend name |
 | QRMI_JOB_QPU_TYPES | Should be `ibm-quantum-compute-service` |
-| {backend_name}_QRMI_IBM_QCS_ENDPOINT | Quantum Compute Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api/v1`) |
-| {backend_name}_QRMI_IBM_QCS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
+| {backend_name}_QRMI_IBM_QCS_ENDPOINT | IBM Quantum Compute Service endpoint (e.g. `https://quantum.cloud.ibm.com/api/v1`) |
+| {backend_name}_QRMI_IBM_QCS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL (e.g. `https://iam.cloud.ibm.com`) |
 | {backend_name}_QRMI_IBM_QCS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {backend_name}_QRMI_IBM_QCS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum Compute Service instance, starting with `crn:v1:`. |
+| {backend_name}_QRMI_IBM_QCS_SERVICE_CRN | Cloud Resource Name (CRN) of the provisioned Quantum Compute Service instance, starting with `crn:v1:`. |
 | {backend_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS | (Optional) Cost of the job as the estimated time it should take to complete (in seconds). Should not exceed the cost of the program, default: `None`. |
 
 Example:

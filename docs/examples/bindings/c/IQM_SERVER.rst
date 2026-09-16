@@ -32,7 +32,7 @@ that a ``.env`` file is available under the current directory.
 Environment variables                 Descriptions
 ===================================== =======================
 {qc_alias_name}_QRMI_IQM_ISA_ENDPOINT IQM Server API endpoint
-{qc_alias_name}_QRMI_IBM_ISA_TOKEN    IQM Server API token
+{qc_alias_name}_QRMI_IQM_ISA_TOKEN    IQM Server API token
 ===================================== =======================
 
 .. note::
