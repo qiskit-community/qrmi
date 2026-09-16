@@ -1,7 +1,7 @@
 ---
 # workflow that runs a major set of tests on a defined schedule 
 
-name: Unit Tests
+name: Testing
 
 on:
   pull_request:
@@ -10,7 +10,8 @@ on:
       - main
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit & Integration Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -20,43 +21,67 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: |
+      - name: Install packages and test dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -e ".[all]"
           pip install pytest-cov
 
-      - name: Run unit tests
-        continue-on-error: true
+      - name: Run standard test suite
         run: |
+          export COVERAGE_FILE=.coverage.unit
+
           pytest \
+            python/tests/unit/ \
             --cov=qrmi \
-            --cov-report=term-missing \
-            --cov-report=xml \
-            --cov-fail-under=70
-  
-      - name: Get coverage
-        id: coverage
-        run: |
-          COVERAGE=$(python - <<EOF
-          import xml.etree.ElementTree as ET
-          tree = ET.parse("coverage.xml")
-          root = tree.getroot()
-          print(round(float(root.attrib["line-rate"]) * 100, 2))
-          EOF
-          )
-          echo "value=$COVERAGE" >> $GITHUB_OUTPUT
+            --cov-report=term
 
-      - name: Post coverage comment
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: marocchino/sticky-pull-request-comment@v2
+      - uses: actions/upload-artifact@v4
         with:
-          message: |
-            ## Coverage Report
+          name: coverage-unit
+          path: .coverage.unit
+          include-hidden-files: true
 
-            Coverage: **${{ steps.coverage.outputs.value }}%**
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
 
-      - name: Print coverage workflow summary
+    needs:
+      - unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install coverage
         run: |
-          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Coverage: **${{ steps.coverage.outputs.value }}%**" >> $GITHUB_STEP_SUMMARY
+          python -m pip install --upgrade pip
+          pip install coverage
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+
+      - name: Generate coverage report
+        run: |
+
+          mv .coverage.unit .coverage
+
+          coverage report --fail-under=70
+          coverage xml -o coverage.xml
+          coverage html
+
+      - name: Upload XML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov
