@@ -41,11 +41,35 @@ jobs:
             --cov=qrmi \
             --cov-report=
 
+      - name: Install compatibility dependencies
+        run: |
+          pip uninstall -y qiskit_ibm_runtime iqm-client || true
+
+          pip install \
+            "qiskit_ibm_runtime>=0.30.0,<0.46.0" \
+            "iqm-client[qiskit-pin-iqm]>=35.0.1,<36.0.0"
+
+      - name: Run compatibility tests
+        run: |
+          export COVERAGE_FILE=.coverage.compat
+
+          pytest \
+            python/tests/compatibility \
+            --cov=qrmi \
+            --cov-report=
+
       - name: Upload unit coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-unit
           path: .coverage.unit
+          include-hidden-files: true
+
+      - name: Upload compatibility coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-compat
+          path: .coverage.compat
           include-hidden-files: true
 
   coverage:
@@ -77,10 +101,19 @@ jobs:
         with:
           name: coverage-unit
 
-      - name: Generate combined report
-        run: |
-          mv .coverage.unit .coverage
+      - name: Download compatibility coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-compat
 
+      - name: Combine coverage data
+        run: |
+          coverage combine \
+            .coverage.unit \
+            .coverage.compat
+
+      - name: Generate coverage report
+        run: |
           coverage report --fail-under=70 > coverage.txt
 
       - name: Publish coverage summary
