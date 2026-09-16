@@ -39,6 +39,8 @@
 //! vendor-API-specific goes through `.context("...")?`, converting to
 //! `QrmiError::Other` via `anyhow::Error`.
 
+use std::collections::HashMap;
+
 use thiserror::Error;
 
 /// Errors raised by QRMI itself, as opposed to errors bubbled up from a
@@ -208,24 +210,51 @@ pub enum QrmiErrorKind {
     Other,
 }
 
+/// Looks up `key` from `config` if given, otherwise from the OS environment.
+/// See [`required_env`]/[`required_config`] for the mandatory case.
+pub(crate) fn resolve_opt(key: &str, config: Option<&HashMap<String, String>>) -> Option<String> {
+    match config {
+        Some(map) => map
+            .get(key)
+            .or_else(|| map.get(&key.to_lowercase()))
+            .cloned(),
+        None => std::env::var(key).ok(),
+    }
+}
+
+pub(crate) fn resolve_opt_required(
+    key: &str,
+    config: Option<&HashMap<String, String>>,
+) -> Result<String, QrmiError> {
+    resolve_opt(key, config).ok_or_else(|| match config {
+        Some(_) => QrmiError::MissingConfigKey(key.into()),
+        None => QrmiError::EnvVarNotSet(key.into()),
+    })
+}
+
+pub(crate) fn optional_config(config: &HashMap<String, String>, key: &str) -> Option<String> {
+    resolve_opt(key, Some(config))
+}
+
+pub(crate) fn optional_env(name: &str) -> Option<String> {
+    resolve_opt(name, None)
+}
+
 /// Reads a required environment variable, returning a [`QrmiError::EnvVarNotSet`]
 /// with the variable's name if it isn't set. This replaces the repeated
 /// `env::var(name).map_err(|_| anyhow!("{name} environment variable is not set"))?`
 /// pattern that shows up throughout the vendor backends.
 pub(crate) fn required_env(name: impl Into<String>) -> Result<String, QrmiError> {
     let name = name.into();
-    std::env::var(&name).map_err(|_| QrmiError::EnvVarNotSet(name))
+    optional_env(&name).ok_or_else(|| QrmiError::EnvVarNotSet(name))
 }
 
 /// Reads a required key from a `from_config` config map, returning a
 /// [`QrmiError::MissingConfigKey`] with the key's name if it isn't present.
 pub(crate) fn required_config(
-    config: &std::collections::HashMap<String, String>,
+    config: &HashMap<String, String>,
     key: impl Into<String>,
 ) -> Result<String, QrmiError> {
     let key = key.into();
-    config
-        .get(&key)
-        .cloned()
-        .ok_or_else(|| QrmiError::MissingConfigKey(key))
+    optional_config(config, &key).ok_or_else(|| QrmiError::MissingConfigKey(key))
 }
