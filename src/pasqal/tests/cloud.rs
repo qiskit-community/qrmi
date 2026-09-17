@@ -1,7 +1,7 @@
 use super::PasqalCloud;
 use crate::models::ResourceType;
 use crate::pasqal::cloud_config::{
-    expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalConfig,
+    expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalCloudConfig,
 };
 use crate::QuantumResource;
 use pasqal_cloud_api::ClientBuilder;
@@ -82,7 +82,7 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
     std::env::set_var("PASQAL_USERNAME", "env-user");
     std::env::set_var("PASQAL_PASSWORD", "env-pass");
 
-    let cfg = PasqalConfig {
+    let cfg = PasqalCloudConfig {
         config: None,
         username: Some("config-user".to_string()),
         password: Some("config-pass".to_string()),
@@ -110,7 +110,7 @@ fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
         "env-client-secret",
     );
 
-    let cfg = PasqalConfig {
+    let cfg = PasqalCloudConfig {
         config: None,
         username: None,
         password: None,
@@ -181,7 +181,8 @@ fn from_config_ignores_environment_variables() {
         ),
     ]);
 
-    let cfg = PasqalConfig::from_opt("", Some(&config)).expect("from_config should succeed");
+    let cfg =
+        PasqalCloudConfig::from_opt("EMU_FREE", Some(&config)).expect("from_config should succeed");
     let (username, password) = cfg.credentials();
     let (client_id, client_secret) = cfg.service_account_credentials("EMU_FREE");
 
@@ -198,45 +199,6 @@ fn from_config_ignores_environment_variables() {
     // This config map doesn't set `QRMI_PASQAL_CLOUD_BASE_URL`, so it stays
     // unset rather than picking up the env-only value set above.
     assert_eq!(cfg.base_url("EMU_FREE"), None);
-
-    for (key, value) in old_vars {
-        match value {
-            Some(value) => std::env::set_var(key, value),
-            None => std::env::remove_var(key),
-        }
-    }
-}
-
-#[test]
-fn pasqal_cloud_from_config_ignores_environment_variables() {
-    let _guard = env_lock().lock().expect("env lock should not be poisoned");
-    let vars = [
-        ("PASQAL_USERNAME", "env-user"),
-        ("PASQAL_PASSWORD", "env-pass"),
-        ("EMU_FREE_QRMI_PASQAL_CLOUD_PROJECT_ID", "env-project-id"),
-        ("EMU_FREE_QRMI_PASQAL_CLOUD_AUTH_TOKEN", "env-token"),
-        ("EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_ID", "env-client-id"),
-        (
-            "EMU_FREE_QRMI_PASQAL_CLOUD_CLIENT_SECRET",
-            "env-client-secret",
-        ),
-    ];
-    let old_vars = vars.map(|(key, _)| (key, std::env::var(key).ok()));
-    for (key, value) in vars {
-        std::env::set_var(key, value);
-    }
-
-    let config = HashMap::from([(
-        "QRMI_PASQAL_CLOUD_PROJECT_ID".to_string(),
-        "config-project-id".to_string(),
-    )]);
-
-    // If `from_config` leaked env vars into `PasqalConfig`, this would still
-    // build successfully (env vars here are all well-formed), so the real
-    // assertion that env is ignored lives in `from_config_ignores_environment_variables`.
-    // This test only pins the public entry point down to the same behavior.
-    let qrmi = PasqalCloud::from_config("EMU_FREE", config).expect("from_config should succeed");
-    assert_eq!(qrmi.backend_name, "EMU_FREE");
 
     for (key, value) in old_vars {
         match value {

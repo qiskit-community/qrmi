@@ -82,7 +82,7 @@ impl IQMServer {
     /// (`config: None`, reads OS environment variables) and
     /// [`Self::from_config`] (`config: Some`, reads the given map).
     fn from_opt(resource_id: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
-        let (backend_name, calibration_set_id) = Self::parse_backend_and_calset(resource_id);
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(resource_id);
 
         // Config keys are the same name as the env vars, minus the
         // `<backend_name>_` prefix (config maps are already scoped to one
@@ -92,13 +92,13 @@ impl IQMServer {
         } else {
             format!("{backend_name}_")
         };
-        let endpoint = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_ENDPOINT"), config)?;
-        let token = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_TOKEN"), config)?;
+        let iqm_endpoint = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_ENDPOINT"), config)?;
+        let iqm_token = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_TOKEN"), config)?;
         let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
 
         let mut config = configuration::Configuration::new();
-        config.base_path = endpoint;
-        config.bearer_access_token = Some(token);
+        config.base_path = iqm_endpoint;
+        config.bearer_access_token = Some(iqm_token);
 
         let converted = if let Some(pos) = backend_name.rfind('_') {
             let mut s = backend_name.to_string();
@@ -112,7 +112,7 @@ impl IQMServer {
             config,
             backend_name: converted,
             acquisition_token,
-            calibration_set_id: calibration_set_id.to_string(),
+            calibration_set_id: calset_id.to_string(),
         })
     }
 

@@ -19,7 +19,7 @@ use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::cloud_config::PasqalConfig;
+use super::cloud_config::PasqalCloudConfig;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,8 +59,8 @@ impl PasqalCloud {
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
-        let cfg = PasqalConfig::from_opt(backend_name, None)?;
-        Self::from_pasqal_config(backend_name, cfg)
+        let cfg = PasqalCloudConfig::from_opt(backend_name, None)?;
+        Self::from_pasqal_cloud_config(backend_name, cfg)
     }
 
     /// Constructs a QRMI to access Pasqal Cloud Service from a config map,
@@ -88,15 +88,15 @@ impl PasqalCloud {
     /// `PASQAL_CONFIG_ROOT`'s `.pasqal/config` file (see [`Self::new`]'s
     /// "Config file fallback"), and only if that key is set in the map.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
-        let cfg = PasqalConfig::from_opt(backend_name, Some(&config))?;
-        Self::from_pasqal_config(backend_name, cfg)
+        let cfg = PasqalCloudConfig::from_opt(backend_name, Some(&config))?;
+        Self::from_pasqal_cloud_config(backend_name, cfg)
     }
 
     /// Builds the Pasqal Cloud API client from an already-resolved
-    /// [`PasqalConfig`], shared by [`Self::new`] (resolved from env/file) and
+    /// [`PasqalCloudConfig`], shared by [`Self::new`] (resolved from env/file) and
     /// [`Self::from_config`] (resolved from a config map) so the credential
     /// precedence, client construction, and logging stay in one place.
-    fn from_pasqal_config(backend_name: &str, cfg: PasqalConfig) -> Result<Self> {
+    fn from_pasqal_cloud_config(backend_name: &str, cfg: PasqalCloudConfig) -> Result<Self> {
         let project_id = cfg.project_id(backend_name).unwrap_or_default();
         let auth_token = cfg.auth_token(backend_name);
         let auth_endpoint = cfg.auth_endpoint(backend_name);

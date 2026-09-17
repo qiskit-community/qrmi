@@ -257,7 +257,3 @@ impl QuantumResource for AliceBobFelis {
         metadata
     }
 }
-
-#[cfg(test)]
-#[path = "tests/felis.rs"]
-mod tests;

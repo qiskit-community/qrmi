@@ -68,7 +68,10 @@ fn from_config_accepts_env_style_keys_lowercased() {
         .into_iter()
         .map(|(k, v)| (k.to_lowercase(), v))
         .collect();
-    assert!(IQMServer::from_config("sirius_mock", config).is_ok());
+    let qrmi = IQMServer::from_config("sirius_mock", config)
+        .expect("from_config should succeed with lowercase keys");
+    assert_eq!(qrmi.calibration_set_id, "default");
+    assert_eq!(qrmi.acquisition_token, None);
 }
 
 #[test]

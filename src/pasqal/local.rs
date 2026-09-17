@@ -36,6 +36,7 @@ impl PasqalLocal {
     ///
     /// # Environment variables
     /// * `QRMI_JOB_UID`: uid of the slurm job
+    /// * `QRMI_JOB_ID`: id of the slurm job
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
     ///
@@ -60,9 +61,8 @@ impl PasqalLocal {
 
     /// Shared parsing logic for [`Self::new`] (`config: None`, reads OS
     /// environment variables) and [`Self::from_config`] (`config: Some`,
-    /// reads the given map) -- the two differ only in where a value comes
-    /// from and, for the env-var case, the deprecated `<backend_name>_QRMI_URL`
-    /// fallback (config maps have no such legacy key).
+    /// reads the given map). The two differ only in where a value comes
+    /// from.
     fn from_opt(backend_name: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
         // Env vars are per-instance (`<backend_name>_QRMI_...`); config map
         // keys use the same name minus that prefix.
