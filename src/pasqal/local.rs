@@ -44,17 +44,13 @@ impl PasqalLocal {
         Self::from_opt(backend_name, None)
     }
 
-    /// Constructs a QRMI to access Pasqal on prem QPU from a config map, instead
-    /// of environment variables.
+    /// Constructs a QRMI to access Pasqal on prem QPU from a config map,
+    /// instead of environment variables.
     ///
-    /// # Required keys
-    ///
-    /// Same names as the environment variables (see [`Self::new`]), minus the
-    /// `<backend_name>_` prefix: `QRMI_WARDEN_URL`, `QRMI_JOB_UID`, `QRMI_JOB_ID`.
-    ///
-    /// Each key above also accepts its fully-lowercased form (e.g.
-    /// `qrmi_warden_url`) as a fallback if the exact-case key isn't present
-    /// in the map.
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<backend_name>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_warden_url`) as a fallback if the
+    /// exact-case key isn't present in the map.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         Self::from_opt(backend_name, Some(&config))
     }

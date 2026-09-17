@@ -74,23 +74,10 @@ impl IBMQiskitRuntimeService {
     /// Constructs a QRS service instance from a config map, instead of
     /// environment variables.
     ///
-    /// # Required keys
-    ///
-    /// Same names as the environment variables (see [`Self::new`]), minus
-    /// the `<backend_name>_` prefix: `QRMI_IBM_QRS_ENDPOINT`,
-    /// `QRMI_IBM_QRS_IAM_ENDPOINT`, `QRMI_IBM_QRS_IAM_APIKEY`,
-    /// `QRMI_IBM_QRS_SERVICE_CRN`.
-    ///
-    /// # Optional keys
-    ///
-    /// `QRMI_IBM_QRS_SESSION_MODE` (default: `"dedicated"`),
-    /// `QRMI_IBM_QRS_SESSION_MAX_TTL` (default: `28800`),
-    /// `QRMI_IBM_QRS_TIMEOUT_SECONDS` or `QRMI_JOB_TIMEOUT_SECONDS`,
-    /// `QRMI_IBM_QRS_SESSION_ID` or `QRMI_JOB_ACQUISITION_TOKEN`.
-    ///
-    /// Each key above also accepts its fully-lowercased form (e.g.
-    /// `qrmi_ibm_qrs_endpoint`) as a fallback if the exact-case key isn't
-    /// present in the map.
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<backend_name>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_ibm_qrs_endpoint`) as a fallback if the
+    /// exact-case key isn't present in the map.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         Self::from_opt(backend_name, Some(&config))
     }

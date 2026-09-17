@@ -59,22 +59,10 @@ impl IBMQuantumSystem {
     /// Constructs a QRMI to access IBM Quantum System API Service from a
     /// config map, instead of environment variables.
     ///
-    /// # Required keys
-    ///
-    /// Same names as the environment variables (see [`Self::new`]), minus
-    /// the `<resource_id>_` prefix: `QRMI_IBM_QS_ENDPOINT`,
-    /// `QRMI_IBM_QS_IAM_APIKEY`, `QRMI_IBM_QS_SERVICE_CRN`,
-    /// `QRMI_IBM_QS_IAM_ENDPOINT`.
-    ///
-    /// # Optional keys (all required together to enable S3 access)
-    ///
-    /// `QRMI_IBM_QS_AWS_ACCESS_KEY_ID`, `QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY`,
-    /// `QRMI_IBM_QS_S3_ENDPOINT`, `QRMI_IBM_QS_S3_BUCKET`,
-    /// `QRMI_IBM_QS_S3_REGION`, `QRMI_IBM_QS_S3_ENDPOINT_FOR_QSAPI`.
-    ///
-    /// Each key above also accepts its fully-lowercased form (e.g.
-    /// `qrmi_ibm_qs_endpoint`) as a fallback if the exact-case key isn't
-    /// present in the map.
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<resource_id>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_ibm_qs_endpoint`) as a fallback if the
+    /// exact-case key isn't present in the map.
     pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {
         Self::from_opt(resource_id, Some(&config))
     }

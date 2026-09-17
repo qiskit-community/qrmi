@@ -224,7 +224,7 @@ pub(crate) fn resolve_opt(key: &str, config: Option<&HashMap<String, String>>) -
 }
 
 /// Looks up `key` from `config` if given, otherwise from the OS environment.
-/// If `key` is not found, raises [`QrmiError::EnvVarNotSet`] or 
+/// If `key` is not found, raises [`QrmiError::EnvVarNotSet`] or
 /// [`QrmiError::MissingConfigKey`] with the variable's name accordingly
 pub(crate) fn resolve_opt_required(
     key: &str,

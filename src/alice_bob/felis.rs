@@ -45,15 +45,12 @@ impl AliceBobFelis {
         Self::from_opt(backend_name, None)
     }
 
-    /// Constructs a Felis QR from a config map, instead of environment variables.
+    /// Constructs a Felis QR from a config map, instead of environment
+    /// variables.
     ///
-    /// # Required keys
-    ///
-    /// Same names as the environment variables (see [`Self::new`]); no
-    /// backend-name prefix, since a config map is already scoped to one
-    /// backend: `QRMI_AB_FELIS_API_KEY`, `QRMI_AB_FELIS_BASE_ENDPOINT`.
-    ///
-    /// Each key above also accepts its fully-lowercased form (e.g.
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// without the backend-name prefix (a config map is already scoped to
+    /// one backend). Each key also accepts its fully lowercased form (e.g.
     /// `qrmi_ab_felis_api_key`) as a fallback if the exact-case key isn't
     /// present in the map.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {

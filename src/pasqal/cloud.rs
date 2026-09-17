@@ -53,7 +53,19 @@ impl PasqalCloud {
     ///
     /// # Config file fallback
     ///
-    /// * `~/.pasqal/config`: Optional fallback for `username`, `password`, `client_id`, `client_secret`, `token`, `project_id`, `auth_endpoint`
+    /// Credentials and `project_id` not set via the environment variables
+    /// above fall back to an INI-style config file (`key = value` lines,
+    /// `#`/`;` comments, case-insensitive keys): `username`, `password`,
+    /// `client_id`, `client_secret`, `token`, `project_id`,
+    /// `auth_endpoint`.
+    ///
+    /// The file is looked up at, in order, and only the first one found is
+    /// read (no merging across candidates):
+    ///
+    /// 1. `$PASQAL_CONFIG_ROOT/.pasqal/config`, falling back to
+    ///    `$<backend_name>_PASQAL_CONFIG_ROOT/.pasqal.config` if the unprefixed variable
+    ///    isn't set
+    /// 2. `$HOME/.pasqal/config`
     pub fn new(backend_name: &str) -> Result<Self> {
         debug!(
             "Initializing PasqalCloud QRMI for backend '{}'",
@@ -66,27 +78,17 @@ impl PasqalCloud {
     /// Constructs a QRMI to access Pasqal Cloud Service from a config map,
     /// instead of environment variables.
     ///
-    /// # Optional keys
-    ///
-    /// Same names as the environment variables (see [`Self::new`]), minus
-    /// the `<backend_name>_` prefix: `QRMI_PASQAL_CLOUD_PROJECT_ID`,
-    /// `QRMI_PASQAL_CLOUD_AUTH_TOKEN`, `QRMI_PASQAL_CLOUD_CLIENT_ID`,
-    /// `QRMI_PASQAL_CLOUD_CLIENT_SECRET`,
-    /// `QRMI_PASQAL_CLOUD_AUTH_ENDPOINT` (default:
-    /// `authenticate.pasqal.cloud/oauth/token`), `QRMI_PASQAL_CLOUD_BASE_URL`.
-    /// `PASQAL_USERNAME`, `PASQAL_PASSWORD` and `PASQAL_CONFIG_ROOT` keep
-    /// their unprefixed names, since they were never backend-specific to
-    /// begin with (a config map is already scoped to one backend).
-    ///
-    /// Each key above also accepts its fully-lowercased form (e.g.
-    /// `qrmi_pasqal_cloud_project_id`, `pasqal_username`) as a fallback if
-    /// the exact-case key isn't present in the map.
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<backend_name>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_pasqal_cloud_project_id`) as a fallback if the
+    /// exact-case key isn't present in the map.
     ///
     /// # Config file fallback
     ///
-    /// Unlike [`Self::new`], this never falls back to `$HOME` -- only to
-    /// `PASQAL_CONFIG_ROOT`'s `.pasqal/config` file (see [`Self::new`]'s
-    /// "Config file fallback"), and only if that key is set in the map.
+    /// Same lookup as [`Self::new`]'s "Config file fallback", except the
+    /// config root only comes from the map's unprefixed `PASQAL_CONFIG_ROOT`.
+    /// The `$HOME` fallback will not be read from the environment variables
+    /// but can still be explicitely set in the config with the `HOME` key.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         let cfg = PasqalCloudConfig::from_opt(backend_name, Some(&config))?;
         Self::from_pasqal_cloud_config(backend_name, cfg)

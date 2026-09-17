@@ -61,17 +61,9 @@ impl IQMServer {
     /// Constructs a IQM Server instance from a config map, instead of
     /// environment variables.
     ///
-    /// # Required keys
-    ///
-    /// The `resource_id` accepted by [`Self::new`], plus the same names as
-    /// the environment variables (see [`Self::new`]) minus the
-    /// `<backend_name>_` prefix: `QRMI_IQM_ISA_ENDPOINT`, `QRMI_IQM_ISA_TOKEN`.
-    ///
-    /// # Optional keys
-    ///
-    /// `QRMI_JOB_ACQUISITION_TOKEN` - pre-set session ID
-    ///
-    /// Each key above also accepts its fully-lowercased form (e.g.
+    /// Takes the same `resource_id` and keys as [`Self::new`]'s
+    /// environment variables, minus the `<backend_name>_` prefix. Each key
+    /// also accepts its fully lowercased form (e.g.
     /// `qrmi_iqm_isa_endpoint`) as a fallback if the exact-case key isn't
     /// present in the map.
     pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {

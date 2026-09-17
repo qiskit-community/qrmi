@@ -253,6 +253,7 @@ pub(crate) fn read_pasqal_config(
         None => None,
     };
 
+    // Explicit "PASQAL_CONFIG_ROOT" will be tried before the "HOME" fallback
     let mut config_path_candidates = Vec::new();
     if let Some(path) = config_root_path.clone() {
         config_path_candidates.push(path);
@@ -270,7 +271,10 @@ pub(crate) fn read_pasqal_config(
 
 // Loads the config from the first readable path in `candidates`. If none is readable and
 // `explicit_root` was set, warns that the explicitly configured root had no config file.
-fn resolve_pasqal_config(candidates: &[PathBuf], explicit_root: Option<&PathBuf>) -> PasqalCloudConfig {
+fn resolve_pasqal_config(
+    candidates: &[PathBuf],
+    explicit_root: Option<&PathBuf>,
+) -> PasqalCloudConfig {
     match candidates.iter().find_map(load_pasqal_config_file) {
         Some(config) => config,
         None => {
