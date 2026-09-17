@@ -13,4 +13,4 @@ Unlike QRMI's Python API documentation, which is built and served using Sphinx, 
 
 Use the link below to access the Rust API documentation:
 
-`Rust API Documentation <../rust/qrmi/index.html>`_
+`Rust API Documentation <../../rust/qrmi/index.html>`_
