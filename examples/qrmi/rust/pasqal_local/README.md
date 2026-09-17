@@ -29,9 +29,9 @@ use qrmi::pasqal::PasqalLocal;
 use std::collections::HashMap;
 
 let config = HashMap::from([
-    ("warden_url".to_string(), "http://localhost:4207".to_string()),
-    ("job_uid".to_string(), "1000".to_string()),
-    ("job_id".to_string(), "1".to_string()),
+    ("QRMI_WARDEN_URL".to_string(), "http://localhost:4207".to_string()),
+    ("QRMI_JOB_UID".to_string(), "1000".to_string()),
+    ("QRMI_JOB_ID".to_string(), "1".to_string()),
 ]);
 let qrmi = PasqalLocal::from_config("PASQAL_LOCAL", config)?;
 ```

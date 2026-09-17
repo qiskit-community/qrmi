@@ -39,9 +39,9 @@ qrmi = QuantumResource.from_config(
     "PASQAL_LOCAL",
     ResourceType.PasqalLocal,
     {
-        "warden_url": "http://localhost:4207",
-        "job_uid": "1000",
-        "job_id": "1",
+        "QRMI_WARDEN_URL": "http://localhost:4207",
+        "QRMI_JOB_UID": "1000",
+        "QRMI_JOB_ID": "1",
     },
 )
 ```

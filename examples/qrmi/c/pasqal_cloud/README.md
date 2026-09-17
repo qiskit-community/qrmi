@@ -42,12 +42,13 @@ password=<your password>
 Since QRMI v0.25.0, a resource can also be built from an explicit config map
 instead of environment variables, via `qrmi_resource_new_from_config()`.
 Unlike `qrmi_resource_new()`, this does **not** fall back to environment
-variables or `~/.pasqal/config` unless `config_root` is set explicitly:
+variables or `~/.pasqal/config` unless `PASQAL_CONFIG_ROOT` is set
+explicitly in the config map:
 
 ```c
 QrmiKeyValue variables[] = {
-    {(char *)"project_id", (char *)"your_project_id"},
-    {(char *)"auth_token", (char *)"your_auth_token"},
+    {(char *)"QRMI_PASQAL_CLOUD_PROJECT_ID", (char *)"your_project_id"},
+    {(char *)"QRMI_PASQAL_CLOUD_AUTH_TOKEN", (char *)"your_auth_token"},
 };
 QrmiConfigMap config = { .variables = variables, .length = 2 };
 

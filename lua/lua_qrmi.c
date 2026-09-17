@@ -249,10 +249,10 @@ static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *
  * Lua usage:
  * @code
  *   local resource, err = qrmi.new_from_config("ibm_kingston", "ibm-quantum-compute-service", {
- *       endpoint = "...",
- *       iam_endpoint = "...",
- *       iam_apikey = "...",
- *       service_crn = "...",
+ *       QRMI_IBM_QCS_ENDPOINT = "...",
+ *       QRMI_IBM_QCS_IAM_ENDPOINT = "...",
+ *       QRMI_IBM_QCS_IAM_APIKEY = "...",
+ *       QRMI_IBM_QCS_SERVICE_CRN = "...",
  *   })
  * @endcode
  *
@@ -260,9 +260,10 @@ static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *
  *   - [1] resource_id (string)   e.g. "ibm_kingston"
  *   - [2] resource_type (string) canonical hyphenated name, same values as `qrmi.new()`
  *   - [3] config (table) string -> string config map; required/optional
- *         keys are specific to each resource type (see the QRMI Rust crate's
- *         `from_config()` doc comments, e.g. `resource_id`, `endpoint`,
- *         `session_id`, ...)
+ *         keys are specific to each resource type -- the same names as the
+ *         environment variables, minus the `{resource_id}_` prefix (see the
+ *         QRMI Rust crate's `from_config()` doc comments, e.g.
+ *         `QRMI_WARDEN_URL`, `QRMI_IBM_QCS_SESSION_ID`, ...)
  * @return Number of values pushed onto the Lua stack.
  *         On success: 1 (resource: qrmi.resource userdata)
  *         On failure: 2 (nil, err: string)

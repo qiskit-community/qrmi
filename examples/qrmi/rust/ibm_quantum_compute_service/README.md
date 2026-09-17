@@ -30,10 +30,10 @@ use qrmi::ibm::IBMQuantumComputeService;
 use std::collections::HashMap;
 
 let config = HashMap::from([
-    ("endpoint".to_string(), "https://quantum.cloud.ibm.com/api/v1".to_string()),
-    ("iam_endpoint".to_string(), "https://iam.cloud.ibm.com".to_string()),
-    ("iam_apikey".to_string(), "your_apikey".to_string()),
-    ("service_crn".to_string(), "your_instance".to_string()),
+    ("QRMI_IBM_QCS_ENDPOINT".to_string(), "https://quantum.cloud.ibm.com/api/v1".to_string()),
+    ("QRMI_IBM_QCS_IAM_ENDPOINT".to_string(), "https://iam.cloud.ibm.com".to_string()),
+    ("QRMI_IBM_QCS_IAM_APIKEY".to_string(), "your_apikey".to_string()),
+    ("QRMI_IBM_QCS_SERVICE_CRN".to_string(), "your_instance".to_string()),
 ]);
 let qrmi = IBMQuantumComputeService::from_config("ibm_torino", config)?;
 ```

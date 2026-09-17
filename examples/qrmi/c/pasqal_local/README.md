@@ -28,9 +28,9 @@ instead of environment variables, via `qrmi_resource_new_from_config()`:
 
 ```c
 QrmiKeyValue variables[] = {
-    {(char *)"warden_url", (char *)"http://localhost:4207"},
-    {(char *)"job_id",     (char *)"1"},
-    {(char *)"job_uid",    (char *)"1000"},
+    {(char *)"QRMI_WARDEN_URL", (char *)"http://localhost:4207"},
+    {(char *)"QRMI_JOB_ID",     (char *)"1"},
+    {(char *)"QRMI_JOB_UID",    (char *)"1000"},
 };
 QrmiConfigMap config = { .variables = variables, .length = 3 };
 

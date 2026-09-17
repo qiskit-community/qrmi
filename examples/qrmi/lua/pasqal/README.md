@@ -58,9 +58,9 @@ instead of environment variables, via `qrmi.new_from_config()`:
 
 ```lua
 local resource, err = qrmi.new_from_config("PASQAL_LOCAL", "pasqal-local", {
-    warden_url = "http://localhost:8006",
-    job_uid = "1000",
-    job_id = "1",
+    QRMI_WARDEN_URL = "http://localhost:8006",
+    QRMI_JOB_UID = "1000",
+    QRMI_JOB_ID = "1",
 })
 ```
 

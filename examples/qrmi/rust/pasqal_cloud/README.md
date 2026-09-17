@@ -41,15 +41,16 @@ password=<your password>
 Since QRMI v0.25.0, a resource can also be built from an explicit config map
 instead of environment variables, via `PasqalCloud::from_config()`. Unlike
 `PasqalCloud::new()`, this does **not** fall back to environment variables
-or `~/.pasqal/config` unless `config_root` is set explicitly:
+or `~/.pasqal/config` unless `PASQAL_CONFIG_ROOT` is set explicitly in the
+config map:
 
 ```rust
 use qrmi::pasqal::PasqalCloud;
 use std::collections::HashMap;
 
 let config = HashMap::from([
-    ("project_id".to_string(), "your_project_id".to_string()),
-    ("auth_token".to_string(), "your_auth_token".to_string()),
+    ("QRMI_PASQAL_CLOUD_PROJECT_ID".to_string(), "your_project_id".to_string()),
+    ("QRMI_PASQAL_CLOUD_AUTH_TOKEN".to_string(), "your_auth_token".to_string()),
 ]);
 let qrmi = PasqalCloud::from_config("FRESNEL", config)?;
 ```

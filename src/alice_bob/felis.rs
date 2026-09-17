@@ -13,7 +13,7 @@
 //! QRMI implementation for Alice and Bob Felis
 
 use crate::alice_bob::error::{classify, ResourceKind};
-use crate::error::{required_config, QrmiError};
+use crate::error::{resolve_opt, QrmiError};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
 use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
@@ -23,7 +23,6 @@ use alice_bob_felis::models::{create_external_job, EventType};
 use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
-use std::env;
 use uuid::Uuid;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
@@ -38,43 +37,62 @@ impl AliceBobFelis {
     ///
     /// # Environment variables
     ///
-    /// * QRMI_FELIS_API_KEY: API key obtained from the Felis web console
+    /// * QRMI_AB_FELIS_API_KEY: API key obtained from the Felis web console
     /// * QRMI_AB_FELIS_BASE_ENDPOINT: URL for Felis API base endpoint
     ///
     /// These may be optionally be prefixed by the backend name
     pub fn new(backend_name: &str) -> Result<Self> {
-        // Handle environment variables
-        let api_key = env::var(format!("{backend_name}_QRMI_AB_FELIS_API_KEY"))
-            .or(env::var("QRMI_AB_FELIS_API_KEY"))
-            .map_err(|_| {
-                QrmiError::EnvVarNotSet(format!(
-                    "{backend_name}_QRMI_AB_FELIS_API_KEY (or QRMI_AB_FELIS_API_KEY)"
-                ))
-            })?;
-        let endpoint = env::var(format!("{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT"))
-            .or(env::var("QRMI_AB_FELIS_BASE_ENDPOINT"))
-            .map_err(|_| {
-                QrmiError::EnvVarNotSet(format!(
-                    "{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT (or QRMI_AB_FELIS_BASE_ENDPOINT)"
-                ))
-            })?;
-        Self::from_credentials(backend_name, api_key, endpoint)
+        Self::from_opt(backend_name, None)
     }
 
     /// Constructs a Felis QR from a config map, instead of environment variables.
     ///
     /// # Required keys
     ///
-    /// * `api_key` - API key obtained from the Felis web console
-    /// * `base_endpoint` - URL for Felis API base endpoint
+    /// Same names as the environment variables (see [`Self::new`]); no
+    /// backend-name prefix, since a config map is already scoped to one
+    /// backend: `QRMI_AB_FELIS_API_KEY`, `QRMI_AB_FELIS_BASE_ENDPOINT`.
+    ///
+    /// Each key above also accepts its fully-lowercased form (e.g.
+    /// `qrmi_ab_felis_api_key`) as a fallback if the exact-case key isn't
+    /// present in the map.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
-        let api_key = required_config(&config, "api_key")?;
-        let endpoint = required_config(&config, "base_endpoint")?;
-        Self::from_credentials(backend_name, api_key, endpoint)
+        Self::from_opt(backend_name, Some(&config))
     }
 
-    /// Builds the Felis client from already-resolved credentials
-    fn from_credentials(backend_name: &str, api_key: String, endpoint: String) -> Result<Self> {
+    /// Shared parsing and client-building logic for [`Self::new`]
+    /// (`config: None`, reads OS environment variables, optionally prefixed
+    /// by the backend name) and [`Self::from_config`] (`config: Some`,
+    /// reads the given map).
+    fn from_opt(backend_name: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        // Env vars are per-instance (`<backend_name>_QRMI_...`); config map
+        // keys use the same name minus that prefix.
+        let prefix = if config.is_some() {
+            String::new()
+        } else {
+            format!("{backend_name}_")
+        };
+
+        let err_type = if config.is_some() {
+            QrmiError::MissingConfigKey
+        } else {
+            QrmiError::EnvVarNotSet
+        };
+        // Handle environment variables
+        let api_key = resolve_opt(&format!("{prefix}QRMI_AB_FELIS_API_KEY"), config)
+            .or(resolve_opt("QRMI_AB_FELIS_API_KEY", config))
+            .ok_or_else(|| {
+                err_type(format!(
+                    "{backend_name}_QRMI_AB_FELIS_API_KEY (or QRMI_AB_FELIS_API_KEY)"
+                ))
+            })?;
+        let endpoint = resolve_opt(&format!("{prefix}QRMI_AB_FELIS_BASE_ENDPOINT"), config)
+            .or(resolve_opt("QRMI_AB_FELIS_BASE_ENDPOINT", config))
+            .ok_or_else(|| {
+                err_type(format!(
+                    "{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT (or QRMI_AB_FELIS_BASE_ENDPOINT)"
+                ))
+            })?;
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
         config.basic_auth = decode_api_key(&api_key).unwrap();
@@ -239,3 +257,7 @@ impl QuantumResource for AliceBobFelis {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/felis.rs"]
+mod tests;

@@ -34,8 +34,8 @@ instead of environment variables, via `qrmi.new_from_config()`:
 
 ```lua
 local resource, err = qrmi.new_from_config("felis_backend_name", "alice-bob-felis", {
-    api_key = "...",
-    base_endpoint = "...",
+    QRMI_AB_FELIS_API_KEY = "...",
+    QRMI_AB_FELIS_BASE_ENDPOINT = "...",
 })
 ```
 

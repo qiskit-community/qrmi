@@ -61,8 +61,8 @@ qrmi = QuantumResource.from_config(
     "ab_emu_1q_lescanne_2020",
     ResourceType.AliceBobFelis,
     {
-        "api_key": "<your felis api key>",
-        "base_endpoint": "https://api.alice-bob.com/",
+        "QRMI_AB_FELIS_API_KEY": "<your felis api key>",
+        "QRMI_AB_FELIS_BASE_ENDPOINT": "https://api.alice-bob.com/",
     },
 )
 ```

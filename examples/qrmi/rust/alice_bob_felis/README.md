@@ -23,8 +23,8 @@ use qrmi::alice_bob::AliceBobFelis;
 use std::collections::HashMap;
 
 let config = HashMap::from([
-    ("api_key".to_string(), "<your felis api key>".to_string()),
-    ("base_endpoint".to_string(), "https://api.alice-bob.com/".to_string()),
+    ("QRMI_AB_FELIS_API_KEY".to_string(), "<your felis api key>".to_string()),
+    ("QRMI_AB_FELIS_BASE_ENDPOINT".to_string(), "https://api.alice-bob.com/".to_string()),
 ]);
 let qrmi = AliceBobFelis::from_config("ab_emu_1q_lescanne_2020", config)?;
 ```

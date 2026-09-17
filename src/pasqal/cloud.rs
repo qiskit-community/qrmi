@@ -59,7 +59,7 @@ impl PasqalCloud {
             "Initializing PasqalCloud QRMI for backend '{}'",
             backend_name
         );
-        let cfg = PasqalConfig::read(backend_name)?;
+        let cfg = PasqalConfig::from_opt(backend_name, None)?;
         Self::from_pasqal_config(backend_name, cfg)
     }
 
@@ -68,17 +68,27 @@ impl PasqalCloud {
     ///
     /// # Optional keys
     ///
-    /// * `project_id` - Pasqal Cloud Project ID to access the QPU
-    /// * `auth_token` - Pasqal Cloud Auth Token
-    /// * `client_id` - Pasqal Cloud service account client ID
-    /// * `client_secret` - Pasqal Cloud service account client secret
-    /// * `auth_endpoint` - Optional auth endpoint URL/path. Default: `authenticate.pasqal.cloud/oauth/token`
-    /// * `username` - Pasqal Cloud username
-    /// * `password` - Pasqal Cloud password
-    /// * `config_root` - Optional root containing `.pasqal/config`, used as a fallback
-    ///   for `username`, `password`, `client_id`, `client_secret`, `auth_token`, `project_id`, `auth_endpoint`
+    /// Same names as the environment variables (see [`Self::new`]), minus
+    /// the `<backend_name>_` prefix: `QRMI_PASQAL_CLOUD_PROJECT_ID`,
+    /// `QRMI_PASQAL_CLOUD_AUTH_TOKEN`, `QRMI_PASQAL_CLOUD_CLIENT_ID`,
+    /// `QRMI_PASQAL_CLOUD_CLIENT_SECRET`,
+    /// `QRMI_PASQAL_CLOUD_AUTH_ENDPOINT` (default:
+    /// `authenticate.pasqal.cloud/oauth/token`), `QRMI_PASQAL_CLOUD_BASE_URL`.
+    /// `PASQAL_USERNAME`, `PASQAL_PASSWORD` and `PASQAL_CONFIG_ROOT` keep
+    /// their unprefixed names, since they were never backend-specific to
+    /// begin with (a config map is already scoped to one backend).
+    ///
+    /// Each key above also accepts its fully-lowercased form (e.g.
+    /// `qrmi_pasqal_cloud_project_id`, `pasqal_username`) as a fallback if
+    /// the exact-case key isn't present in the map.
+    ///
+    /// # Config file fallback
+    ///
+    /// Unlike [`Self::new`], this never falls back to `$HOME` -- only to
+    /// `PASQAL_CONFIG_ROOT`'s `.pasqal/config` file (see [`Self::new`]'s
+    /// "Config file fallback"), and only if that key is set in the map.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
-        let cfg = PasqalConfig::from_config(config)?;
+        let cfg = PasqalConfig::from_opt(backend_name, Some(&config))?;
         Self::from_pasqal_config(backend_name, cfg)
     }
 

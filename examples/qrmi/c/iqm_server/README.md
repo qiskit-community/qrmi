@@ -24,8 +24,8 @@ instead of environment variables, via `qrmi_resource_new_from_config()`:
 
 ```c
 QrmiKeyValue variables[] = {
-    {(char *)"isa_endpoint", (char *)"https://resonance.meetiqm.com"},
-    {(char *)"isa_token", (char *)"your api token"},
+    {(char *)"QRMI_IQM_ISA_ENDPOINT", (char *)"https://resonance.meetiqm.com"},
+    {(char *)"QRMI_IQM_ISA_TOKEN", (char *)"your api token"},
 };
 QrmiConfigMap config = { .variables = variables, .length = 2 };
 

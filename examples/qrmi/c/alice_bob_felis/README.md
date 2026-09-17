@@ -20,8 +20,8 @@ instead of environment variables, via `qrmi_resource_new_from_config()`:
 
 ```c
 QrmiKeyValue variables[] = {
-    {(char *)"api_key", (char *)"<your felis api key>"},
-    {(char *)"base_endpoint", (char *)"https://api.alice-bob.com/"},
+    {(char *)"QRMI_AB_FELIS_API_KEY", (char *)"<your felis api key>"},
+    {(char *)"QRMI_AB_FELIS_BASE_ENDPOINT", (char *)"https://api.alice-bob.com/"},
 };
 QrmiConfigMap config = { .variables = variables, .length = 2 };
 

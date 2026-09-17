@@ -37,8 +37,8 @@ qrmi = QuantumResource.from_config(
     "garnet_mock",
     ResourceType.IQMServer,
     {
-        "isa_endpoint": "https://resonance.meetiqm.com",
-        "isa_token": "your api token",
+        "QRMI_IQM_ISA_ENDPOINT": "https://resonance.meetiqm.com",
+        "QRMI_IQM_ISA_TOKEN": "your api token",
     },
 )
 ```

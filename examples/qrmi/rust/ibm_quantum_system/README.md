@@ -33,10 +33,10 @@ use qrmi::ibm::IBMQuantumSystem;
 use std::collections::HashMap;
 
 let config = HashMap::from([
-    ("endpoint".to_string(), "http://localhost:8080".to_string()),
-    ("iam_endpoint".to_string(), "https://iam.cloud.ibm.com".to_string()),
-    ("iam_apikey".to_string(), "your_apikey".to_string()),
-    ("service_crn".to_string(), "your_instance".to_string()),
+    ("QRMI_IBM_QS_ENDPOINT".to_string(), "http://localhost:8080".to_string()),
+    ("QRMI_IBM_QS_IAM_ENDPOINT".to_string(), "https://iam.cloud.ibm.com".to_string()),
+    ("QRMI_IBM_QS_IAM_APIKEY".to_string(), "your_apikey".to_string()),
+    ("QRMI_IBM_QS_SERVICE_CRN".to_string(), "your_instance".to_string()),
 ]);
 let qrmi = IBMQuantumSystem::from_config("test_eagle", config)?;
 ```

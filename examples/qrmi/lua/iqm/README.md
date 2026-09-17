@@ -38,8 +38,8 @@ instead of environment variables, via `qrmi.new_from_config()`:
 
 ```lua
 local resource, err = qrmi.new_from_config("garnet_mock", "iqm-server", {
-    isa_endpoint = "https://resonance.meetiqm.com",
-    isa_token = "your api token",
+    QRMI_IQM_ISA_ENDPOINT = "https://resonance.meetiqm.com",
+    QRMI_IQM_ISA_TOKEN = "your api token",
 })
 ```
 

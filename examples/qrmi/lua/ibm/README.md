@@ -40,10 +40,10 @@ instead of environment variables, via `qrmi.new_from_config()`:
 
 ```lua
 local resource, err = qrmi.new_from_config("ibm_torino", "ibm-quantum-compute-service", {
-    endpoint = "https://quantum.cloud.ibm.com/api/v1",
-    iam_endpoint = "https://iam.cloud.ibm.com",
-    iam_apikey = "your_apikey",
-    service_crn = "your_instance",
+    QRMI_IBM_QCS_ENDPOINT = "https://quantum.cloud.ibm.com/api/v1",
+    QRMI_IBM_QCS_IAM_ENDPOINT = "https://iam.cloud.ibm.com",
+    QRMI_IBM_QCS_IAM_APIKEY = "your_apikey",
+    QRMI_IBM_QCS_SERVICE_CRN = "your_instance",
 })
 ```
 

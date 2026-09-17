@@ -30,10 +30,10 @@ instead of environment variables, via `qrmi_resource_new_from_config()`:
 
 ```c
 QrmiKeyValue variables[] = {
-    {(char *)"endpoint", (char *)"http://localhost:8080"},
-    {(char *)"iam_endpoint", (char *)"https://iam.cloud.ibm.com"},
-    {(char *)"iam_apikey", (char *)"your_apikey"},
-    {(char *)"service_crn", (char *)"your_instance"},
+    {(char *)"QRMI_IBM_QS_ENDPOINT", (char *)"http://localhost:8080"},
+    {(char *)"QRMI_IBM_QS_IAM_ENDPOINT", (char *)"https://iam.cloud.ibm.com"},
+    {(char *)"QRMI_IBM_QS_IAM_APIKEY", (char *)"your_apikey"},
+    {(char *)"QRMI_IBM_QS_SERVICE_CRN", (char *)"your_instance"},
 };
 QrmiConfigMap config = { .variables = variables, .length = 4 };
 

@@ -83,6 +83,7 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
     std::env::set_var("PASQAL_PASSWORD", "env-pass");
 
     let cfg = PasqalConfig {
+        config: None,
         username: Some("config-user".to_string()),
         password: Some("config-pass".to_string()),
         client_id: None,
@@ -90,7 +91,6 @@ fn resolve_pasqal_credentials_prefers_environment_variables() {
         token: None,
         project_id: None,
         auth_endpoint: None,
-        from_env: true,
     };
     let (username, password) = cfg.credentials();
 
@@ -111,6 +111,7 @@ fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
     );
 
     let cfg = PasqalConfig {
+        config: None,
         username: None,
         password: None,
         client_id: Some("config-client-id".to_string()),
@@ -118,7 +119,6 @@ fn resolve_pasqal_service_account_credentials_prefers_environment_variables() {
         token: None,
         project_id: None,
         auth_endpoint: None,
-        from_env: true,
     };
     let (client_id, client_secret) = cfg.service_account_credentials("EMU_FREE");
 
@@ -157,22 +157,31 @@ fn from_config_ignores_environment_variables() {
     }
 
     let config = HashMap::from([
-        ("username".to_string(), "config-user".to_string()),
-        ("password".to_string(), "config-pass".to_string()),
-        ("client_id".to_string(), "config-client-id".to_string()),
+        ("PASQAL_USERNAME".to_string(), "config-user".to_string()),
+        ("PASQAL_PASSWORD".to_string(), "config-pass".to_string()),
         (
-            "client_secret".to_string(),
+            "QRMI_PASQAL_CLOUD_CLIENT_ID".to_string(),
+            "config-client-id".to_string(),
+        ),
+        (
+            "QRMI_PASQAL_CLOUD_CLIENT_SECRET".to_string(),
             "config-client-secret".to_string(),
         ),
-        ("auth_token".to_string(), "config-token".to_string()),
-        ("project_id".to_string(), "config-project-id".to_string()),
         (
-            "auth_endpoint".to_string(),
+            "QRMI_PASQAL_CLOUD_AUTH_TOKEN".to_string(),
+            "config-token".to_string(),
+        ),
+        (
+            "QRMI_PASQAL_CLOUD_PROJECT_ID".to_string(),
+            "config-project-id".to_string(),
+        ),
+        (
+            "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT".to_string(),
             "config.endpoint.example".to_string(),
         ),
     ]);
 
-    let cfg = PasqalConfig::from_config(config).expect("from_config should succeed");
+    let cfg = PasqalConfig::from_opt("", Some(&config)).expect("from_config should succeed");
     let (username, password) = cfg.credentials();
     let (client_id, client_secret) = cfg.service_account_credentials("EMU_FREE");
 
@@ -186,8 +195,8 @@ fn from_config_ignores_environment_variables() {
     );
     assert_eq!(cfg.auth_token("EMU_FREE").as_deref(), Some("config-token"));
     assert_eq!(cfg.auth_endpoint("EMU_FREE"), "config.endpoint.example");
-    // `PasqalConfig` has no config-map key for `base_url`; ignoring env means
-    // it stays unset rather than picking up the env-only value above.
+    // This config map doesn't set `QRMI_PASQAL_CLOUD_BASE_URL`, so it stays
+    // unset rather than picking up the env-only value set above.
     assert_eq!(cfg.base_url("EMU_FREE"), None);
 
     for (key, value) in old_vars {
@@ -217,7 +226,10 @@ fn pasqal_cloud_from_config_ignores_environment_variables() {
         std::env::set_var(key, value);
     }
 
-    let config = HashMap::from([("project_id".to_string(), "config-project-id".to_string())]);
+    let config = HashMap::from([(
+        "QRMI_PASQAL_CLOUD_PROJECT_ID".to_string(),
+        "config-project-id".to_string(),
+    )]);
 
     // If `from_config` leaked env vars into `PasqalConfig`, this would still
     // build successfully (env vars here are all well-formed), so the real
@@ -382,7 +394,7 @@ fn read_pasqal_config_uses_pasqal_config_root_env() {
     std::env::set_var("PASQAL_CONFIG_ROOT", &root);
     std::env::set_var("HOME", &home);
 
-    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+    let cfg = read_pasqal_config("EMU_FREE", None).expect("read_pasqal_config should not fail");
 
     assert_eq!(cfg.token.as_deref(), Some("from-root"));
     assert_eq!(cfg.project_id.as_deref(), Some("project"));
@@ -418,7 +430,7 @@ fn read_pasqal_config_uses_backend_pasqal_config_root_env() {
     std::env::set_var("EMU_FREE_PASQAL_CONFIG_ROOT", &root);
     std::env::set_var("HOME", &home);
 
-    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+    let cfg = read_pasqal_config("EMU_FREE", None).expect("read_pasqal_config should not fail");
 
     assert_eq!(cfg.token.as_deref(), Some("from-backend-root"));
     assert_eq!(cfg.project_id.as_deref(), Some("project"));
@@ -455,7 +467,7 @@ fn read_pasqal_config_prefers_pasqal_config_root_env() {
     std::env::set_var("EMU_FREE_PASQAL_CONFIG_ROOT", &backend_root);
     std::env::set_var("HOME", &home);
 
-    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+    let cfg = read_pasqal_config("EMU_FREE", None).expect("read_pasqal_config should not fail");
 
     assert_eq!(cfg.token.as_deref(), Some("from-raw-root"));
 
@@ -476,7 +488,7 @@ fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     std::env::set_var("PASQAL_CONFIG_ROOT", &missing_root);
     std::env::set_var("HOME", &missing_home);
 
-    let cfg = read_pasqal_config("EMU_FREE").expect("read_pasqal_config should not fail");
+    let cfg = read_pasqal_config("EMU_FREE", None).expect("read_pasqal_config should not fail");
     // All config should be None since the config file is missing: the default
     assert!(cfg.username.is_none());
     assert!(cfg.password.is_none());

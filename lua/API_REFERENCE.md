@@ -46,15 +46,15 @@ process environment variables.
 |---|---|---|
 | `resource_id` | string | e.g. `"ibm_kingston"` |
 | `resource_type` | string | Same values accepted by `qrmi.new()` |
-| `config` | table | string -> string config map. Required/optional keys are specific to each resource type (see the QRMI Rust crate's `from_config()` doc comments, e.g. `resource_id`, `endpoint`, `session_id`, ...) |
+| `config` | table | string -> string config map. Required/optional keys are specific to each resource type -- the same names as the environment variables, minus the `{resource_id}_` prefix (see the QRMI Rust crate's `from_config()` doc comments, e.g. `QRMI_WARDEN_URL`, `QRMI_IBM_QCS_SESSION_ID`, ...) |
 
 **Returns:** on success, `resource` (a `qrmi.resource`); on failure, `nil, err`
 
 ```lua
 local resource, err = qrmi.new_from_config("PASQAL_LOCAL", "pasqal-local", {
-    warden_url = "...",
-    job_uid = "...",
-    job_id = "...",
+    QRMI_WARDEN_URL = "...",
+    QRMI_JOB_UID = "...",
+    QRMI_JOB_ID = "...",
 })
 ```
 

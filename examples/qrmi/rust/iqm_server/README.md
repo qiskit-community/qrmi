@@ -27,8 +27,8 @@ use qrmi::iqm::IQMServer;
 use std::collections::HashMap;
 
 let config = HashMap::from([
-    ("isa_endpoint".to_string(), "https://resonance.meetiqm.com".to_string()),
-    ("isa_token".to_string(), "your api token".to_string()),
+    ("QRMI_IQM_ISA_ENDPOINT".to_string(), "https://resonance.meetiqm.com".to_string()),
+    ("QRMI_IQM_ISA_TOKEN".to_string(), "your api token".to_string()),
 ]);
 let qrmi = IQMServer::from_config("garnet_mock", config)?;
 ```

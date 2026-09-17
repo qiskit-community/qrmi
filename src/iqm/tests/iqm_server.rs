@@ -47,10 +47,10 @@ async fn resource_id_and_type_match_backend() {
 fn valid_config() -> HashMap<String, String> {
     HashMap::from([
         (
-            "isa_endpoint".to_string(),
+            "QRMI_IQM_ISA_ENDPOINT".to_string(),
             "http://localhost:8080".to_string(),
         ),
-        ("isa_token".to_string(), "test-token".to_string()),
+        ("QRMI_IQM_ISA_TOKEN".to_string(), "test-token".to_string()),
     ])
 }
 
@@ -60,6 +60,15 @@ fn from_config_builds_resource_from_map() {
         IQMServer::from_config("sirius_mock", valid_config()).expect("from_config should succeed");
     assert_eq!(qrmi.calibration_set_id, "default");
     assert_eq!(qrmi.acquisition_token, None);
+}
+
+#[test]
+fn from_config_accepts_env_style_keys_lowercased() {
+    let config: HashMap<String, String> = valid_config()
+        .into_iter()
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+    assert!(IQMServer::from_config("sirius_mock", config).is_ok());
 }
 
 #[test]
@@ -75,7 +84,10 @@ fn from_config_parses_calibration_set_id_from_backend_name() {
 #[test]
 fn from_config_honors_acquisition_token() {
     let mut config = valid_config();
-    config.insert("acquisition_token".to_string(), "tok-123".to_string());
+    config.insert(
+        "QRMI_JOB_ACQUISITION_TOKEN".to_string(),
+        "tok-123".to_string(),
+    );
 
     let qrmi = IQMServer::from_config("sirius_mock", config).expect("from_config should succeed");
     assert_eq!(qrmi.acquisition_token, Some("tok-123".to_string()));
@@ -84,9 +96,9 @@ fn from_config_honors_acquisition_token() {
 #[test]
 fn from_config_missing_isa_endpoint() {
     let mut config = valid_config();
-    config.remove("isa_endpoint");
+    config.remove("QRMI_IQM_ISA_ENDPOINT");
     let err = IQMServer::from_config("sirius_mock", config)
         .map(|_| ())
         .unwrap_err();
-    assert!(matches!(err, QrmiError::MissingConfigKey(key) if key == "isa_endpoint"));
+    assert!(matches!(err, QrmiError::MissingConfigKey(key) if key == "QRMI_IQM_ISA_ENDPOINT"));
 }
