@@ -233,8 +233,8 @@ def test_cancel_warns():
 
 @pytest.fixture
 def qrmi_backend():
-    """Verify that a QRMIBackend instance can be created with the necessary attributes."""
-    backend = QRMIBackend.__new__(QRMIBackend)
+    """QRMIBackend fixture."""
+    backend = object.__new__(QRMIBackend)
 
     backend._idx_to_qb = {0: "QB1"}
     backend._use_default_calibration_set = False
