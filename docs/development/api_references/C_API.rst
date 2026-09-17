@@ -11,5 +11,5 @@ Unlike QRMI's Python API documentation, which is built and served using Sphinx, 
 
 Use the link below to access the C API documentation:
 
-`C API Documentation <../c/index.html>`_
+`C API Documentation <../../c/index.html>`_
 
