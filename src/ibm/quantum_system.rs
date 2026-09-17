@@ -26,7 +26,6 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
-use uuid::Uuid;
 
 use async_trait::async_trait;
 
@@ -187,16 +186,6 @@ impl QuantumResource for IBMQuantumSystem {
             .get_backend::<Backend>(&self.backend_name)
             .await?;
         Ok(matches!(backend.status, BackendStatus::Online))
-    }
-
-    async fn acquire(&mut self) -> Result<String> {
-        // Quantum System API does not support session concept, so simply returns dummy ID for now.
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        // Quantum System API does not support session concept, so simply ignores
-        Ok(())
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {

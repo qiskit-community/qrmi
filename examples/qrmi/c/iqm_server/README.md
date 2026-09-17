@@ -15,7 +15,7 @@ Because QRMI is an environment variable driven software library, all configurati
 | {qc_alias_name}_QRMI_IBM_ISA_TOKEN | IQM Server API token |
 
 > [!NOTE]
-> Replace the “:” in the QC alias name with “_” when specifying it. For example, `sirius:mock` -> `sirius_mock`.
+> Replace the ":" in the QC alias name with "_" when specifying it. For example, `sirius:mock` -> `sirius_mock`.
 
 ## Alternative: create the resource from a config map
 
@@ -38,10 +38,10 @@ the full set of required/optional keys per resource type.
 
 ## Create IQM JSON input file as input
 
-Refer [this tool](../../../task_runner/iqm) to generate. You can customize quantum circuits by editting the code.
+Refer [this tool](../../../task_runner/iqm) to generate. You can customize quantum circuits by editing the code.
 
 > [!NOTE]
-> Use the file with name ending with `_params_only.json`, e.g. `iqm_json_sirius_params_only.json`.
+> Use the file with name ending `_params_only.json`, e.g. `iqm_json_sirius_params_only.json`.
 
 ## How to build this example
 

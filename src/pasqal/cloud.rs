@@ -17,7 +17,6 @@ use anyhow::Context;
 use log::{debug, warn};
 use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use super::cloud_config::PasqalCloudConfig;
 use async_trait::async_trait;
@@ -265,18 +264,6 @@ impl QuantumResource for PasqalCloud {
             .await
             .context("failed to get device")?;
         Ok(device.availability == "ACTIVE")
-    }
-
-    async fn acquire(&mut self) -> Result<String> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply returns dummy ID for now.
-        Ok(Uuid::new_v4().to_string())
-    }
-
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        // TBD on cloud side for POC
-        // Pasqal Cloud does not support session concept, so simply ignores
-        Ok(())
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
