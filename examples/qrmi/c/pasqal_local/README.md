@@ -21,6 +21,26 @@ Where `<backend_name>` is the backend name passed as the first argument (e.g. `P
 
 
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config map
+instead of environment variables, via `qrmi_resource_new_from_config()`:
+
+```c
+QrmiKeyValue variables[] = {
+    {(char *)"QRMI_WARDEN_URL", (char *)"http://localhost:4207"},
+    {(char *)"QRMI_JOB_ID",     (char *)"1"},
+    {(char *)"QRMI_JOB_UID",    (char *)"1000"},
+};
+QrmiConfigMap config = { .variables = variables, .length = 3 };
+
+QrmiQuantumResource *qrmi = qrmi_resource_new_from_config(
+    "PASQAL_LOCAL", QRMI_RESOURCE_TYPE_PASQAL_LOCAL, &config);
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:

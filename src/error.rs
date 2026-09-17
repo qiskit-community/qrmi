@@ -39,6 +39,8 @@
 //! vendor-API-specific goes through `.context("...")?`, converting to
 //! `QrmiError::Other` via `anyhow::Error`.
 
+use std::collections::HashMap;
+
 use thiserror::Error;
 
 /// Errors raised by QRMI itself, as opposed to errors bubbled up from a
@@ -79,10 +81,12 @@ pub enum QrmiError {
     #[error("unable to retrieve result for task {task_id}: {reason}")]
     TaskNotReady { task_id: String, reason: String },
 
-    /// A required key was missing from a provider's environment variable map
-    /// (as opposed to [`QrmiError::EnvVarNotSet`], which is for real OS
-    /// environment variables).
-    #[error("missing '{0}' in environment map")]
+    /// A required key was missing from a config map. Either a provider's
+    /// environment-variable-style map (e.g. [`crate::resource_provider`]) or
+    /// a `from_config` constructor's generic config map (as opposed to
+    /// [`QrmiError::EnvVarNotSet`], which is for real OS environment
+    /// variables).
+    #[error("missing required config key: '{0}'")]
     MissingConfigKey(String),
 
     /// A configuration value (or combination of values) was invalid in a way
@@ -91,6 +95,7 @@ pub enum QrmiError {
     /// other. See [`QrmiError::ParseError`] for the single-value case.
     #[error("invalid configuration: {0}")]
     InvalidConfig(String),
+
     /// The named resource (e.g. a backend) does not exist.
     #[error("resource not found: {0}")]
     ResourceNotFound(String),
@@ -195,7 +200,7 @@ pub enum QrmiErrorKind {
     UnsupportedFunction,
     /// The task is not in a state that allows the requested operation.
     TaskNotReady,
-    /// A required key was missing from a provider's environment variable map.
+    /// A required key was missing from a provider's config map.
     MissingConfigKey,
     /// A configuration value (or combination of values) was invalid.
     InvalidConfig,
@@ -214,11 +219,36 @@ pub enum QrmiErrorKind {
     Other,
 }
 
+/// Looks up `key` from `config` if given, otherwise from the OS environment.
+/// See [`required_env`]/[`resolve_opt_required`] for the mandatory case.
+pub(crate) fn resolve_opt(key: &str, config: Option<&HashMap<String, String>>) -> Option<String> {
+    match config {
+        Some(map) => map
+            .get(key)
+            .or_else(|| map.get(&key.to_lowercase()))
+            .cloned(),
+        None => std::env::var(key).ok(),
+    }
+}
+
+/// Looks up `key` from `config` if given, otherwise from the OS environment.
+/// If `key` is not found, raises [`QrmiError::EnvVarNotSet`] or
+/// [`QrmiError::MissingConfigKey`] with the variable's name accordingly
+pub(crate) fn resolve_opt_required(
+    key: &str,
+    config: Option<&HashMap<String, String>>,
+) -> Result<String, QrmiError> {
+    resolve_opt(key, config).ok_or_else(|| match config {
+        Some(_) => QrmiError::MissingConfigKey(key.into()),
+        None => QrmiError::EnvVarNotSet(key.into()),
+    })
+}
+
 /// Reads a required environment variable, returning a [`QrmiError::EnvVarNotSet`]
 /// with the variable's name if it isn't set. This replaces the repeated
 /// `env::var(name).map_err(|_| anyhow!("{name} environment variable is not set"))?`
 /// pattern that shows up throughout the vendor backends.
 pub(crate) fn required_env(name: impl Into<String>) -> Result<String, QrmiError> {
     let name = name.into();
-    std::env::var(&name).map_err(|_| QrmiError::EnvVarNotSet(name))
+    resolve_opt_required(&name, None)
 }

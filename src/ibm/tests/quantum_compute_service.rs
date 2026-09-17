@@ -15,6 +15,7 @@ use super::super::IBMQuantumComputeService;
 use crate::models::ResourceType;
 use crate::QuantumResource;
 use quantum_compute_client::apis::configuration;
+use std::collections::HashMap;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
@@ -49,4 +50,56 @@ async fn resource_id_and_type_match_backend() {
 
     assert_eq!(resource_id, BACKEND_NAME);
     assert_eq!(resource_type, ResourceType::IBMQuantumComputeService);
+}
+
+#[test]
+fn from_config_applies_defaults_and_job_acquisition_token_fallback() {
+    let config = HashMap::from([
+        (
+            "QRMI_IBM_QCS_ENDPOINT".to_string(),
+            "http://localhost".to_string(),
+        ),
+        (
+            "QRMI_IBM_QCS_IAM_ENDPOINT".to_string(),
+            "http://localhost".to_string(),
+        ),
+        ("QRMI_IBM_QCS_IAM_APIKEY".to_string(), "dummy".to_string()),
+        ("QRMI_IBM_QCS_SERVICE_CRN".to_string(), "dummy".to_string()),
+        (
+            "QRMI_JOB_ACQUISITION_TOKEN".to_string(),
+            "abc123".to_string(),
+        ),
+    ]);
+    let qrmi =
+        IBMQuantumComputeService::from_config("ibm_torino", config).expect("from_config succeeds");
+
+    assert_eq!(qrmi.session_mode, "dedicated");
+    assert_eq!(qrmi.session_max_ttl, 28800);
+    assert_eq!(qrmi.session_id, Some("abc123".to_string()));
+}
+
+#[test]
+fn from_config_accepts_env_style_keys_lowercased() {
+    let config = HashMap::from([
+        (
+            "qrmi_ibm_qcs_endpoint".to_string(),
+            "http://localhost".to_string(),
+        ),
+        (
+            "qrmi_ibm_qcs_iam_endpoint".to_string(),
+            "http://localhost".to_string(),
+        ),
+        ("qrmi_ibm_qcs_iam_apikey".to_string(), "dummy".to_string()),
+        ("qrmi_ibm_qcs_service_crn".to_string(), "dummy".to_string()),
+    ]);
+    assert!(IBMQuantumComputeService::from_config("ibm_torino", config).is_ok());
+}
+
+#[test]
+fn from_config_missing_required_key_errors() {
+    let config = HashMap::from([(
+        "QRMI_IBM_QCS_ENDPOINT".to_string(),
+        "http://localhost".to_string(),
+    )]);
+    assert!(IBMQuantumComputeService::from_config("ibm_torino", config).is_err());
 }

@@ -28,6 +28,29 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS | (Optional) Cost of the job as the estimated time it should take to complete (in seconds). Should not exceed the cost of the program, default: `None`. |
 | {resource_name}_QRMI_IBM_QCS_SESSION_ID | (Optional) Session ID, can be obtanied by acquire function. If exists, used in the target functions. |
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config dict
+instead of environment variables, via `QuantumResource.from_config()`:
+
+```python
+from qrmi import QuantumResource, ResourceType
+
+qrmi = QuantumResource.from_config(
+    "ibm_torino",
+    ResourceType.IBMQuantumComputeService,
+    {
+        "QRMI_IBM_QCS_ENDPOINT": "https://quantum.cloud.ibm.com/api/v1",
+        "QRMI_IBM_QCS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
+        "QRMI_IBM_QCS_IAM_APIKEY": "your_apikey",
+        "QRMI_IBM_QCS_SERVICE_CRN": "your_instance",
+    },
+)
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Create Qiskit Primitive input file as input
 
 Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can customize quantum circuits by editing the code.

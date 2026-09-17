@@ -14,6 +14,7 @@ use super::super::IBMQuantumSystem;
 use crate::models::ResourceType;
 use crate::QuantumResource;
 use quantum_system_api::ClientBuilder;
+use std::collections::HashMap;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
@@ -37,4 +38,50 @@ async fn resource_id_and_type_match_backend() {
 
     assert_eq!(resource_id, BACKEND_NAME);
     assert_eq!(resource_type, ResourceType::IBMQuantumSystem);
+}
+
+fn required_only_config() -> HashMap<String, String> {
+    HashMap::from([
+        (
+            "QRMI_IBM_QS_ENDPOINT".to_string(),
+            "http://localhost".to_string(),
+        ),
+        ("QRMI_IBM_QS_IAM_APIKEY".to_string(), "dummy".to_string()),
+        ("QRMI_IBM_QS_SERVICE_CRN".to_string(), "dummy".to_string()),
+        (
+            "QRMI_IBM_QS_IAM_ENDPOINT".to_string(),
+            "http://localhost".to_string(),
+        ),
+    ])
+}
+
+#[test]
+fn from_config_works_without_s3_keys() {
+    assert!(IBMQuantumSystem::from_config("test_eagle", required_only_config()).is_ok());
+}
+
+#[test]
+fn from_config_accepts_env_style_keys_lowercased() {
+    let config: HashMap<String, String> = required_only_config()
+        .into_iter()
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+    assert!(IBMQuantumSystem::from_config("test_eagle", config).is_ok());
+}
+
+#[test]
+fn from_config_requires_all_s3_keys_together() {
+    let mut config = required_only_config();
+    // Only one of the five S3 keys set -- should be treated as "no S3", not an error.
+    config.insert("QRMI_IBM_QS_S3_BUCKET".to_string(), "my-bucket".to_string());
+    assert!(IBMQuantumSystem::from_config("test_eagle", config).is_ok());
+}
+
+#[test]
+fn from_config_missing_required_key_errors() {
+    let config = HashMap::from([(
+        "QRMI_IBM_QS_ENDPOINT".to_string(),
+        "http://localhost".to_string(),
+    )]);
+    assert!(IBMQuantumSystem::from_config("test_eagle", config).is_err());
 }
