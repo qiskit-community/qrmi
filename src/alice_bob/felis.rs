@@ -23,7 +23,6 @@ use alice_bob_felis::models::{create_external_job, EventType};
 use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
 pub struct AliceBobFelis {
