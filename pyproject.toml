@@ -74,7 +74,11 @@ docs = [
 all = ["qrmi[ibm,pasqal,iqm]"]
 
 [project.urls]
-repository = "https://github.com/qiskit-community/qrmi"
+Repository = "https://github.com/qiskit-community/qrmi"
+Homepage = "https://qiskit-community.github.io/qrmi/"
+Documentation = "https://qiskit-community.github.io/qrmi/"
+"API Reference" = "https://qiskit-community.github.io/qrmi/development/api_references/index.html"
+Issues = "https://github.com/qiskit-community/qrmi/issues"
 
 [tool.maturin]
 python-source = "python"
