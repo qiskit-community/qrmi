@@ -50,8 +50,23 @@ print("id:", id, id_err)
 local rtype, rtype_err = resource:type()
 print("type:", rtype, rtype_err)
 
-local accessible, aerr = resource:is_accessible()
-print("is_accessible:", accessible, aerr)
+local rstatus, rstatus_err = resource:status()
+if not rstatus then
+    print("status failed:", rstatus_err)
+else
+    print("status:")
+    print("  status            =", rstatus.status)
+    print("  status_reason     =", rstatus.status_reason)
+    print("  healthy           =", rstatus.healthy)
+    print("  pending_job_count =", rstatus.pending_job_count)
+    print("  is_accessible     =", rstatus.is_accessible)
+    if rstatus.capacity then
+        print("  capacity.available_slots =", rstatus.capacity.available_slots)
+        print("  capacity.max_slots       =", rstatus.capacity.max_slots)
+    else
+        print("  capacity          = nil")
+    end
+end
 
 local token, tok_err = resource:acquire()
 if not token then
@@ -119,7 +134,7 @@ local bad, bad_err = qrmi.new("x", "not_a_real_type")
 print("bad new ->", bad, bad_err)
 
 -- Error case: calling a method after free() raises a Lua error
-local ok2, err2 = pcall(function() resource:is_accessible() end)
+local ok2, err2 = pcall(function() resource:status() end)
 print("call after free -> pcall ok:", ok2, "err:", err2)
 
 -- ---------------------------------------------------------------------------

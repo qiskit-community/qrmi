@@ -1,6 +1,6 @@
 // This code is part of Qiskit.
 //
-// (C) Copyright IBM 2025
+// (C) Copyright IBM 2025-2026
 //
 // This code is licensed under the Apache License, Version 2.0. You may
 // obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -14,12 +14,14 @@
 
 mod config;
 mod payload;
+mod resource_status;
 mod target;
 mod task_result;
 mod task_status;
 
 pub use self::config::{Config, ResourceDef, ResourceType};
 pub use self::payload::Payload;
+pub use self::resource_status::{ResourceCapacity, ResourceStatus, ResourceStatusCode};
 pub use self::target::Target;
 pub use self::task_result::TaskResult;
 pub use self::task_status::TaskStatus;

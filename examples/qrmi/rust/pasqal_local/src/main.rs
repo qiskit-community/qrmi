@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         qrmi.resource_type().await?.as_str()
     );
 
-    let accessible = qrmi.is_accessible().await?;
+    let accessible = qrmi.status().await?.is_accessible();
     if !accessible {
         println!("Pasqal local is not accessible"); // Checks for real QPU
     }

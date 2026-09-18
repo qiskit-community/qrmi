@@ -35,7 +35,7 @@ qrmi = QuantumResource(args.backend, ResourceType.IBMQuantumComputeService)
 print(qrmi)
 print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
-print(qrmi.is_accessible())
+print(json.dumps(qrmi.status().to_dict(), indent=2))
 
 lock = qrmi.acquire()
 print(f"lock {lock}")

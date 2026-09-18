@@ -100,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for mut r in resources {
         let id = r.resource_id().await?;
         let resource_type = r.resource_type().await?;
-        let accessible = r.is_accessible().await.unwrap_or(false);
+        let accessible = r.status().await?.is_accessible();
         println!(
             "  {:<30} type={:<25} accessible={}",
             id,

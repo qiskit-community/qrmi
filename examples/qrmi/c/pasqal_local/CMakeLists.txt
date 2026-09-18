@@ -28,7 +28,7 @@ function(add_example TARGET_NAME C_FILE)
   # source files for the client app
   set(SRC_FILE
           ${CMAKE_CURRENT_SOURCE_DIR}/${C_FILE}
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/../common/common.c
   )
 
   add_executable(${TARGET_NAME} ${SRC_FILE})
@@ -57,6 +57,7 @@ function(add_example TARGET_NAME C_FILE)
   target_include_directories(${TARGET_NAME}
           PRIVATE
           ${CMAKE_CURRENT_SOURCE_DIR}/../../../..
+          ${CMAKE_CURRENT_SOURCE_DIR}/../common
   )
 
   install (TARGETS ${TARGET_NAME} DESTINATION .)

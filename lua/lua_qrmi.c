@@ -127,6 +127,17 @@ static const char *task_status_to_string(QrmiTaskStatus s) {
 }
 
 /**
+ * @brief Convert a QrmiResourceStatusCode enum value to its Lua-facing string form.
+ *
+ * @param s A QrmiResourceStatusCode value as returned by qrmi_resource_status_code().
+ * @return One of "online", "offline", "paused", "busy", or "unknown" if
+ *         @p s does not match any known variant.
+ */
+static const char *status_code_to_string(QrmiResourceStatusCode s) {
+    return qrmi_resource_status_code_to_string(s);
+}
+
+/**
  * @brief `qrmi.new(resource_id, resource_type_str)` - Create a quantum resource handle.
  *
  * Wraps qrmi_resource_new().
@@ -197,6 +208,9 @@ static lua_qrmi_resource_t *check_resource(lua_State *L, int idx) {
  *
  * Wraps qrmi_resource_is_accessible().
  *
+ * @deprecated Use resource:status() and resource:status.is_accessible instead.
+ * This function will be removed in a future release.
+ *
  * Lua usage:
  * @code
  *   local accessible, err = resource:is_accessible()
@@ -210,6 +224,10 @@ static lua_qrmi_resource_t *check_resource(lua_State *L, int idx) {
 static int l_is_accessible(lua_State *L) {
     lua_qrmi_resource_t *ud = check_resource(L, 1);
     bool accessible = false;
+
+    fprintf(stderr,
+        "warning: resource:is_accessible() is deprecated, use resource:status() instead\n");
+
     QrmiReturnCode rc = qrmi_resource_is_accessible(ud->handle, &accessible);
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
     lua_pushboolean(L, accessible);
@@ -762,6 +780,104 @@ static int l_metadata(lua_State *L) {
 }
 
 /**
+ * @brief `resource:status()` - Fetch detailed status information as a Lua table.
+ *
+ * Wraps qrmi_resource_status() and its field accessors
+ * (qrmi_resource_status_code(), qrmi_resource_status_reason(),
+ * qrmi_resource_status_healthy(), qrmi_resource_status_pending_job_count(),
+ * qrmi_resource_status_capacity(), qrmi_resource_status_is_accessible()),
+ * flattening the result into a single Lua table. Fields the vendor does
+ * not report (QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR from the
+ * corresponding accessor) are set to `nil` rather than raising an error.
+ * The underlying QrmiResourceStatus (and QrmiResourceCapacity, if any)
+ * handles are freed before this function returns, so no extra
+ * userdata/GC bookkeeping is needed on the Lua side.
+ *
+ * Lua usage:
+ * @code
+ *   local status, err = resource:status()
+ *   print(status.status)             -- "online" | "offline" | "paused" | "busy"
+ *   print(status.status_reason)      -- string or nil
+ *   print(status.healthy)            -- boolean or nil
+ *   print(status.pending_job_count)  -- integer or nil
+ *   print(status.is_accessible)      -- boolean
+ *   if status.capacity then
+ *     print(status.capacity.available_slots, status.capacity.max_slots)
+ *   end
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments: [1] resource (qrmi.resource userdata).
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (status: table as described above)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_status(lua_State *L) {
+    lua_qrmi_resource_t *ud = check_resource(L, 1);
+
+    QrmiResourceStatus *status = NULL;
+    QrmiReturnCode rc = qrmi_resource_status(ud->handle, &status);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+
+    lua_newtable(L);
+
+    QrmiResourceStatusCode code;
+    rc = qrmi_resource_status_code(status, &code);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) {
+        qrmi_resource_status_free(status);
+        return push_qrmi_error(L, rc);
+    }
+    lua_pushstring(L, status_code_to_string(code));
+    lua_setfield(L, -2, "status");
+
+    char *reason = qrmi_resource_status_reason(status);
+    if (reason) {
+        lua_pushstring(L, reason);
+        qrmi_string_free(reason);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "status_reason");
+
+    bool healthy = false;
+    if (qrmi_resource_status_healthy(status, &healthy) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushboolean(L, healthy);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "healthy");
+
+    uint64_t pending_job_count = 0;
+    if (qrmi_resource_status_pending_job_count(status, &pending_job_count) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushinteger(L, (lua_Integer)pending_job_count);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "pending_job_count");
+
+    QrmiResourceCapacity *capacity = NULL;
+    if (qrmi_resource_status_capacity(status, &capacity) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_newtable(L);
+        lua_pushinteger(L, (lua_Integer)capacity->available_slots);
+        lua_setfield(L, -2, "available_slots");
+        lua_pushinteger(L, (lua_Integer)capacity->max_slots);
+        lua_setfield(L, -2, "max_slots");
+        qrmi_resource_capacity_free(capacity);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "capacity");
+
+    bool accessible = false;
+    rc = qrmi_resource_status_is_accessible(status, &accessible);
+    qrmi_resource_status_free(status);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+    lua_pushboolean(L, accessible);
+    lua_setfield(L, -2, "is_accessible");
+
+    return 1;
+}
+
+/**
  * @brief `resource:target()` - Fetch the device's target information.
  *
  * Wraps qrmi_resource_target().
@@ -849,6 +965,7 @@ static int l_resource_gc(lua_State *L) {
 /** @brief Method table installed on the `qrmi.resource` metatable's __index. */
 static const luaL_Reg resource_methods[] = {
     {"is_accessible", l_is_accessible},
+    {"status",        l_status},
     {"id",            l_resource_id},
     {"type",          l_resource_type},
     {"acquire",       l_acquire},
