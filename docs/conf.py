@@ -69,8 +69,8 @@ autodoc_mock_imports = [
 # =============================================================================
 
 linkcheck_ignore = [
-    r"../c/index.html",
-    r"../rust/qrmi/index.html",
+    r"../../c/index.html",
+    r"../../rust/qrmi/index.html",
     r"https://crates.io/crates/log",
     r"https://github.com/Qiskit/ibm-quantum-schemas/.*",
     r"https://resonance.iqm.tech/",
