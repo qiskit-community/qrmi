@@ -140,9 +140,9 @@ class PulserQRMIConnection(RemoteConnection):
         for job_id in job_ids:
             try:
                 job_logs = self._qrmi.task_logs(job_id)
+                logs.append(job_logs)
             except RuntimeError as err:
                 logger.warning("Failed to fetch logs for job %s: %s", job_id, err)
-            logs.append(job_logs)
         return tuple(logs)
 
     def cancel_batch_jobs(self, batch_id: str | None = None) -> None:

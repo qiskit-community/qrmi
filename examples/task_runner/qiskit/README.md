@@ -3,8 +3,8 @@
 The tools demonstrate the generation of EstimatorV2/SamplerV2 inputs from a quantum circuit example.
 
 ## Prerequisites
-* Python 3.11 or above
 
+* Python 3.11 or above
 
 ## Install dependencies
 
@@ -18,8 +18,8 @@ pip install -f requirements.txt
 
 Generates EstimatorV2 input for the circuit introduced in [Getting started doc](https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-estimator).
 
-
 Usage:
+
 ```shell-session
 usage: gen_estimator_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
 
@@ -37,6 +37,7 @@ options:
 ```
 
 Example:
+
 ```bash
 python gen_estimator_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance>
 ```
@@ -53,6 +54,7 @@ Output:
 Generates SamplerV2 input for the circuit introduced in [Getting started doc](https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-sampler).
 
 Usage:
+
 ```shell-session
 usage: gen_sampler_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
 
@@ -70,6 +72,7 @@ options:
 ```
 
 Example:
+
 ```bash
 python gen_sampler_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance>
 ```

@@ -3,6 +3,7 @@
 * [Examples in Rust](./rust)
 * [Examples in Python](./python)
 * [Examples in C](./c)
+* [Examples in Lua](./lua)
 
 ## License
 

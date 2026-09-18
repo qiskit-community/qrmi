@@ -1,0 +1,52 @@
+.sphinx-contributors .sphinx-contributors_list {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.sphinx-contributors img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+}
+
+.sphinx-contributors {
+    overflow: hidden;
+
+    /* Fade left and right edges */
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 30%,
+        black 90%,
+        transparent
+    );
+
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 30%,
+        black 90%,
+        transparent
+    );
+}
+
+.sphinx-contributors_list {
+    display: flex;
+    gap: 2rem;
+    width: max-content;
+    animation: marquee 40s linear infinite;
+}
+
+@keyframes marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+.sphinx-contributors_list:hover {
+    animation-play-state: paused;
+}

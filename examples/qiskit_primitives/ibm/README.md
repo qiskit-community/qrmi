@@ -10,8 +10,8 @@
 Assuming your python virtual environment is located at `~/py311venv_qrmi_primitives/bin/activate`,
 
 ```shell-session
-$ source ~/py311venv_qrmi_primitives/bin/activate
-$ pip install -r requirements.txt
+source ~/py311venv_qrmi_primitives/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Set environment variables
@@ -34,9 +34,9 @@ When run as a job in a Slurm cluster, these environment variables are set by use
 | Environment variables | Descriptions |
 | ---- | ---- |
 | {resource_name}_QRMI_IBM_QS_ENDPOINT | Quantum System endpoint URL |
-| {resource_name}_QRMI_IBM_QS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
+| {resource_name}_QRMI_IBM_QS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL (e.g. `https://iam.cloud.ibm.com`) |
 | {resource_name}_QRMI_IBM_QS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_QS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
+| {resource_name}_QRMI_IBM_QS_SERVICE_CRN | Cloud Resource Name (CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
 | {resource_name}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID | AWS Access Key ID to access S3 bucket |
 | {resource_name}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY | AWS Secret Access Key to access S3 bucket |
 | {resource_name}_QRMI_IBM_QS_S3_ENDPOINT | S3 endpoint URL |
@@ -45,6 +45,7 @@ When run as a job in a Slurm cluster, these environment variables are set by use
 | {resource_name}_QRMI_IBM_QS_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
 
 #### Example
+
 ```shell-session
 export QRMI_JOB_QPU_RESOURCES=test_eagle
 export QRMI_JOB_QPU_TYPES=ibm-quantum-system
@@ -59,51 +60,23 @@ export test_eagle_QRMI_IBM_QS_S3_BUCKET=test
 export test_eagle_QRMI_IBM_QS_S3_REGION=us-east
 export test_eagle_QRMI_IBM_QS_TIMEOUT_SECONDS=86400
 ```
-### IBM Quantum Compute Service specific
+
+### IBM Qiskit Runtime Service specific (deprecated)
 
 When run as a job in a Slurm cluster, these environment variables are set by users or administrator.
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {resource_name}_QRMI_IBM_QCS_ENDPOINT | Quantum Compute Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
-| {resource_name}_QRMI_IBM_QCS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
-| {resource_name}_QRMI_IBM_QCS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_QCS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
-| {resource_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time).
-| {resource_name}_QRMI_IBM_QCS_SESSION_MODE | Session mode, default='dedicated', batch or dedicated. |
-| {resource_name}_QRMI_IBM_QCS_SESSION_ID | Session ID, set by acquire function. Optional for acquire function, however, required other functions. |
-System execution time is the amount of time that the system is dedicated to processing your job. |
-
-#### Example
-```shell-session
-export QRMI_JOB_QPU_RESOURCES=ibm_torino,ibm_marrakesh
-export QRMI_JOB_QPU_TYPES=ibm-quantum-compute-service,ibm-quantum-compute-service
-export ibm_torino_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-export ibm_torino_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-export ibm_torino_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
-export ibm_torino_QRMI_IBM_QCS_SERVICE_CRN=your_instance
-export ibm_marrakesh_QRMI_IBM_QCS_ENDPOINT=https://quantum.cloud.ibm.com/api/v1
-export ibm_marrakesh_QRMI_IBM_QCS_IAM_ENDPOINT=https://iam.cloud.ibm.com
-export ibm_marrakesh_QRMI_IBM_QCS_IAM_APIKEY=your_apikey
-export ibm_marrakesh_QRMI_IBM_QCS_SERVICE_CRN=your_instance
-```
-
-### IBM Qiskit Runtime Service specific(deprecated)
-
-When run as a job in a Slurm cluster, these environment variables are set by users or administrator.
-
-| Environment variables | Descriptions |
-| ---- | ---- |
-| {resource_name}_QRMI_IBM_QRS_ENDPOINT | Qiskit Runtime Service endpoint URL(e.g. `https://quantum.cloud.ibm.com/api`) |
-| {resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL(e.g. `https://iam.cloud.ibm.com`) |
+| {resource_name}_QRMI_IBM_QRS_ENDPOINT | IBM Quantum Compute (formerly Qiskit Runtime) Service endpoint URL (e.g. `https://quantum.cloud.ibm.com/api`) |
+| {resource_name}_QRMI_IBM_QRS_IAM_ENDPOINT | IBM Cloud IAM endpoint URL (e.g. `https://iam.cloud.ibm.com`) |
 | {resource_name}_QRMI_IBM_QRS_IAM_APIKEY | IBM Cloud IAM API Key |
-| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name(CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
-| {resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time).
+| {resource_name}_QRMI_IBM_QRS_SERVICE_CRN | Cloud Resource Name (CRN) of the provisioned Quantum System instance, starting with `crn:v1:`. |
+| {resource_name}_QRMI_IBM_QRS_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
 | {resource_name}_QRMI_IBM_QRS_SESSION_MODE | Session mode, default='dedicated', batch or dedicated. |
 | {resource_name}_QRMI_IBM_QRS_SESSION_ID | Session ID, set by acquire function. Optional for acquire function, however, required other functions. |
-System execution time is the amount of time that the system is dedicated to processing your job. |
 
 #### Example
+
 ```shell-session
 export QRMI_JOB_QPU_RESOURCES=ibm_torino,ibm_marrakesh
 export QRMI_JOB_QPU_TYPES=qiskit-runtime-service,qiskit-runtime-service
@@ -124,7 +97,7 @@ export ibm_marrakesh_QRMI_IBM_QRS_SERVICE_CRN=your_instance
 Code is based on "Get started with Sampler" tutorial (https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-backend-primitives#get-started-with-the-sampler-backend-primitive).
 
 ```shell-session
-$ python sampler.py
+python sampler.py
 ```
 
 ### EstimatorV2
@@ -132,7 +105,7 @@ $ python sampler.py
 Code is based on "Get started with Estimator" tutorial (https://quantum.cloud.ibm.com/docs/en/guides/get-started-with-backend-primitives#get-started-with-the-estimator-backend-primitive).
 
 ```shell-session
-$ python estimator.py
+python estimator.py
 ```
 
 ### SQD tutorial
