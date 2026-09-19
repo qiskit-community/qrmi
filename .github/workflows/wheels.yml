@@ -141,7 +141,8 @@ jobs:
     outputs:
       qrmi-version: ${{ steps.sysinfo.outputs.qrmi-version }}
       python-version: ${{ steps.sysinfo.outputs.python-version }}
-      python-test-versions: ${{ steps.sysinfo.outputs.python-test-versions }}
+      python-test-versions-x86_64: ${{ steps.sysinfo.outputs.python-test-versions-x86_64 }}
+      python-test-versions-arm64: ${{ steps.sysinfo.outputs.python-test-versions-arm64 }}
     steps:
     - uses: actions/checkout@v6
     - name: System info
@@ -150,8 +151,21 @@ jobs:
         echo "qrmi-version=$(make get-qrmi-version)" >> $GITHUB_OUTPUT
         echo "python-version=$(make get-python-version)" >> $GITHUB_OUTPUT
         # Python versions tested by the test-x86_64 and test-arm64 jobs.
-        # Keep in sync with the python versions built by cibuildwheel.
-        echo 'python-test-versions=["3.10", "3.11", "3.12", "3.13"]' >> $GITHUB_OUTPUT
+        # Derived from the cibuildwheel build identifiers, so they follow the
+        # pyproject.toml settings (requires-python, [tool.cibuildwheel] build/skip)
+        # e.g. cp312-manylinux_x86_64 -> 3.12
+        # The cibuildwheel version is taken from requirements-dev.txt, and must
+        # match the pypa/cibuildwheel action version used by the build jobs.
+        cibw_version=$(sed -n 's/^cibuildwheel==//p' requirements-dev.txt)
+        for arch in x86_64 aarch64; do
+          versions=$(pipx run "cibuildwheel==$cibw_version" --print-build-identifiers --platform linux --archs "$arch" \
+            | grep -E '^cp[0-9]+-manylinux' \
+            | sed -E 's/^cp([0-9])([0-9]+)-.*/\1.\2/' \
+            | sort -uV | jq -R . | jq -sc .)
+          echo "$arch: $versions"
+          name=$([ "$arch" = aarch64 ] && echo arm64 || echo "$arch")
+          echo "python-test-versions-$name=$versions" >> $GITHUB_OUTPUT
+        done
 
   format-check:
     if: inputs.format-check == true
@@ -292,7 +306,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJSON(needs.info.outputs.python-test-versions) }}
+        python-version: ${{ fromJSON(needs.info.outputs.python-test-versions-x86_64) }}
         suite:
         - name: ibm-pasqal
           extras: ibm,pasqal
@@ -315,8 +329,10 @@ jobs:
     - name: Install wheel with [${{ matrix.suite.extras }}]
       run: |
         python -m pip install --upgrade pip
+        # Same as before-test in pyproject.toml [tool.cibuildwheel.linux]
+        pip install -r requirements-dev.txt
         pip install --no-index --no-deps --find-links ./wheelhouse qrmi
-        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}" pytest
+        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}"
     - name: Run tests
       run: |
         # Run outside the repository so that the installed wheel is imported
@@ -335,7 +351,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJSON(needs.info.outputs.python-test-versions) }}
+        python-version: ${{ fromJSON(needs.info.outputs.python-test-versions-arm64) }}
         suite:
         - name: ibm-pasqal
           extras: ibm,pasqal
@@ -358,8 +374,10 @@ jobs:
     - name: Install wheel with [${{ matrix.suite.extras }}]
       run: |
         python -m pip install --upgrade pip
+        # Same as before-test in pyproject.toml [tool.cibuildwheel.linux]
+        pip install -r requirements-dev.txt
         pip install --no-index --no-deps --find-links ./wheelhouse qrmi
-        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}" pytest
+        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}"
     - name: Run tests
       run: |
         # Run outside the repository so that the installed wheel is imported
@@ -411,8 +429,10 @@ jobs:
     - name: Install wheel with [${{ matrix.suite.extras }}]
       run: |
         python -m pip install --upgrade pip
+        # Same as before-test in pyproject.toml [tool.cibuildwheel.linux]
+        pip install -r requirements-dev.txt
         pip install --no-index --no-deps --find-links ./wheelhouse qrmi
-        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}" pytest
+        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}"
     - name: Run tests
       run: |
         # Run outside the repository so that the installed wheel is imported
