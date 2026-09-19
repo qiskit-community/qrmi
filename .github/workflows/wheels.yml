@@ -1,11 +1,22 @@
 ---
 # wheels workflow
 # - Triggered manually from the GitHub UI (Actions tab) or from another workflow.
-# - Perform multiple tasks related to weels - e.g. build, test, lint, etc.
+# - Perform multiple tasks related to wheels - e.g. build, test, lint, etc.
 # - Selected task(s) are performed on the architecture(s) selected
-#   - Exception: sdist, it does not require architecture selection
+#   - Exception: sdist and format-check, they do not require architecture selection
 # - wheels is always built and uploaded on the selected architecture(s)
 # - Task(s) and architecture(s) available are defined as workflow inputs
+#
+# Testing
+# - The same wheel is installed with different extras, because the extras have
+#   conflicting dependency versions and cannot be installed together:
+#     [ibm,pasqal] -> pytest python/tests/unit
+#     [iqm]        -> pytest python/tests/compatibility
+#     [alice-bob]  -> install and import check only
+# - cibuildwheel itself only runs an import smoke test (x86_64, arm64).
+#   The test suites above run in the test-* jobs when unit-test is enabled.
+# - ppc64le tests run on a single python version, because many dependencies have
+#   no pre-built ppc64le wheels on pypi and are compiled from source.
 
 name: wheels
 on:
@@ -24,8 +35,7 @@ on:
         default: true
         required: false
       # Enable this with caution. Many python wheels are not pre-built in pypi for ppc64le
-      # and so they are built locally. Each python venv takes about 24 min to setup,
-      # which means about 2 hours total to test all python versions we support.
+      # and so they are built locally, which takes a long time.
       arch-ppc64le:
         description: >-
           Build wheels for ppc64le
@@ -40,19 +50,19 @@ on:
         required: false
       unit-test:
         description: >-
-          pytest after building the wheels
+          Run the test suites after building the wheels
         type: boolean
         default: false
         required: false
       format-check:
         description: >-
-          format check before building the wheels
+          Format check of the python code
         type: boolean
         default: false
         required: false
       lint:
         description: >-
-          pylint after bulding the wheels
+          pylint after building the wheels
         type: boolean
         default: false
         required: false
@@ -78,8 +88,7 @@ on:
         default: true
         required: false
       # Enable this with caution. Many python wheels are not pre-built in pypi for ppc64le
-      # and so they are built locally. Each python venv takes about 24 min to setup,
-      # which means about 2 hours total to test all python versions we support.
+      # and so they are built locally, which takes a long time.
       arch-ppc64le:
         description: >-
           Build wheels for ppc64le
@@ -94,19 +103,19 @@ on:
         required: false
       unit-test:
         description: >-
-          pytest after building the wheels
+          Run the test suites after building the wheels
         type: boolean
         default: false
         required: false
       format-check:
         description: >-
-          format check before building the wheels
+          Format check of the python code
         type: boolean
         default: false
         required: false
       lint:
         description: >-
-          pylint after bulding the wheels
+          pylint after building the wheels
         type: boolean
         default: false
         required: false
@@ -123,12 +132,16 @@ on:
         default: 'manual'
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   info:
     runs-on: ubuntu-24.04
     outputs:
       qrmi-version: ${{ steps.sysinfo.outputs.qrmi-version }}
       python-version: ${{ steps.sysinfo.outputs.python-version }}
+      python-test-versions: ${{ steps.sysinfo.outputs.python-test-versions }}
     steps:
     - uses: actions/checkout@v6
     - name: System info
@@ -136,6 +149,21 @@ jobs:
       run: |
         echo "qrmi-version=$(make get-qrmi-version)" >> $GITHUB_OUTPUT
         echo "python-version=$(make get-python-version)" >> $GITHUB_OUTPUT
+        # Python versions tested by the test-x86_64 and test-arm64 jobs.
+        # Keep in sync with the python versions built by cibuildwheel.
+        echo 'python-test-versions=["3.10", "3.11", "3.12", "3.13"]' >> $GITHUB_OUTPUT
+
+  format-check:
+    if: inputs.format-check == true
+    runs-on: ubuntu-24.04
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ needs.info.outputs.python-version }}
+    - name: Use black to check formatting
+      run: make fmt-python
 
   pypi-sdist:
     if: inputs.sdist == true
@@ -155,6 +183,10 @@ jobs:
         if-no-files-found: error
         retention-days: 1
 
+  # ---------------------------------------------------------------------------
+  # Build
+  # ---------------------------------------------------------------------------
+
   wheels-x86_64:
     if: inputs.arch-x86_64 == true
     runs-on: ubuntu-24.04
@@ -164,59 +196,49 @@ jobs:
     - uses: actions/setup-python@v6
       with:
         python-version: ${{ needs.info.outputs.python-version }}
-    - if: inputs.format-check == true
-      name: Use black to check formatting
-      run: make fmt-python
-    - if: inputs.unit-test == false
-      name: Skip wheels unit test
-      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
     - name: Build wheels
       uses: pypa/cibuildwheel@v3.4.1
       env:
-        CIBW_TEST_EXTRAS: all
-        CIBW_TEST_COMMAND: >
-          pytest
-          {project}/python/tests/unit
-          --ignore={project}/python/tests/compatibility
+        # Smoke test only: install the wheel without extras and import it.
+        # The test suites run in the test-x86_64 job.
+        CIBW_TEST_COMMAND: python -c "import qrmi"
     - if: inputs.lint == true
       name: Lint wheels
       run: make lint-wheels
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-x86_64
-        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        path: ./wheelhouse/*.whl
         if-no-files-found: error
         retention-days: 1
 
   wheels-ppc64le:
-    if: ${{ inputs.arch-ppc64le == true }}
+    if: inputs.arch-ppc64le == true
     runs-on: ubuntu-24.04-ppc64le
     needs: [info]
     steps:
     - uses: actions/checkout@v6
     # cibuildwheel requires a recent python version to run, it supports the last three python releases.
     # However, actions/setup-python@v6 does not support ppc64le yet
-    # https://github.com/actions/setup-python/issues/1154 
+    # https://github.com/actions/setup-python/issues/1154
     # For now we have to install python manually.
     - name: Install python3 manually for cibuildwheel
       run: |
         sudo add-apt-repository -y ppa:deadsnakes/ppa
         sudo apt update
         sudo apt install -y python${{ needs.info.outputs.python-version }}{,-dev,-venv} python3-pip
-    - if: ${{ inputs.format-check == true }}
-      name: Format check the .python directory
-      run: make fmt-python
-    - if: ${{ inputs.unit-test == false }}
-      name: Skip wheel unit tests
-      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
     # pypa/cibuildwheel action can't be used because it calls actions/setup-python@v6 internally, which
     # does not support ppc64le yet
     - name: Build wheels
+      env:
+        # No tests inside cibuildwheel on ppc64le: installing the wheel in the
+        # cibuildwheel test venvs compiles dependencies from source for every
+        # python version. The test suites run in the test-ppc64le job instead.
+        CIBW_TEST_SKIP: '*'
       run: |
         make create-venv
         source $(make get-venv-activate)
-        # Indirect package dependencies for the pulser-core wheel
-        CIBW_BEFORE_ALL="dnf install -y openblas-devel libjpeg-turbo-devel zlib-devel" CIBW_TEST_EXTRAS=all cibuildwheel
+        cibuildwheel
     - if: inputs.lint == true
       name: Lint wheels
       run: |
@@ -225,12 +247,12 @@ jobs:
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-ppc64le
-        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        path: ./wheelhouse/*.whl
         if-no-files-found: error
         retention-days: 1
 
   wheels-arm64:
-    if: ${{ inputs.arch-arm64 == true }}
+    if: inputs.arch-arm64 == true
     runs-on: ubuntu-24.04-arm
     needs: [info]
     steps:
@@ -238,21 +260,165 @@ jobs:
     - uses: actions/setup-python@v6
       with:
         python-version: ${{ needs.info.outputs.python-version }}
-    - if: ${{ inputs.format-check == true }}
-      name: Format check the .python directory
-      run: make fmt-python
-    - if: ${{ inputs.unit-test == false }}
-      name: Skip wheel unit tests
-      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
-    - uses: pypa/cibuildwheel@v3.4.1
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v3.4.1
       env:
-        CIBW_TEST_EXTRAS: all
+        # Smoke test only: install the wheel without extras and import it.
+        # The test suites run in the test-arm64 job.
+        CIBW_TEST_COMMAND: python -c "import qrmi"
     - if: inputs.lint == true
       name: Lint wheels
       run: make lint-wheels
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-arm64
-        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        path: ./wheelhouse/*.whl
         if-no-files-found: error
         retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Test
+  # Each test job installs the built wheel with one set of extras and runs
+  # the matching test suite. The wheel is installed first without dependencies
+  # (pip picks the wheel compatible with the running python), then the extras
+  # are resolved from pypi.
+  # ---------------------------------------------------------------------------
+
+  test-x86_64:
+    if: inputs.arch-x86_64 == true && inputs.unit-test == true
+    name: test-x86_64 (${{ matrix.python-version }}, ${{ matrix.suite.name }})
+    runs-on: ubuntu-24.04
+    needs: [info, wheels-x86_64]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(needs.info.outputs.python-test-versions) }}
+        suite:
+        - name: ibm-pasqal
+          extras: ibm,pasqal
+          tests: python/tests/unit
+        - name: iqm
+          extras: iqm
+          tests: python/tests/compatibility
+        - name: alice-bob
+          extras: alice-bob
+          tests: ''
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-x86_64
+        path: ./wheelhouse
+    - name: Install wheel with [${{ matrix.suite.extras }}]
+      run: |
+        python -m pip install --upgrade pip
+        pip install --no-index --no-deps --find-links ./wheelhouse qrmi
+        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}" pytest
+    - name: Run tests
+      run: |
+        # Run outside the repository so that the installed wheel is imported
+        cd "$RUNNER_TEMP"
+        if [ -n "${{ matrix.suite.tests }}" ]; then
+          pytest "$GITHUB_WORKSPACE/${{ matrix.suite.tests }}"
+        else
+          python -c "import qrmi"
+        fi
+
+  test-arm64:
+    if: inputs.arch-arm64 == true && inputs.unit-test == true
+    name: test-arm64 (${{ matrix.python-version }}, ${{ matrix.suite.name }})
+    runs-on: ubuntu-24.04-arm
+    needs: [info, wheels-arm64]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(needs.info.outputs.python-test-versions) }}
+        suite:
+        - name: ibm-pasqal
+          extras: ibm,pasqal
+          tests: python/tests/unit
+        - name: iqm
+          extras: iqm
+          tests: python/tests/compatibility
+        - name: alice-bob
+          extras: alice-bob
+          tests: ''
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-arm64
+        path: ./wheelhouse
+    - name: Install wheel with [${{ matrix.suite.extras }}]
+      run: |
+        python -m pip install --upgrade pip
+        pip install --no-index --no-deps --find-links ./wheelhouse qrmi
+        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}" pytest
+    - name: Run tests
+      run: |
+        # Run outside the repository so that the installed wheel is imported
+        cd "$RUNNER_TEMP"
+        if [ -n "${{ matrix.suite.tests }}" ]; then
+          pytest "$GITHUB_WORKSPACE/${{ matrix.suite.tests }}"
+        else
+          python -c "import qrmi"
+        fi
+
+  # ppc64le: single python version only (see comment at the top of this file)
+  test-ppc64le:
+    if: inputs.arch-ppc64le == true && inputs.unit-test == true
+    name: test-ppc64le (${{ needs.info.outputs.python-version }}, ${{ matrix.suite.name }})
+    runs-on: ubuntu-24.04-ppc64le
+    needs: [info, wheels-ppc64le]
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+        - name: ibm-pasqal
+          extras: ibm,pasqal
+          tests: python/tests/unit
+        - name: iqm
+          extras: iqm
+          tests: python/tests/compatibility
+        - name: alice-bob
+          extras: alice-bob
+          tests: ''
+    steps:
+    - uses: actions/checkout@v6
+    # actions/setup-python@v6 does not support ppc64le yet (see wheels-ppc64le)
+    - name: Install python and build dependencies
+      run: |
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt update
+        sudo apt install -y python${{ needs.info.outputs.python-version }}{,-dev,-venv}
+        # Libraries needed to compile dependencies that have no pre-built
+        # ppc64le wheels on pypi (e.g. indirect dependencies of pulser-core)
+        sudo apt install -y libopenblas-dev libjpeg-turbo8-dev zlib1g-dev gfortran pkgconf
+    - name: Create venv
+      run: |
+        python${{ needs.info.outputs.python-version }} -m venv "$RUNNER_TEMP/venv"
+        echo "$RUNNER_TEMP/venv/bin" >> $GITHUB_PATH
+    - uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-ppc64le
+        path: ./wheelhouse
+    - name: Install wheel with [${{ matrix.suite.extras }}]
+      run: |
+        python -m pip install --upgrade pip
+        pip install --no-index --no-deps --find-links ./wheelhouse qrmi
+        pip install "qrmi[${{ matrix.suite.extras }}]==${{ needs.info.outputs.qrmi-version }}" pytest
+    - name: Run tests
+      run: |
+        # Run outside the repository so that the installed wheel is imported
+        cd "$RUNNER_TEMP"
+        if [ -n "${{ matrix.suite.tests }}" ]; then
+          pytest "$GITHUB_WORKSPACE/${{ matrix.suite.tests }}"
+        else
+          python -c "import qrmi"
+        fi
