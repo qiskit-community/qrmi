@@ -76,14 +76,14 @@ than an error.
 Structure of `status`:
 ```lua
 {
-    status = "online",            -- "online" / "offline" / "paused" / "busy"
+    status = "online",            -- "online" / "offline" / "paused"
     status_reason = nil,          -- string or nil; vendor-specific (e.g. "maintenance")
     healthy = nil,                -- boolean or nil; nil if the vendor doesn't report it
+    busy = nil,                   -- boolean or nil; nil if the vendor doesn't resport it
     pending_job_count = nil,      -- integer or nil; nil if the vendor doesn't report it
     capacity = nil,               -- table or nil; nil if the vendor doesn't report it
     -- capacity, when present:
     -- { available_slots = 2, max_slots = 4 }
-    is_accessible = true,         -- boolean; true when status is "online" or "busy"
 }
 ```
 
