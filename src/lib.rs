@@ -183,9 +183,7 @@ pub trait QuantumResource: Send + Sync {
     ///         ResourceStatusCode::Offline => println!("offline"),
     ///         ResourceStatusCode::Paused => println!("paused: {:?}", status.status_reason),
     ///     }
-    ///     if status.is_accessible() {
-    ///         println!("a job can be submitted right now");
-    ///     }
+    ///
     ///     // Fields the vendor may not report are `None`.
     ///     if let Some(healthy) = status.healthy {
     ///         println!("healthy: {healthy}");
