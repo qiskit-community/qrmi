@@ -58,8 +58,8 @@ else
     print("  status            =", rstatus.status)
     print("  status_reason     =", rstatus.status_reason)
     print("  healthy           =", rstatus.healthy)
+    print("  busy              =", rstatus.busy)
     print("  pending_job_count =", rstatus.pending_job_count)
-    print("  is_accessible     =", rstatus.is_accessible)
     if rstatus.capacity then
         print("  capacity.available_slots =", rstatus.capacity.available_slots)
         print("  capacity.max_slots       =", rstatus.capacity.max_slots)
