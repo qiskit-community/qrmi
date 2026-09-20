@@ -796,11 +796,11 @@ static int l_metadata(lua_State *L) {
  * Lua usage:
  * @code
  *   local status, err = resource:status()
- *   print(status.status)             -- "online" | "offline" | "paused" | "busy"
+ *   print(status.status)             -- "online" | "offline" | "paused"
  *   print(status.status_reason)      -- string or nil
+ *   print(status.busy)               -- boolean or nil
  *   print(status.healthy)            -- boolean or nil
  *   print(status.pending_job_count)  -- integer or nil
- *   print(status.is_accessible)      -- boolean
  *   if status.capacity then
  *     print(status.capacity.available_slots, status.capacity.max_slots)
  *   end
@@ -838,6 +838,14 @@ static int l_status(lua_State *L) {
     }
     lua_setfield(L, -2, "status_reason");
 
+    bool busy = false;
+    if (qrmi_resource_status_busy(status, &busy) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushboolean(L, busy);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "busy");
+
     bool healthy = false;
     if (qrmi_resource_status_healthy(status, &healthy) == QRMI_RETURN_CODE_SUCCESS) {
         lua_pushboolean(L, healthy);
@@ -866,13 +874,6 @@ static int l_status(lua_State *L) {
         lua_pushnil(L);
     }
     lua_setfield(L, -2, "capacity");
-
-    bool accessible = false;
-    rc = qrmi_resource_status_is_accessible(status, &accessible);
-    qrmi_resource_status_free(status);
-    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-    lua_pushboolean(L, accessible);
-    lua_setfield(L, -2, "is_accessible");
 
     return 1;
 }
