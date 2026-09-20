@@ -52,7 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         qrmi.resource_type().await?.as_str()
     );
 
-    let accessible = qrmi.status().await?.is_accessible();
+    let accessible = matches!(
+        qrmi.status().await?.status,
+        qrmi::models::ResourceStatusCode::Online
+    );
     if !accessible {
         panic!("{} is not accessible", args.backend);
     }

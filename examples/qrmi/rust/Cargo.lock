@@ -1494,7 +1494,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tokio",
  "tower-service",
  "tracing",
@@ -2121,8 +2121,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "pyo3"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4688ddedf473e32662b9b067670129a8afb8c18e351482c70d62ba4a88171e8b"
+dependencies = [
+ "libc",
+ "once_cell",
+ "portable-atomic",
+ "pyo3-build-config",
+ "pyo3-ffi",
+]
+
+[[package]]
+name = "pyo3-build-config"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f41027e41b4bd03f6e60f9f417fe24a6341a6bb744edd62b6f709f2a52ea30e9"
+dependencies = [
+ "target-lexicon",
+]
+
+[[package]]
+name = "pyo3-ffi"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e591a95526fead067432c3b3a33fc74770b87b1e04e73671090d9c2055a2b327"
+dependencies = [
+ "libc",
+ "pyo3-build-config",
+]
+
+[[package]]
+name = "pythonize"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ec376e1216e0c929a74964ce2020012a1a39f32d80e78aa688721219ea7fb89"
+dependencies = [
+ "pyo3",
+ "serde",
+]
+
+[[package]]
 name = "qrmi"
-version = "0.23.1"
+version = "0.24.5"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2134,11 +2176,13 @@ dependencies = [
  "ffi_helpers",
  "futures",
  "glob",
+ "http 1.5.0",
  "iqm-server-api",
  "libc",
  "log",
  "pasqal-cloud-api",
  "pasqal-local-api",
+ "pythonize",
  "quantum-system-api",
  "quantum_compute_client",
  "reqwest-retry",
@@ -2238,8 +2282,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "qrmi-example-resource-status"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
+name = "qrmi-example-service"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
 name = "quantum-system-api"
-version = "0.16.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2253,6 +2319,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
+ "retry-policies",
  "rhexdump",
  "serde",
  "serde_json",
@@ -2286,7 +2353,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.43",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "thiserror 2.0.20",
  "tokio",
  "tracing",
@@ -2324,7 +2391,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tracing",
  "windows-sys 0.61.2",
 ]
@@ -3067,6 +3134,12 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
+
+[[package]]
+name = "target-lexicon"
+version = "0.13.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "tempfile"

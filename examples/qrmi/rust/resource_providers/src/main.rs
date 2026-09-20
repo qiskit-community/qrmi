@@ -100,7 +100,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for mut r in resources {
         let id = r.resource_id().await?;
         let resource_type = r.resource_type().await?;
-        let accessible = r.status().await?.is_accessible();
+        let accessible = matches!(
+            r.status().await?.status,
+            qrmi::models::ResourceStatusCode::Online
+        );
         println!(
             "  {:<30} type={:<25} accessible={}",
             id,
