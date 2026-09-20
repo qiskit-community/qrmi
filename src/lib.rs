@@ -164,8 +164,8 @@ pub trait QuantumResource: Send + Sync {
     /// `is_accessible()` carries no further information.
     ///
     /// Vendor implementations are expected to override this method to
-    /// report `Paused` and `Busy` as well where applicable, and to
-    /// populate `status_reason`, `healthy`, `capacity`, and
+    /// report `Paused` as well where applicable, and to
+    /// populate `status_reason`, `healthy`, `busy`, `capacity`, and
     /// `pending_job_count` where the underlying service provides them.
     ///
     /// # Example
@@ -182,7 +182,6 @@ pub trait QuantumResource: Send + Sync {
     ///         ResourceStatusCode::Online => println!("online"),
     ///         ResourceStatusCode::Offline => println!("offline"),
     ///         ResourceStatusCode::Paused => println!("paused: {:?}", status.status_reason),
-    ///         ResourceStatusCode::Busy => println!("busy"),
     ///     }
     ///     if status.is_accessible() {
     ///         println!("a job can be submitted right now");
@@ -190,6 +189,10 @@ pub trait QuantumResource: Send + Sync {
     ///     // Fields the vendor may not report are `None`.
     ///     if let Some(healthy) = status.healthy {
     ///         println!("healthy: {healthy}");
+    ///     }
+    ///
+    ///     if let Some(busy) = status.busy {
+    ///         println!("busy: {busy}");
     ///     }
     ///
     ///     if let Some(count) = status.pending_job_count {
