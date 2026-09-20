@@ -12,13 +12,17 @@
 
 use crate::error::{required_env, QrmiError};
 use crate::ibm::error::IbmError;
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceCapacity, ResourceStatus, ResourceStatusCode, ResourceType, Target,
+    TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use log::info;
 use quantum_system_api::utils::s3::S3Client;
 use quantum_system_api::{
-    models::Backend, models::BackendStatus, models::Job, models::JobStatus, models::LogLevel,
-    models::ProgramId, AuthMethod, Client, ClientBuilder,
+    models::Backend, models::BackendLanesConfiguration, models::BackendStatus, models::Job,
+    models::JobStatus, models::Jobs, models::LogLevel, models::ProgramId, AuthMethod, Client,
+    ClientBuilder,
 };
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::Jitter;
@@ -154,6 +158,39 @@ impl QuantumResource for IBMQuantumSystem {
             .get_backend::<Backend>(&self.backend_name)
             .await?;
         Ok(matches!(backend.status, BackendStatus::Online))
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let (backend, lane_config, jobs) = tokio::try_join!(
+            self.api_client.get_backend::<Backend>(&self.backend_name),
+            self.api_client
+                .get_backend_lanes_configuration::<BackendLanesConfiguration>(&self.backend_name),
+            self.api_client.list_jobs::<Jobs>()
+        )?;
+
+        let count = jobs
+            .jobs
+            .iter()
+            .filter(|job| job.backend == self.backend_name)
+            .count() as u64;
+
+        let status = match backend.status {
+            BackendStatus::Online => ResourceStatusCode::Online,
+            BackendStatus::Offline => ResourceStatusCode::Offline,
+            BackendStatus::Paused => ResourceStatusCode::Paused,
+        };
+
+        Ok(ResourceStatus {
+            status,
+            status_reason: None,
+            busy: backend.locked,
+            healthy: None,
+            capacity: Some(ResourceCapacity {
+                available_slots: lane_config.hpc_workload_manager.lanes.saturating_sub(count),
+                max_slots: lane_config.hpc_workload_manager.lanes,
+            }),
+            pending_job_count: None,
+        })
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
