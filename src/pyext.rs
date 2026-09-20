@@ -222,7 +222,10 @@ impl PyQuantumResource {
         )?;
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.status().await }));
         match result {
-            Ok(v) => Ok(v.is_accessible()),
+            Ok(v) => Ok(matches!(
+                v.status,
+                crate::models::ResourceStatusCode::Online
+            )),
             Err(e) => Err(to_py_err(e)),
         }
     }

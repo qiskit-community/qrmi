@@ -47,20 +47,16 @@ pub enum ResourceStatusCode {
     /// Online but not currently accepting/running jobs due to a
     /// maintenance-type event (e.g. calibration),
     Paused,
-    /// Online and available, but occupied by other users' jobs or with
-    /// a large pending queue, so a submitted job will not run immediately
-    Busy,
 }
 
 impl ResourceStatusCode {
     /// Returns a lowercase, human-readable representation
-    /// ("online", "offline", "paused", "busy").
+    /// ("online", "offline", "paused").
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Online => "online",
             Self::Offline => "offline",
             Self::Paused => "paused",
-            Self::Busy => "busy",
         }
     }
 }
@@ -82,6 +78,9 @@ pub struct ResourceStatus {
     /// Whether the quantum computer is healthy. `None` when the vendor
     /// does not report health information.
     pub healthy: Option<bool>,
+    /// Online and available, but occupied by other users' jobs or with
+    /// a large pending queue, so a submitted job will not run immediately
+    pub busy: Option<bool>,
     /// The resource's capacity. `None` when the vendor does not report
     /// capacity information.
     pub capacity: Option<ResourceCapacity>,
@@ -90,38 +89,19 @@ pub struct ResourceStatus {
     pub pending_job_count: Option<u64>,
 }
 
-impl ResourceStatus {
-    /// Returns whether a job can currently be submitted to the resource.
-    /// Matches the previous behavior of `is_accessible()`
-    /// (true when Online or Busy).
-    pub fn is_accessible(&self) -> bool {
-        matches!(
-            self.status,
-            ResourceStatusCode::Online | ResourceStatusCode::Busy
-        )
-    }
-}
-
 // Python-facing methods. Thin wrappers around the plain inherent impl
 // above, plus Python-convenience helpers (e.g. to_dict()).
 #[cfg(feature = "pyo3")]
 #[gen_stub_pymethods]
 #[pymethods]
 impl ResourceStatus {
-    /// Returns whether a job can currently be submitted to the resource
-    /// (``True`` when the status is ``ONLINE`` or ``BUSY``).
-    #[pyo3(name = "is_accessible")]
-    fn py_is_accessible(&self) -> bool {
-        self.is_accessible()
-    }
-
     /// Returns this status as a plain, JSON-serializable dict.
     /// Equivalent to calling ``json.dumps(status.to_dict())``.
     ///
     /// Field values mirror this struct's ``serde::Serialize``
     /// implementation: ``status`` is a lowercase string (e.g.
     /// ``"online"``), and fields the vendor does not report
-    /// (``status_reason``, ``healthy``, ``capacity``,
+    /// (``status_reason``, ``healthy``, ``busy``, ``capacity``,
     /// ``pending_job_count``) are ``None``.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         use pyo3::exceptions::PyValueError;

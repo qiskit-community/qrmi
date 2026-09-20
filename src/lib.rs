@@ -216,6 +216,7 @@ pub trait QuantumResource: Send + Sync {
             },
             status_reason: None,
             healthy: None,
+            busy: None,
             capacity: None,
             pending_job_count: None,
         })

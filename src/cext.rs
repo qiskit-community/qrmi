@@ -831,8 +831,7 @@ pub unsafe extern "C" fn qrmi_resource_free(ptr: *mut QuantumResource) -> Return
 /// @ingroup QrmiQuantumResource
 /// Returns true if device is accessible, otherwise false.
 ///
-/// @deprecated Use qrmi_resource_status() and
-/// qrmi_resource_status_is_accessible() instead. This function will be
+/// @deprecated Use qrmi_resource_status() instead. This function will be
 /// removed in a future release.
 ///
 /// # Safety
@@ -875,7 +874,7 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
         .block_on(async { (*qrmi).inner.status().await });
     match result {
         Ok(v) => {
-            *outp = v.is_accessible();
+            *outp = matches!(v.status, crate::models::ResourceStatusCode::Online);
             ReturnCode::Success
         }
         Err(err) => _fail(err),
@@ -895,11 +894,6 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
 ///   QrmiResourceStatus *status = NULL;
 ///   QrmiReturnCode rc = qrmi_resource_status(qrmi, &status);
 ///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///     bool accessible = false;
-///     rc = qrmi_resource_status_is_accessible(status, &accessible);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///       printf("accessible=%d\n", accessible);
-///     }
 ///     qrmi_resource_status_free(status);
 ///   }
 /// @endcode
@@ -1020,7 +1014,7 @@ pub unsafe extern "C" fn qrmi_resource_status_code(
 
 /// @ingroup QrmiResourceStatus
 /// Converts a QrmiResourceStatusCode value to a human-readable, lowercase
-/// string ("online", "offline", "paused", "busy"). Intended for logging
+/// string ("online", "offline", "paused"). Intended for logging
 /// and diagnostic output.
 ///
 /// # Example
@@ -1045,7 +1039,6 @@ pub extern "C" fn qrmi_resource_status_code_to_string(
         crate::models::ResourceStatusCode::Online => c"online".as_ptr(),
         crate::models::ResourceStatusCode::Offline => c"offline".as_ptr(),
         crate::models::ResourceStatusCode::Paused => c"paused".as_ptr(),
-        crate::models::ResourceStatusCode::Busy => c"busy".as_ptr(),
     }
 }
 
@@ -1140,6 +1133,58 @@ pub unsafe extern "C" fn qrmi_resource_status_healthy(
         }
         None => _fail(QrmiError::UnsupportedFunction(
             "this vendor does not report health information".to_string(),
+        )),
+    }
+}
+
+/// @ingroup QrmiResourceStatus
+/// Returns whether the resource is currently busy.
+///
+/// # Safety
+///
+/// * `status` must have been returned by a previous call to qrmi_resource_status().
+///
+/// * `outp` must be non-null.
+///
+/// @code
+///   QrmiResourceStatus *status = NULL;
+///   QrmiReturnCode rc = qrmi_resource_status(qrmi, &status);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     bool busy = false;
+///     rc = qrmi_resource_status_busy(status, &healthy);
+///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///       printf("busy=%d\n", healthy);
+///     } else if (rc == QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR) {
+///       printf("this vendor does not report busy information\n");
+///     } else {
+///       printf("qrmi_resource_status_busy() failed: %s\n", qrmi_get_last_error());
+///     }
+///     qrmi_resource_status_free(status);
+///   }
+/// @endcode
+///
+/// @param (status) [in] A QrmiResourceStatus handle
+/// @param (outp) [out] Whether the resource is busy
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report health information.
+/// @version 0.25.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_status_busy(
+    status: *mut ResourceStatus,
+    outp: *mut bool,
+) -> ReturnCode {
+    crate::common::initialize();
+    if status.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match (*status).inner.busy {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _fail(QrmiError::UnsupportedFunction(
+            "this vendor does not report busy information".to_string(),
         )),
     }
 }
@@ -1274,46 +1319,6 @@ pub unsafe extern "C" fn qrmi_resource_capacity_free(
     unsafe {
         let _ = Box::from_raw(ptr);
     };
-    ReturnCode::Success
-}
-
-/// @ingroup QrmiResourceStatus
-/// Returns whether a job can currently be submitted to the resource
-/// (true when ONLINE or BUSY).
-///
-/// # Safety
-///
-/// * `status` must have been returned by a previous call to qrmi_resource_status().
-///
-/// * `outp` must be non-null.
-///
-/// @code
-///   QrmiResourceStatus *status = NULL;
-///   QrmiReturnCode rc = qrmi_resource_status(qrmi, &status);
-///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///     bool accessible = false;
-///     rc = qrmi_resource_status_is_accessible(status, &accessible);
-///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///       printf("accessible=%d\n", accessible);
-///     }
-///     qrmi_resource_status_free(status);
-///   }
-/// @endcode
-///
-/// @param (status) [in] A QrmiResourceStatus handle
-/// @param (outp) [out] Whether the resource is accessible
-/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.25.0
-#[no_mangle]
-pub unsafe extern "C" fn qrmi_resource_status_is_accessible(
-    status: *mut ResourceStatus,
-    outp: *mut bool,
-) -> ReturnCode {
-    crate::common::initialize();
-    if status.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
-    *outp = (*status).inner.is_accessible();
     ReturnCode::Success
 }
 
