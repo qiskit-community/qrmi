@@ -50,7 +50,7 @@ logger.info(
     "Selected resource: id=%s type=%s", qrmi.resource_id(), str(qrmi.resource_type())
 )
 
-if qrmi.is_accessible():
+if qrmi.status().status == ResourceStatusCode.Online:
     logger.info("accessible")
 else:
     logger.info("unaccessible")
@@ -63,8 +63,6 @@ match status.status:
         logger.info("offline")
     case ResourceStatusCode.Paused:
         logger.info("paused")
-    case ResourceStatusCode.Busy:
-        logger.info("busy")
 
 logger.info("reason: %s", status.status_reason)
 
@@ -77,6 +75,11 @@ if status.healthy is None:
     logger.warning("this resource not report healthy")
 else:
     logger.info("%s", "healthy" if status.healthy is True else "unhealthy")
+
+if status.busy is None:
+    logger.warning("this resource not report busy")
+else:
+    logger.info("%s", "busy" if status.busy is True else "free")
 
 if status.capacity:
     logger.info("available slots: %d", status.capacity.available_slots)

@@ -17,7 +17,7 @@
 import argparse
 import time
 
-from qrmi import Payload, QuantumResource, ResourceType, TaskStatus
+from qrmi import Payload, QuantumResource, ResourceType, TaskStatus, ResourceStatusCode
 
 parser = argparse.ArgumentParser(description="An example of Pasqal Cloud QRMI")
 parser.add_argument(
@@ -34,7 +34,7 @@ qrmi = QuantumResource(args.backend, ResourceType.PasqalCloud)
 print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
 # Check if QR it's accessible
-is_avail = qrmi.status().is_accessible()
+is_avail = qrmi.status().status == ResourceStatusCode.Online
 print("Pasqal Cloud QR is %s accessible" % "not" if not is_avail else "")
 
 # Get target
