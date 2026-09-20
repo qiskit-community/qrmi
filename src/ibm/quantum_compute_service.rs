@@ -258,7 +258,7 @@ impl QuantumResource for IBMQuantumComputeService {
 
         // A dedicated, active session in use, then marks as busy
         let is_busy = matches!(
-            status, 
+            status,
             ResourceStatusCode::Online if has_dedicated_active_session
         );
 
