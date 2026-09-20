@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     resource_type = QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM;
   } else if (!strcmp(argv[1], "qiskit-runtime-service")) {
     resource_type = QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE;
-  } else if (!strcmp(argv[1], "ibm-quantum-compute")) {
+  } else if (!strcmp(argv[1], "ibm-quantum-compute-service")) {
     resource_type = QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE;
   } else if (!strcmp(argv[1], "pasqal-cloud")) {
     resource_type = QRMI_RESOURCE_TYPE_PASQAL_CLOUD;
@@ -73,9 +73,6 @@ int main(int argc, char *argv[]) {
       case QRMI_RESOURCE_STATUS_CODE_PAUSED:
         fprintf(stdout, "paused\n");
         break;
-      case QRMI_RESOURCE_STATUS_CODE_BUSY:
-        fprintf(stdout, "busy\n");
-        break;
       }
     }
     fprintf(stdout, "%s\n", qrmi_resource_status_code_to_string(code));
@@ -108,13 +105,17 @@ int main(int argc, char *argv[]) {
     qrmi_string_free((char *)last_error);
   }
 
-  bool accessible = false;
-  rc = qrmi_resource_status_is_accessible(status, &accessible);
+  bool busy = false;
+  rc = qrmi_resource_status_busy(status, &busy);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-    fprintf(stdout, "accessible=%d\n", accessible);
+    if (busy == true) {
+      fprintf(stdout, "system is busy\n");
+    } else {
+      fprintf(stdout, "system is runnable\n");
+    }
   } else {
     const char *last_error = qrmi_get_last_error();
-    fprintf(stderr, "qrmi_resource_status_is_accessible() failed. %s (%d)\n",
+    fprintf(stderr, "qrmi_resource_status_busy() failed. %s (%d)\n",
             last_error, qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
   }

@@ -56,18 +56,18 @@ int main(int argc, char *argv[]) {
     QrmiResourceStatus *res_status = NULL;
     rc = qrmi_resource_status(qrmi, &res_status);
     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-        bool is_accessible = false;
-        rc = qrmi_resource_status_is_accessible(res_status, &is_accessible);
+        QrmiResourceStatusCode status;
+        rc = qrmi_resource_status_code(res_status, &status);
         qrmi_resource_status_free(res_status);
         if (rc == QRMI_RETURN_CODE_SUCCESS) {
-            if (is_accessible == false) {
+            if (status == QRMI_RESOURCE_STATUS_CODE_ONLINE) {
                 fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
-                return -1;
+                goto error;
             }
         } else {
             const char *last_error = qrmi_get_last_error();
-            fprintf(stderr, "qrmi_resource_status_is_accessible() failed. %s (%d)\n",
-                    last_error, qrmi_get_last_error_kind());
+            fprintf(stderr, "qrmi_resource_status_code() failed. %s (%d)\n",
+                last_error, qrmi_get_last_error_kind());
             qrmi_string_free((char *)last_error);
             goto error;
         }
