@@ -71,7 +71,7 @@ docs = [
   "sphinx-copybutton>=0.5.2",
   "sphinx-togglebutton>=0.4.5",
 ]
-# To be fixed
+# 'iqm' should be removed, but can't for now - will impact to test-wheels in Makefile.
 all = ["qrmi[ibm,pasqal,iqm]"]
 
 [project.urls]
