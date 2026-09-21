@@ -1494,7 +1494,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tokio",
  "tower-service",
  "tracing",
@@ -1780,6 +1780,16 @@ name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
+
+[[package]]
+name = "libloading"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
 
 [[package]]
 name = "linux-raw-sys"
@@ -2122,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.23.1"
+version = "0.24.5"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2134,8 +2144,10 @@ dependencies = [
  "ffi_helpers",
  "futures",
  "glob",
+ "http 1.5.0",
  "iqm-server-api",
  "libc",
+ "libloading",
  "log",
  "pasqal-cloud-api",
  "pasqal-local-api",
@@ -2204,6 +2216,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "qrmi-example-oqtopus"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
 name = "qrmi-example-pasqal-cloud"
 version = "0.3.0"
 dependencies = [
@@ -2238,8 +2261,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "qrmi-example-service"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
 name = "quantum-system-api"
-version = "0.16.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2253,6 +2287,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
+ "retry-policies",
  "rhexdump",
  "serde",
  "serde_json",
@@ -2286,7 +2321,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.43",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "thiserror 2.0.20",
  "tokio",
  "tracing",
@@ -2324,7 +2359,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tracing",
  "windows-sys 0.61.2",
 ]

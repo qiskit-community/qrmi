@@ -9,6 +9,7 @@ members = [
     "iqm_server",
     "resource_providers",
     "service",
+    "oqtopus",
 ]
 resolver = "2"
 
