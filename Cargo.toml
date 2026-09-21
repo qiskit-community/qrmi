@@ -66,6 +66,14 @@ members = [
     "dependencies/quantum_compute_client",
     "dependencies/pasqal_cloud_client",
     "dependencies/alice_bob_felis_client",
+    "dependencies/oqtopus",
+]
+default-members = [
+    ".",
+    "dependencies/quantum_system_client",
+    "dependencies/quantum_compute_client",
+    "dependencies/pasqal_cloud_client",
+    "dependencies/alice_bob_felis_client",
 ]
 resolver = "2"
 
