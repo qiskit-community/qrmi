@@ -115,9 +115,11 @@ test-command = [
   "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
 ]
 
-# Python 3.14 on aarch64/ppc64le: skip iqm
+# Python 3.14 on aarch64, skip iqm
 # (qiskit-aer, required by iqm-client[qiskit], has no wheels yet,
 #  see https://github.com/Qiskit/qiskit-aer/issues/2419)
+# Python 3.x on ppc64le, skip iqm
+# grpcio has no wheel yet.
 [[tool.cibuildwheel.overrides]]
-select = "cp314-manylinux_{aarch64,ppc64le}"
+select = "cp314-manylinux_aarch64 *-manylinux_ppc64le"
 test-command = ["pytest {project}/python/tests/unit"]
