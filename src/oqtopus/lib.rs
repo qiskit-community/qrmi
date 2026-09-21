@@ -13,8 +13,10 @@ use crate::error::{required_env, QrmiError};
 use crate::models::ResourceType;
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
-use std::env;
 use libloading::Library;
+use std::env;
+use std::ffi::{CStr, CString};
+use std::os::raw::{c_char, c_int};
 
 use log::{info, warn};
 
@@ -62,6 +64,8 @@ fn default_bridge_path() -> String {
 /// QRMI implementation for OQTOPUS Cloud
 pub struct Oqtopus {
     pub(crate) device_id: String,
+    pub(crate) url: String,
+    pub(crate) api_token: String,
     py_bridge: Library,
 }
 
@@ -72,8 +76,8 @@ impl Oqtopus {
     /// * QRMI_OQTOPUS_BASE_URL - Oqtopus cloud base URL
     /// * QRMI_OQTOPUS_API_TOKEN - Oqtopus cloud API token
     pub fn new(device_id: &str) -> Result<Self> {
-        let _endpoint = required_env(format!("{device_id}_QRMI_OQTOPUS_BASE_URL"))?;
-        let _api_token = required_env(format!("{device_id}_QRMI_OQTOPUS_API_TOKEN"))?;
+        let endpoint = required_env(format!("{device_id}_QRMI_OQTOPUS_BASE_URL"))?;
+        let api_token = required_env(format!("{device_id}_QRMI_OQTOPUS_API_TOKEN"))?;
 
         use libloading::os::unix::{Library as UnixLibrary, RTLD_GLOBAL, RTLD_NOW};
 
@@ -147,14 +151,40 @@ impl Oqtopus {
         let bridge_path = env::var("PY_BRIDGE_PATH").unwrap_or_else(|_| default_bridge_path());
 
         let lib = unsafe {
-            Library::new(&bridge_path)
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("failed to load {bridge_path}: {e}")))?
+            Library::new(&bridge_path).map_err(|e| {
+                QrmiError::Other(anyhow::anyhow!("failed to load {bridge_path}: {e}"))
+            })?
         };
 
         Ok(Self {
             device_id: device_id.to_string(),
+            api_token: api_token.to_string(),
+            url: endpoint.to_string(),
             py_bridge: lib,
         })
+    }
+
+    fn free_string(&self, ptr: *mut c_char) {
+        if ptr.is_null() {
+            return;
+        }
+        if let Ok(free_func) = unsafe {
+            self.py_bridge
+                .get::<unsafe extern "C" fn(*mut c_char)>(b"py_bridge_free_string")
+        } {
+            unsafe { free_func(ptr) };
+        }
+    }
+
+    fn take_error_string(&self, err_ptr: *mut c_char) -> String {
+        if err_ptr.is_null() {
+            return "unknown error".to_string();
+        }
+        let msg = unsafe { CStr::from_ptr(err_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(err_ptr);
+        msg
     }
 }
 
@@ -171,15 +201,57 @@ impl QuantumResource for Oqtopus {
 
     /// Asynchronously checks if a backend is accessible.
     async fn is_accessible(&mut self) -> Result<bool> {
-        unsafe {
-            let func: libloading::Symbol<unsafe extern "C" fn() -> i32> = self.py_bridge
-                .get(b"test")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("failed to find test symbol: {e}")))?;
-            let ret = func();
-            if ret != 0 {
-                return Err(QrmiError::Other(anyhow::anyhow!("test returned {ret}")));
-            }
+        let device_id_c = CString::new(self.device_id.clone())
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid device_id: {e}")))?;
+
+        let config_json = serde_json::json!({
+            "url": self.url,
+            "api_token": self.api_token,
+        })
+        .to_string();
+
+        let config_json_c = CString::new(config_json)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid config json: {e}")))?;
+
+        let func: libloading::Symbol<
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut *mut c_char,
+                *mut *mut c_char,
+            ) -> c_int,
+        > = unsafe {
+            self.py_bridge
+                .get(b"get_device_status")
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
+        };
+
+        let mut status_ptr: *mut c_char = std::ptr::null_mut();
+        let mut err_ptr: *mut c_char = std::ptr::null_mut();
+
+        let ret = unsafe {
+            func(
+                device_id_c.as_ptr(),
+                config_json_c.as_ptr(),
+                &mut status_ptr,
+                &mut err_ptr,
+            )
+        };
+
+        if ret != 0 {
+            let msg = self.take_error_string(err_ptr);
+            return Err(QrmiError::Other(anyhow::anyhow!(
+                "get_device_status failed: {msg}"
+            )));
         }
-        Ok(true)
+
+        let status = unsafe { CStr::from_ptr(status_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(status_ptr);
+
+        info!("device status: {status}");
+
+        Ok(status == "available")
     }
 }

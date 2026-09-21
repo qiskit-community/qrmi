@@ -66,6 +66,7 @@ int main(int argc, char *argv[]) {
     qrmi_string_free((char *)last_error);
     goto error;
   }
+  fprintf(stdout, "accessible: %d\n", is_accessible);
 
   qrmi_resource_free(qrmi);
 

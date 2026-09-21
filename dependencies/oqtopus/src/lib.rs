@@ -31,7 +31,40 @@
 //! `.so` itself, which is the same value CPython needs here.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
+use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
 use std::os::raw::c_int;
+
+unsafe fn set_error(out_error: *mut *mut c_char, msg: &str) {
+    if out_error.is_null() {
+        eprintln!("[py_bridge] {msg}");
+        return;
+    }
+    let c_string =
+        CString::new(msg).unwrap_or_else(|_| CString::new("error (invalid utf8)").unwrap());
+    unsafe { *out_error = c_string.into_raw() };
+}
+
+pub fn build_client<'py>(py: Python<'py>, config_json: &str) -> PyResult<Bound<'py, PyAny>> {
+    let oqtopus = py.import("oqtopus_client")?;
+
+    let json_mod = py.import("json")?;
+    let config_dict = json_mod.call_method1("loads", (config_json,))?;
+    let kwargs = config_dict.cast::<PyDict>()?;
+
+    let config_cls = oqtopus
+        .getattr("services")?
+        .getattr("config")?
+        .getattr("OqtopusConfig")?;
+    let config = config_cls.call((), Some(kwargs))?;
+
+    let client_cls = oqtopus
+        .getattr("services")?
+        .getattr("client")?
+        .getattr("OqtopusClient")?;
+    client_cls.call1((config,))
+}
 
 /// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
 ///
@@ -39,15 +72,9 @@ use std::os::raw::c_int;
 #[no_mangle]
 pub extern "C" fn test() -> c_int {
     let result = std::panic::catch_unwind(|| -> PyResult<()> {
-        // Note: as of PyO3 0.26 this is deprecated in favor of
-        // `Python::initialize()`. Swap it out if you're on a newer version.
         Python::initialize();
 
         Python::attach(|py| {
-            // In pyo3 0.21-0.22 the method is `run_bound` (takes &str).
-            // In pyo3 <=0.20 and >=0.23 it's back to `run`, but 0.23+
-            // takes a &CStr instead of &str (e.g. c"..." literal) -
-            // adjust if you bump the pyo3 version in Cargo.toml.
             py.run(
                 c"import sys; print(f'[py_bridge] hello from Python {sys.version}')\n\
                  print('[py_bridge] sys.path =', sys.path)",
@@ -65,6 +92,59 @@ pub extern "C" fn test() -> c_int {
         }
         Err(_) => {
             eprintln!("[py_bridge] panicked while calling python");
+            -1
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_device_status(
+    device_id: *const c_char,
+    config_json: *const c_char,
+    out_status: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+) -> c_int {
+    let result = std::panic::catch_unwind(|| -> PyResult<String> {
+        let device_id = unsafe { CStr::from_ptr(device_id) }
+            .to_string_lossy()
+            .into_owned();
+        let config_json = unsafe { CStr::from_ptr(config_json) }
+            .to_string_lossy()
+            .into_owned();
+
+        Python::initialize();
+
+        Python::attach(|py| {
+            let inner_result: PyResult<String> = (|| {
+                let client = build_client(py, &config_json)?;
+                let device = client.call_method1("get_device", (device_id.clone(),))?;
+                let status: String = device.getattr("status")?.extract()?;
+                Ok(status)
+            })();
+
+            inner_result.map_err(|e| {
+                let tb = e
+                    .traceback(py)
+                    .and_then(|tb| tb.format().ok())
+                    .unwrap_or_default();
+                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
+            })
+        })
+    });
+
+    match result {
+        Ok(Ok(status)) => {
+            let c_string = CString::new(status)
+                .unwrap_or_else(|_| CString::new("(status contains invalid data)").unwrap());
+            unsafe { *out_status = c_string.into_raw() };
+            0
+        }
+        Ok(Err(e)) => {
+            set_error(out_error, &format!("python error: {e}"));
+            -1
+        }
+        Err(_) => {
+            set_error(out_error, "panicked while calling python");
             -1
         }
     }
