@@ -71,7 +71,7 @@ docs = [
   "sphinx-copybutton>=0.5.2",
   "sphinx-togglebutton>=0.4.5",
 ]
-all = ["qrmi[ibm,pasqal,iqm]"]
+all = ["qrmi[ibm,pasqal]"]
 
 [project.urls]
 Repository = "https://github.com/qiskit-community/qrmi"
@@ -112,4 +112,8 @@ test-command = [
   "python -m venv $VENV_IQM",
   "$VENV_IQM/bin/pip install -r {project}/requirements-dev.txt '{wheel}[iqm]'",
   "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
+  "VENV_AB=$(mktemp -d)",
+  "python -m venv $VENV_AB",
+  "$VENV_AB/bin/pip install '{wheel}[alice-bob]'",
+  "$VENV_AB/bin/python -c 'from qrmi import QuantumResource'",
 ]
