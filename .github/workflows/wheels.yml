@@ -173,11 +173,10 @@ jobs:
     - name: Build wheels
       uses: pypa/cibuildwheel@v3.4.1
       env:
-        CIBW_TEST_EXTRAS: all
+        CIBW_TEST_EXTRAS: ibm,pasqal
         CIBW_TEST_COMMAND: >
           pytest
           {project}/python/tests/unit
-          --ignore={project}/python/tests/compatibility
     - if: inputs.lint == true
       name: Lint wheels
       run: make lint-wheels
@@ -216,7 +215,7 @@ jobs:
         make create-venv
         source $(make get-venv-activate)
         # Indirect package dependencies for the pulser-core wheel
-        CIBW_BEFORE_ALL="dnf install -y openblas-devel libjpeg-turbo-devel zlib-devel" CIBW_TEST_EXTRAS=all cibuildwheel
+        CIBW_BEFORE_ALL="dnf install -y openblas-devel libjpeg-turbo-devel zlib-devel" CIBW_TEST_EXTRAS=ibm,pasqal CIBW_TEST_COMMAND="pytest {project}/python/tests/unit" cibuildwheel
     - if: inputs.lint == true
       name: Lint wheels
       run: |
@@ -246,7 +245,10 @@ jobs:
       run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
     - uses: pypa/cibuildwheel@v3.4.1
       env:
-        CIBW_TEST_EXTRAS: all
+        CIBW_TEST_EXTRAS: ibm,pasqal
+        CIBW_TEST_COMMAND: >
+          pytest
+          {project}/python/tests/unit
     - if: inputs.lint == true
       name: Lint wheels
       run: make lint-wheels
