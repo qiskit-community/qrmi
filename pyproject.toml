@@ -105,4 +105,10 @@ before-all = 'curl -sSf https://sh.rustup.rs | sh -s -- -y'
 before-test = 'pip install -r requirements-dev.txt'
 environment = { PATH='$HOME/.cargo/bin:$PATH' }
 skip = '*musllinux* cp*t-*'
-test-command = 'pytest {project}/python/tests'
+test-command = [
+  "pytest {project}/python/tests/unit",
+  "VENV_IQM=$(mktemp -d)",
+  "python -m venv $VENV_IQM",
+  "$VENV_IQM/bin/pip install -r {project}/requirements-dev.txt '{wheel}[iqm]'",
+  "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
+]
