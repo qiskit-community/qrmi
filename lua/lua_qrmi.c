@@ -206,6 +206,11 @@ static void free_config_pairs(QrmiKeyValue *pairs, size_t count) {
  *         Lua error instead).
  */
 static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *out_count) {
+    // idx must be a positive/absolute stack index
+    if (idx <= 0) {
+        luaL_error(L, "build_config_map_from_table: table index must be positive (got %d)", idx);
+    }
+
     size_t count = 0;
     lua_pushnil(L);
     while (lua_next(L, idx) != 0) {
@@ -227,12 +232,16 @@ static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *
          * rewrite the value in place on the stack, which would confuse the
          * next lua_next() call if done directly on the traversal key. */
         lua_pushvalue(L, -2);
-        if (!lua_isstring(L, -1) || !lua_isstring(L, -2)) {
+        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
             free_config_pairs(pairs, i);
-            luaL_error(L, "config table keys and values must be strings");
+            luaL_error(L, "QRMI config table keys and values must be strings");
         }
         pairs[i].key = strdup(lua_tostring(L, -1));
         pairs[i].value = strdup(lua_tostring(L, -2));
+        if (!pairs[i].key || !pairs[i].value) {
+            free_config_pairs(pairs, i + 1);
+            luaL_error(L, "out of memory building config map");
+        }
         i++;
         lua_pop(L, 2); /* pop key copy and value, leaving key for lua_next */
     }
@@ -241,7 +250,7 @@ static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *
 }
 
 /**
- * @brief `qrmi.new_from_config(resource_type, config)` - Create a quantum
+ * @brief `qrmi.new_from_config(resource_id, resource_type, config)` - Create a quantum
  * resource handle from an explicit config map.
  *
  * Wraps qrmi_resource_new_from_config().
