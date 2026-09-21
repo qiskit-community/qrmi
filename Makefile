@@ -120,7 +120,7 @@ endif
 
 test-wheels: $(PYTHON_VENV_DIR)
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	CIBW_CONTAINER_ENGINE=$(CONTAINER_ENGINE) CIBW_TEST_EXTRAS=all cibuildwheel
+	CIBW_CONTAINER_ENGINE=$(CONTAINER_ENGINE) cibuildwheel
 
 # test-stubgen has very specific requirements, please do not include it in this target
 test-rust-all: test test-doc test-deps test-rust-examples test-task-runner
