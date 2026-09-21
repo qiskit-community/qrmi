@@ -112,27 +112,11 @@ test-command = [
   "python -m venv $VENV_IQM",
   "$VENV_IQM/bin/pip install -r {project}/requirements-dev.txt '{wheel}[iqm]'",
   "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
-  "VENV_AB=$(mktemp -d)",
-  "python -m venv $VENV_AB",
-  "$VENV_AB/bin/pip install '{wheel}[alice-bob]'",
-  "$VENV_AB/bin/python -c 'from qrmi import QuantumResource'",
 ]
 
-# Python 3.14 on x86_64: skip alice-bob
-# (qiskit-terra<0.45 -> symengine<0.10, which has no wheels and fails to build)
-[[tool.cibuildwheel.overrides]]
-select = "cp314-manylinux_x86_64"
-test-command = [
-  "pytest {project}/python/tests/unit",
-  "VENV_IQM=$(mktemp -d)",
-  "python -m venv $VENV_IQM",
-  "$VENV_IQM/bin/pip install -r {project}/requirements-dev.txt '{wheel}[iqm]'",
-  "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
-]
-
-# Python 3.14 on aarch64/ppc64le: skip alice-bob (same as above) and iqm
+# Python 3.14 on aarch64/ppc64le: skip iqm
 # (qiskit-aer, required by iqm-client[qiskit], has no wheels yet,
 #  see https://github.com/Qiskit/qiskit-aer/issues/2419)
 [[tool.cibuildwheel.overrides]]
-select = "cp314-manylinux_aarch64 cp314-manylinux_ppc64le"
+select = "cp314-manylinux_{aarch64,ppc64le}"
 test-command = ["pytest {project}/python/tests/unit"]
