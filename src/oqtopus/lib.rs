@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::error::{required_env, QrmiError};
-use crate::models::ResourceType;
+use crate::models::{ResourceType, TaskStatus};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
 use libloading::Library;
@@ -44,6 +44,19 @@ fn find_libpython_in(lib_dir: &std::path::Path) -> Option<String> {
         }
     }
     best.map(|p| p.to_string_lossy().into_owned())
+}
+
+fn map_job_status(status: &str) -> Result<TaskStatus> {
+    match status {
+        "registered" | "submitted" | "ready" => Ok(TaskStatus::Queued),
+        "running" => Ok(TaskStatus::Running),
+        "succeeded" => Ok(TaskStatus::Completed),
+        "failed" => Ok(TaskStatus::Failed),
+        "cancelled" => Ok(TaskStatus::Cancelled),
+        other => Err(QrmiError::Other(anyhow::anyhow!(
+            "unknown job status from oqtopus_client: {other}"
+        ))),
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -297,5 +310,51 @@ impl QuantumResource for Oqtopus {
         info!("cancel_job succeeded: {message}");
 
         Ok(())
+    }
+
+    async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
+        let job_id_c = CString::new(task_id)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_id: {e}")))?;
+
+        let func: libloading::Symbol<
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut *mut c_char,
+                *mut *mut c_char,
+            ) -> c_int,
+        > = unsafe {
+            self.py_bridge
+                .get(b"get_job_status")
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
+        };
+
+        let mut status_ptr: *mut c_char = std::ptr::null_mut();
+        let mut err_ptr: *mut c_char = std::ptr::null_mut();
+
+        let ret = unsafe {
+            func(
+                job_id_c.as_ptr(),
+                self.config_json.as_ptr(),
+                &mut status_ptr,
+                &mut err_ptr,
+            )
+        };
+
+        if ret != 0 {
+            let msg = self.take_error_string(err_ptr);
+            return Err(QrmiError::Other(anyhow::anyhow!(
+                "get_job_status failed: {msg}"
+            )));
+        }
+
+        let status = unsafe { CStr::from_ptr(status_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(status_ptr);
+
+        info!("job status: {status}");
+
+        map_job_status(&status)
     }
 }

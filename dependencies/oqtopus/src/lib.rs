@@ -304,3 +304,100 @@ pub unsafe extern "C" fn cancel_job(
         }
     }
 }
+
+/// Calls `oqtopus_client`'s `OqtopusClient.get_job_status(job_id)` and
+/// returns the job's `status` value (e.g. `"running"`, `"succeeded"`,
+/// `"failed"`, ...). `JobsJobStatus` is a `str`-subclassed `Enum` on the
+/// Python side, so it extracts directly as a plain string.
+///
+/// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
+///
+/// # Parameters
+/// - `job_id`: the ID of the job to query (a nul-terminated UTF-8 string).
+/// - `config_json`: a JSON object string passed as `**kwargs` to the
+///   `OqtopusConfig` constructor (e.g. `{"url": "...", "api_token": "..."}`).
+/// - `out_status`: on success, a pointer to the resulting status string
+///   (nul-terminated, allocated via `CString::into_raw`) is written here.
+///   The caller must free it with `py_bridge_free_string` once done.
+/// - `out_error`: on failure (non-zero return), a pointer to an error
+///   message (nul-terminated, allocated via `CString::into_raw`) is
+///   written here. For `UserApiError`-like exceptions, the message
+///   includes the `status_code`/`message` detail. Passing `NULL` just
+///   logs to stderr instead and no pointer is written. As with
+///   `out_status`, a non-null result must be freed with
+///   `py_bridge_free_string`.
+///
+/// # Returns
+/// `0` on success. `-1` if a Python exception was raised, or if this
+/// function panicked internally.
+///
+/// # Safety
+/// - `job_id` and `config_json` must both be valid pointers to
+///   nul-terminated UTF-8 strings (invalid UTF-8 is lossily replaced by
+///   `to_string_lossy` rather than causing a crash, but the result is not
+///   guaranteed to be meaningful).
+/// - `out_status` and `out_error` must each be either `NULL` or a valid,
+///   writable pointer to a `*mut c_char`.
+/// - Any string returned through `out_status` or `out_error` leaks until
+///   the caller frees it. Callers must always call the matching
+///   `py_bridge_free_string`.
+/// - The caller must ensure the corresponding libpython has already been
+///   `dlopen`'d (by `py_loader`) before this function is called.
+#[no_mangle]
+pub unsafe extern "C" fn get_job_status(
+    job_id: *const c_char,
+    config_json: *const c_char,
+    out_status: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+) -> c_int {
+    let result = std::panic::catch_unwind(|| -> PyResult<String> {
+        let job_id = unsafe { CStr::from_ptr(job_id) }
+            .to_string_lossy()
+            .into_owned();
+        let config_json = unsafe { CStr::from_ptr(config_json) }
+            .to_string_lossy()
+            .into_owned();
+
+        Python::initialize();
+
+        Python::attach(|py| {
+            let inner_result: PyResult<String> = (|| {
+                let client = build_client(py, &config_json)?;
+                let response = client.call_method1("get_job_status", (job_id.as_str(),))?;
+                // JobsJobStatus is (str, Enum), so this extracts directly.
+                let status: String = response.getattr("status")?.extract()?;
+                Ok(status)
+            })();
+
+            inner_result.map_err(|e| {
+                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
+                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "api error: status={status_code} message={message}"
+                    ));
+                }
+                let tb = e
+                    .traceback(py)
+                    .and_then(|tb| tb.format().ok())
+                    .unwrap_or_default();
+                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
+            })
+        })
+    });
+
+    match result {
+        Ok(Ok(status)) => {
+            let c_string = CString::new(status)
+                .unwrap_or_else(|_| CString::new("(status contains invalid data)").unwrap());
+            unsafe { *out_status = c_string.into_raw() };
+            0
+        }
+        Ok(Err(e)) => {
+            set_error(out_error, &format!("python error: {e}"));
+            -1
+        }
+        Err(_) => {
+            set_error(out_error, "panicked while calling python");
+            -1
+        }
+    }
+}
