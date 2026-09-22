@@ -22,7 +22,7 @@ const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oaut
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct PasqalCloudConfig {
-    // Config stores the eventual hashmap from the [`crate::PasqalLocal::from_config`]
+    // Config stores the eventual hashmap from the [`crate::PasqalCloud::from_config`]
     pub config: Option<HashMap<String, String>>,
     pub(crate) username: Option<String>,
     pub(crate) password: Option<String>,

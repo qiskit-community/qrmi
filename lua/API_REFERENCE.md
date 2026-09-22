@@ -37,7 +37,7 @@ Valid values for `resource_type`:
 local resource, err = qrmi.new("ibm_kingston", "ibm-quantum-compute-service")
 ```
 
-### `qrmi.new_from_config(resource_type, config)`
+### `qrmi.new_from_config(resource_id, resource_type, config)`
 
 Creates a quantum resource handle from an explicit config map, instead of
 process environment variables.
