@@ -62,7 +62,7 @@ impl PasqalCloud {
     /// read (no merging across candidates):
     ///
     /// 1. `$PASQAL_CONFIG_ROOT/.pasqal/config`, falling back to
-    ///    `$<backend_name>_PASQAL_CONFIG_ROOT/.pasqal.config` if the unprefixed variable
+    ///    `$<backend_name>_PASQAL_CONFIG_ROOT/.pasqal/config` if the unprefixed variable
     ///    isn't set
     /// 2. `$HOME/.pasqal/config`
     pub fn new(backend_name: &str) -> Result<Self> {

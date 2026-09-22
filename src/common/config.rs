@@ -43,11 +43,15 @@ pub(crate) fn resolve_opt_required(
 
 /// Like [`resolve_opt_required`], but tries each of `keys` in order and only
 /// fails if none of them are found. Use this when a setting has multiple,
-/// independently-valid names
+/// independently-valid names.
+///
+/// Duplicate names are only tried, and named in the error, once.
 pub(crate) fn resolve_opt_required_any(
     keys: &[&str],
     config: Option<&HashMap<String, String>>,
 ) -> Result<String, QrmiError> {
+    let mut keys = keys.to_vec();
+    keys.dedup();
     keys.iter()
         .find_map(|key| resolve_opt(key, config))
         .ok_or_else(|| not_found_error(keys.join(" or "), config))

@@ -804,15 +804,19 @@ pub unsafe extern "C" fn qrmi_resource_new(
 ///
 /// * `config` must be a valid pointer to a QrmiConfigMap struct.
 ///
+/// * The memory pointed to by `resource_id` must contain a valid nul terminator.
+///
+/// * The nul terminator must be within `isize::MAX` from `resource_id`
+///
 /// # Example
 ///
 /// @code
 ///   QrmiConfigMap config;
-///   
+///
 ///   QrmiKeyValue variables[] = {
-///       {(char *)"warden_url", (char *)"http://localhost:8006"},
-///       {(char *)"job_id", (char *)"1"},
-///       {(char *)"job_uid", (char *)"1000"},
+///       {(char *)"qrmi_warden_url", (char *)"http://localhost:8006"},
+///       {(char *)"qrmi_job_id", (char *)"1"},
+///       {(char *)"qrmi_job_uid", (char *)"1000"},
 ///   };
 ///   config.variables = variables;
 ///   config.length = 3;

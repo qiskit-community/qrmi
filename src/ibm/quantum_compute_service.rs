@@ -46,13 +46,13 @@ pub struct IBMQuantumComputeService {
 }
 
 impl IBMQuantumComputeService {
-    /// Constructs a QRS service instance.
+    /// Constructs a QCS service instance.
     ///
     /// Environment variables used:
-    /// * QRMI_IBM_QCS_ENDPOINT - QRS endpoint URL
+    /// * QRMI_IBM_QCS_ENDPOINT - QCS endpoint URL
     /// * QRMI_IBM_QCS_IAM_ENDPOINT - IAM endpoint URL
-    /// * QRMI_IBM_QCS_IAM_APIKEY - IAM API key for QRS
-    /// * QRMI_IBM_QCS_SERVICE_CRN - QRS service instance CRN
+    /// * QRMI_IBM_QCS_IAM_APIKEY - IAM API key for QCS
+    /// * QRMI_IBM_QCS_SERVICE_CRN - QCS service instance CRN
     /// * QRMI_IBM_QCS_SESSION_MODE - Session mode (default: dedicated)
     /// * QRMI_IBM_QCS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
     /// * QRMI_IBM_QCS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
@@ -61,7 +61,7 @@ impl IBMQuantumComputeService {
         Self::from_opt(backend_name, None)
     }
 
-    /// Constructs a QRS service instance from a config map, instead of
+    /// Constructs a QCS service instance from a config map, instead of
     /// environment variables.
     ///
     /// Accepts the same keys as [`Self::new`]'s environment variables,
