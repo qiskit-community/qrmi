@@ -9,7 +9,7 @@ on:
       - main
     paths:
       - 'docs/**'
-      - 'python/**'
+      - 'python/qrmi/**'
       - 'src/**'
       - '**/*.h'
       - 'Cargo.toml'
@@ -21,7 +21,7 @@ on:
     - main
     paths:
       - 'docs/**'
-      - 'python/**'
+      - 'python/qrmi/**'
       - 'src/**'
       - '**/*.h'
       - 'Cargo.toml'
