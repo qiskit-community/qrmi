@@ -63,16 +63,10 @@ impl AliceBobFelis {
     fn from_opt(backend_name: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
         // Env vars are per-instance (`<backend_name>_QRMI_...`); config map
         // keys use the same name minus that prefix.
-        let prefix = if config.is_some() {
-            String::new()
+        let (prefix, err_type): (String, fn(String) -> QrmiError) = if config.is_some() {
+            (String::new(), QrmiError::MissingConfigKey)
         } else {
-            format!("{backend_name}_")
-        };
-
-        let err_type = if config.is_some() {
-            QrmiError::MissingConfigKey
-        } else {
-            QrmiError::EnvVarNotSet
+            (format!("{backend_name}_"), QrmiError::EnvVarNotSet)
         };
         // Handle environment variables
         let api_key = resolve_opt(&format!("{prefix}QRMI_AB_FELIS_API_KEY"), config)
