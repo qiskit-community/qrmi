@@ -39,8 +39,6 @@
 //! vendor-API-specific goes through `.context("...")?`, converting to
 //! `QrmiError::Other` via `anyhow::Error`.
 
-use std::collections::HashMap;
-
 use thiserror::Error;
 
 /// Errors raised by QRMI itself, as opposed to errors bubbled up from a
@@ -217,38 +215,4 @@ pub enum QrmiErrorKind {
     InvalidInput,
     /// Everything else (vendor API failures, I/O, ...).
     Other,
-}
-
-/// Looks up `key` from `config` if given, otherwise from the OS environment.
-/// See [`required_env`]/[`resolve_opt_required`] for the mandatory case.
-pub(crate) fn resolve_opt(key: &str, config: Option<&HashMap<String, String>>) -> Option<String> {
-    match config {
-        Some(map) => map
-            .get(key)
-            .or_else(|| map.get(&key.to_lowercase()))
-            .cloned(),
-        None => std::env::var(key).ok(),
-    }
-}
-
-/// Looks up `key` from `config` if given, otherwise from the OS environment.
-/// If `key` is not found, raises [`QrmiError::EnvVarNotSet`] or
-/// [`QrmiError::MissingConfigKey`] with the variable's name accordingly
-pub(crate) fn resolve_opt_required(
-    key: &str,
-    config: Option<&HashMap<String, String>>,
-) -> Result<String, QrmiError> {
-    resolve_opt(key, config).ok_or_else(|| match config {
-        Some(_) => QrmiError::MissingConfigKey(key.into()),
-        None => QrmiError::EnvVarNotSet(key.into()),
-    })
-}
-
-/// Reads a required environment variable, returning a [`QrmiError::EnvVarNotSet`]
-/// with the variable's name if it isn't set. This replaces the repeated
-/// `env::var(name).map_err(|_| anyhow!("{name} environment variable is not set"))?`
-/// pattern that shows up throughout the vendor backends.
-pub(crate) fn required_env(name: impl Into<String>) -> Result<String, QrmiError> {
-    let name = name.into();
-    resolve_opt_required(&name, None)
 }

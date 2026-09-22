@@ -10,7 +10,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, resolve_opt, resolve_opt_required, QrmiError};
+use crate::common::{required_env, resolve_opt, resolve_opt_required};
+use crate::error::QrmiError;
 use crate::ibm::error::IbmError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};

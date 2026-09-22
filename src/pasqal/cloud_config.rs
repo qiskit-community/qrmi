@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::resolve_opt;
+use crate::common::resolve_opt;
 use crate::{QrmiError, Result};
 use log::{debug, warn};
 use std::collections::HashMap;

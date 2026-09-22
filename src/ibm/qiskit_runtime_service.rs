@@ -22,7 +22,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{resolve_opt, resolve_opt_required, QrmiError};
+use crate::common::{resolve_opt, resolve_opt_required};
+use crate::error::QrmiError;
 use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::qiskit_runtime_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
