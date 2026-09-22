@@ -51,8 +51,8 @@ password=<your password>
 Since QRMI v0.25.0, a resource can also be built from an explicit config dict
 instead of environment variables, via `QuantumResource.from_config()`.
 Unlike the environment-variable-driven constructor, this does **not** fall
-back to environment variables or `~/.pasqal/config` unless
-`PASQAL_CONFIG_ROOT` is set explicitly in the config dict:
+back to environment variables, and only reads `~/.pasqal/config` if
+`PASQAL_CONFIG_ROOT` or `HOME` is set explicitly in the config dict:
 
 ```python
 from qrmi import QuantumResource, ResourceType

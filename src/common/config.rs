@@ -45,7 +45,9 @@ pub(crate) fn resolve_opt_required(
 /// fails if none of them are found. Use this when a setting has multiple,
 /// independently-valid names.
 ///
-/// Duplicate names are only tried, and named in the error, once.
+/// Adjacent duplicate names (e.g. a prefixed and a global name that happen
+/// to be identical because there was no prefix to begin with) are only
+/// tried, and named in the error, once.
 pub(crate) fn resolve_opt_required_any(
     keys: &[&str],
     config: Option<&HashMap<String, String>>,

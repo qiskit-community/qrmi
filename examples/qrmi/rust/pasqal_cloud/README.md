@@ -40,9 +40,9 @@ password=<your password>
 
 Since QRMI v0.25.0, a resource can also be built from an explicit config map
 instead of environment variables, via `PasqalCloud::from_config()`. Unlike
-`PasqalCloud::new()`, this does **not** fall back to environment variables
-or `~/.pasqal/config` unless `PASQAL_CONFIG_ROOT` is set explicitly in the
-config map:
+`PasqalCloud::new()`, this does **not** fall back to environment variables,
+and only reads `~/.pasqal/config` if `PASQAL_CONFIG_ROOT` or `HOME` is set
+explicitly in the config map:
 
 ```rust
 use qrmi::pasqal::PasqalCloud;

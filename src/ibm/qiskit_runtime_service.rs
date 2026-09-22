@@ -115,13 +115,13 @@ impl IBMQiskitRuntimeService {
         let session_id = resolve_opt(&format!("{prefix}QRMI_IBM_QRS_SESSION_ID"), config)
             .or_else(|| resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config));
 
-        let mut config = configuration::Configuration::new();
-        config.base_path = qrs_endpoint;
-        config.bearer_access_token = None;
-        config.crn = Some(service_crn);
+        let mut client_config = configuration::Configuration::new();
+        client_config.base_path = qrs_endpoint;
+        client_config.bearer_access_token = None;
+        client_config.crn = Some(service_crn);
 
         Ok(Self {
-            config,
+            config: client_config,
             backend_name: backend_name.to_string(),
             session_id,
             calibration_id: None,

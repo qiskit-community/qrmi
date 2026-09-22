@@ -88,9 +88,9 @@ impl IQMServer {
         let iqm_token = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_TOKEN"), config)?;
         let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
 
-        let mut config = configuration::Configuration::new();
-        config.base_path = iqm_endpoint;
-        config.bearer_access_token = Some(iqm_token);
+        let mut client_config = configuration::Configuration::new();
+        client_config.base_path = iqm_endpoint;
+        client_config.bearer_access_token = Some(iqm_token);
 
         let converted = if let Some(pos) = backend_name.rfind('_') {
             let mut s = backend_name.to_string();
@@ -101,7 +101,7 @@ impl IQMServer {
         };
 
         Ok(Self {
-            config,
+            config: client_config,
             backend_name: converted,
             acquisition_token,
             calibration_set_id: calset_id.to_string(),
