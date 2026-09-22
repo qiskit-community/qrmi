@@ -672,3 +672,144 @@ pub unsafe extern "C" fn get_job_result_json(
         }
     }
 }
+
+/// Calls `oqtopus_client`'s `OqtopusClient.submit_job(OqtopusJobSpec)` and
+/// returns the resulting job ID.
+///
+/// `job_spec_json` is a single JSON object describing the job:
+/// `{"job_type": "sampling", "device_id": "...", "program": "...",
+/// "shots": 1000, "name": null, "description": null,
+/// "transpiler_info": null, "simulator_info": null,
+/// "mitigation_info": null}`. `job_type` selects which
+/// `OqtopusJobSpec.<job_type>(...)` classmethod builds the spec
+/// (`sampling`, `estimation`, `multi_manual`, or `sse`); the remaining
+/// keys are passed through as `**kwargs`.
+///
+/// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
+///
+/// # Parameters
+/// - `job_spec_json`: the job spec as described above (a nul-terminated
+///   UTF-8 JSON string).
+/// - `config_json`: a JSON object string passed as `**kwargs` to the
+///   `OqtopusConfig` constructor (e.g. `{"url": "...", "api_token": "..."}`).
+/// - `out_job_id`: on success, a pointer to the submitted job's ID
+///   (nul-terminated, allocated via `CString::into_raw`) is written here.
+///   The caller must free it with `py_bridge_free_string` once done.
+/// - `out_error`: on failure (non-zero return), a pointer to an error
+///   message (nul-terminated, allocated via `CString::into_raw`) is
+///   written here. For `UserApiError`-like exceptions, the message
+///   includes the `status_code`/`message` detail. Passing `NULL` just
+///   logs to stderr instead and no pointer is written. As with
+///   `out_job_id`, a non-null result must be freed with
+///   `py_bridge_free_string`.
+///
+/// # Returns
+/// `0` on success. `-1` if a Python exception was raised, or if this
+/// function panicked internally.
+///
+/// # Safety
+/// - `job_spec_json` and `config_json` must both be valid pointers to
+///   nul-terminated UTF-8 strings (invalid UTF-8 is lossily replaced by
+///   `to_string_lossy` rather than causing a crash, but the result is not
+///   guaranteed to be meaningful).
+/// - `out_job_id` and `out_error` must each be either `NULL` or a valid,
+///   writable pointer to a `*mut c_char`.
+/// - Any string returned through `out_job_id` or `out_error` leaks until
+///   the caller frees it. Callers must always call the matching
+///   `py_bridge_free_string`.
+/// - The caller must ensure the corresponding libpython has already been
+///   `dlopen`'d (by `py_loader`) before this function is called.
+#[no_mangle]
+pub unsafe extern "C" fn submit_job(
+    job_spec_json: *const c_char,
+    config_json: *const c_char,
+    out_job_id: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+) -> c_int {
+    let result = std::panic::catch_unwind(|| -> PyResult<String> {
+        let job_spec_json = unsafe { CStr::from_ptr(job_spec_json) }
+            .to_string_lossy()
+            .into_owned();
+        let config_json = unsafe { CStr::from_ptr(config_json) }
+            .to_string_lossy()
+            .into_owned();
+
+        Python::initialize();
+
+        Python::attach(|py| {
+            let inner_result: PyResult<String> = (|| {
+                let client = build_client(py, &config_json)?;
+
+                let json_mod = py.import("json")?;
+                let spec_dict = json_mod.call_method1("loads", (job_spec_json,))?;
+                let spec_dict = spec_dict.cast::<PyDict>()?;
+
+                let job_type: String = spec_dict
+                    .get_item("job_type")?
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err("job_spec_json missing job_type")
+                    })?
+                    .extract()?;
+                spec_dict.del_item("job_type")?;
+
+                let job_spec_cls = py
+                    .import("oqtopus_client")?
+                    .getattr("services")?
+                    .getattr("job_spec")?
+                    .getattr("OqtopusJobSpec")?;
+                let builder = job_spec_cls.getattr(job_type.as_str())?;
+                let job_spec = builder.call((), Some(spec_dict))?;
+
+                let response = client.call_method1("submit_job", (job_spec,))?;
+
+                if let Ok(job_id) = response.getattr("job_id") {
+                    if let Ok(job_id) = job_id.extract::<String>() {
+                        return Ok(job_id);
+                    }
+                }
+                let as_dict = response.call_method0("to_dict")?;
+                let as_dict = as_dict.cast::<PyDict>()?;
+                for key in ["job_id", "id", "jobId"] {
+                    if let Some(value) = as_dict.get_item(key)? {
+                        if let Ok(job_id) = value.extract::<String>() {
+                            return Ok(job_id);
+                        }
+                    }
+                }
+                Err(pyo3::exceptions::PyValueError::new_err(
+                    "could not find job_id in submit_job response",
+                ))
+            })();
+
+            inner_result.map_err(|e| {
+                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
+                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "api error: status={status_code} message={message}"
+                    ));
+                }
+                let tb = e
+                    .traceback(py)
+                    .and_then(|tb| tb.format().ok())
+                    .unwrap_or_default();
+                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
+            })
+        })
+    });
+
+    match result {
+        Ok(Ok(job_id)) => {
+            let c_string = CString::new(job_id)
+                .unwrap_or_else(|_| CString::new("(job_id contains invalid data)").unwrap());
+            unsafe { *out_job_id = c_string.into_raw() };
+            0
+        }
+        Ok(Err(e)) => {
+            set_error(out_error, &format!("python error: {e}"));
+            -1
+        }
+        Err(_) => {
+            set_error(out_error, "panicked while calling python");
+            -1
+        }
+    }
+}

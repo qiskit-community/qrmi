@@ -40,6 +40,24 @@ pub enum Payload {
         /// Optional user-defined tag associated with the job
         tag: Option<String>,
     },
+    /// Payload for OQTOPUS Cloud
+    Oqtopus {
+        /// "sampling" | "estimation" | "multi_manual" | "sse"
+        job_type: String,
+        /// QASM3 (or Python script for sse) program. For multiple
+        /// programs, pass a JSON array string (e.g. `["...", "..."]`);
+        /// a plain string is treated as a single program.
+        program: String,
+        shots: u32,
+        name: Option<String>,
+        description: Option<String>,
+        /// JSON object string, or None
+        transpiler_info: Option<String>,
+        /// JSON object string, or None
+        simulator_info: Option<String>,
+        /// JSON object string, or None
+        mitigation_info: Option<String>,
+    },
 }
 #[cfg(feature = "pyo3")]
 define_stub_info_gatherer!(stub_info);

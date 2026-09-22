@@ -124,6 +124,27 @@ pub enum Payload {
         /// Optional user-defined tag associated with the job
         tag: *mut c_char,
     },
+    /// Payload for OQTOPUS Cloud
+    Oqtopus {
+        /// "sampling" | "estimation" | "multi_manual" | "sse"
+        job_type: *mut c_char,
+        /// QASM3 (or Python script for sse) program. For multiple
+        /// programs, pass a JSON array string (e.g. `["...", "..."]`);
+        /// a plain string is treated as a single program.
+        program: *mut c_char,
+        /// Number of shots
+        shots: u32,
+        /// Job name. NULL if not set.
+        name: *mut c_char,
+        /// Job description. NULL if not set.
+        description: *mut c_char,
+        /// Transpiler settings as a JSON object string. NULL if not set.
+        transpiler_info: *mut c_char,
+        /// Simulator settings as a JSON object string. NULL if not set.
+        simulator_info: *mut c_char,
+        /// Error mitigation settings as a JSON object string. NULL if not set.
+        mitigation_info: *mut c_char,
+    },
 }
 
 /// A key-value pair
@@ -1157,6 +1178,71 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             job_type: type_str.to_string(),
             tag: tag_opt,
             use_timeslot: use_timeslot_opt,
+        });
+    } else if let Payload::Oqtopus {
+        job_type,
+        program,
+        shots,
+        name,
+        description,
+        transpiler_info,
+        simulator_info,
+        mitigation_info,
+    } = *payload
+    {
+        let Ok(job_type_str) = CStr::from_ptr(job_type).to_str() else {
+            return ReturnCode::Error;
+        };
+        let Ok(program_str) = CStr::from_ptr(program).to_str() else {
+            return ReturnCode::Error;
+        };
+        let name_opt = if name.is_null() {
+            None
+        } else {
+            CStr::from_ptr(name).to_str().ok().map(|s| s.to_string())
+        };
+        let description_opt = if description.is_null() {
+            None
+        } else {
+            CStr::from_ptr(description)
+                .to_str()
+                .ok()
+                .map(|s| s.to_string())
+        };
+        let transpiler_info_opt = if transpiler_info.is_null() {
+            None
+        } else {
+            CStr::from_ptr(transpiler_info)
+                .to_str()
+                .ok()
+                .map(|s| s.to_string())
+        };
+        let simulator_info_opt = if simulator_info.is_null() {
+            None
+        } else {
+            CStr::from_ptr(simulator_info)
+                .to_str()
+                .ok()
+                .map(|s| s.to_string())
+        };
+        let mitigation_info_opt = if mitigation_info.is_null() {
+            None
+        } else {
+            CStr::from_ptr(mitigation_info)
+                .to_str()
+                .ok()
+                .map(|s| s.to_string())
+        };
+
+        qrmi_payload = Some(crate::models::Payload::Oqtopus {
+            job_type: job_type_str.to_string(),
+            program: program_str.to_string(),
+            shots,
+            name: name_opt,
+            description: description_opt,
+            transpiler_info: transpiler_info_opt,
+            simulator_info: simulator_info_opt,
+            mitigation_info: mitigation_info_opt,
         });
     }
 

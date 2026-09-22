@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::error::{required_env, QrmiError};
-use crate::models::{ResourceType, Target, TaskStatus, TaskResult};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
 use libloading::Library;
@@ -444,5 +444,94 @@ impl QuantumResource for Oqtopus {
         self.free_string(json_ptr);
 
         Ok(TaskResult { value })
+    }
+
+    async fn task_start(&mut self, payload: Payload) -> Result<String> {
+        let Payload::Oqtopus {
+            job_type,
+            program,
+            shots,
+            name,
+            description,
+            transpiler_info,
+            simulator_info,
+            mitigation_info,
+        } = payload
+        else {
+            return Err(QrmiError::Other(anyhow::anyhow!(
+                "unsupported payload for Oqtopus backend"
+            )));
+        };
+
+        let program_value = if program.trim_start().starts_with('[') {
+            serde_json::from_str::<serde_json::Value>(&program)
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid program JSON array: {e}")))?
+        } else {
+            serde_json::Value::String(program)
+        };
+
+        let parse_info = |s: &Option<String>| -> Result<serde_json::Value> {
+            match s {
+                None => Ok(serde_json::Value::Null),
+                Some(s) => serde_json::from_str(s)
+                    .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid JSON: {e}"))),
+            }
+        };
+
+        let job_spec_json = serde_json::json!({
+            "job_type": job_type,
+            "device_id": self.device_id,
+            "program": program_value,
+            "shots": shots,
+            "name": name,
+            "description": description,
+            "transpiler_info": parse_info(&transpiler_info)?,
+            "simulator_info": parse_info(&simulator_info)?,
+            "mitigation_info": parse_info(&mitigation_info)?,
+        })
+        .to_string();
+        let job_spec_json_c = CString::new(job_spec_json)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_spec json: {e}")))?;
+
+        let func: libloading::Symbol<
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut *mut c_char,
+                *mut *mut c_char,
+            ) -> c_int,
+        > = unsafe {
+            self.py_bridge
+                .get(b"submit_job")
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
+        };
+
+        let mut job_id_ptr: *mut c_char = std::ptr::null_mut();
+        let mut err_ptr: *mut c_char = std::ptr::null_mut();
+
+        let ret = unsafe {
+            func(
+                job_spec_json_c.as_ptr(),
+                self.config_json.as_ptr(),
+                &mut job_id_ptr,
+                &mut err_ptr,
+            )
+        };
+
+        if ret != 0 {
+            let msg = self.take_error_string(err_ptr);
+            return Err(QrmiError::Other(anyhow::anyhow!(
+                "submit_job failed: {msg}"
+            )));
+        }
+
+        let job_id = unsafe { CStr::from_ptr(job_id_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(job_id_ptr);
+
+        info!("submit_job succeeded: job_id={job_id}");
+
+        Ok(job_id)
     }
 }
