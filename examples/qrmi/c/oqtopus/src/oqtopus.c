@@ -1,4 +1,6 @@
 /*
+ * This code is part of Qiskit.
+ *
  * (C) Copyright IBM 2026.
  *
  * This code is licensed under the Apache License, Version 2.0. You may
@@ -20,8 +22,9 @@ extern const char *read_file(const char *);
 
 int main(int argc, char *argv[]) {
 
-  if (argc != 2) {
-    fprintf(stderr, "oqtopus <device_id>\n");
+  if (argc != 4) {
+    fprintf(stderr, "oqtopus <device_id> <QASM program file> "
+                    "<job_type('sampling','estimation', 'multi_manual' or 'sse')>\n");
     return EXIT_SUCCESS;
   }
 
@@ -66,7 +69,69 @@ int main(int argc, char *argv[]) {
     qrmi_string_free((char *)last_error);
     goto error;
   }
-  fprintf(stdout, "accessible: %d\n", is_accessible);
+
+  char *target = NULL;
+  rc = qrmi_resource_target(qrmi, &target);
+  if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    fprintf(stdout, "target = %s\n", target);
+    qrmi_string_free((char *)target);
+  } else {
+    const char *last_error = qrmi_get_last_error();
+    fprintf(stderr, "qrmi_resource_target() failed. %s (%d)\n", last_error,
+            qrmi_get_last_error_kind());
+    qrmi_string_free((char *)last_error);
+    goto error;
+  }
+
+  const char *input = read_file(argv[2]);
+
+  QrmiPayload payload;
+  payload.tag = QRMI_PAYLOAD_OQTOPUS;
+  payload.OQTOPUS.job_type = argv[3];
+  payload.OQTOPUS.program = (char*)input;
+  payload.OQTOPUS.shots = 1000;
+  payload.OQTOPUS.name = "Bell State Sampling";
+  payload.OQTOPUS.description = "Bell state sampling example";
+  payload.OQTOPUS.transpiler_info = NULL;
+  payload.OQTOPUS.simulator_info = NULL;
+  payload.OQTOPUS.mitigation_info = NULL;
+
+  char *job_id = NULL;
+  rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
+  if (rc != QRMI_RETURN_CODE_SUCCESS) {
+    const char *last_error = qrmi_get_last_error();
+    fprintf(stderr, "failed to start a task. . %s (%d)\n", last_error,
+            qrmi_get_last_error_kind());
+    qrmi_string_free((char *)last_error);
+    free((void *)input);
+    goto error;
+  }
+  fprintf(stdout, "Job ID: %s\n", job_id);
+  free((void *)input);
+
+  QrmiTaskStatus status;
+  while (1) {
+    rc = qrmi_resource_task_status(qrmi, job_id, &status);
+    if (rc != QRMI_RETURN_CODE_SUCCESS || (status != QRMI_TASK_STATUS_RUNNING &&
+                                           status != QRMI_TASK_STATUS_QUEUED)) {
+      break;
+    }
+    sleep(1);
+  }
+
+  rc = qrmi_resource_task_status(qrmi, job_id, &status);
+  if (rc == QRMI_RETURN_CODE_SUCCESS && status == QRMI_TASK_STATUS_COMPLETED) {
+    char *result = NULL;
+    qrmi_resource_task_result(qrmi, job_id, &result);
+    fprintf(stdout, "%s\n", result);
+    qrmi_string_free((char *)result);
+  } else if (status == QRMI_TASK_STATUS_FAILED) {
+    fprintf(stderr, "Failed.\n");
+  } else if (status == QRMI_TASK_STATUS_CANCELLED) {
+    fprintf(stderr, "Cancelled.\n");
+  }
+
+  qrmi_string_free(job_id);
 
   qrmi_resource_free(qrmi);
 
