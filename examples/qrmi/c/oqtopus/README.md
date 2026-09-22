@@ -16,10 +16,7 @@ Because QRMI is an environment variable driven software library, all configurati
 
 ## Create IQM JSON input file as input
 
-Refer [this tool](../../../task_runner/oqtopus) to generate. You can customize quantum circuits by editing the code.
-
-> [!NOTE]
-> Use the file with name ending `_params_only.json`, e.g. `oqtopus_params_only.json`.
+Refer [this tool](../../../task_runner/oqtopus) to generate.
 
 ## How to build this example
 
@@ -33,12 +30,12 @@ $ make
 ## How to run this example
 ```shell-session
 $ ./build/oqtopus
-oqtopus <device_id>
+oqtopus <device_id> <QASM program file> <job_type('sampling','estimation', 'multi_manual' or 'sse')>
 ```
 For example,
 ```shell-session
 export qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
 export qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
 
-./oqtopus qulacs
+./oqtopus qulacs ../../../../task_runner/oqtopus/bell_state.txt sampling
 ```
