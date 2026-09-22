@@ -401,3 +401,112 @@ pub unsafe extern "C" fn get_job_status(
         }
     }
 }
+
+/// Calls `oqtopus_client`'s `OqtopusClient.get_device(device_id)`,
+/// serializes the resulting `OqtopusDevice` dataclass to a JSON string
+/// (via `dataclasses.asdict` + `json.dumps(..., default=str)`, so any
+/// field type without a direct JSON mapping falls back to its `str()`
+/// representation instead of raising), and returns that string.
+///
+/// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
+///
+/// # Parameters
+/// - `device_id`: the device ID to query (a nul-terminated UTF-8 string).
+/// - `config_json`: a JSON object string passed as `**kwargs` to the
+///   `OqtopusConfig` constructor (e.g. `{"url": "...", "api_token": "..."}`).
+/// - `out_json`: on success, a pointer to the resulting JSON string
+///   (nul-terminated, allocated via `CString::into_raw`) is written here.
+///   The caller must free it with `py_bridge_free_string` once done.
+/// - `out_error`: on failure (non-zero return), a pointer to an error
+///   message (nul-terminated, allocated via `CString::into_raw`) is
+///   written here. For `UserApiError`-like exceptions, the message
+///   includes the `status_code`/`message` detail. Passing `NULL` just
+///   logs to stderr instead and no pointer is written. As with
+///   `out_json`, a non-null result must be freed with
+///   `py_bridge_free_string`.
+///
+/// # Returns
+/// `0` on success. `-1` if a Python exception was raised, or if this
+/// function panicked internally.
+///
+/// # Safety
+/// - `device_id` and `config_json` must both be valid pointers to
+///   nul-terminated UTF-8 strings (invalid UTF-8 is lossily replaced by
+///   `to_string_lossy` rather than causing a crash, but the result is not
+///   guaranteed to be meaningful).
+/// - `out_json` and `out_error` must each be either `NULL` or a valid,
+///   writable pointer to a `*mut c_char`.
+/// - Any string returned through `out_json` or `out_error` leaks until
+///   the caller frees it. Callers must always call the matching
+///   `py_bridge_free_string`.
+/// - The caller must ensure the corresponding libpython has already been
+///   `dlopen`'d (by `py_loader`) before this function is called.
+#[no_mangle]
+pub unsafe extern "C" fn get_device_json(
+    device_id: *const c_char,
+    config_json: *const c_char,
+    out_json: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+) -> c_int {
+    let result = std::panic::catch_unwind(|| -> PyResult<String> {
+        let device_id = unsafe { CStr::from_ptr(device_id) }
+            .to_string_lossy()
+            .into_owned();
+        let config_json = unsafe { CStr::from_ptr(config_json) }
+            .to_string_lossy()
+            .into_owned();
+
+        Python::initialize();
+
+        Python::attach(|py| {
+            let inner_result: PyResult<String> = (|| {
+                let client = build_client(py, &config_json)?;
+                let device = client.call_method1("get_device", (device_id.as_str(),))?;
+
+                let dataclasses = py.import("dataclasses")?;
+                let device_dict = dataclasses.call_method1("asdict", (device,))?;
+
+                let builtins = py.import("builtins")?;
+                let str_fn = builtins.getattr("str")?;
+                let kwargs = PyDict::new(py);
+                kwargs.set_item("default", str_fn)?;
+
+                let json_mod = py.import("json")?;
+                let json_str: String = json_mod
+                    .call_method("dumps", (device_dict,), Some(&kwargs))?
+                    .extract()?;
+                Ok(json_str)
+            })();
+
+            inner_result.map_err(|e| {
+                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
+                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "api error: status={status_code} message={message}"
+                    ));
+                }
+                let tb = e
+                    .traceback(py)
+                    .and_then(|tb| tb.format().ok())
+                    .unwrap_or_default();
+                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
+            })
+        })
+    });
+
+    match result {
+        Ok(Ok(json_str)) => {
+            let c_string = CString::new(json_str)
+                .unwrap_or_else(|_| CString::new("(json contains invalid data)").unwrap());
+            unsafe { *out_json = c_string.into_raw() };
+            0
+        }
+        Ok(Err(e)) => {
+            set_error(out_error, &format!("python error: {e}"));
+            -1
+        }
+        Err(_) => {
+            set_error(out_error, "panicked while calling python");
+            -1
+        }
+    }
+}
