@@ -64,9 +64,8 @@ fn default_bridge_path() -> String {
 /// QRMI implementation for OQTOPUS Cloud
 pub struct Oqtopus {
     pub(crate) device_id: String,
-    pub(crate) url: String,
-    pub(crate) api_token: String,
     py_bridge: Library,
+    config_json: CString,
 }
 
 impl Oqtopus {
@@ -156,11 +155,19 @@ impl Oqtopus {
             })?
         };
 
+        let config_json = serde_json::json!({
+            "url": endpoint,
+            "api_token": api_token,
+        })
+        .to_string();
+
+        let config_json_c = CString::new(config_json)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid config json: {e}")))?;
+
         Ok(Self {
             device_id: device_id.to_string(),
-            api_token: api_token.to_string(),
-            url: endpoint.to_string(),
             py_bridge: lib,
+            config_json: config_json_c,
         })
     }
 
@@ -204,15 +211,6 @@ impl QuantumResource for Oqtopus {
         let device_id_c = CString::new(self.device_id.clone())
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid device_id: {e}")))?;
 
-        let config_json = serde_json::json!({
-            "url": self.url,
-            "api_token": self.api_token,
-        })
-        .to_string();
-
-        let config_json_c = CString::new(config_json)
-            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid config json: {e}")))?;
-
         let func: libloading::Symbol<
             unsafe extern "C" fn(
                 *const c_char,
@@ -232,7 +230,7 @@ impl QuantumResource for Oqtopus {
         let ret = unsafe {
             func(
                 device_id_c.as_ptr(),
-                config_json_c.as_ptr(),
+                self.config_json.as_ptr(),
                 &mut status_ptr,
                 &mut err_ptr,
             )
@@ -253,5 +251,51 @@ impl QuantumResource for Oqtopus {
         info!("device status: {status}");
 
         Ok(status == "available")
+    }
+
+    async fn task_stop(&mut self, task_id: &str) -> Result<()> {
+        let job_id_c = CString::new(task_id)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_id: {e}")))?;
+
+        let func: libloading::Symbol<
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut *mut c_char,
+                *mut *mut c_char,
+            ) -> c_int,
+        > = unsafe {
+            self.py_bridge
+                .get(b"cancel_job")
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
+        };
+
+        let mut message_ptr: *mut c_char = std::ptr::null_mut();
+        let mut err_ptr: *mut c_char = std::ptr::null_mut();
+
+        let ret = unsafe {
+            func(
+                job_id_c.as_ptr(),
+                self.config_json.as_ptr(),
+                &mut message_ptr,
+                &mut err_ptr,
+            )
+        };
+
+        if ret != 0 {
+            let msg = self.take_error_string(err_ptr);
+            return Err(QrmiError::Other(anyhow::anyhow!(
+                "cancel_job failed: {msg}"
+            )));
+        }
+
+        let message = unsafe { CStr::from_ptr(message_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(message_ptr);
+
+        info!("cancel_job succeeded: {message}");
+
+        Ok(())
     }
 }

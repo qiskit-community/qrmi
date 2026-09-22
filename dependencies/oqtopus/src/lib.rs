@@ -77,6 +77,13 @@ pub fn build_client<'py>(py: Python<'py>, config_json: &str) -> PyResult<Bound<'
     client_cls.call1((config,))
 }
 
+fn extract_user_api_error(py: Python, err: &PyErr) -> Option<(i64, String)> {
+    let value = err.value(py);
+    let status_code: i64 = value.getattr("status_code").ok()?.extract().ok()?;
+    let message: String = value.getattr("message").ok()?.extract().ok()?;
+    Some((status_code, message))
+}
+
 pub fn job_spec_cls<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
     py.import("oqtopus_client")?
         .getattr("services")?
@@ -115,6 +122,41 @@ pub extern "C" fn test() -> c_int {
     }
 }
 
+/// Calls `oqtopus_client`'s `OqtopusClient.get_device(device_id)` and
+/// returns the device's `status` string (e.g. `"available"`,
+/// `"unavailable"`).
+///
+/// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
+///
+/// # Parameters
+/// - `device_id`: the device ID to query (a nul-terminated UTF-8 string).
+/// - `config_json`: a JSON object string passed as `**kwargs` to the
+///   `OqtopusConfig` constructor (e.g. `{"url": "...", "api_token": "..."}`).
+/// - `out_status`: on success, a pointer to the resulting status string
+///   (nul-terminated, allocated via `CString::into_raw`) is written here.
+///   The caller must free it with `py_bridge_free_string` once done.
+/// - `out_error`: on failure (non-zero return), a pointer to an error
+///   message (nul-terminated, allocated via `CString::into_raw`) is
+///   written here. Passing `NULL` just logs to stderr instead and no
+///   pointer is written. As with `out_status`, a non-null result must be
+///   freed with `py_bridge_free_string`.
+///
+/// # Returns
+/// `0` on success. `-1` if a Python exception was raised, or if this
+/// function panicked internally.
+///
+/// # Safety
+/// - `device_id` and `config_json` must both be valid pointers to
+///   nul-terminated UTF-8 strings (invalid UTF-8 is lossily replaced by
+///   `to_string_lossy` rather than causing a crash, but the result is not
+///   guaranteed to be meaningful).
+/// - `out_status` and `out_error` must each be either `NULL` or a valid,
+///   writable pointer to a `*mut c_char`.
+/// - Any string returned through `out_status` or `out_error` leaks until
+///   the caller frees it. Callers must always call the matching
+///   `py_bridge_free_string`.
+/// - The caller must ensure the corresponding libpython has already been
+///   `dlopen`'d (by `py_loader`) before this function is called.
 #[no_mangle]
 pub unsafe extern "C" fn get_device_status(
     device_id: *const c_char,
@@ -155,6 +197,101 @@ pub unsafe extern "C" fn get_device_status(
             let c_string = CString::new(status)
                 .unwrap_or_else(|_| CString::new("(status contains invalid data)").unwrap());
             unsafe { *out_status = c_string.into_raw() };
+            0
+        }
+        Ok(Err(e)) => {
+            set_error(out_error, &format!("python error: {e}"));
+            -1
+        }
+        Err(_) => {
+            set_error(out_error, "panicked while calling python");
+            -1
+        }
+    }
+}
+
+/// Calls `oqtopus_client`'s `OqtopusClient.cancel_job(job_id)` to cancel
+/// a job.
+///
+/// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
+///
+/// # Parameters
+/// - `job_id`: the ID of the job to cancel (a nul-terminated UTF-8 string).
+/// - `config_json`: a JSON object string passed as `**kwargs` to the
+///   `OqtopusConfig` constructor (e.g. `{"url": "...", "api_token": "..."}`).
+/// - `out_message`: on success, a pointer to the confirmation message
+///   returned by the API (nul-terminated, allocated via
+///   `CString::into_raw`) is written here. The caller must free it with
+///   `py_bridge_free_string` once done.
+/// - `out_error`: on failure (non-zero return), a pointer to an error
+///   message (nul-terminated, allocated via `CString::into_raw`) is
+///   written here. For `UserApiError`-like exceptions (e.g. attempting
+///   to cancel a job that has already completed), the message includes
+///   the `status_code`/`message` detail. Passing `NULL` just logs to
+///   stderr instead and no pointer is written. As with `out_message`, a
+///   non-null result must be freed with `py_bridge_free_string`.
+///
+/// # Returns
+/// `0` on success. `-1` if a Python exception was raised, or if this
+/// function panicked internally.
+///
+/// # Safety
+/// - `job_id` and `config_json` must both be valid pointers to
+///   nul-terminated UTF-8 strings (invalid UTF-8 is lossily replaced by
+///   `to_string_lossy` rather than causing a crash, but the result is not
+///   guaranteed to be meaningful).
+/// - `out_message` and `out_error` must each be either `NULL` or a valid,
+///   writable pointer to a `*mut c_char`.
+/// - Any string returned through `out_message` or `out_error` leaks until
+///   the caller frees it. Callers must always call the matching
+///   `py_bridge_free_string`.
+/// - The caller must ensure the corresponding libpython has already been
+///   `dlopen`'d (by `py_loader`) before this function is called.
+#[no_mangle]
+pub unsafe extern "C" fn cancel_job(
+    job_id: *const c_char,
+    config_json: *const c_char,
+    out_message: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+) -> c_int {
+    let result = std::panic::catch_unwind(|| -> PyResult<String> {
+        let job_id = unsafe { CStr::from_ptr(job_id) }
+            .to_string_lossy()
+            .into_owned();
+        let config_json = unsafe { CStr::from_ptr(config_json) }
+            .to_string_lossy()
+            .into_owned();
+
+        Python::initialize();
+
+        Python::attach(|py| {
+            let inner_result: PyResult<String> = (|| {
+                let client = build_client(py, &config_json)?;
+                let response = client.call_method1("cancel_job", (job_id.as_str(),))?;
+                let message: String = response.getattr("message")?.extract()?;
+                Ok(message)
+            })();
+
+            inner_result.map_err(|e| {
+                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
+                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "api error: status={status_code} message={message}"
+                    ));
+                }
+                let tb = e
+                    .traceback(py)
+                    .and_then(|tb| tb.format().ok())
+                    .unwrap_or_default();
+                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
+            })
+        })
+    });
+
+    match result {
+        Ok(Ok(message)) => {
+            let c_string = CString::new(message)
+                .unwrap_or_else(|_| CString::new("(message contains invalid data)").unwrap());
+            unsafe { *out_message = c_string.into_raw() };
             0
         }
         Ok(Err(e)) => {
