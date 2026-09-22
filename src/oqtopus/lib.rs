@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 use crate::error::{required_env, QrmiError};
-use crate::models::{ResourceType, TaskStatus, Target};
+use crate::models::{ResourceType, Target, TaskStatus, TaskResult};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
 use libloading::Library;
@@ -400,5 +400,49 @@ impl QuantumResource for Oqtopus {
         self.free_string(json_ptr);
 
         Ok(Target { value })
+    }
+
+    async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
+        let job_id_c = CString::new(task_id)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_id: {e}")))?;
+
+        let func: libloading::Symbol<
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut *mut c_char,
+                *mut *mut c_char,
+            ) -> c_int,
+        > = unsafe {
+            self.py_bridge
+                .get(b"get_job_result_json")
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
+        };
+
+        let mut json_ptr: *mut c_char = std::ptr::null_mut();
+        let mut err_ptr: *mut c_char = std::ptr::null_mut();
+
+        let ret = unsafe {
+            func(
+                job_id_c.as_ptr(),
+                self.config_json.as_ptr(),
+                &mut json_ptr,
+                &mut err_ptr,
+            )
+        };
+
+        if ret != 0 {
+            let msg = self.take_error_string(err_ptr);
+            return Err(QrmiError::Other(anyhow::anyhow!(
+                "get_job_result_json failed: {msg}"
+            )));
+        }
+
+        let value = unsafe { CStr::from_ptr(json_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(json_ptr);
+
+        Ok(TaskResult { value })
     }
 }
