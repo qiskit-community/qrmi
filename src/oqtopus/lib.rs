@@ -74,6 +74,12 @@ fn default_bridge_path() -> String {
     "liboqtopus_py_bridge.so".to_string()
 }
 
+/// C ABI signature shared by every `dependencies/oqtopus` py_bridge
+/// entry point used here: one input string (plus `config_json`), one
+/// output string, one error-message out-param.
+type BridgeFn =
+    unsafe extern "C" fn(*const c_char, *const c_char, *mut *mut c_char, *mut *mut c_char) -> c_int;
+
 /// QRMI implementation for OQTOPUS Cloud
 pub struct Oqtopus {
     pub(crate) device_id: String,
@@ -206,6 +212,47 @@ impl Oqtopus {
         self.free_string(err_ptr);
         msg
     }
+
+    /// Calls a py_bridge C entry point that takes one argument string
+    /// plus `self.config_json`, and returns one output string on
+    /// success. Centralizes symbol lookup, the call itself, error
+    /// handling, and freeing the output/error strings -- the shape
+    /// shared by every py_bridge function used here (`get_device_status`,
+    /// `cancel_job`, `get_job_status`, `get_device_json`,
+    /// `get_job_result_json`, `submit_job`).
+    ///
+    /// `op_name` is used only to prefix error messages (e.g.
+    /// `"get_device_status failed: ..."`).
+    fn call_bridge(&self, symbol: &[u8], arg: &CStr, op_name: &str) -> Result<String> {
+        let func: libloading::Symbol<BridgeFn> = unsafe {
+            self.py_bridge
+                .get(symbol)
+                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
+        };
+
+        let mut out_ptr: *mut c_char = std::ptr::null_mut();
+        let mut err_ptr: *mut c_char = std::ptr::null_mut();
+
+        let ret = unsafe {
+            func(
+                arg.as_ptr(),
+                self.config_json.as_ptr(),
+                &mut out_ptr,
+                &mut err_ptr,
+            )
+        };
+
+        if ret != 0 {
+            let msg = self.take_error_string(err_ptr);
+            return Err(QrmiError::Other(anyhow::anyhow!("{op_name} failed: {msg}")));
+        }
+
+        let value = unsafe { CStr::from_ptr(out_ptr) }
+            .to_string_lossy()
+            .into_owned();
+        self.free_string(out_ptr);
+        Ok(value)
+    }
 }
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
@@ -224,42 +271,7 @@ impl QuantumResource for Oqtopus {
         let device_id_c = CString::new(self.device_id.clone())
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid device_id: {e}")))?;
 
-        let func: libloading::Symbol<
-            unsafe extern "C" fn(
-                *const c_char,
-                *const c_char,
-                *mut *mut c_char,
-                *mut *mut c_char,
-            ) -> c_int,
-        > = unsafe {
-            self.py_bridge
-                .get(b"get_device_status")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
-        };
-
-        let mut status_ptr: *mut c_char = std::ptr::null_mut();
-        let mut err_ptr: *mut c_char = std::ptr::null_mut();
-
-        let ret = unsafe {
-            func(
-                device_id_c.as_ptr(),
-                self.config_json.as_ptr(),
-                &mut status_ptr,
-                &mut err_ptr,
-            )
-        };
-
-        if ret != 0 {
-            let msg = self.take_error_string(err_ptr);
-            return Err(QrmiError::Other(anyhow::anyhow!(
-                "get_device_status failed: {msg}"
-            )));
-        }
-
-        let status = unsafe { CStr::from_ptr(status_ptr) }
-            .to_string_lossy()
-            .into_owned();
-        self.free_string(status_ptr);
+        let status = self.call_bridge(b"get_device_status", &device_id_c, "get_device_status")?;
 
         info!("device status: {status}");
 
@@ -270,42 +282,7 @@ impl QuantumResource for Oqtopus {
         let job_id_c = CString::new(task_id)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_id: {e}")))?;
 
-        let func: libloading::Symbol<
-            unsafe extern "C" fn(
-                *const c_char,
-                *const c_char,
-                *mut *mut c_char,
-                *mut *mut c_char,
-            ) -> c_int,
-        > = unsafe {
-            self.py_bridge
-                .get(b"cancel_job")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
-        };
-
-        let mut message_ptr: *mut c_char = std::ptr::null_mut();
-        let mut err_ptr: *mut c_char = std::ptr::null_mut();
-
-        let ret = unsafe {
-            func(
-                job_id_c.as_ptr(),
-                self.config_json.as_ptr(),
-                &mut message_ptr,
-                &mut err_ptr,
-            )
-        };
-
-        if ret != 0 {
-            let msg = self.take_error_string(err_ptr);
-            return Err(QrmiError::Other(anyhow::anyhow!(
-                "cancel_job failed: {msg}"
-            )));
-        }
-
-        let message = unsafe { CStr::from_ptr(message_ptr) }
-            .to_string_lossy()
-            .into_owned();
-        self.free_string(message_ptr);
+        let message = self.call_bridge(b"cancel_job", &job_id_c, "cancel_job")?;
 
         info!("cancel_job succeeded: {message}");
 
@@ -316,42 +293,7 @@ impl QuantumResource for Oqtopus {
         let job_id_c = CString::new(task_id)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_id: {e}")))?;
 
-        let func: libloading::Symbol<
-            unsafe extern "C" fn(
-                *const c_char,
-                *const c_char,
-                *mut *mut c_char,
-                *mut *mut c_char,
-            ) -> c_int,
-        > = unsafe {
-            self.py_bridge
-                .get(b"get_job_status")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
-        };
-
-        let mut status_ptr: *mut c_char = std::ptr::null_mut();
-        let mut err_ptr: *mut c_char = std::ptr::null_mut();
-
-        let ret = unsafe {
-            func(
-                job_id_c.as_ptr(),
-                self.config_json.as_ptr(),
-                &mut status_ptr,
-                &mut err_ptr,
-            )
-        };
-
-        if ret != 0 {
-            let msg = self.take_error_string(err_ptr);
-            return Err(QrmiError::Other(anyhow::anyhow!(
-                "get_job_status failed: {msg}"
-            )));
-        }
-
-        let status = unsafe { CStr::from_ptr(status_ptr) }
-            .to_string_lossy()
-            .into_owned();
-        self.free_string(status_ptr);
+        let status = self.call_bridge(b"get_job_status", &job_id_c, "get_job_status")?;
 
         info!("job status: {status}");
 
@@ -362,42 +304,7 @@ impl QuantumResource for Oqtopus {
         let device_id_c = CString::new(self.device_id.clone())
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid device_id: {e}")))?;
 
-        let func: libloading::Symbol<
-            unsafe extern "C" fn(
-                *const c_char,
-                *const c_char,
-                *mut *mut c_char,
-                *mut *mut c_char,
-            ) -> c_int,
-        > = unsafe {
-            self.py_bridge
-                .get(b"get_device_json")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
-        };
-
-        let mut json_ptr: *mut c_char = std::ptr::null_mut();
-        let mut err_ptr: *mut c_char = std::ptr::null_mut();
-
-        let ret = unsafe {
-            func(
-                device_id_c.as_ptr(),
-                self.config_json.as_ptr(),
-                &mut json_ptr,
-                &mut err_ptr,
-            )
-        };
-
-        if ret != 0 {
-            let msg = self.take_error_string(err_ptr);
-            return Err(QrmiError::Other(anyhow::anyhow!(
-                "get_device_json failed: {msg}"
-            )));
-        }
-
-        let value = unsafe { CStr::from_ptr(json_ptr) }
-            .to_string_lossy()
-            .into_owned();
-        self.free_string(json_ptr);
+        let value = self.call_bridge(b"get_device_json", &device_id_c, "get_device_json")?;
 
         Ok(Target { value })
     }
@@ -406,42 +313,7 @@ impl QuantumResource for Oqtopus {
         let job_id_c = CString::new(task_id)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_id: {e}")))?;
 
-        let func: libloading::Symbol<
-            unsafe extern "C" fn(
-                *const c_char,
-                *const c_char,
-                *mut *mut c_char,
-                *mut *mut c_char,
-            ) -> c_int,
-        > = unsafe {
-            self.py_bridge
-                .get(b"get_job_result_json")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
-        };
-
-        let mut json_ptr: *mut c_char = std::ptr::null_mut();
-        let mut err_ptr: *mut c_char = std::ptr::null_mut();
-
-        let ret = unsafe {
-            func(
-                job_id_c.as_ptr(),
-                self.config_json.as_ptr(),
-                &mut json_ptr,
-                &mut err_ptr,
-            )
-        };
-
-        if ret != 0 {
-            let msg = self.take_error_string(err_ptr);
-            return Err(QrmiError::Other(anyhow::anyhow!(
-                "get_job_result_json failed: {msg}"
-            )));
-        }
-
-        let value = unsafe { CStr::from_ptr(json_ptr) }
-            .to_string_lossy()
-            .into_owned();
-        self.free_string(json_ptr);
+        let value = self.call_bridge(b"get_job_result_json", &job_id_c, "get_job_result_json")?;
 
         Ok(TaskResult { value })
     }
@@ -493,42 +365,7 @@ impl QuantumResource for Oqtopus {
         let job_spec_json_c = CString::new(job_spec_json)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_spec json: {e}")))?;
 
-        let func: libloading::Symbol<
-            unsafe extern "C" fn(
-                *const c_char,
-                *const c_char,
-                *mut *mut c_char,
-                *mut *mut c_char,
-            ) -> c_int,
-        > = unsafe {
-            self.py_bridge
-                .get(b"submit_job")
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("symbol not found: {e}")))?
-        };
-
-        let mut job_id_ptr: *mut c_char = std::ptr::null_mut();
-        let mut err_ptr: *mut c_char = std::ptr::null_mut();
-
-        let ret = unsafe {
-            func(
-                job_spec_json_c.as_ptr(),
-                self.config_json.as_ptr(),
-                &mut job_id_ptr,
-                &mut err_ptr,
-            )
-        };
-
-        if ret != 0 {
-            let msg = self.take_error_string(err_ptr);
-            return Err(QrmiError::Other(anyhow::anyhow!(
-                "submit_job failed: {msg}"
-            )));
-        }
-
-        let job_id = unsafe { CStr::from_ptr(job_id_ptr) }
-            .to_string_lossy()
-            .into_owned();
-        self.free_string(job_id_ptr);
+        let job_id = self.call_bridge(b"submit_job", &job_spec_json_c, "submit_job")?;
 
         info!("submit_job succeeded: job_id={job_id}");
 

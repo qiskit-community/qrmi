@@ -20,18 +20,6 @@
 //! *after* libpython has already been loaded into the process with
 //! `RTLD_GLOBAL`, so the dynamic linker can resolve those symbols lazily
 //! against the already-loaded libpython.
-
-//! This crate is built as a cdylib with PyO3's `extension-module` feature,
-//! which tells PyO3's build script to *not* link against libpython at
-//! build time. That means this .so/.dylib can be built and shipped even on
-//! machines that don't have libpython available.
-//!
-//! It is not meant to be loaded directly by the OS loader as a normal
-//! dependency (that would fail: it has unresolved `Py_*` symbols). Instead
-//! it is meant to be `dlopen`'d at runtime (see the `py_loader` crate),
-//! *after* libpython has already been loaded into the process with
-//! `RTLD_GLOBAL`, so the dynamic linker can resolve those symbols lazily
-//! against the already-loaded libpython.
 //!
 //! No special setup is needed here to make the interpreter find its
 //! stdlib and site-packages: `PYTHONHOME` is a standard env var that
@@ -110,6 +98,93 @@ fn normalize_value<'py>(py: Python<'py>, value: &Bound<'py, PyAny>) -> PyResult<
     Ok(value.clone())
 }
 
+/// Shared plumbing for a py_bridge C entry point that takes one
+/// argument string plus `config_json`, and returns one output string.
+/// Handles catching panics, initializing Python, running `f` under the
+/// GIL, formatting `UserApiError`s and tracebacks, and writing the
+/// result (or error) through `out`/`out_error`.
+///
+/// Every py_bridge function below shares this exact shape (decode two
+/// input strings, run some Python calls, produce one output string, map
+/// errors the same way, write through the same kind of out-params), so
+/// this centralizes that instead of repeating it six times.
+///
+/// # Safety
+/// `arg` and `config_json` must be valid pointers to nul-terminated
+/// UTF-8 strings. `out` and `out_error` must each be either `NULL` or a
+/// valid, writable pointer to a `*mut c_char`.
+unsafe fn run_bridge_call(
+    arg: *const c_char,
+    config_json: *const c_char,
+    out: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+    f: impl FnOnce(Python, &str, &str) -> PyResult<String> + std::panic::UnwindSafe,
+) -> c_int {
+    let result = std::panic::catch_unwind(|| -> PyResult<String> {
+        let arg = unsafe { CStr::from_ptr(arg) }
+            .to_string_lossy()
+            .into_owned();
+        let config_json = unsafe { CStr::from_ptr(config_json) }
+            .to_string_lossy()
+            .into_owned();
+
+        Python::initialize();
+
+        Python::attach(|py| {
+            f(py, &arg, &config_json).map_err(|e| {
+                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
+                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "api error: status={status_code} message={message}"
+                    ));
+                }
+                let tb = e
+                    .traceback(py)
+                    .and_then(|tb| tb.format().ok())
+                    .unwrap_or_default();
+                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
+            })
+        })
+    });
+
+    match result {
+        Ok(Ok(value)) => {
+            let c_string = CString::new(value)
+                .unwrap_or_else(|_| CString::new("(contains invalid data)").unwrap());
+            unsafe { *out = c_string.into_raw() };
+            0
+        }
+        Ok(Err(e)) => {
+            unsafe { set_error(out_error, &format!("python error: {e}")) };
+            -1
+        }
+        Err(_) => {
+            unsafe { set_error(out_error, "panicked while calling python") };
+            -1
+        }
+    }
+}
+
+/// Frees a string previously returned through an `out_*` parameter of
+/// one of this crate's C entry points (allocated via
+/// `CString::into_raw`). Safe to call with `NULL` (no-op).
+///
+/// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
+///
+/// # Safety
+/// `ptr`, if non-null, must be a pointer previously returned from one of
+/// this crate's `out_*` parameters, and must not already have been
+/// freed (double-freeing is undefined behavior, as with any C
+/// allocator).
+#[no_mangle]
+pub unsafe extern "C" fn py_bridge_free_string(ptr: *mut c_char) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(CString::from_raw(ptr));
+    }
+}
+
 /// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
 ///
 /// Returns 0 on success, -1 on failure (Python exception or panic).
@@ -183,49 +258,18 @@ pub unsafe extern "C" fn get_device_status(
     out_status: *mut *mut c_char,
     out_error: *mut *mut c_char,
 ) -> c_int {
-    let result = std::panic::catch_unwind(|| -> PyResult<String> {
-        let device_id = unsafe { CStr::from_ptr(device_id) }
-            .to_string_lossy()
-            .into_owned();
-        let config_json = unsafe { CStr::from_ptr(config_json) }
-            .to_string_lossy()
-            .into_owned();
-
-        Python::initialize();
-
-        Python::attach(|py| {
-            let inner_result: PyResult<String> = (|| {
-                let client = build_client(py, &config_json)?;
-                let device = client.call_method1("get_device", (device_id.clone(),))?;
-                let status: String = device.getattr("status")?.extract()?;
-                Ok(status)
-            })();
-
-            inner_result.map_err(|e| {
-                let tb = e
-                    .traceback(py)
-                    .and_then(|tb| tb.format().ok())
-                    .unwrap_or_default();
-                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
-            })
-        })
-    });
-
-    match result {
-        Ok(Ok(status)) => {
-            let c_string = CString::new(status)
-                .unwrap_or_else(|_| CString::new("(status contains invalid data)").unwrap());
-            unsafe { *out_status = c_string.into_raw() };
-            0
-        }
-        Ok(Err(e)) => {
-            set_error(out_error, &format!("python error: {e}"));
-            -1
-        }
-        Err(_) => {
-            set_error(out_error, "panicked while calling python");
-            -1
-        }
+    unsafe {
+        run_bridge_call(
+            device_id,
+            config_json,
+            out_status,
+            out_error,
+            |py, device_id, config_json| {
+                let client = build_client(py, config_json)?;
+                let device = client.call_method1("get_device", (device_id,))?;
+                device.getattr("status")?.extract()
+            },
+        )
     }
 }
 
@@ -273,54 +317,18 @@ pub unsafe extern "C" fn cancel_job(
     out_message: *mut *mut c_char,
     out_error: *mut *mut c_char,
 ) -> c_int {
-    let result = std::panic::catch_unwind(|| -> PyResult<String> {
-        let job_id = unsafe { CStr::from_ptr(job_id) }
-            .to_string_lossy()
-            .into_owned();
-        let config_json = unsafe { CStr::from_ptr(config_json) }
-            .to_string_lossy()
-            .into_owned();
-
-        Python::initialize();
-
-        Python::attach(|py| {
-            let inner_result: PyResult<String> = (|| {
-                let client = build_client(py, &config_json)?;
-                let response = client.call_method1("cancel_job", (job_id.as_str(),))?;
-                let message: String = response.getattr("message")?.extract()?;
-                Ok(message)
-            })();
-
-            inner_result.map_err(|e| {
-                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
-                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "api error: status={status_code} message={message}"
-                    ));
-                }
-                let tb = e
-                    .traceback(py)
-                    .and_then(|tb| tb.format().ok())
-                    .unwrap_or_default();
-                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
-            })
-        })
-    });
-
-    match result {
-        Ok(Ok(message)) => {
-            let c_string = CString::new(message)
-                .unwrap_or_else(|_| CString::new("(message contains invalid data)").unwrap());
-            unsafe { *out_message = c_string.into_raw() };
-            0
-        }
-        Ok(Err(e)) => {
-            set_error(out_error, &format!("python error: {e}"));
-            -1
-        }
-        Err(_) => {
-            set_error(out_error, "panicked while calling python");
-            -1
-        }
+    unsafe {
+        run_bridge_call(
+            job_id,
+            config_json,
+            out_message,
+            out_error,
+            |py, job_id, config_json| {
+                let client = build_client(py, config_json)?;
+                let response = client.call_method1("cancel_job", (job_id,))?;
+                response.getattr("message")?.extract()
+            },
+        )
     }
 }
 
@@ -369,62 +377,26 @@ pub unsafe extern "C" fn get_job_status(
     out_status: *mut *mut c_char,
     out_error: *mut *mut c_char,
 ) -> c_int {
-    let result = std::panic::catch_unwind(|| -> PyResult<String> {
-        let job_id = unsafe { CStr::from_ptr(job_id) }
-            .to_string_lossy()
-            .into_owned();
-        let config_json = unsafe { CStr::from_ptr(config_json) }
-            .to_string_lossy()
-            .into_owned();
-
-        Python::initialize();
-
-        Python::attach(|py| {
-            let inner_result: PyResult<String> = (|| {
-                let client = build_client(py, &config_json)?;
-                let response = client.call_method1("get_job_status", (job_id.as_str(),))?;
+    unsafe {
+        run_bridge_call(
+            job_id,
+            config_json,
+            out_status,
+            out_error,
+            |py, job_id, config_json| {
+                let client = build_client(py, config_json)?;
+                let response = client.call_method1("get_job_status", (job_id,))?;
                 // JobsJobStatus is (str, Enum), so this extracts directly.
-                let status: String = response.getattr("status")?.extract()?;
-                Ok(status)
-            })();
-
-            inner_result.map_err(|e| {
-                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
-                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "api error: status={status_code} message={message}"
-                    ));
-                }
-                let tb = e
-                    .traceback(py)
-                    .and_then(|tb| tb.format().ok())
-                    .unwrap_or_default();
-                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
-            })
-        })
-    });
-
-    match result {
-        Ok(Ok(status)) => {
-            let c_string = CString::new(status)
-                .unwrap_or_else(|_| CString::new("(status contains invalid data)").unwrap());
-            unsafe { *out_status = c_string.into_raw() };
-            0
-        }
-        Ok(Err(e)) => {
-            set_error(out_error, &format!("python error: {e}"));
-            -1
-        }
-        Err(_) => {
-            set_error(out_error, "panicked while calling python");
-            -1
-        }
+                response.getattr("status")?.extract()
+            },
+        )
     }
 }
 
 /// Calls `oqtopus_client`'s `OqtopusClient.get_device(device_id)`,
 /// serializes the resulting `OqtopusDevice` dataclass to a JSON string
-/// (via `dataclasses.asdict` + `json.dumps(..., default=str)`, so any
-/// field type without a direct JSON mapping falls back to its `str()`
+/// (via `vars()` + `json.dumps(..., default=str)`, so any field type
+/// without a direct JSON mapping falls back to its `str()`
 /// representation instead of raising), and returns that string.
 ///
 /// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
@@ -467,33 +439,29 @@ pub unsafe extern "C" fn get_device_json(
     out_json: *mut *mut c_char,
     out_error: *mut *mut c_char,
 ) -> c_int {
-    let result = std::panic::catch_unwind(|| -> PyResult<String> {
-        let device_id = unsafe { CStr::from_ptr(device_id) }
-            .to_string_lossy()
-            .into_owned();
-        let config_json = unsafe { CStr::from_ptr(config_json) }
-            .to_string_lossy()
-            .into_owned();
+    unsafe {
+        run_bridge_call(
+            device_id,
+            config_json,
+            out_json,
+            out_error,
+            |py, device_id, config_json| {
+                let client = build_client(py, config_json)?;
+                let device = client.call_method1("get_device", (device_id,))?;
 
-        Python::initialize();
-
-        Python::attach(|py| {
-            let inner_result: PyResult<String> = (|| {
-                let client = build_client(py, &config_json)?;
-                let device = client.call_method1("get_device", (device_id.as_str(),))?;
-
-                // OqtopusDevice's declared dataclass fields only contain `raw`;
-                // the actual data lives in the instance's __dict__, so use
-                // vars() instead of dataclasses.asdict().
+                // OqtopusDevice's declared dataclass fields only contain
+                // `raw`; the actual data lives in the instance's
+                // __dict__, so use vars() instead of dataclasses.asdict().
                 let builtins = py.import("builtins")?;
                 let device_dict = builtins.call_method1("vars", (device,))?;
                 let device_dict = device_dict.cast::<PyDict>()?;
 
                 let json_mod = py.import("json")?;
 
-                // device_info is itself a JSON string; parse it so it nests as
-                // a proper object instead of being embedded as an escaped
-                // string. If parsing fails for any reason, leave it as-is.
+                // device_info is itself a JSON string; parse it so it
+                // nests as a proper object instead of being embedded as
+                // an escaped string. If parsing fails for any reason,
+                // leave it as-is.
                 if let Some(device_info_str) = device_dict.get_item("device_info")? {
                     if let Ok(device_info_str) = device_info_str.extract::<String>() {
                         if let Ok(parsed) = json_mod.call_method1("loads", (device_info_str,)) {
@@ -506,43 +474,11 @@ pub unsafe extern "C" fn get_device_json(
                 let kwargs = PyDict::new(py);
                 kwargs.set_item("default", str_fn)?;
 
-                let json_mod = py.import("json")?;
-                let json_str: String = json_mod
+                json_mod
                     .call_method("dumps", (device_dict,), Some(&kwargs))?
-                    .extract()?;
-                Ok(json_str)
-            })();
-
-            inner_result.map_err(|e| {
-                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
-                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "api error: status={status_code} message={message}"
-                    ));
-                }
-                let tb = e
-                    .traceback(py)
-                    .and_then(|tb| tb.format().ok())
-                    .unwrap_or_default();
-                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
-            })
-        })
-    });
-
-    match result {
-        Ok(Ok(json_str)) => {
-            let c_string = CString::new(json_str)
-                .unwrap_or_else(|_| CString::new("(json contains invalid data)").unwrap());
-            unsafe { *out_json = c_string.into_raw() };
-            0
-        }
-        Ok(Err(e)) => {
-            set_error(out_error, &format!("python error: {e}"));
-            -1
-        }
-        Err(_) => {
-            set_error(out_error, "panicked while calling python");
-            -1
-        }
+                    .extract()
+            },
+        )
     }
 }
 
@@ -599,20 +535,15 @@ pub unsafe extern "C" fn get_job_result_json(
     out_json: *mut *mut c_char,
     out_error: *mut *mut c_char,
 ) -> c_int {
-    let result = std::panic::catch_unwind(|| -> PyResult<String> {
-        let job_id = unsafe { CStr::from_ptr(job_id) }
-            .to_string_lossy()
-            .into_owned();
-        let config_json = unsafe { CStr::from_ptr(config_json) }
-            .to_string_lossy()
-            .into_owned();
-
-        Python::initialize();
-
-        Python::attach(|py| {
-            let inner_result: PyResult<String> = (|| {
-                let client = build_client(py, &config_json)?;
-                let job_result = client.call_method1("get_job_result", (job_id.as_str(),))?;
+    unsafe {
+        run_bridge_call(
+            job_id,
+            config_json,
+            out_json,
+            out_error,
+            |py, job_id, config_json| {
+                let client = build_client(py, config_json)?;
+                let job_result = client.call_method1("get_job_result", (job_id,))?;
 
                 let builtins = py.import("builtins")?;
                 let raw_vars = builtins.call_method1("vars", (job_result,))?;
@@ -633,43 +564,11 @@ pub unsafe extern "C" fn get_job_result_json(
                 let kwargs = PyDict::new(py);
                 kwargs.set_item("default", str_fn)?;
 
-                let json_mod = py.import("json")?;
-                let json_str: String = json_mod
+                py.import("json")?
                     .call_method("dumps", (result_dict,), Some(&kwargs))?
-                    .extract()?;
-                Ok(json_str)
-            })();
-
-            inner_result.map_err(|e| {
-                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
-                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "api error: status={status_code} message={message}"
-                    ));
-                }
-                let tb = e
-                    .traceback(py)
-                    .and_then(|tb| tb.format().ok())
-                    .unwrap_or_default();
-                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
-            })
-        })
-    });
-
-    match result {
-        Ok(Ok(json_str)) => {
-            let c_string = CString::new(json_str)
-                .unwrap_or_else(|_| CString::new("(json contains invalid data)").unwrap());
-            unsafe { *out_json = c_string.into_raw() };
-            0
-        }
-        Ok(Err(e)) => {
-            set_error(out_error, &format!("python error: {e}"));
-            -1
-        }
-        Err(_) => {
-            set_error(out_error, "panicked while calling python");
-            -1
-        }
+                    .extract()
+            },
+        )
     }
 }
 
@@ -726,19 +625,14 @@ pub unsafe extern "C" fn submit_job(
     out_job_id: *mut *mut c_char,
     out_error: *mut *mut c_char,
 ) -> c_int {
-    let result = std::panic::catch_unwind(|| -> PyResult<String> {
-        let job_spec_json = unsafe { CStr::from_ptr(job_spec_json) }
-            .to_string_lossy()
-            .into_owned();
-        let config_json = unsafe { CStr::from_ptr(config_json) }
-            .to_string_lossy()
-            .into_owned();
-
-        Python::initialize();
-
-        Python::attach(|py| {
-            let inner_result: PyResult<String> = (|| {
-                let client = build_client(py, &config_json)?;
+    unsafe {
+        run_bridge_call(
+            job_spec_json,
+            config_json,
+            out_job_id,
+            out_error,
+            |py, job_spec_json, config_json| {
+                let client = build_client(py, config_json)?;
 
                 let json_mod = py.import("json")?;
                 let spec_dict = json_mod.call_method1("loads", (job_spec_json,))?;
@@ -752,16 +646,14 @@ pub unsafe extern "C" fn submit_job(
                     .extract()?;
                 spec_dict.del_item("job_type")?;
 
-                let job_spec_cls = py
-                    .import("oqtopus_client")?
-                    .getattr("services")?
-                    .getattr("job_spec")?
-                    .getattr("OqtopusJobSpec")?;
-                let builder = job_spec_cls.getattr(job_type.as_str())?;
+                let builder = job_spec_cls(py)?.getattr(job_type.as_str())?;
                 let job_spec = builder.call((), Some(spec_dict))?;
 
                 let response = client.call_method1("submit_job", (job_spec,))?;
 
+                // Prefer the direct attribute; fall back to to_dict() in
+                // case the generated model exposes it under a different
+                // name/alias.
                 if let Ok(job_id) = response.getattr("job_id") {
                     if let Ok(job_id) = job_id.extract::<String>() {
                         return Ok(job_id);
@@ -779,37 +671,7 @@ pub unsafe extern "C" fn submit_job(
                 Err(pyo3::exceptions::PyValueError::new_err(
                     "could not find job_id in submit_job response",
                 ))
-            })();
-
-            inner_result.map_err(|e| {
-                if let Some((status_code, message)) = extract_user_api_error(py, &e) {
-                    return pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "api error: status={status_code} message={message}"
-                    ));
-                }
-                let tb = e
-                    .traceback(py)
-                    .and_then(|tb| tb.format().ok())
-                    .unwrap_or_default();
-                pyo3::exceptions::PyRuntimeError::new_err(format!("{e}\n{tb}"))
-            })
-        })
-    });
-
-    match result {
-        Ok(Ok(job_id)) => {
-            let c_string = CString::new(job_id)
-                .unwrap_or_else(|_| CString::new("(job_id contains invalid data)").unwrap());
-            unsafe { *out_job_id = c_string.into_raw() };
-            0
-        }
-        Ok(Err(e)) => {
-            set_error(out_error, &format!("python error: {e}"));
-            -1
-        }
-        Err(_) => {
-            set_error(out_error, "panicked while calling python");
-            -1
-        }
+            },
+        )
     }
 }
