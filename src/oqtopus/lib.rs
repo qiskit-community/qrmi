@@ -9,6 +9,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+//! Unix-only (Linux/macOS): loads libpython via `dlopen`
+//! (`libloading::os::unix`), which has no Windows equivalent. Windows
+//! is intentionally unsupported here -- QRMI targets HPC environments,
+//! which are Linux-only in practice, so this module should be gated
+//! behind `#[cfg(unix)]` at its `mod oqtopus;` declaration in `src/lib.rs`.
+
 use crate::error::{required_env, QrmiError};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
@@ -20,6 +26,7 @@ use std::os::raw::{c_char, c_int};
 
 use log::{info, warn};
 
+#[cfg(not(target_os = "macos"))]
 fn pythonhome_lib_candidate(home: &str) -> Option<String> {
     let home = std::path::Path::new(home);
     for subdir in ["lib64", "lib"] {
@@ -30,6 +37,7 @@ fn pythonhome_lib_candidate(home: &str) -> Option<String> {
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn find_libpython_in(lib_dir: &std::path::Path) -> Option<String> {
     let entries = std::fs::read_dir(lib_dir).ok()?;
     let mut best: Option<std::path::PathBuf> = None;
@@ -44,6 +52,77 @@ fn find_libpython_in(lib_dir: &std::path::Path) -> Option<String> {
         }
     }
     best.map(|p| p.to_string_lossy().into_owned())
+}
+
+/// macOS equivalent of the above. Two install layouts are common:
+/// - Non-framework builds (Homebrew, `pyenv install --enable-shared`,
+///   etc.): `$PYTHONHOME/lib/libpython3.x.dylib`.
+/// - Framework builds (python.org installers, `pyenv install
+///   --enable-framework`): `PYTHONHOME` points at a `.../Versions/3.x`
+///   directory, and the shared library sits right there named plainly
+///   `Python` (no `lib` prefix, no `.dylib` extension).
+#[cfg(target_os = "macos")]
+fn pythonhome_lib_candidate(home: &str) -> Option<String> {
+    let home = std::path::Path::new(home);
+
+    if let Some(found) = find_libpython_in(&home.join("lib")) {
+        return Some(found);
+    }
+
+    let framework_binary = home.join("Python");
+    if framework_binary.is_file() {
+        return Some(framework_binary.to_string_lossy().into_owned());
+    }
+
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn find_libpython_in(lib_dir: &std::path::Path) -> Option<String> {
+    let entries = std::fs::read_dir(lib_dir).ok()?;
+    let mut best: Option<std::path::PathBuf> = None;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = path.file_name()?.to_str()?.to_string();
+        if name.starts_with("libpython") && name.ends_with(".dylib") {
+            // Prefer a version-specific name (libpython3.12.dylib) over
+            // a bare libpython3.dylib, if both exist.
+            let is_versioned = name
+                .strip_prefix("libpython")
+                .and_then(|rest| rest.chars().next())
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false);
+            if best.is_none() || is_versioned {
+                best = Some(path);
+            }
+        }
+    }
+    best.map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Sonames tried, in order, when neither `PYTHON_LIBRARY` nor
+/// `PYTHONHOME` is set -- via the dynamic linker's normal search path
+/// (`LD_LIBRARY_PATH`, `ld.so.cache`/Mach-O default paths, etc.).
+#[cfg(target_os = "macos")]
+fn fallback_soname_candidates() -> &'static [&'static str] {
+    &[
+        "libpython3.13.dylib",
+        "libpython3.12.dylib",
+        "libpython3.11.dylib",
+        "libpython3.10.dylib",
+        "libpython3.dylib",
+    ]
+}
+
+#[cfg(not(target_os = "macos"))]
+fn fallback_soname_candidates() -> &'static [&'static str] {
+    &[
+        "libpython3.13.so.1.0",
+        "libpython3.12.so.1.0",
+        "libpython3.11.so.1.0",
+        "libpython3.10.so.1.0",
+        "libpython3.so",
+    ]
 }
 
 fn map_job_status(status: &str) -> Result<TaskStatus> {
@@ -62,11 +141,6 @@ fn map_job_status(status: &str) -> Result<TaskStatus> {
 #[cfg(target_os = "macos")]
 fn default_bridge_path() -> String {
     "liboqtopus_py_bridge.dylib".to_string()
-}
-
-#[cfg(target_os = "windows")]
-fn default_bridge_path() -> String {
-    "oqtopus_py_bridge.dll".to_string()
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
@@ -135,23 +209,15 @@ impl Oqtopus {
                 }
                 None => {
                     return Err(QrmiError::Other(anyhow::anyhow!(
-                        "PYTHONHOME={home} is set, but no libpython*.so* found under its lib/ or lib64/ directory"
+                        "PYTHONHOME={home} is set, but no libpython was found under it"
                     )));
                 }
             }
         }
 
         if !loaded {
-            let candidates = [
-                "libpython3.13.so.1.0",
-                "libpython3.12.so.1.0",
-                "libpython3.11.so.1.0",
-                "libpython3.10.so.1.0",
-                "libpython3.so",
-            ];
-
-            for name in candidates {
-                if let Ok(lib) = unsafe { UnixLibrary::open(Some(name), RTLD_GLOBAL | RTLD_NOW) } {
+            for name in fallback_soname_candidates() {
+                if let Ok(lib) = unsafe { UnixLibrary::open(Some(*name), RTLD_GLOBAL | RTLD_NOW) } {
                     info!("loaded {name} (via default search path)");
                     std::mem::forget(lib);
                     loaded = true;
