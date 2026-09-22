@@ -1,3 +1,14 @@
+//
+// (C) Copyright IBM 2026
+//
+// This code is licensed under the Apache License, Version 2.0. You may
+// obtain a copy of this license in the LICENSE.txt file in the root directory
+// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+//
+// Any modifications or derivative works of this code must retain this
+// copyright notice, and modified files need to carry a notice indicating
+// that they have been altered from the originals.
+
 //! This crate is built as a cdylib with PyO3's `extension-module` feature,
 //! which tells PyO3's build script to *not* link against libpython at
 //! build time. That means this .so/.dylib can be built and shipped even on
@@ -64,6 +75,13 @@ pub fn build_client<'py>(py: Python<'py>, config_json: &str) -> PyResult<Bound<'
         .getattr("client")?
         .getattr("OqtopusClient")?;
     client_cls.call1((config,))
+}
+
+pub fn job_spec_cls<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    py.import("oqtopus_client")?
+        .getattr("services")?
+        .getattr("job_spec")?
+        .getattr("OqtopusJobSpec")
 }
 
 /// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.

@@ -2,6 +2,11 @@
 name = "oqtopus_py_bridge"
 version = "0.1.0"
 edition = "2021"
+keywords = ["python", "pyo3", "api-bindings"]
+description = "OQTOPUS Cloud Python API bridge"
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
 
 [lib]
 crate-type = ["cdylib"]
