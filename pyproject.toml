@@ -71,6 +71,7 @@ docs = [
   "sphinx-copybutton>=0.5.2",
   "sphinx-togglebutton>=0.4.5",
 ]
+# 'iqm' should be removed, but can't for now - will impact to test-wheels in Makefile.
 all = ["qrmi[ibm,pasqal,iqm]"]
 
 [project.urls]
@@ -105,4 +106,20 @@ before-all = 'curl -sSf https://sh.rustup.rs | sh -s -- -y'
 before-test = 'pip install -r requirements-dev.txt'
 environment = { PATH='$HOME/.cargo/bin:$PATH' }
 skip = '*musllinux* cp*t-*'
-test-command = 'pytest {project}/python/tests'
+test-extras = ["ibm", "pasqal"]
+test-command = [
+  "pytest {project}/python/tests/unit",
+  "VENV_IQM=$(mktemp -d)",
+  "python -m venv $VENV_IQM",
+  "$VENV_IQM/bin/pip install -r {project}/requirements-dev.txt '{wheel}[iqm]'",
+  "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
+]
+
+# Run only the unit tests where [iqm] cannot be installed:
+# - aarch64, Python 3.14: qiskit-aer (required by iqm-client[qiskit]) has no
+#   wheels yet, see https://github.com/Qiskit/qiskit-aer/issues/2419
+# - ppc64le: grpcio (required by iqm-station-control-client) has no wheels,
+#   and building it from source fails
+[[tool.cibuildwheel.overrides]]
+select = "cp314-manylinux_aarch64 *-manylinux_ppc64le"
+test-command = ["pytest {project}/python/tests/unit"]
