@@ -115,11 +115,11 @@ test-command = [
   "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
 ]
 
-# Python 3.14 on aarch64, skip iqm
-# (qiskit-aer, required by iqm-client[qiskit], has no wheels yet,
-#  see https://github.com/Qiskit/qiskit-aer/issues/2419)
-# Python 3.x on ppc64le, skip iqm
-# grpcio has no wheel yet.
+# Run only the unit tests where [iqm] cannot be installed:
+# - aarch64, Python 3.14: qiskit-aer (required by iqm-client[qiskit]) has no
+#   wheels yet, see https://github.com/Qiskit/qiskit-aer/issues/2419
+# - ppc64le: grpcio (required by iqm-station-control-client) has no wheels,
+#   and building it from source fails
 [[tool.cibuildwheel.overrides]]
 select = "cp314-manylinux_aarch64 *-manylinux_ppc64le"
 test-command = ["pytest {project}/python/tests/unit"]
