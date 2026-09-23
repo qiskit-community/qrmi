@@ -52,6 +52,16 @@ pub fn build_client<'py>(py: Python<'py>, config_json: &str) -> PyResult<Bound<'
     let config_dict = json_mod.call_method1("loads", (config_json,))?;
     let kwargs = config_dict.cast::<PyDict>()?;
 
+    // retry_status_codes / retry_methods arrive as JSON arrays (lists);
+    // OqtopusConfig expects frozenset[int] / frozenset[str].
+    let builtins = py.import("builtins")?;
+    for key in ["retry_status_codes", "retry_methods"] {
+        if let Some(val) = kwargs.get_item(key)? {
+            let frozenset = builtins.call_method1("frozenset", (val,))?;
+            kwargs.set_item(key, frozenset)?;
+        }
+    }
+
     let config_cls = oqtopus
         .getattr("services")?
         .getattr("config")?

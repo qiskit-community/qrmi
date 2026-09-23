@@ -15,7 +15,7 @@
 //! which are Linux-only in practice, so this module should be gated
 //! behind `#[cfg(unix)]` at its `mod oqtopus;` declaration in `src/lib.rs`.
 
-use crate::error::{required_env, QrmiError};
+use crate::error::QrmiError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
@@ -154,6 +154,92 @@ fn default_bridge_path() -> String {
 type BridgeFn =
     unsafe extern "C" fn(*const c_char, *const c_char, *mut *mut c_char, *mut *mut c_char) -> c_int;
 
+fn oqtopus_env(device_id: &str, suffix: &str) -> Option<String> {
+    std::env::var(format!("{device_id}_QRMI_OQTOPUS_{suffix}")).ok()
+}
+
+fn parse_env<T: std::str::FromStr>(device_id: &str, suffix: &str) -> Result<Option<T>>
+where
+    T::Err: std::fmt::Display,
+{
+    match oqtopus_env(device_id, suffix) {
+        None => Ok(None),
+        Some(raw) => raw.trim().parse::<T>().map(Some).map_err(|e| {
+            QrmiError::Other(anyhow::anyhow!(
+                "invalid value for {device_id}_QRMI_OQTOPUS_{suffix}: {e}"
+            ))
+        }),
+    }
+}
+
+/// Comma-separated list, e.g. "429,500,502,503" or "GET,POST".
+/// Entries are trimmed; empty entries are dropped.
+fn parse_env_list(device_id: &str, suffix: &str) -> Option<Vec<String>> {
+    oqtopus_env(device_id, suffix).map(|raw| {
+        raw.split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .collect()
+    })
+}
+
+fn build_config_json(device_id: &str) -> Result<CString> {
+    let mut config = serde_json::Map::new();
+
+    // Present but None-by-default in OqtopusConfig -- fine to include
+    // even if unset, since None is already the Python-side default.
+    if let Some(v) = oqtopus_env(device_id, "URL") {
+        config.insert("url".into(), serde_json::Value::String(v));
+    }
+    if let Some(v) = oqtopus_env(device_id, "API_TOKEN") {
+        config.insert("api_token".into(), serde_json::Value::String(v));
+    }
+    if let Some(v) = oqtopus_env(device_id, "PROXY") {
+        config.insert("proxy".into(), serde_json::Value::String(v));
+    }
+
+    // These have non-None defaults on the Python side (timeout=30.0,
+    // retry_max_attempts=3, retry_backoff_seconds=0.2), so the key must
+    // be omitted entirely when unset -- passing an explicit null would
+    // override the Python default with None instead of falling back to it.
+    if let Some(v) = parse_env::<f64>(device_id, "TIMEOUT")? {
+        config.insert("timeout".into(), serde_json::json!(v));
+    }
+    if let Some(v) = parse_env::<u32>(device_id, "RETRY_MAX_ATTEMPTS")? {
+        config.insert("retry_max_attempts".into(), serde_json::json!(v));
+    }
+    if let Some(v) = parse_env::<f64>(device_id, "RETRY_BACKOFF_SECONDS")? {
+        config.insert("retry_backoff_seconds".into(), serde_json::json!(v));
+    }
+
+    // retry_status_codes / retry_methods: Python expects frozenset[int]
+    // / frozenset[str]. We can only send JSON arrays over the wire; the
+    // py_bridge side (build_client) converts them to frozenset before
+    // constructing OqtopusConfig.
+    if let Some(items) = parse_env_list(device_id, "RETRY_STATUS_CODES") {
+        let codes: Vec<i64> = items
+            .iter()
+            .map(|s| {
+                s.parse::<i64>().map_err(|e| {
+                    QrmiError::Other(anyhow::anyhow!(
+                        "invalid value in {device_id}_QRMI_OQTOPUS_RETRY_STATUS_CODES: {e}"
+                    ))
+                })
+            })
+            .collect::<Result<_>>()?;
+        config.insert("retry_status_codes".into(), serde_json::json!(codes));
+    }
+    if let Some(items) = parse_env_list(device_id, "RETRY_METHODS") {
+        let methods: Vec<String> = items.into_iter().map(|s| s.to_uppercase()).collect();
+        config.insert("retry_methods".into(), serde_json::json!(methods));
+    }
+
+    let config_json = serde_json::Value::Object(config).to_string();
+    CString::new(config_json)
+        .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid config json: {e}")))
+}
+
 /// QRMI implementation for OQTOPUS Cloud
 pub struct Oqtopus {
     pub(crate) device_id: String,
@@ -165,11 +251,16 @@ impl Oqtopus {
     /// Constructs a OQTOPUS cloud instance.
     ///
     /// Environment variables used:
-    /// * QRMI_OQTOPUS_BASE_URL - Oqtopus cloud base URL
-    /// * QRMI_OQTOPUS_API_TOKEN - Oqtopus cloud API token
+    /// * {device_id}_QRMI_OQTOPUS_URL: OQTOPUS API URL.
+    /// * {device_id}_QRMI_OQTOPUS_API_TOKEN: API token string.
+    /// * {device_id}_QRMI_OQTOPUS_PROXY: Proxy URL.
+    /// * {device_id}_QRMI_OQTOPUS_TIMEOUT: HTTP request timeout seconds. (e.g. 30.0)
+    /// * {device_id}_QRMI_OQTOPUS_RETRY_MAX_ATTEMPTS: Max retry attempts for retryable requests. (e.g. 3)
+    /// * {device_id}_QRMI_OQTOPUS_RETRY_BACKOFF_SECONDS: Exponential backoff base seconds.(e.g. 0.2)
+    /// * {device_id}_QRMI_OQTOPUS_RETRY_STATUS_CODES: HTTP status codes treated as retryable. (e.g. 429,500,502,503)
+    /// * {device_id}_QRMI_OQTOPUS_RETRY_METHODS: HTTP methods treated as retryable.(e.g. GET,POST)
     pub fn new(device_id: &str) -> Result<Self> {
-        let endpoint = required_env(format!("{device_id}_QRMI_OQTOPUS_BASE_URL"))?;
-        let api_token = required_env(format!("{device_id}_QRMI_OQTOPUS_API_TOKEN"))?;
+        let config_json_c = build_config_json(device_id)?;
 
         use libloading::os::unix::{Library as UnixLibrary, RTLD_GLOBAL, RTLD_NOW};
 
@@ -239,15 +330,6 @@ impl Oqtopus {
                 QrmiError::Other(anyhow::anyhow!("failed to load {bridge_path}: {e}"))
             })?
         };
-
-        let config_json = serde_json::json!({
-            "url": endpoint,
-            "api_token": api_token,
-        })
-        .to_string();
-
-        let config_json_c = CString::new(config_json)
-            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid config json: {e}")))?;
 
         Ok(Self {
             device_id: device_id.to_string(),
