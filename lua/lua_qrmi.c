@@ -874,7 +874,7 @@ static int l_status(lua_State *L) {
         lua_pushnil(L);
     }
     lua_setfield(L, -2, "capacity");
-
+    qrmi_resource_status_free(status)
     return 1;
 }
 
