@@ -99,7 +99,7 @@ impl PasqalLocal {
         let qpu_slots = parse_qpu_slots(resolve_opt("QRMI_JOB_QPU_SLOTS", config))?;
 
         Ok(Self {
-            api_client: ClientBuilder::new(url).build().unwrap(),
+            api_client: ClientBuilder::new(url).build()?,
             backend_name: backend_name.to_string(),
             job_uid,
             job_id,
