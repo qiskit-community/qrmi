@@ -83,3 +83,39 @@ Output:
 | ---- | ---- |
 | sampler_input_{backend_name}_params_only.json | SamplerV2 input parameters([SamplerV2 schema](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs)).
 | sampler_input_{backend_name}.json | An input for QRMI task runner, which contains 2 properties - `program_id`(=`sampler`) and `parameters`(SamplerV2 input parameters). |
+
+### gen_executor_input.py
+
+Generates Executor v2.0 input for the circuit introduced in [Getting started doc](https://quantum.cloud.ibm.com/docs/en/guides/executor-examples).
+
+Usage:
+
+```shell-session
+usage: gen_executor_inputs.py [-h] [--iam_url IAM_URL] backend base_url apikey crn
+
+A tool to generate Executor v2.0 input for testing
+
+positional arguments:
+  backend     Backend name
+  base_url    API endpoint
+  apikey      IAM API key
+  crn         Service CRN of your instance
+
+options:
+  -h, --help  show this help message and exit
+  --iam_url IAM_URL  IAM endpoint
+```
+
+Example:
+
+```bash
+python gen_executor_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance>
+```
+
+Output:
+
+| Files | Descriptions |
+| ---- | ---- |
+| executor_input_{backend_name}_params_only.json | Executor v2.0 input parameters([Executor v2.0 schema](https://quantum.cloud.ibm.com/docs/en/api/qiskit-runtime-rest/tags/jobs)).
+| executor_input_{backend_name}.json | An input for QRMI task runner, which contains 2 properties - `program_id`(=`executor`) and `parameters`(Executor v2.0 input parameters). |
+
