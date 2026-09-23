@@ -95,7 +95,7 @@ impl PasqalLocal {
         let qpu_slots = parse_qpu_slots(resolve_opt("QRMI_JOB_QPU_SLOTS", config))?;
 
         Ok(Self {
-            api_client: ClientBuilder::new(url).build().unwrap(),
+            api_client: ClientBuilder::new(url).build()?,
             backend_name: backend_name.to_string(),
             job_uid,
             job_id,
@@ -127,10 +127,8 @@ impl QuantumResource for PasqalLocal {
         Ok(session.id)
     }
 
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
-        let session_id = required_env(&token_var)?;
-        self.api_client.revoke_session(&session_id).await?;
+    async fn release(&mut self, id: &str) -> Result<()> {
+        self.api_client.revoke_session(id).await?;
         Ok(())
     }
 

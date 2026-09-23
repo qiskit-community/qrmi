@@ -1560,20 +1560,20 @@ pub unsafe extern "C" fn qrmi_resource_release(
     }
     ffi_helpers::null_pointer_check!(acquisition_token, ReturnCode::Error);
 
-    if let Ok(token) = CStr::from_ptr(acquisition_token).to_str() {
-        let result = (*qrmi)
-            .runtime
-            .block_on(async { (*qrmi).inner.release(token).await });
-        match result {
-            Ok(()) => {
-                return ReturnCode::Success;
-            }
-            Err(err) => {
-                return _fail(err);
-            }
+    let token = match CStr::from_ptr(acquisition_token).to_str() {
+        Ok(token) => token,
+        Err(err) => {
+            _set_last_error(format!("{:?}", err));
+            return ReturnCode::Error;
         }
+    };
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.release(token).await });
+    match result {
+        Ok(()) => ReturnCode::Success,
+        Err(err) => _fail(err),
     }
-    ReturnCode::Success
 }
 
 /// @ingroup QrmiQuantumResource
