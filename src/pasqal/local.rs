@@ -36,8 +36,8 @@ impl PasqalLocal {
     /// * `backend_name` - The name of the backend/device to use
     ///
     /// # Environment variables
-    /// * `QRMI_JOB_UID`: uid of the slurm job
-    /// * `QRMI_JOB_ID`: id of the slurm job
+    /// * `QRMI_JOB_UID`: uid of the scheduler job
+    /// * `QRMI_JOB_ID`: scheduler job or array-task ID
     /// * `QRMI_JOB_QPU_SLOTS`: optional number of QPU slots to claim when
     ///   acquiring a Warden session (default `1`)
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).

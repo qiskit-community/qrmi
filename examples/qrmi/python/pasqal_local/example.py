@@ -37,8 +37,12 @@ is_avail = qrmi.status().status == ResourceStatusCode.Online
 print("Pasqal Local QR is %s accessible" % "not" if not is_avail else "")
 
 # Get a session
-session = qrmi.acquire()
-os.environ[f"{args.backend}_QRMI_JOB_ACQUISITION_TOKEN"] = session
+token_var = f"{args.backend}_QRMI_JOB_ACQUISITION_TOKEN"
+session = os.environ.get(token_var)
+acquired_here = not session
+if acquired_here:
+    session = qrmi.acquire()
+    os.environ[token_var] = session
 try:
     # Get target
     target = qrmi.target()
@@ -82,4 +86,5 @@ try:
     # Get the results
     print("Results: %s" % qrmi.task_result(new_task_id).value)
 finally:
-    qrmi.release(session)
+    if acquired_here:
+        qrmi.release(session)
