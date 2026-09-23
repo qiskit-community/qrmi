@@ -458,8 +458,8 @@ impl QuantumResource for IBMQuantumComputeService {
 
     /// Stops a running job.
     ///
-    /// This function checks the job status via GET /jobs/{id}. If the job is still running,
-    /// it sends a cancellation (POST /jobs/{id}/cancel) before deleting the job with DELETE /jobs/{id}.
+    /// This function checks the job status via GET /jobs/{id}. If the job is running
+    /// or queued, it sends a cancellation request via POST /jobs/{id}/cancel.
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
         // Ensure the bearer token is valid
         if let Err(e) = auth::check_token(
