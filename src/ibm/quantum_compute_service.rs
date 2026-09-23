@@ -480,8 +480,9 @@ impl QuantumResource for IBMQuantumComputeService {
         if status == models::job_response::Status::Running
             || status == models::job_response::Status::Queued
         {
-            let _ = jobs_api::cancel_job_jid(&self.config, task_id, None, None).await;
-            //jobs_api::delete_job_jid(&self.config, task_id, None).await?;
+            jobs_api::cancel_job_jid(&self.config, task_id, None, None)
+                .await
+                .map_err(|e| classify(e, ResourceKind::Job))?;
         }
         Ok(())
     }
