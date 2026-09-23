@@ -82,7 +82,8 @@ pub struct CreateSessionPayload {
 }
 
 impl Client {
-    /// Return authentication headers for request with a fresh munge token
+    /// Return authentication headers for request with a fresh munge token.
+    /// Falls back to dynamically loading libmunge.so if not linked at build time.
     async fn create_headers(&self) -> Result<header::HeaderMap> {
         let mut headers = header::HeaderMap::new();
         headers.insert(
@@ -90,8 +91,6 @@ impl Client {
             reqwest::header::HeaderValue::from_static("application/json"),
         );
 
-        // Generate fresh munge token for each request. If the `munge` feature
-        // wasn't compiled in, this falls back to dynamically loading libmunge.so.
         let token = munge::encode(b"")?;
         headers.insert(
             reqwest::header::HeaderName::from_static("x-munge-cred"),

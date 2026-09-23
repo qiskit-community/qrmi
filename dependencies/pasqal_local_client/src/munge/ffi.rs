@@ -11,8 +11,7 @@
 
 use std::os::raw::{c_char, c_int, c_void};
 
-// Statically linked munge, available when built with `--features munge`
-// (requires libmunge headers/lib present at build time).
+// Requires libmunge headers/lib at build time.
 #[cfg(feature = "munge")]
 mod linked {
     use super::*;
@@ -43,11 +42,8 @@ mod linked {
     }
 }
 
-// Fallback when not built with `--features munge`: try to dlopen libmunge.so
-// at runtime, so the client still works on hosts that have it installed
-// without requiring a special build.
-// ponytail: only tries the default soname, add SONAME/path overrides if a
-// host ever needs a non-standard libmunge location.
+// Fallback: dlopen libmunge.so at runtime so the client works on hosts that
+// have it installed without a special build.
 #[cfg(not(feature = "munge"))]
 mod dynamic {
     use super::*;
