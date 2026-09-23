@@ -456,7 +456,7 @@ impl QuantumResource for IBMQuantumComputeService {
         }
     }
 
-    /// Stops a running job.
+    /// Stops a running or queued job.
     ///
     /// This function checks the job status via GET /jobs/{id}. If the job is running
     /// or queued, it sends a cancellation request via POST /jobs/{id}/cancel.
