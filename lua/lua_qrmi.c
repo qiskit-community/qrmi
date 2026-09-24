@@ -785,7 +785,7 @@ static int l_metadata(lua_State *L) {
  * Wraps qrmi_resource_status() and its field accessors
  * (qrmi_resource_status_code(), qrmi_resource_status_reason(),
  * qrmi_resource_status_healthy(), qrmi_resource_status_pending_job_count(),
- * qrmi_resource_status_capacity(), qrmi_resource_status_is_accessible()),
+ * qrmi_resource_status_capacity(),
  * flattening the result into a single Lua table. Fields the vendor does
  * not report (QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR from the
  * corresponding accessor) are set to `nil` rather than raising an error.
