@@ -961,7 +961,7 @@ pub unsafe extern "C" fn qrmi_resource_status_free(ptr: *mut ResourceStatus) -> 
 }
 
 /// @ingroup QrmiResourceStatus
-/// Returns the resource's status code (Online/Offline/Paused/Busy).
+/// Returns the resource's status code (Online/Offline/Paused).
 ///
 /// # Safety
 ///

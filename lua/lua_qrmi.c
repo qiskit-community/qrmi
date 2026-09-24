@@ -130,8 +130,7 @@ static const char *task_status_to_string(QrmiTaskStatus s) {
  * @brief Convert a QrmiResourceStatusCode enum value to its Lua-facing string form.
  *
  * @param s A QrmiResourceStatusCode value as returned by qrmi_resource_status_code().
- * @return One of "online", "offline", "paused", "busy", or "unknown" if
- *         @p s does not match any known variant.
+ * @return One of "online", "offline" or "paused".
  */
 static const char *status_code_to_string(QrmiResourceStatusCode s) {
     return qrmi_resource_status_code_to_string(s);

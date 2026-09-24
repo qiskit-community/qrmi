@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
         qrmi_resource_status_free(res_status);
         if (rc == QRMI_RETURN_CODE_SUCCESS) {
           if (status == QRMI_RESOURCE_STATUS_CODE_ONLINE) {
-            fprintf(stderr, "%s cannot be accessed.\n", id);
+            fprintf(stderr, "%s can be accessed.\n", id);
           } else {
             fprintf(stderr, "%s cannot be accessed.\n", id);
           }
