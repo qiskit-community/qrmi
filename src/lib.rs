@@ -148,10 +148,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    #[deprecated(
-        since = "0.25.0",
-        note = "use `status().await?.status` instead"
-    )]
+    #[deprecated(since = "0.25.0", note = "use `status().await?.status` instead")]
     async fn is_accessible(&mut self) -> Result<bool>;
 
     /// Returns detailed status information for the resource.
