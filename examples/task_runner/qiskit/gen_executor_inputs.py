@@ -108,7 +108,6 @@ else:
 # Generate transpiler target from backend configuration & properties
 target = convert_to_target(backend_config, backend_props)
 
-
 # Generate the circuit
 circuit = QuantumCircuit(3)
 circuit.h(0)
@@ -160,10 +159,7 @@ program.append_samplex_item(
 
 
 options = ExecutorOptions()
-
-
 params = converter.encoder(program, options)
-
 input_json = params.model_dump(mode="json")
 print(json.dumps(input_json, indent=2))
 
