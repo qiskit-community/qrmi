@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# (C) Copyright 2025, 2026 IBM. All Rights Reserved.
+#
+# (C) Copyright 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +9,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""generating input files for estimatorV2"""
+"""generating input files for Executor"""
 
 # pylint: disable=invalid-name, duplicate-code
 import sys
@@ -20,7 +19,9 @@ import requests
 
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
-from qiskit_ibm_runtime.quantum_program.params_converters import QUANTUM_PROGRAM_PARAMS_CONVERTERS
+from qiskit_ibm_runtime.quantum_program.params_converters import (
+    QUANTUM_PROGRAM_PARAMS_CONVERTERS,
+)
 from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
 
 try:
@@ -38,23 +39,40 @@ from samplomatic.transpiler import generate_boxing_pass_manager
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit.circuit import Parameter, QuantumCircuit
 
+DEFAULT_SCHEMA_VERSION = "v2.0"
+
 parser = argparse.ArgumentParser(
-    description="A tool to generate Executor v2.0 input for testing"
+    description="A tool to generate Executor input for testing"
 )
 parser.add_argument("backend", help="Backend name")
 parser.add_argument("base_url", help="API endpoint")
 parser.add_argument("apikey", help="IAM API key")
-parser.add_argument("crn", help="Service CRN of your instance")
+parser.add_argument(
+    "instance", help="Service CRN of your instance - starting with 'crn:v1:'"
+)
 parser.add_argument(
     "--iam_url", help="IAM endpoint", default="https://iam.cloud.ibm.com"
 )
+parser.add_argument(
+    "--schema_version",
+    help=f"Executor schema version. default: {DEFAULT_SCHEMA_VERSION}",
+    default=DEFAULT_SCHEMA_VERSION,
+)
 args = parser.parse_args()
+
+try:
+    converter = QUANTUM_PROGRAM_PARAMS_CONVERTERS[args.schema_version]
+except KeyError as err:
+    raise ValueError(
+        f"Invalid schema version '{args.schema_version}'. "
+        f"Supported versions: {list(QUANTUM_PROGRAM_PARAMS_CONVERTERS.keys())}"
+    ) from err
 
 # Use IAM based authentication
 token_manager = IAMAuthenticator(apikey=args.apikey, url=args.iam_url).token_manager
 headers = {
     "Authorization": f"Bearer {token_manager.get_token()}",
-    "Service-CRN": args.crn,
+    "Service-CRN": args.instance,
 }
 print(json.dumps(headers, indent=2))
 
@@ -106,9 +124,7 @@ circuit.rz(Parameter("lam"), 2)
 circuit.measure_all()
 
 # Transpile the circuit to ISA
-preset_pass_manager = generate_preset_pass_manager(
-    target=target, optimization_level=3
-)
+preset_pass_manager = generate_preset_pass_manager(target=target, optimization_level=3)
 isa_circuit = preset_pass_manager.run(circuit)
 
 boxing_pm = generate_boxing_pass_manager(
@@ -137,9 +153,7 @@ program.append_samplex_item(
     template_circuit,
     samplex=samplex,
     samplex_arguments={
-        "parameter_values": np.random.rand(
-            10, 3
-        ),  # 10 sets of parameter values
+        "parameter_values": np.random.rand(10, 3),  # 10 sets of parameter values
     },
     shape=(2, 14, 10),
 )
@@ -147,12 +161,6 @@ program.append_samplex_item(
 
 options = ExecutorOptions()
 
-_SCHEMA_VERSION = "v2.0"
-
-try:
-    converter = QUANTUM_PROGRAM_PARAMS_CONVERTERS[_SCHEMA_VERSION]
-except KeyError:
-    raise ValueError(f"No converters for schema version {_SCHEMA_VERSION}.")
 
 params = converter.encoder(program, options)
 
@@ -172,9 +180,9 @@ def dump(json_data: dict, filename: str) -> None:
 
 
 dump(
-    {"parameters": input_json, "program_id": "executor" },
-    f"executor_input_{args.backend}.json",
+    {"parameters": input_json, "program_id": "executor"},
+    f"executor_input_{args.backend}_{args.schema_version}.json",
 )
-dump(input_json, f"executor_input_{args.backend}_params_only.json")
+dump(input_json, f"executor_input_{args.backend}_{args.schema_version}_params_only.json")
 
 print("done")
