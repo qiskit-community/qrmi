@@ -39,7 +39,7 @@ options:
 Example:
 
 ```bash
-python gen_estimator_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance, starting with 'crn:v1:'>
+python gen_estimator_inputs.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance, starting with 'crn:v1:'>
 ```
 
 Output:
@@ -74,7 +74,7 @@ options:
 Example:
 
 ```bash
-python gen_sampler_input.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance, starting with 'crn:v1:'>
+python gen_sampler_inputs.py ibm_marrakesh https://quantum.cloud.ibm.com/api <your apikey> <your instance, starting with 'crn:v1:'>
 ```
 
 Output:
