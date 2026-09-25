@@ -15,7 +15,13 @@ import time
 import json
 from qiskit import QuantumCircuit
 from qiskit import qasm3
-from qrmi import Payload, TaskStatus, QRMIService # pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module
+from qrmi import (
+    Payload,
+    TaskStatus,
+    QRMIService,
+    ResourceStatusCode,
+)
 
 service = QRMIService()
 
@@ -26,7 +32,9 @@ if len(resources) == 0:
 qrmi = resources[0]
 print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
-if qrmi.is_accessible() is False:
+status = qrmi.status()
+print(json.dumps(status.to_dict(), indent=2))
+if status.status != ResourceStatusCode.Online:
     raise RuntimeError("Quantum resource is not accessible")
 
 target_json = json.loads(qrmi.target().value)
