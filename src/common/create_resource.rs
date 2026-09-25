@@ -59,5 +59,6 @@ pub(crate) fn create_resource_from_config(
         ResourceType::PasqalCloud => Box::new(PasqalCloud::from_config(resource_id, config)?),
         ResourceType::AliceBobFelis => Box::new(AliceBobFelis::from_config(resource_id, config)?),
         ResourceType::IQMServer => Box::new(IQMServer::from_config(resource_id, config)?),
+        ResourceType::OQTOPUS => Box::new(Oqtopus::from_config(resource_id, config)?),
     })
 }

@@ -9,9 +9,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! QRMI implementations for OQTOPUS Cloud
+//! OQTOPUS-specific models
 
-mod lib;
-pub mod models;
+mod device_info;
 
-pub use self::lib::Oqtopus;
+pub(crate) use self::device_info::OqtopusDeviceInfo;
+pub(crate) use self::device_info::OqtopusDeviceStatus;

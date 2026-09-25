@@ -16,10 +16,14 @@
 //! behind `#[cfg(unix)]` at its `mod oqtopus;` declaration in `src/lib.rs`.
 
 use crate::error::QrmiError;
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+};
+use crate::oqtopus::models::{OqtopusDeviceInfo, OqtopusDeviceStatus};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
 use libloading::Library;
+use std::collections::HashMap;
 use std::env;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
@@ -154,28 +158,22 @@ fn default_bridge_path() -> String {
 type BridgeFn =
     unsafe extern "C" fn(*const c_char, *const c_char, *mut *mut c_char, *mut *mut c_char) -> c_int;
 
-fn oqtopus_env(device_id: &str, suffix: &str) -> Option<String> {
-    std::env::var(format!("{device_id}_QRMI_OQTOPUS_{suffix}")).ok()
-}
-
-fn parse_env<T: std::str::FromStr>(device_id: &str, suffix: &str) -> Result<Option<T>>
+fn parse_value<T: std::str::FromStr>(raw: Option<String>, key_name: &str) -> Result<Option<T>>
 where
     T::Err: std::fmt::Display,
 {
-    match oqtopus_env(device_id, suffix) {
+    match raw {
         None => Ok(None),
-        Some(raw) => raw.trim().parse::<T>().map(Some).map_err(|e| {
-            QrmiError::Other(anyhow::anyhow!(
-                "invalid value for {device_id}_QRMI_OQTOPUS_{suffix}: {e}"
-            ))
-        }),
+        Some(raw) => raw
+            .trim()
+            .parse::<T>()
+            .map(Some)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid value for {key_name}: {e}"))),
     }
 }
 
-/// Comma-separated list, e.g. "429,500,502,503" or "GET,POST".
-/// Entries are trimmed; empty entries are dropped.
-fn parse_env_list(device_id: &str, suffix: &str) -> Option<Vec<String>> {
-    oqtopus_env(device_id, suffix).map(|raw| {
+fn parse_value_list(raw: Option<String>) -> Option<Vec<String>> {
+    raw.map(|raw| {
         raw.split(',')
             .map(str::trim)
             .filter(|s| !s.is_empty())
@@ -184,53 +182,67 @@ fn parse_env_list(device_id: &str, suffix: &str) -> Option<Vec<String>> {
     })
 }
 
-fn build_config_json(device_id: &str) -> Result<CString> {
+fn build_config_json(
+    device_id: &str,
+    config_params: Option<&HashMap<String, String>>,
+) -> Result<CString> {
+    let key_name = |suffix: &str| -> String {
+        match config_params {
+            Some(_) => format!("QRMI_OQTOPUS_{suffix}"),
+            None => format!("{device_id}_QRMI_OQTOPUS_{suffix}"),
+        }
+    };
+
+    let lookup = |suffix: &str| -> Option<String> {
+        match config_params {
+            Some(params) => params.get(&key_name(suffix)).cloned(),
+            None => std::env::var(key_name(suffix)).ok(),
+        }
+    };
+
     let mut config = serde_json::Map::new();
 
-    // Present but None-by-default in OqtopusConfig -- fine to include
-    // even if unset, since None is already the Python-side default.
-    if let Some(v) = oqtopus_env(device_id, "URL") {
+    if let Some(v) = lookup("BASE_URL") {
         config.insert("url".into(), serde_json::Value::String(v));
     }
-    if let Some(v) = oqtopus_env(device_id, "API_TOKEN") {
+    if let Some(v) = lookup("API_TOKEN") {
         config.insert("api_token".into(), serde_json::Value::String(v));
     }
-    if let Some(v) = oqtopus_env(device_id, "PROXY") {
+    if let Some(v) = lookup("PROXY") {
         config.insert("proxy".into(), serde_json::Value::String(v));
     }
 
-    // These have non-None defaults on the Python side (timeout=30.0,
-    // retry_max_attempts=3, retry_backoff_seconds=0.2), so the key must
-    // be omitted entirely when unset -- passing an explicit null would
-    // override the Python default with None instead of falling back to it.
-    if let Some(v) = parse_env::<f64>(device_id, "TIMEOUT")? {
+    if let Some(v) = parse_value::<f64>(lookup("TIMEOUT"), &key_name("TIMEOUT"))? {
         config.insert("timeout".into(), serde_json::json!(v));
     }
-    if let Some(v) = parse_env::<u32>(device_id, "RETRY_MAX_ATTEMPTS")? {
+    if let Some(v) = parse_value::<u32>(
+        lookup("RETRY_MAX_ATTEMPTS"),
+        &key_name("RETRY_MAX_ATTEMPTS"),
+    )? {
         config.insert("retry_max_attempts".into(), serde_json::json!(v));
     }
-    if let Some(v) = parse_env::<f64>(device_id, "RETRY_BACKOFF_SECONDS")? {
+    if let Some(v) = parse_value::<f64>(
+        lookup("RETRY_BACKOFF_SECONDS"),
+        &key_name("RETRY_BACKOFF_SECONDS"),
+    )? {
         config.insert("retry_backoff_seconds".into(), serde_json::json!(v));
     }
 
-    // retry_status_codes / retry_methods: Python expects frozenset[int]
-    // / frozenset[str]. We can only send JSON arrays over the wire; the
-    // py_bridge side (build_client) converts them to frozenset before
-    // constructing OqtopusConfig.
-    if let Some(items) = parse_env_list(device_id, "RETRY_STATUS_CODES") {
+    if let Some(items) = parse_value_list(lookup("RETRY_STATUS_CODES")) {
         let codes: Vec<i64> = items
             .iter()
             .map(|s| {
                 s.parse::<i64>().map_err(|e| {
                     QrmiError::Other(anyhow::anyhow!(
-                        "invalid value in {device_id}_QRMI_OQTOPUS_RETRY_STATUS_CODES: {e}"
+                        "invalid value in {}: {e}",
+                        key_name("RETRY_STATUS_CODES")
                     ))
                 })
             })
             .collect::<Result<_>>()?;
         config.insert("retry_status_codes".into(), serde_json::json!(codes));
     }
-    if let Some(items) = parse_env_list(device_id, "RETRY_METHODS") {
+    if let Some(items) = parse_value_list(lookup("RETRY_METHODS")) {
         let methods: Vec<String> = items.into_iter().map(|s| s.to_uppercase()).collect();
         config.insert("retry_methods".into(), serde_json::json!(methods));
     }
@@ -260,7 +272,15 @@ impl Oqtopus {
     /// * {device_id}_QRMI_OQTOPUS_RETRY_STATUS_CODES: HTTP status codes treated as retryable. (e.g. 429,500,502,503)
     /// * {device_id}_QRMI_OQTOPUS_RETRY_METHODS: HTTP methods treated as retryable.(e.g. GET,POST)
     pub fn new(device_id: &str) -> Result<Self> {
-        let config_json_c = build_config_json(device_id)?;
+        Self::from_opt(device_id, None)
+    }
+
+    pub fn from_config(device_id: &str, config: HashMap<String, String>) -> Result<Self> {
+        Self::from_opt(device_id, Some(&config))
+    }
+
+    fn from_opt(device_id: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        let config_json_c = build_config_json(device_id, config)?;
 
         use libloading::os::unix::{Library as UnixLibrary, RTLD_GLOBAL, RTLD_NOW};
 
@@ -424,6 +444,36 @@ impl QuantumResource for Oqtopus {
         info!("device status: {status}");
 
         Ok(status == "available")
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let device_id_c = CString::new(self.device_id.clone())
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid device_id: {e}")))?;
+
+        let value = self.call_bridge(b"get_device_json", &device_id_c, "get_device_json")?;
+        let device: OqtopusDeviceInfo = serde_json::from_str(&value)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid device json: {e}")))?;
+
+        let status_reason = match (&device.available_at, &device.calibrated_at) {
+            (Some(available_at), Some(calibrated_at)) => Some(format!(
+                "available at {available_at}, calibrated at {calibrated_at}"
+            )),
+            (Some(available_at), None) => Some(format!("available at {available_at}")),
+            (None, Some(calibrated_at)) => Some(format!("calibrated at {calibrated_at}")),
+            (None, None) => None,
+        };
+
+        Ok(ResourceStatus {
+            status: match device.status {
+                OqtopusDeviceStatus::Available => ResourceStatusCode::Online,
+                OqtopusDeviceStatus::Unavailable => ResourceStatusCode::Offline,
+            },
+            status_reason,
+            healthy: None,
+            busy: None,
+            capacity: None,
+            pending_job_count: Some(device.n_pending_jobs),
+        })
     }
 
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
