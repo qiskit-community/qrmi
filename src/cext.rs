@@ -2623,7 +2623,85 @@ pub unsafe extern "C" fn qrmi_service_resources(
     // so does own its own).
     let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
     let result = runtime.block_on(async { crate::QRMIService::new().await });
+    _service_resources_out(result, runtime, resources_out)
+}
 
+/// @ingroup QrmiService
+/// Returns the currently accessible resources defined in a QRMI config,
+/// without reading any environment variables.
+///
+/// This is the counterpart of qrmi_service_resources() for applications that
+/// don't run under a workload manager. Each static resource definition in
+/// `config` is built like qrmi_resource_new_from_config(), using the
+/// definition's environment map merged with `runtime_config`, whose values
+/// take precedence. `runtime_config` holds values a config file can't know
+/// in advance, e.g. `QRMI_JOB_ID`, `QRMI_JOB_UID` or
+/// `QRMI_JOB_TIMEOUT_SECONDS`, and may be NULL. Dynamic resource definitions
+/// are skipped.
+///
+/// The caller is responsible for freeing the returned struct with
+/// qrmi_service_resources_free().
+///
+/// # Safety
+///
+/// * `config` must be a valid pointer returned by qrmi_config_load().
+/// * `runtime_config` must be NULL or a valid pointer to a QrmiConfigMap.
+/// * `resources_out` must be non-null and point to a zero-initialized
+///   QrmiQuantumResources.
+///
+/// # Example
+///
+/// @code
+///   QrmiConfig *cnf = qrmi_config_load("qrmi_config.json");
+///   QrmiKeyValue variables[] = {
+///       {(char *)"QRMI_JOB_ID", (char *)"1"},
+///       {(char *)"QRMI_JOB_UID", (char *)"1000"},
+///   };
+///   QrmiConfigMap runtime_config = { .variables = variables, .length = 2 };
+///   QrmiQuantumResources resources = {0};
+///   QrmiReturnCode rc = qrmi_service_resources_from_config(cnf, &runtime_config, &resources);
+///   qrmi_config_free(cnf);
+/// @endcode
+///
+/// @param (config) [in] A QrmiConfig handle
+/// @param (runtime_config) [in] Optional values applied to every resource
+/// @param (resources_out) [out] Pointer to a QrmiQuantumResources struct to populate
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.25.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_service_resources_from_config(
+    config: *const Config,
+    runtime_config: *const ConfigMap,
+    resources_out: *mut QuantumResources,
+) -> ReturnCode {
+    crate::common::initialize();
+    if config.is_null() || resources_out.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    let runtime_config = if runtime_config.is_null() {
+        std::collections::HashMap::new()
+    } else {
+        match envvars_to_hashmap(&*runtime_config) {
+            Ok(m) => m,
+            Err(e) => {
+                _set_last_error(format!("{:?}", e));
+                return ReturnCode::Error;
+            }
+        }
+    };
+
+    let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
+    let result = runtime
+        .block_on(async { crate::QRMIService::from_config(&*config, &runtime_config).await });
+    _service_resources_out(result, runtime, resources_out)
+}
+
+/// Moves each resource of a `QRMIService` into its own C handle.
+unsafe fn _service_resources_out(
+    result: crate::Result<crate::QRMIService>,
+    runtime: Arc<tokio::runtime::Runtime>,
+    resources_out: *mut QuantumResources,
+) -> ReturnCode {
     match result {
         Ok(service) => {
             let resource_map = service.into_resource_map();

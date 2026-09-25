@@ -658,16 +658,37 @@ impl PyQRMIService {
         let inner = py
             .detach(|| rt.block_on(async { crate::QRMIService::new().await }))
             .map_err(to_py_err)?;
+        Self::from_inner(py, inner)
+    }
 
-        let qrmi_resources = inner
-            .into_resource_map()
-            .into_iter()
-            .map(|(id, boxed)| {
-                Py::new(py, PyQuantumResource::from_inner(boxed)).map(|obj| (id, obj))
+    /// Returns the currently accessible resources defined in a QRMI config,
+    /// without reading any environment variables.
+    ///
+    /// Each static resource definition is built like
+    /// `QuantumResource.from_config()`, using the definition's environment
+    /// map merged with `runtime_config`, whose values take precedence.
+    /// `runtime_config` holds values a config file can't know in advance,
+    /// e.g. `QRMI_JOB_ID`, `QRMI_JOB_UID` or `QRMI_JOB_TIMEOUT_SECONDS`.
+    /// Dynamic resource definitions are skipped.
+    #[staticmethod]
+    #[pyo3(signature = (config, runtime_config=None))]
+    pub fn from_config(
+        py: Python<'_>,
+        config: PyRef<'_, PyConfig>,
+        runtime_config: Option<std::collections::HashMap<String, String>>,
+    ) -> PyResult<Self> {
+        crate::common::initialize();
+        let runtime_config = runtime_config.unwrap_or_default();
+        let config = &config.inner;
+        let rt = Runtime::new().expect("Failed to create a new tokio runtime.");
+        let inner = py
+            .detach(|| {
+                rt.block_on(async {
+                    crate::QRMIService::from_config(config, &runtime_config).await
+                })
             })
-            .collect::<PyResult<std::collections::HashMap<_, _>>>()?;
-
-        Ok(Self { qrmi_resources })
+            .map_err(to_py_err)?;
+        Self::from_inner(py, inner)
     }
 
     /// Returns all accessible QRMI resources.
@@ -689,6 +710,21 @@ impl PyQRMIService {
         self.qrmi_resources
             .get(resource_id)
             .map(|r| r.clone_ref(py))
+    }
+}
+
+impl PyQRMIService {
+    /// Moves each resource of a `QRMIService` into its own `PyQuantumResource`.
+    fn from_inner(py: Python<'_>, inner: crate::QRMIService) -> PyResult<Self> {
+        let qrmi_resources = inner
+            .into_resource_map()
+            .into_iter()
+            .map(|(id, boxed)| {
+                Py::new(py, PyQuantumResource::from_inner(boxed)).map(|obj| (id, obj))
+            })
+            .collect::<PyResult<std::collections::HashMap<_, _>>>()?;
+
+        Ok(Self { qrmi_resources })
     }
 }
 
