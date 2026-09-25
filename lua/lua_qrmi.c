@@ -175,6 +175,147 @@ static int l_qrmi_new(lua_State *L) {
 }
 
 /**
+ * @brief Free a `QrmiKeyValue` array allocated by build_config_map_from_table().
+ *
+ * @param pairs Array to free, or NULL (in which case this is a no-op).
+ * @param count Number of entries in @p pairs that were actually populated
+ *              (i.e. have owned `key`/`value` strings to free).
+ */
+static void free_config_pairs(QrmiKeyValue *pairs, size_t count) {
+    if (!pairs) return;
+    for (size_t i = 0; i < count; i++) {
+        free(pairs[i].key);
+        free(pairs[i].value);
+    }
+    free(pairs);
+}
+
+/**
+ * @brief Convert a Lua string -> string table into a heap-allocated
+ * `QrmiKeyValue` array, for use as the `variables` field of a `QrmiConfigMap`.
+ *
+ * Raises a Lua error (via luaL_error) if any key or value in the table is
+ * not a string. On success, the caller owns the returned array (and its
+ * `key`/`value` strings) and must free it with free_config_pairs().
+ *
+ * @param L Lua state.
+ * @param idx Stack index of the table to convert.
+ * @param[out] out_count Set to the number of entries in the returned array.
+ * @return Newly allocated array of @p *out_count QrmiKeyValue entries
+ *         (NULL if the table is empty). Never returns on failure (raises a
+ *         Lua error instead).
+ */
+static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *out_count) {
+    // idx must be a positive/absolute stack index
+    if (idx <= 0) {
+        luaL_error(L, "build_config_map_from_table: table index must be positive (got %d)", idx);
+    }
+
+    size_t count = 0;
+    lua_pushnil(L);
+    while (lua_next(L, idx) != 0) {
+        count++;
+        lua_pop(L, 1);
+    }
+    *out_count = count;
+    if (count == 0) return NULL;
+
+    QrmiKeyValue *pairs = (QrmiKeyValue *)calloc(count, sizeof(QrmiKeyValue));
+    if (!pairs) {
+        luaL_error(L, "out of memory building config map");
+    }
+
+    size_t i = 0;
+    lua_pushnil(L);
+    while (lua_next(L, idx) != 0) {
+        /* Copy the key before converting it to a string: lua_tostring may
+         * rewrite the value in place on the stack, which would confuse the
+         * next lua_next() call if done directly on the traversal key. */
+        lua_pushvalue(L, -2);
+        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
+            free_config_pairs(pairs, i);
+            luaL_error(L, "QRMI config table keys and values must be strings");
+        }
+        pairs[i].key = strdup(lua_tostring(L, -1));
+        pairs[i].value = strdup(lua_tostring(L, -2));
+        if (!pairs[i].key || !pairs[i].value) {
+            free_config_pairs(pairs, i + 1);
+            luaL_error(L, "out of memory building config map");
+        }
+        i++;
+        lua_pop(L, 2); /* pop key copy and value, leaving key for lua_next */
+    }
+
+    return pairs;
+}
+
+/**
+ * @brief `qrmi.new_from_config(resource_id, resource_type, config)` - Create a quantum
+ * resource handle from an explicit config map.
+ *
+ * Wraps qrmi_resource_new_from_config().
+ *
+ * Lua usage:
+ * @code
+ *   local resource, err = qrmi.new_from_config("ibm_kingston", "ibm-quantum-compute-service", {
+ *       QRMI_IBM_QCS_ENDPOINT = "...",
+ *       QRMI_IBM_QCS_IAM_ENDPOINT = "...",
+ *       QRMI_IBM_QCS_IAM_APIKEY = "...",
+ *       QRMI_IBM_QCS_SERVICE_CRN = "...",
+ *   })
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments:
+ *   - [1] resource_id (string)   e.g. "ibm_kingston"
+ *   - [2] resource_type (string) canonical hyphenated name, same values as `qrmi.new()`
+ *   - [3] config (table) string -> string config map; required/optional
+ *         keys are specific to each resource type -- the same names as the
+ *         environment variables, minus the `{resource_id}_` prefix (see the
+ *         QRMI Rust crate's `from_config()` doc comments, e.g.
+ *         `QRMI_WARDEN_URL`, `QRMI_IBM_QCS_SESSION_ID`, ...)
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (resource: qrmi.resource userdata)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_qrmi_new_from_config(lua_State *L) {
+    const char *resource_id = luaL_checkstring(L, 1);
+    const char *type_str = luaL_checkstring(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    QrmiResourceType type;
+    QrmiReturnCode type_rc = resource_type_from_string(type_str, &type);
+    if (type_rc != QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unknown resource type '%s'", type_str);
+        return 2;
+    }
+
+    size_t count = 0;
+    QrmiKeyValue *pairs = build_config_map_from_table(L, 3, &count);
+
+    QrmiConfigMap config_map;
+    config_map.variables = pairs;
+    config_map.length = count;
+
+    QrmiQuantumResource *handle = qrmi_resource_new_from_config(resource_id, type, &config_map);
+    free_config_pairs(pairs, count);
+
+    if (!handle) {
+        const char *err = qrmi_get_last_error();
+        lua_pushnil(L);
+        lua_pushstring(L, err ? err : "qrmi_resource_new_from_config failed");
+        return 2;
+    }
+
+    lua_qrmi_resource_t *ud = (lua_qrmi_resource_t *)lua_newuserdata(L, sizeof(lua_qrmi_resource_t));
+    ud->handle = handle;
+    ud->acquisition_token = NULL;
+    luaL_getmetatable(L, QRMI_RESOURCE_MT);
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+/**
  * @brief Fetch the lua_qrmi_resource_t backing a `qrmi.resource` userdata.
  *
  * Raises a Lua error (via luaL_error) if the resource has already been freed.
@@ -1037,8 +1178,9 @@ static const luaL_Reg config_methods[] = {
 
 /** @brief Function table installed on the `qrmi` module table. */
 static const luaL_Reg qrmi_functions[] = {
-    {"new",         l_qrmi_new},
-    {"load_config", l_qrmi_load_config},
+    {"new",             l_qrmi_new},
+    {"new_from_config", l_qrmi_new_from_config},
+    {"load_config",     l_qrmi_load_config},
     {NULL, NULL}
 };
 
@@ -1049,7 +1191,7 @@ static const luaL_Reg qrmi_functions[] = {
  * itself so `resource:method()` calls dispatch through resource_methods)
  * and the completely independent `qrmi.config` metatable (dispatching
  * through config_methods), then returns the `qrmi` module table
- * (containing `qrmi.new` and `qrmi.load_config`).
+ * (containing `qrmi.new`, `qrmi.new_from_config`, and `qrmi.load_config`).
  *
  * @param L Lua state.
  * @return Always 1 (the `qrmi` module table).

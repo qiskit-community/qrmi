@@ -36,6 +36,28 @@ password=<your password>
 # auth_endpoint=<auth endpoint URL/path>
 ```
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config map
+instead of environment variables, via `PasqalCloud::from_config()`. Unlike
+`PasqalCloud::new()`, this does **not** fall back to environment variables,
+and only reads `~/.pasqal/config` if `PASQAL_CONFIG_ROOT` or `HOME` is set
+explicitly in the config map:
+
+```rust
+use qrmi::pasqal::PasqalCloud;
+use std::collections::HashMap;
+
+let config = HashMap::from([
+    ("QRMI_PASQAL_CLOUD_PROJECT_ID".to_string(), "your_project_id".to_string()),
+    ("QRMI_PASQAL_CLOUD_AUTH_TOKEN".to_string(), "your_auth_token".to_string()),
+]);
+let qrmi = PasqalCloud::from_config("FRESNEL", config)?;
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:

@@ -10,13 +10,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::required_env;
+use crate::common::{required_env, resolve_opt, resolve_opt_required};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
 use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
-use std::env;
 
 use async_trait::async_trait;
 
@@ -37,25 +36,60 @@ impl PasqalLocal {
     ///
     /// # Environment variables
     /// * `QRMI_JOB_UID`: uid of the slurm job
+    /// * `QRMI_JOB_ID`: id of the slurm job
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
     ///
     pub fn new(backend_name: &str) -> Result<Self> {
-        let warden_url_var = format!("{backend_name}_QRMI_WARDEN_URL");
-        let legacy_url_var = format!("{backend_name}_QRMI_URL");
-        let url = match env::var(&warden_url_var) {
-            Ok(url) => url,
-            Err(_) => {
-                let url = required_env(&legacy_url_var)?;
-                warn!("{legacy_url_var} is deprecated, please use {warden_url_var} instead.");
-                url
-            }
+        Self::from_opt(backend_name, None)
+    }
+
+    /// Constructs a QRMI to access Pasqal on prem QPU from a config map,
+    /// instead of environment variables.
+    ///
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<backend_name>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_warden_url`) as a fallback if the
+    /// exact-case key isn't present in the map.
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        Self::from_opt(backend_name, Some(&config))
+    }
+
+    /// Shared parsing logic for [`Self::new`] (`config: None`, reads OS
+    /// environment variables) and [`Self::from_config`] (`config: Some`,
+    /// reads the given map). The two differ only in where a value comes
+    /// from.
+    fn from_opt(backend_name: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        // Env vars are per-instance (`<backend_name>_QRMI_...`); config map
+        // keys use the same name minus that prefix.
+        let prefix = if config.is_some() {
+            String::new()
+        } else {
+            format!("{backend_name}_")
         };
-        let job_uid: i32 = env::var("QRMI_JOB_UID")
-            .ok()
-            .and_then(|s| s.parse::<i32>().ok())
-            .unwrap();
-        let job_id: String = env::var("QRMI_JOB_ID").ok().unwrap();
+        let warden_url_var = format!("{prefix}QRMI_WARDEN_URL");
+        let legacy_url_var = format!("{prefix}QRMI_URL");
+        let url = match resolve_opt_required(&warden_url_var, config) {
+            Ok(url) => url,
+            Err(err) => match resolve_opt(&legacy_url_var, config) {
+                Some(url) => {
+                    warn!("{legacy_url_var} is deprecated, please use {warden_url_var} instead.");
+                    url
+                }
+                None => return Err(err),
+            },
+        };
+        let job_uid_str = resolve_opt_required("QRMI_JOB_UID", config)?;
+        let job_uid: i32 = job_uid_str
+            .parse()
+            .map_err(|source| QrmiError::ParseError {
+                name: "QRMI_JOB_UID".to_string(),
+                value: job_uid_str,
+                source: Box::new(source),
+            })?;
+
+        let job_id = resolve_opt_required("QRMI_JOB_ID", config)?;
+
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
             backend_name: backend_name.to_string(),
@@ -152,3 +186,7 @@ impl QuantumResource for PasqalLocal {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/local.rs"]
+mod tests;

@@ -11,7 +11,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::common::{resolve_opt, resolve_opt_required};
+use crate::error::QrmiError;
 use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::quantum_compute_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
@@ -26,7 +27,6 @@ use quantum_compute_client::models::create_session_request_one_of::Mode;
 
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::env;
 
 use async_trait::async_trait;
 
@@ -46,44 +46,71 @@ pub struct IBMQuantumComputeService {
 }
 
 impl IBMQuantumComputeService {
-    /// Constructs a QRS service instance.
+    /// Constructs a QCS service instance.
     ///
     /// Environment variables used:
-    /// * QRMI_IBM_QCS_ENDPOINT - QRS endpoint URL
+    /// * QRMI_IBM_QCS_ENDPOINT - QCS endpoint URL
     /// * QRMI_IBM_QCS_IAM_ENDPOINT - IAM endpoint URL
-    /// * QRMI_IBM_QCS_IAM_APIKEY - IAM API key for QRS
-    /// * QRMI_IBM_QCS_SERVICE_CRN - QRS service instance CRN
+    /// * QRMI_IBM_QCS_IAM_APIKEY - IAM API key for QCS
+    /// * QRMI_IBM_QCS_SERVICE_CRN - QCS service instance CRN
     /// * QRMI_IBM_QCS_SESSION_MODE - Session mode (default: dedicated)
     /// * QRMI_IBM_QCS_SESSION_MAX_TTL - Session max_ttl (default: 28800)
     /// * QRMI_IBM_QCS_TIMEOUT_SECONDS or QRMI_JOB_TIMEOUT_SECONDS - (optional) Cost for the job (seconds)
     /// * QRMI_IBM_QCS_SESSION_ID or QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(backend_name: &str) -> Result<Self> {
-        let qrs_endpoint = required_env(format!("{backend_name}_QRMI_IBM_QCS_ENDPOINT"))?;
-        let iam_endpoint = required_env(format!("{backend_name}_QRMI_IBM_QCS_IAM_ENDPOINT"))?;
-        let api_key = required_env(format!("{backend_name}_QRMI_IBM_QCS_IAM_APIKEY"))?;
-        let service_crn = required_env(format!("{backend_name}_QRMI_IBM_QCS_SERVICE_CRN"))?;
-        let session_mode = env::var(format!("{backend_name}_QRMI_IBM_QCS_SESSION_MODE"))
-            .unwrap_or_else(|_| "dedicated".to_string());
-        let session_max_ttl: i32 = env::var(format!("{backend_name}_QRMI_IBM_QCS_SESSION_MAX_TTL"))
-            .ok()
-            .and_then(|s| s.parse::<i32>().ok())
-            .unwrap_or(28800);
+        Self::from_opt(backend_name, None)
+    }
+
+    /// Constructs a QCS service instance from a config map, instead of
+    /// environment variables.
+    ///
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<backend_name>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_ibm_qcs_endpoint`) as a fallback if the
+    /// exact-case key isn't present in the map.
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        Self::from_opt(backend_name, Some(&config))
+    }
+
+    /// Shared parsing logic for [`Self::new`] (`config: None`, reads OS
+    /// environment variables) and [`Self::from_config`] (`config: Some`,
+    /// reads the given map).
+    fn from_opt(backend_name: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        // Config keys are the same name as the env vars, minus the
+        // `<backend_name>_` prefix (config maps are already scoped to one
+        // backend, so there's nothing to prefix).
+        let prefix = if config.is_some() {
+            String::new()
+        } else {
+            format!("{backend_name}_")
+        };
+        let qrs_endpoint = resolve_opt_required(&format!("{prefix}QRMI_IBM_QCS_ENDPOINT"), config)?;
+        let iam_endpoint =
+            resolve_opt_required(&format!("{prefix}QRMI_IBM_QCS_IAM_ENDPOINT"), config)?;
+        let api_key = resolve_opt_required(&format!("{prefix}QRMI_IBM_QCS_IAM_APIKEY"), config)?;
+        let service_crn =
+            resolve_opt_required(&format!("{prefix}QRMI_IBM_QCS_SERVICE_CRN"), config)?;
+
+        let session_mode = resolve_opt(&format!("{prefix}QRMI_IBM_QCS_SESSION_MODE"), config)
+            .unwrap_or_else(|| "dedicated".to_string());
+        let session_max_ttl: i32 =
+            resolve_opt(&format!("{prefix}QRMI_IBM_QCS_SESSION_MAX_TTL"), config)
+                .and_then(|s| s.parse::<i32>().ok())
+                .unwrap_or(28800);
         let timeout_secs: Option<i32> =
-            env::var(format!("{backend_name}_QRMI_IBM_QCS_TIMEOUT_SECONDS"))
-                .ok()
-                .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_TIMEOUT_SECONDS")).ok())
+            resolve_opt(&format!("{prefix}QRMI_IBM_QCS_TIMEOUT_SECONDS"), config)
+                .or_else(|| resolve_opt(&format!("{prefix}QRMI_JOB_TIMEOUT_SECONDS"), config))
                 .and_then(|s| s.parse::<i32>().ok());
-        let session_id = env::var(format!("{backend_name}_QRMI_IBM_QCS_SESSION_ID"))
-            .ok()
-            .or_else(|| env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok());
-        // Set up the config
-        let mut config = configuration::Configuration::new();
-        config.base_path = qrs_endpoint;
-        config.bearer_access_token = None;
-        config.crn = Some(service_crn);
+        let session_id = resolve_opt(&format!("{prefix}QRMI_IBM_QCS_SESSION_ID"), config)
+            .or_else(|| resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config));
+
+        let mut client_config = configuration::Configuration::new();
+        client_config.base_path = qrs_endpoint;
+        client_config.bearer_access_token = None;
+        client_config.crn = Some(service_crn);
 
         Ok(Self {
-            config,
+            config: client_config,
             backend_name: backend_name.to_string(),
             session_id,
             calibration_id: None,

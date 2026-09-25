@@ -163,6 +163,9 @@ pub struct ResourceDef {
 /// Type alias for the C ResourceDef struct (used in qrmi_provider_new).
 type CResourceDef = ResourceDef;
 
+/// Type alias for key-value map
+pub type ConfigMap = EnvironmentVariables;
+
 /// Converts a C `EnvironmentVariables` struct to a Rust `HashMap<String, String>`.
 unsafe fn envvars_to_hashmap(
     envvars: &EnvironmentVariables,
@@ -781,6 +784,82 @@ pub unsafe extern "C" fn qrmi_resource_new(
                 return std::ptr::null_mut();
             }
         };
+
+        let qrmi = Box::new(QuantumResource {
+            inner: res,
+            runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+        });
+        return Box::into_raw(qrmi);
+    }
+    std::ptr::null_mut()
+}
+
+/// @ingroup QrmiQuantumResource
+/// Constructs a QrmiQuantumResource from a config map.
+///
+/// Created QrmiQuantumResource instance needs to be removed by qrmi_resource_free() call if
+/// no longer needed.
+///
+/// # Safety
+///
+/// * `config` must be a valid pointer to a QrmiConfigMap struct.
+///
+/// * The memory pointed to by `resource_id` must contain a valid nul terminator.
+///
+/// * The nul terminator must be within `isize::MAX` from `resource_id`
+///
+/// # Example
+///
+/// @code
+///   QrmiConfigMap config;
+///
+///   QrmiKeyValue variables[] = {
+///       {(char *)"qrmi_warden_url", (char *)"http://localhost:8006"},
+///       {(char *)"qrmi_job_id", (char *)"1"},
+///       {(char *)"qrmi_job_uid", (char *)"1000"},
+///   };
+///   config.variables = variables;
+///   config.length = 3;
+///   QrmiQuantumResource *qrmi = qrmi_resource_new_from_config("your_resource_name",
+///                                                 QRMI_RESOURCE_TYPE_PASQAL_LOCAL,
+///                                                 &config);
+/// @endcode
+///
+/// @param (resource_id) [in] A resource identifier, i.e. backend name
+/// @param (resource_type) [in] QrmiResourceType variant
+/// @param (config) [in] Pointer to QrmiConfigMap holding the config map
+/// @return a QrmiQuantumResource handle if succeeded, otherwise NULL. Must call qrmi_resource_free() to free if no longer used.
+/// @version 0.25.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_new_from_config(
+    resource_id: *const c_char,
+    resource_type: ResourceType,
+    config: *const ConfigMap,
+) -> *mut QuantumResource {
+    crate::common::initialize();
+    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
+    if config.is_null() {
+        _set_last_error("config is NULL".to_string());
+        return std::ptr::null_mut();
+    }
+
+    let config_map = match envvars_to_hashmap(&*config) {
+        Ok(m) => m,
+        Err(e) => {
+            _set_last_error(format!("{:?}", e));
+            return std::ptr::null_mut();
+        }
+    };
+
+    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+        let res =
+            match crate::common::create_resource_from_config(&resource_type, id_str, config_map) {
+                Ok(v) => v,
+                Err(err) => {
+                    _record_error(err);
+                    return std::ptr::null_mut();
+                }
+            };
 
         let qrmi = Box::new(QuantumResource {
             inner: res,

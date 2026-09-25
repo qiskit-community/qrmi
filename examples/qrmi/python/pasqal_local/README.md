@@ -27,6 +27,28 @@ Because QRMI is an environment variable driven software library, all configurati
 Where `<backend_name>` is the backend name passed via `--backend` (e.g. `PASQAL_LOCAL`).
 
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config dict
+instead of environment variables, via `QuantumResource.from_config()`:
+
+```python
+from qrmi import QuantumResource, ResourceType
+
+qrmi = QuantumResource.from_config(
+    "PASQAL_LOCAL",
+    ResourceType.PasqalLocal,
+    {
+        "QRMI_WARDEN_URL": "http://localhost:4207",
+        "QRMI_JOB_UID": "1000",
+        "QRMI_JOB_ID": "1",
+    },
+)
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:

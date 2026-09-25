@@ -13,6 +13,7 @@
 //! QRMI implementation for Alice and Bob Felis
 
 use crate::alice_bob::error::{classify, ResourceKind};
+use crate::common::resolve_opt_required_any;
 use crate::error::QrmiError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
@@ -23,7 +24,6 @@ use alice_bob_felis::models::{create_external_job, EventType};
 use async_trait::async_trait;
 use serde_json::json;
 use std::collections::HashMap;
-use std::env;
 
 /// QR implementation for Alice and Bob's Cloud API, Felis
 pub struct AliceBobFelis {
@@ -37,26 +37,45 @@ impl AliceBobFelis {
     ///
     /// # Environment variables
     ///
-    /// * QRMI_FELIS_API_KEY: API key obtained from the Felis web console
+    /// * QRMI_AB_FELIS_API_KEY: API key obtained from the Felis web console
     /// * QRMI_AB_FELIS_BASE_ENDPOINT: URL for Felis API base endpoint
     ///
     /// These may be optionally be prefixed by the backend name
     pub fn new(backend_name: &str) -> Result<Self> {
-        // Handle environment variables
-        let api_key = env::var(format!("{backend_name}_QRMI_AB_FELIS_API_KEY"))
-            .or(env::var("QRMI_AB_FELIS_API_KEY"))
-            .map_err(|_| {
-                QrmiError::EnvVarNotSet(format!(
-                    "{backend_name}_QRMI_AB_FELIS_API_KEY (or QRMI_AB_FELIS_API_KEY)"
-                ))
-            })?;
-        let endpoint = env::var(format!("{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT"))
-            .or(env::var("QRMI_AB_FELIS_BASE_ENDPOINT"))
-            .map_err(|_| {
-                QrmiError::EnvVarNotSet(format!(
-                    "{backend_name}_QRMI_AB_FELIS_BASE_ENDPOINT (or QRMI_AB_FELIS_BASE_ENDPOINT)"
-                ))
-            })?;
+        Self::from_opt(backend_name, None)
+    }
+
+    /// Constructs a Felis QR from a config map, instead of environment
+    /// variables.
+    ///
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// without the backend-name prefix (a config map is already scoped to
+    /// one backend). Each key also accepts its fully lowercased form (e.g.
+    /// `qrmi_ab_felis_api_key`) as a fallback if the exact-case key isn't
+    /// present in the map.
+    pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
+        Self::from_opt(backend_name, Some(&config))
+    }
+
+    /// Shared parsing and client-building logic for [`Self::new`]
+    /// (`config: None`, reads OS environment variables, optionally prefixed
+    /// by the backend name) and [`Self::from_config`] (`config: Some`,
+    /// reads the given map).
+    fn from_opt(backend_name: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        // Env vars are per-instance (`<backend_name>_QRMI_...`); config map
+        // keys use the same name minus that prefix.
+        let prefix = if config.is_some() {
+            String::new()
+        } else {
+            format!("{backend_name}_")
+        };
+        // Neither name is deprecated, so both are tried and named on failure.
+        let prefixed_api_key = format!("{prefix}QRMI_AB_FELIS_API_KEY");
+        let api_key =
+            resolve_opt_required_any(&[&prefixed_api_key, "QRMI_AB_FELIS_API_KEY"], config)?;
+        let prefixed_endpoint = format!("{prefix}QRMI_AB_FELIS_BASE_ENDPOINT");
+        let endpoint =
+            resolve_opt_required_any(&[&prefixed_endpoint, "QRMI_AB_FELIS_BASE_ENDPOINT"], config)?;
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
         config.basic_auth = decode_api_key(&api_key).unwrap();

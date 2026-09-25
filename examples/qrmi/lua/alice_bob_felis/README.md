@@ -27,6 +27,21 @@ See the corresponding section in [the README for the Felis Python example](../..
 
 See the corresponding section in [the README for the Felis Python example](../../python/alice_bob_felis/README.md#generate-qir-input-file)
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit Lua table
+instead of environment variables, via `qrmi.new_from_config()`:
+
+```lua
+local resource, err = qrmi.new_from_config("felis_backend_name", "alice-bob-felis", {
+    QRMI_AB_FELIS_API_KEY = "...",
+    QRMI_AB_FELIS_BASE_ENDPOINT = "...",
+})
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## How to run this example
 
 ```shell-session

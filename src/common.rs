@@ -10,10 +10,14 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+mod config;
 mod create_resource;
 mod job_env;
 mod logging;
 
-pub(crate) use create_resource::create_resource;
+pub(crate) use config::{
+    required_env, resolve_opt, resolve_opt_required, resolve_opt_required_any,
+};
+pub(crate) use create_resource::{create_resource, create_resource_from_config};
 pub(crate) use job_env::get_job_qpu_resources_and_types;
 pub(crate) use logging::{initialize, set_log_sink, LogSink};

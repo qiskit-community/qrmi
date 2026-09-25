@@ -23,6 +23,28 @@ Because QRMI is an environment variable driven software library, all configurati
 | {resource_name}_QRMI_JOB_TIMEOUT_SECONDS | Time (in seconds) after which job should time out and get cancelled. It is based on system execution time (not wall clock time). System execution time is the amount of time that the system is dedicated to processing your job. |
 
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config map
+instead of environment variables, via `IBMQuantumSystem::from_config()`:
+
+```rust
+use qrmi::ibm::IBMQuantumSystem;
+use std::collections::HashMap;
+
+let config = HashMap::from([
+    ("QRMI_IBM_QS_ENDPOINT".to_string(), "http://localhost:8080".to_string()),
+    ("QRMI_IBM_QS_IAM_ENDPOINT".to_string(), "https://iam.cloud.ibm.com".to_string()),
+    ("QRMI_IBM_QS_IAM_APIKEY".to_string(), "your_apikey".to_string()),
+    ("QRMI_IBM_QS_SERVICE_CRN".to_string(), "your_instance".to_string()),
+]);
+let qrmi = IBMQuantumSystem::from_config("test_eagle", config)?;
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type (including the
+optional S3 keys for this resource type).
+
 ## Create Qiskit Primitive input file as input
 
 Refer [this tool](../../../../examples/task_runner/qiskit) to generate. You can customize quantum circuits by editing the code.
