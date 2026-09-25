@@ -11,10 +11,13 @@
 // that they have been altered from the originals.
 
 use crate::common::{required_env, resolve_opt, resolve_opt_required};
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceCapacity, ResourceStatus, ResourceStatusCode, ResourceType, Target,
+    TaskResult, TaskStatus,
+};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
-use pasqal_local_api::{Client, ClientBuilder, JobStatus};
+use pasqal_local_api::{AccessibleResponse, Client, ClientBuilder, JobStatus, QpuSlotsResponse};
 use std::collections::HashMap;
 
 use async_trait::async_trait;
@@ -119,6 +122,12 @@ impl QuantumResource for PasqalLocal {
         Ok(accessible.is_accessible)
     }
 
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let accessible = self.api_client.get_accessible().await?;
+        let slots = self.api_client.get_qpu_slots().await?;
+        Ok(status_from_warden(accessible, slots))
+    }
+
     async fn acquire(&mut self) -> Result<String> {
         let session = self
             .api_client
@@ -187,6 +196,35 @@ impl QuantumResource for PasqalLocal {
         let mut metadata: HashMap<String, String> = HashMap::new();
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
+    }
+}
+
+/// Maps Warden's readiness and QPU slot usage to a [`ResourceStatus`].
+///
+/// Warden reports an administrator maintenance window as not accessible,
+/// which is [`ResourceStatusCode::Paused`]. Capacity is only known when
+/// Warden manages QPU slots.
+fn status_from_warden(
+    accessible: AccessibleResponse,
+    slots: Option<QpuSlotsResponse>,
+) -> ResourceStatus {
+    let capacity = slots.map(|slots| ResourceCapacity {
+        available_slots: slots.qpu_slots_available,
+        max_slots: slots.qpu_slots_total,
+    });
+    ResourceStatus {
+        status: if accessible.is_accessible {
+            ResourceStatusCode::Online
+        } else {
+            ResourceStatusCode::Paused
+        },
+        status_reason: Some(accessible.message).filter(|message| !message.is_empty()),
+        healthy: None,
+        busy: capacity
+            .as_ref()
+            .map(|capacity| capacity.available_slots == 0),
+        capacity,
+        pending_job_count: None,
     }
 }
 

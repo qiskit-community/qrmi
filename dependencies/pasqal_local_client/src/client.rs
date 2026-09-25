@@ -51,6 +51,13 @@ pub struct AccessibleResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct QpuSlotsResponse {
+    pub qpu_slots_total: u64,
+    pub qpu_slots_used: u64,
+    pub qpu_slots_available: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct SessionResponse {
     pub id: String,
 }
@@ -155,6 +162,19 @@ impl Client {
         let resp = self.client.get(url).send().await?;
 
         self.handle_request(resp).await
+    }
+
+    /// Returns Warden's QPU slot usage, or `None` if Warden does not
+    /// manage QPU slots.
+    pub async fn get_qpu_slots(&self) -> Result<Option<QpuSlotsResponse>> {
+        let url = format!("{}/qpu-slots", self.base_url);
+
+        let resp = self.client.get(url).send().await?;
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        self.handle_request(resp).await.map(Some)
     }
 
     pub async fn create_session(
@@ -281,5 +301,56 @@ impl ClientBuilder {
             base_url: self.base_url.clone(),
             client: reqwest_builder.build(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ClientBuilder;
+
+    #[tokio::test]
+    async fn get_qpu_slots_reads_slot_usage() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/qpu-slots")
+            .with_status(200)
+            .with_body(r#"{"qpu_slots_total":10,"qpu_slots_used":4,"qpu_slots_available":6}"#)
+            .create_async()
+            .await;
+        let client = ClientBuilder::new(server.url()).build().unwrap();
+
+        let slots = client.get_qpu_slots().await.unwrap().unwrap();
+
+        mock.assert_async().await;
+        assert_eq!(slots.qpu_slots_total, 10);
+        assert_eq!(slots.qpu_slots_used, 4);
+        assert_eq!(slots.qpu_slots_available, 6);
+    }
+
+    #[tokio::test]
+    async fn get_qpu_slots_is_none_when_slots_are_not_configured() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", "/qpu-slots")
+            .with_status(404)
+            .with_body(r#"{"detail":"QPU slots are not configured."}"#)
+            .create_async()
+            .await;
+        let client = ClientBuilder::new(server.url()).build().unwrap();
+
+        assert!(client.get_qpu_slots().await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn get_qpu_slots_reports_server_errors() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", "/qpu-slots")
+            .with_status(500)
+            .create_async()
+            .await;
+        let client = ClientBuilder::new(server.url()).build().unwrap();
+
+        assert!(client.get_qpu_slots().await.is_err());
     }
 }

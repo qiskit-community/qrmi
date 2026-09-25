@@ -19,5 +19,5 @@ mod models;
 #[cfg(feature = "munge")]
 mod munge;
 
-pub use client::{Client, ClientBuilder};
+pub use client::{AccessibleResponse, Client, ClientBuilder, QpuSlotsResponse};
 pub use models::JobStatus;
