@@ -128,6 +128,16 @@ static const char *task_status_to_string(QrmiTaskStatus s) {
 }
 
 /**
+ * @brief Convert a QrmiResourceStatusCode enum value to its Lua-facing string form.
+ *
+ * @param s A QrmiResourceStatusCode value as returned by qrmi_resource_status_code().
+ * @return One of "online", "offline" or "paused".
+ */
+static const char *status_code_to_string(QrmiResourceStatusCode s) {
+    return qrmi_resource_status_code_to_string(s);
+}
+
+/**
  * @brief `qrmi.new(resource_id, resource_type_str)` - Create a quantum resource handle.
  *
  * Wraps qrmi_resource_new().
@@ -176,6 +186,147 @@ static int l_qrmi_new(lua_State *L) {
 }
 
 /**
+ * @brief Free a `QrmiKeyValue` array allocated by build_config_map_from_table().
+ *
+ * @param pairs Array to free, or NULL (in which case this is a no-op).
+ * @param count Number of entries in @p pairs that were actually populated
+ *              (i.e. have owned `key`/`value` strings to free).
+ */
+static void free_config_pairs(QrmiKeyValue *pairs, size_t count) {
+    if (!pairs) return;
+    for (size_t i = 0; i < count; i++) {
+        free(pairs[i].key);
+        free(pairs[i].value);
+    }
+    free(pairs);
+}
+
+/**
+ * @brief Convert a Lua string -> string table into a heap-allocated
+ * `QrmiKeyValue` array, for use as the `variables` field of a `QrmiConfigMap`.
+ *
+ * Raises a Lua error (via luaL_error) if any key or value in the table is
+ * not a string. On success, the caller owns the returned array (and its
+ * `key`/`value` strings) and must free it with free_config_pairs().
+ *
+ * @param L Lua state.
+ * @param idx Stack index of the table to convert.
+ * @param[out] out_count Set to the number of entries in the returned array.
+ * @return Newly allocated array of @p *out_count QrmiKeyValue entries
+ *         (NULL if the table is empty). Never returns on failure (raises a
+ *         Lua error instead).
+ */
+static QrmiKeyValue *build_config_map_from_table(lua_State *L, int idx, size_t *out_count) {
+    // idx must be a positive/absolute stack index
+    if (idx <= 0) {
+        luaL_error(L, "build_config_map_from_table: table index must be positive (got %d)", idx);
+    }
+
+    size_t count = 0;
+    lua_pushnil(L);
+    while (lua_next(L, idx) != 0) {
+        count++;
+        lua_pop(L, 1);
+    }
+    *out_count = count;
+    if (count == 0) return NULL;
+
+    QrmiKeyValue *pairs = (QrmiKeyValue *)calloc(count, sizeof(QrmiKeyValue));
+    if (!pairs) {
+        luaL_error(L, "out of memory building config map");
+    }
+
+    size_t i = 0;
+    lua_pushnil(L);
+    while (lua_next(L, idx) != 0) {
+        /* Copy the key before converting it to a string: lua_tostring may
+         * rewrite the value in place on the stack, which would confuse the
+         * next lua_next() call if done directly on the traversal key. */
+        lua_pushvalue(L, -2);
+        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
+            free_config_pairs(pairs, i);
+            luaL_error(L, "QRMI config table keys and values must be strings");
+        }
+        pairs[i].key = strdup(lua_tostring(L, -1));
+        pairs[i].value = strdup(lua_tostring(L, -2));
+        if (!pairs[i].key || !pairs[i].value) {
+            free_config_pairs(pairs, i + 1);
+            luaL_error(L, "out of memory building config map");
+        }
+        i++;
+        lua_pop(L, 2); /* pop key copy and value, leaving key for lua_next */
+    }
+
+    return pairs;
+}
+
+/**
+ * @brief `qrmi.new_from_config(resource_id, resource_type, config)` - Create a quantum
+ * resource handle from an explicit config map.
+ *
+ * Wraps qrmi_resource_new_from_config().
+ *
+ * Lua usage:
+ * @code
+ *   local resource, err = qrmi.new_from_config("ibm_kingston", "ibm-quantum-compute-service", {
+ *       QRMI_IBM_QCS_ENDPOINT = "...",
+ *       QRMI_IBM_QCS_IAM_ENDPOINT = "...",
+ *       QRMI_IBM_QCS_IAM_APIKEY = "...",
+ *       QRMI_IBM_QCS_SERVICE_CRN = "...",
+ *   })
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments:
+ *   - [1] resource_id (string)   e.g. "ibm_kingston"
+ *   - [2] resource_type (string) canonical hyphenated name, same values as `qrmi.new()`
+ *   - [3] config (table) string -> string config map; required/optional
+ *         keys are specific to each resource type -- the same names as the
+ *         environment variables, minus the `{resource_id}_` prefix (see the
+ *         QRMI Rust crate's `from_config()` doc comments, e.g.
+ *         `QRMI_WARDEN_URL`, `QRMI_IBM_QCS_SESSION_ID`, ...)
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (resource: qrmi.resource userdata)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_qrmi_new_from_config(lua_State *L) {
+    const char *resource_id = luaL_checkstring(L, 1);
+    const char *type_str = luaL_checkstring(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    QrmiResourceType type;
+    QrmiReturnCode type_rc = resource_type_from_string(type_str, &type);
+    if (type_rc != QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unknown resource type '%s'", type_str);
+        return 2;
+    }
+
+    size_t count = 0;
+    QrmiKeyValue *pairs = build_config_map_from_table(L, 3, &count);
+
+    QrmiConfigMap config_map;
+    config_map.variables = pairs;
+    config_map.length = count;
+
+    QrmiQuantumResource *handle = qrmi_resource_new_from_config(resource_id, type, &config_map);
+    free_config_pairs(pairs, count);
+
+    if (!handle) {
+        const char *err = qrmi_get_last_error();
+        lua_pushnil(L);
+        lua_pushstring(L, err ? err : "qrmi_resource_new_from_config failed");
+        return 2;
+    }
+
+    lua_qrmi_resource_t *ud = (lua_qrmi_resource_t *)lua_newuserdata(L, sizeof(lua_qrmi_resource_t));
+    ud->handle = handle;
+    ud->acquisition_token = NULL;
+    luaL_getmetatable(L, QRMI_RESOURCE_MT);
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+/**
  * @brief Fetch the lua_qrmi_resource_t backing a `qrmi.resource` userdata.
  *
  * Raises a Lua error (via luaL_error) if the resource has already been freed.
@@ -198,6 +349,9 @@ static lua_qrmi_resource_t *check_resource(lua_State *L, int idx) {
  *
  * Wraps qrmi_resource_is_accessible().
  *
+ * @deprecated Use resource:status() and resource:status.is_accessible instead.
+ * This function will be removed in a future release.
+ *
  * Lua usage:
  * @code
  *   local accessible, err = resource:is_accessible()
@@ -211,6 +365,10 @@ static lua_qrmi_resource_t *check_resource(lua_State *L, int idx) {
 static int l_is_accessible(lua_State *L) {
     lua_qrmi_resource_t *ud = check_resource(L, 1);
     bool accessible = false;
+
+    fprintf(stderr,
+        "warning: resource:is_accessible() is deprecated, use resource:status() instead\n");
+
     QrmiReturnCode rc = qrmi_resource_is_accessible(ud->handle, &accessible);
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
     lua_pushboolean(L, accessible);
@@ -824,6 +982,107 @@ static int l_metadata(lua_State *L) {
 }
 
 /**
+ * @brief `resource:status()` - Fetch detailed status information as a Lua table.
+ *
+ * Wraps qrmi_resource_status() and its field accessors
+ * (qrmi_resource_status_code(), qrmi_resource_status_reason(),
+ * qrmi_resource_status_healthy(), qrmi_resource_status_pending_job_count(),
+ * qrmi_resource_status_capacity(),
+ * flattening the result into a single Lua table. Fields the vendor does
+ * not report (QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR from the
+ * corresponding accessor) are set to `nil` rather than raising an error.
+ * The underlying QrmiResourceStatus (and QrmiResourceCapacity, if any)
+ * handles are freed before this function returns, so no extra
+ * userdata/GC bookkeeping is needed on the Lua side.
+ *
+ * Lua usage:
+ * @code
+ *   local status, err = resource:status()
+ *   print(status.status)             -- "online" | "offline" | "paused"
+ *   print(status.status_reason)      -- string or nil
+ *   print(status.busy)               -- boolean or nil
+ *   print(status.healthy)            -- boolean or nil
+ *   print(status.pending_job_count)  -- integer or nil
+ *   if status.capacity then
+ *     print(status.capacity.available_slots, status.capacity.max_slots)
+ *   end
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments: [1] resource (qrmi.resource userdata).
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (status: table as described above)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_status(lua_State *L) {
+    lua_qrmi_resource_t *ud = check_resource(L, 1);
+
+    QrmiResourceStatus *status = NULL;
+    QrmiReturnCode rc = qrmi_resource_status(ud->handle, &status);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+
+    lua_newtable(L);
+
+    QrmiResourceStatusCode code;
+    rc = qrmi_resource_status_code(status, &code);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) {
+        qrmi_resource_status_free(status);
+        return push_qrmi_error(L, rc);
+    }
+    lua_pushstring(L, status_code_to_string(code));
+    lua_setfield(L, -2, "status");
+
+    char *reason = qrmi_resource_status_reason(status);
+    if (reason) {
+        lua_pushstring(L, reason);
+        qrmi_string_free(reason);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "status_reason");
+
+    bool busy = false;
+    if (qrmi_resource_status_busy(status, &busy) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushboolean(L, busy);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "busy");
+
+    bool healthy = false;
+    if (qrmi_resource_status_healthy(status, &healthy) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushboolean(L, healthy);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "healthy");
+
+    uint64_t pending_job_count = 0;
+    if (qrmi_resource_status_pending_job_count(status, &pending_job_count) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushinteger(L, (lua_Integer)pending_job_count);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "pending_job_count");
+
+    QrmiResourceCapacity *capacity = NULL;
+    if (qrmi_resource_status_capacity(status, &capacity) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_newtable(L);
+        lua_pushinteger(L, (lua_Integer)capacity->available_slots);
+        lua_setfield(L, -2, "available_slots");
+        lua_pushinteger(L, (lua_Integer)capacity->max_slots);
+        lua_setfield(L, -2, "max_slots");
+        qrmi_resource_capacity_free(capacity);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "capacity");
+
+    qrmi_resource_status_free(status);
+
+    return 1;
+}
+
+/**
  * @brief `resource:target()` - Fetch the device's target information.
  *
  * Wraps qrmi_resource_target().
@@ -911,6 +1170,7 @@ static int l_resource_gc(lua_State *L) {
 /** @brief Method table installed on the `qrmi.resource` metatable's __index. */
 static const luaL_Reg resource_methods[] = {
     {"is_accessible", l_is_accessible},
+    {"status",        l_status},
     {"id",            l_resource_id},
     {"type",          l_resource_type},
     {"acquire",       l_acquire},
@@ -1099,8 +1359,9 @@ static const luaL_Reg config_methods[] = {
 
 /** @brief Function table installed on the `qrmi` module table. */
 static const luaL_Reg qrmi_functions[] = {
-    {"new",         l_qrmi_new},
-    {"load_config", l_qrmi_load_config},
+    {"new",             l_qrmi_new},
+    {"new_from_config", l_qrmi_new_from_config},
+    {"load_config",     l_qrmi_load_config},
     {NULL, NULL}
 };
 
@@ -1111,7 +1372,7 @@ static const luaL_Reg qrmi_functions[] = {
  * itself so `resource:method()` calls dispatch through resource_methods)
  * and the completely independent `qrmi.config` metatable (dispatching
  * through config_methods), then returns the `qrmi` module table
- * (containing `qrmi.new` and `qrmi.load_config`).
+ * (containing `qrmi.new`, `qrmi.new_from_config`, and `qrmi.load_config`).
  *
  * @param L Lua state.
  * @return Always 1 (the `qrmi` module table).

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # (C) Copyright 2025, 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
@@ -41,7 +39,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("backend", help="Backend name")
 parser.add_argument("base_url", help="API endpoint")
 parser.add_argument("apikey", help="IAM API key")
-parser.add_argument("crn", help="Service CRN of your instance")
+parser.add_argument("instance", help="Service CRN of your instance - starting with 'crn:v1:'")
 parser.add_argument(
     "--iam_url", help="IAM endpoint", default="https://iam.cloud.ibm.com"
 )
@@ -51,7 +49,7 @@ args = parser.parse_args()
 token_manager = IAMAuthenticator(apikey=args.apikey, url=args.iam_url).token_manager
 headers = {
     "Authorization": f"Bearer {token_manager.get_token()}",
-    "Service-CRN": args.crn,
+    "Service-CRN": args.instance,
 }
 print(json.dumps(headers, indent=2))
 

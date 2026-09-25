@@ -10,6 +10,7 @@ members = [
     "resource_providers",
     "service",
     "oqtopus",
+    "resource_status",
 ]
 resolver = "2"
 

@@ -49,6 +49,27 @@ cd examples/qrmi/python/alice_bob/
 python generate_input_generic.py > generated_circuit.ll
 ```
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit config dict
+instead of environment variables, via `QuantumResource.from_config()`:
+
+```python
+from qrmi import QuantumResource, ResourceType
+
+qrmi = QuantumResource.from_config(
+    "ab_emu_1q_lescanne_2020",
+    ResourceType.AliceBobFelis,
+    {
+        "QRMI_AB_FELIS_API_KEY": "<your felis api key>",
+        "QRMI_AB_FELIS_BASE_ENDPOINT": "https://api.alice-bob.com/",
+    },
+)
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type.
+
 ## How to run
 
 ```shell-session

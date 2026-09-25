@@ -51,6 +51,23 @@ password=<your password>
 # auth_endpoint=<auth endpoint URL/path>
 ```
 
+## Alternative: create the resource from a config map
+
+Since QRMI v0.25.0, a resource can also be built from an explicit Lua table
+instead of environment variables, via `qrmi.new_from_config()`:
+
+```lua
+local resource, err = qrmi.new_from_config("PASQAL_LOCAL", "pasqal-local", {
+    QRMI_WARDEN_URL = "http://localhost:8006",
+    QRMI_JOB_UID = "1000",
+    QRMI_JOB_ID = "1",
+})
+```
+
+See the [0.25.0 migration guide](../../../../docs/migration/0.25.0.md) for
+the full set of required/optional keys per resource type (`pasqal-cloud`
+takes none of the above; see the table there).
+
 ## Create Pulser Sequence file as input
 
 Given a Pulser sequence `sequence`, we can convert it to a JSON string and write it to a file like this:

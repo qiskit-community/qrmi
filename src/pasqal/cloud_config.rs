@@ -10,8 +10,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use anyhow::{anyhow, Result};
+use crate::common::resolve_opt;
+use crate::{QrmiError, Result};
 use log::{debug, warn};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -19,7 +21,9 @@ use std::path::PathBuf;
 const DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT: &str = "authenticate.pasqal.cloud/oauth/token";
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct PasqalConfig {
+pub(crate) struct PasqalCloudConfig {
+    // Config stores the eventual hashmap from the [`crate::PasqalCloud::from_config`]
+    pub config: Option<HashMap<String, String>>,
     pub(crate) username: Option<String>,
     pub(crate) password: Option<String>,
     pub(crate) client_id: Option<String>,
@@ -29,38 +33,55 @@ pub(crate) struct PasqalConfig {
     pub(crate) auth_endpoint: Option<String>,
 }
 
-impl PasqalConfig {
-    pub(crate) fn read(backend_name: &str) -> Result<Self> {
-        read_pasqal_config(backend_name)
+impl PasqalCloudConfig {
+    pub(crate) fn from_opt(
+        backend_name: &str,
+        config: Option<&HashMap<String, String>>,
+    ) -> Result<Self> {
+        read_pasqal_config(backend_name, config)
     }
 
     pub(crate) fn project_id(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_PROJECT_ID")
-            .or(self.project_id.clone().filter(|v| !v.trim().is_empty()))
+        resolve_backend_prefixed_param(
+            backend_name,
+            "QRMI_PASQAL_CLOUD_PROJECT_ID",
+            self.config.as_ref(),
+        )
+        .or(self.project_id.clone().filter(|v| !v.trim().is_empty()))
     }
 
     pub(crate) fn auth_token(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_TOKEN")
-            .or(self.token.clone().filter(|v| !v.trim().is_empty()))
+        resolve_backend_prefixed_param(
+            backend_name,
+            "QRMI_PASQAL_CLOUD_AUTH_TOKEN",
+            self.config.as_ref(),
+        )
+        .or(self.token.clone().filter(|v| !v.trim().is_empty()))
     }
 
     pub(crate) fn auth_endpoint(&self, backend_name: &str) -> String {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT")
-            .or(self.auth_endpoint.clone().filter(|v| !v.trim().is_empty()))
-            .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string())
+        resolve_backend_prefixed_param(
+            backend_name,
+            "QRMI_PASQAL_CLOUD_AUTH_ENDPOINT",
+            self.config.as_ref(),
+        )
+        .or(self.auth_endpoint.clone().filter(|v| !v.trim().is_empty()))
+        .unwrap_or_else(|| DEFAULT_PASQAL_CLOUD_AUTH_ENDPOINT.to_string())
     }
 
     pub(crate) fn base_url(&self, backend_name: &str) -> Option<String> {
-        env_config_value(backend_name, "QRMI_PASQAL_CLOUD_BASE_URL")
+        resolve_backend_prefixed_param(
+            backend_name,
+            "QRMI_PASQAL_CLOUD_BASE_URL",
+            self.config.as_ref(),
+        )
     }
 
     pub(crate) fn credentials(&self) -> (Option<String>, Option<String>) {
-        let username = env::var("PASQAL_USERNAME")
-            .ok()
+        let username = resolve_opt("PASQAL_USERNAME", self.config.as_ref())
             .filter(|v| !v.trim().is_empty())
             .or(self.username.clone().filter(|v| !v.trim().is_empty()));
-        let password = env::var("PASQAL_PASSWORD")
-            .ok()
+        let password = resolve_opt("PASQAL_PASSWORD", self.config.as_ref())
             .filter(|v| !v.trim().is_empty())
             .or(self.password.clone().filter(|v| !v.trim().is_empty()));
         (username, password)
@@ -70,12 +91,36 @@ impl PasqalConfig {
         &self,
         backend_name: &str,
     ) -> (Option<String>, Option<String>) {
-        let client_id = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_ID")
-            .or(self.client_id.clone().filter(|v| !v.trim().is_empty()));
-        let client_secret = env_config_value(backend_name, "QRMI_PASQAL_CLOUD_CLIENT_SECRET")
-            .or(self.client_secret.clone().filter(|v| !v.trim().is_empty()));
+        let client_id = resolve_backend_prefixed_param(
+            backend_name,
+            "QRMI_PASQAL_CLOUD_CLIENT_ID",
+            self.config.as_ref(),
+        )
+        .or(self.client_id.clone().filter(|v| !v.trim().is_empty()));
+        let client_secret = resolve_backend_prefixed_param(
+            backend_name,
+            "QRMI_PASQAL_CLOUD_CLIENT_SECRET",
+            self.config.as_ref(),
+        )
+        .or(self.client_secret.clone().filter(|v| !v.trim().is_empty()));
         (client_id, client_secret)
     }
+}
+
+// Env vars are per-instance (`<backend_name>_...`); config map keys use the
+// same name minus that prefix, since a config map is already scoped to one
+// backend.
+fn resolve_backend_prefixed_param(
+    backend_name: &str,
+    value: &str,
+    config: Option<&HashMap<String, String>>,
+) -> Option<String> {
+    let prefix = if config.is_some() {
+        String::new()
+    } else {
+        format!("{backend_name}_")
+    };
+    resolve_opt(&format!("{prefix}{value}"), config).filter(|v| !v.trim().is_empty())
 }
 
 fn strip_quotes(s: &str) -> &str {
@@ -145,16 +190,18 @@ pub(crate) fn expand_env_vars(value: &str) -> Result<String> {
             }
 
             if !closed {
-                return Err(anyhow!("malformed environment variable in path: missing closing brace after ${{{key}}}"));
+                return Err(QrmiError::InvalidInput(format!(
+                    "malformed environment variable in path: missing closing brace after ${{{key}}}"
+                )));
             }
             if key.is_empty()
                 || !key
                     .chars()
                     .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
             {
-                return Err(anyhow!(
+                return Err(QrmiError::InvalidInput(format!(
                     "malformed environment variable in path: ${{{key}}}"
-                ));
+                )));
             }
 
             if let Ok(var_value) = env::var(&key) {
@@ -184,22 +231,29 @@ pub(crate) fn expand_env_vars(value: &str) -> Result<String> {
     Ok(expanded)
 }
 
-pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
-    let mut config_root_path = match env::var("PASQAL_CONFIG_ROOT").ok() {
+pub(crate) fn read_pasqal_config(
+    backend_name: &str,
+    hashmap_config: Option<&HashMap<String, String>>,
+) -> Result<PasqalCloudConfig> {
+    // A config map is already scoped to one backend, so it only has the
+    // single, unprefixed `PASQAL_CONFIG_ROOT` key. Env vars additionally
+    // fall back to the backend-prefixed override if the global one isn't set.
+    let mut config_root_path = match resolve_opt("PASQAL_CONFIG_ROOT", hashmap_config) {
         Some(config_root) => pasqal_config_path_from_root(&config_root)?,
         None => None,
     };
-    if config_root_path.is_none() {
-        config_root_path = match env::var(format!("{backend_name}_PASQAL_CONFIG_ROOT")).ok() {
+    if config_root_path.is_none() && hashmap_config.is_none() {
+        config_root_path = match resolve_opt(&format!("{backend_name}_PASQAL_CONFIG_ROOT"), None) {
             Some(config_root) => pasqal_config_path_from_root(&config_root)?,
             None => None,
         };
     }
-    let home_config_path = match env::var("HOME").ok() {
+    let home_config_path = match resolve_opt("HOME", hashmap_config) {
         Some(home) => pasqal_config_path_from_root(&home)?,
         None => None,
     };
 
+    // Explicit "PASQAL_CONFIG_ROOT" will be tried before the "HOME" fallback
     let mut config_path_candidates = Vec::new();
     if let Some(path) = config_root_path.clone() {
         config_path_candidates.push(path);
@@ -208,26 +262,42 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         config_path_candidates.push(path);
     }
 
-    let content = match config_path_candidates
-        .iter()
-        .find_map(|path| fs::read_to_string(path).ok().map(|content| (path, content)))
-    {
-        Some((path, content)) => {
-            debug!("Reading Pasqal config file: {}", path.display());
-            content
-        }
+    let mut config = resolve_pasqal_config(&config_path_candidates, config_root_path.as_ref());
+    // Store the eventual hashmap config here
+    config.config = hashmap_config.cloned();
+
+    Ok(config)
+}
+
+// Loads the config from the first readable path in `candidates`. If none is readable and
+// `explicit_root` was set, warns that the explicitly configured root had no config file.
+fn resolve_pasqal_config(
+    candidates: &[PathBuf],
+    explicit_root: Option<&PathBuf>,
+) -> PasqalCloudConfig {
+    match candidates.iter().find_map(load_pasqal_config_file) {
+        Some(config) => config,
         None => {
-            if let Some(path) = config_root_path {
+            if let Some(path) = explicit_root {
                 warn!(
                     "Pasqal config root is set but no config file was found. Checked: {}",
                     path.display()
                 );
             }
-            return Ok(PasqalConfig::default());
+            PasqalCloudConfig::default()
         }
-    };
+    }
+}
 
-    let mut config = PasqalConfig::default();
+// Reads and parses the Pasqal config file at `path`, or returns `None` if it can't be read.
+fn load_pasqal_config_file(path: &PathBuf) -> Option<PasqalCloudConfig> {
+    let content = fs::read_to_string(path).ok()?;
+    debug!("Reading Pasqal config file: {}", path.display());
+    Some(parse_pasqal_config_content(&content))
+}
+
+fn parse_pasqal_config_content(content: &str) -> PasqalCloudConfig {
+    let mut config = PasqalCloudConfig::default();
 
     for line in content.lines() {
         let line = line.trim();
@@ -254,11 +324,5 @@ pub(crate) fn read_pasqal_config(backend_name: &str) -> Result<PasqalConfig> {
         }
     }
 
-    Ok(config)
-}
-
-fn env_config_value(backend_name: &str, key: &str) -> Option<String> {
-    env::var(format!("{backend_name}_{key}"))
-        .ok()
-        .filter(|v| !v.trim().is_empty())
+    config
 }

@@ -17,6 +17,7 @@ pub enum CreateJobRequestOneOfAllOfParams {
     SamplerV2Input(Box<models::SamplerV2Input>),
     EstimatorV2Input(Box<models::EstimatorV2Input>),
     NoiseLearnerInput(Box<models::NoiseLearnerInput>),
+    ExecutorInput(Box<serde_json::Value>),
 }
 
 impl Default for CreateJobRequestOneOfAllOfParams {

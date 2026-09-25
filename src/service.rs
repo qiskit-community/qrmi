@@ -85,7 +85,8 @@ impl QRMIService {
             };
 
             let mut resource = crate::common::create_resource(&resource_type, qpu)?;
-            if resource.is_accessible().await? {
+            let res_status = resource.status().await?;
+            if matches!(res_status.status, crate::models::ResourceStatusCode::Online) {
                 resources.insert(qpu.to_string(), resource);
             } else {
                 log::debug!("{} is not accessible now. ignored.", qpu);

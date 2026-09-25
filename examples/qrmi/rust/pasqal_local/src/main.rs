@@ -32,7 +32,6 @@ struct Args {
     input: String,
 }
 
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
@@ -48,7 +47,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         qrmi.resource_type().await?.as_str()
     );
 
-    let accessible = qrmi.is_accessible().await?;
+    let accessible = matches!(
+        qrmi.status().await?.status,
+        qrmi::models::ResourceStatusCode::Online
+    );
     if !accessible {
         println!("Pasqal local is not accessible"); // Checks for real QPU
     }

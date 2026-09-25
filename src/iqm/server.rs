@@ -10,9 +10,12 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::common::{resolve_opt, resolve_opt_required};
+use crate::error::QrmiError;
 use crate::iqm::error::{classify, ResourceKind};
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
 use iqm_server_api::apis::calibration_sets_api::{
@@ -20,11 +23,10 @@ use iqm_server_api::apis::calibration_sets_api::{
 };
 use iqm_server_api::apis::configuration;
 use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
-use iqm_server_api::apis::quantum_computers_api::{get_qc_health_v1, qc_get_artifacts};
+use iqm_server_api::apis::quantum_computers_api::{get_qc_health_v1, get_qc_v1, qc_get_artifacts};
 use iqm_server_api::models::IqmServerJobStatus;
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::env;
 use std::fmt::Write;
 
 /// QRMI implementation for IQM Server API
@@ -36,6 +38,18 @@ pub struct IQMServer {
 }
 
 impl IQMServer {
+    /// Splits a `<backend_name>` or `<backend_name>,<calibration_set_id>`
+    /// string into its parts, defaulting the calibration set id to
+    /// `"default"` when omitted.
+    fn parse_backend_and_calset(resource_id: &str) -> (&str, &str) {
+        let buf: Vec<&str> = resource_id.split(",").collect();
+        match buf.as_slice() {
+            [name, id, ..] => (name, id),
+            [name] => (name, "default"),
+            _ => unreachable!("buf should never be empty due to split()"),
+        }
+    }
+
     /// Constructs a IQM Server instance.
     ///
     /// Environment variables used:
@@ -43,20 +57,42 @@ impl IQMServer {
     /// * QRMI_IQM_ISA_TOKEN - IQM Server API token
     /// * QRMI_JOB_ACQUISITION_TOKEN - (optional) pre‐set session ID
     pub fn new(resource_id: &str) -> Result<Self> {
-        let buf: Vec<&str> = resource_id.split(",").collect();
-        let (backend_name, calset_id) = match buf.as_slice() {
-            [name, id, ..] => (*name, *id),
-            [name] => (*name, "default"),
-            _ => unreachable!("buf should never be empty due to split()"),
-        };
+        Self::from_opt(resource_id, None)
+    }
 
-        let iqm_endpoint = required_env(format!("{backend_name}_QRMI_IQM_ISA_ENDPOINT"))?;
-        let iqm_token = required_env(format!("{backend_name}_QRMI_IQM_ISA_TOKEN"))?;
-        let acquisition_token = env::var(format!("{backend_name}_QRMI_JOB_ACQUISITION_TOKEN")).ok();
-        // Set up the config
-        let mut config = configuration::Configuration::new();
-        config.base_path = iqm_endpoint;
-        config.bearer_access_token = Some(iqm_token);
+    /// Constructs a IQM Server instance from a config map, instead of
+    /// environment variables.
+    ///
+    /// Takes the same `resource_id` and keys as [`Self::new`]'s
+    /// environment variables, minus the `<backend_name>_` prefix. Each key
+    /// also accepts its fully lowercased form (e.g.
+    /// `qrmi_iqm_isa_endpoint`) as a fallback if the exact-case key isn't
+    /// present in the map.
+    pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {
+        Self::from_opt(resource_id, Some(&config))
+    }
+
+    /// Shared parsing and client-building logic for [`Self::new`]
+    /// (`config: None`, reads OS environment variables) and
+    /// [`Self::from_config`] (`config: Some`, reads the given map).
+    fn from_opt(resource_id: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        let (backend_name, calset_id) = Self::parse_backend_and_calset(resource_id);
+
+        // Config keys are the same name as the env vars, minus the
+        // `<backend_name>_` prefix (config maps are already scoped to one
+        // backend, so there's nothing to prefix).
+        let prefix = if config.is_some() {
+            String::new()
+        } else {
+            format!("{backend_name}_")
+        };
+        let iqm_endpoint = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_ENDPOINT"), config)?;
+        let iqm_token = resolve_opt_required(&format!("{prefix}QRMI_IQM_ISA_TOKEN"), config)?;
+        let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
+
+        let mut client_config = configuration::Configuration::new();
+        client_config.base_path = iqm_endpoint;
+        client_config.bearer_access_token = Some(iqm_token);
 
         let converted = if let Some(pos) = backend_name.rfind('_') {
             let mut s = backend_name.to_string();
@@ -67,7 +103,7 @@ impl IQMServer {
         };
 
         Ok(Self {
-            config,
+            config: client_config,
             backend_name: converted,
             acquisition_token,
             calibration_set_id: calset_id.to_string(),
@@ -121,6 +157,25 @@ impl QuantumResource for IQMServer {
             .await
             .map_err(|e| classify(e, ResourceKind::Backend))?;
         Ok(health.operational == "online" && health.health.healthy)
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let qc = get_qc_v1(&self.config, &self.backend_name)
+            .await
+            .map_err(|e| classify(e, ResourceKind::Backend))?;
+
+        Ok(ResourceStatus {
+            status: match qc.operational.as_str() {
+                "online" => ResourceStatusCode::Online,
+                "maintenance" => ResourceStatusCode::Paused,
+                _ => ResourceStatusCode::Offline,
+            },
+            status_reason: Some(format!("healthy updated at {}", qc.health.updated_at)),
+            healthy: Some(qc.health.healthy),
+            busy: None,
+            capacity: None,
+            pending_job_count: qc.queue_length.try_into().ok(),
+        })
     }
 
     /// Starts a job task.

@@ -30,6 +30,7 @@ use uuid::Uuid;
 
 mod cext;
 pub mod models;
+pub use models::{ResourceStatus, ResourceStatusCode};
 #[cfg(feature = "pyo3")]
 pub mod pyext;
 
@@ -148,7 +149,77 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
+    #[deprecated(since = "0.25.0", note = "use `status().await?.status` instead")]
     async fn is_accessible(&mut self) -> Result<bool>;
+
+    /// Returns detailed status information for the resource.
+    ///
+    /// The default implementation delegates to the deprecated
+    /// [`is_accessible`](Self::is_accessible), mapping `true` to
+    /// [`ResourceStatusCode::Online`] and `false` to
+    /// [`ResourceStatusCode::Offline`]. All other fields (`status_reason`,
+    /// `healthy`, `capacity`, `pending_job_count`) are `None`, since
+    /// `is_accessible()` carries no further information.
+    ///
+    /// Vendor implementations are expected to override this method to
+    /// report `Paused` as well where applicable, and to
+    /// populate `status_reason`, `healthy`, `busy`, `capacity`, and
+    /// `pending_job_count` where the underlying service provides them.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
+    ///     use qrmi::ResourceStatusCode;
+    ///
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
+    ///     let status = qrmi.status().await?;
+    ///     match status.status {
+    ///         ResourceStatusCode::Online => println!("online"),
+    ///         ResourceStatusCode::Offline => println!("offline"),
+    ///         ResourceStatusCode::Paused => println!("paused: {:?}", status.status_reason),
+    ///     }
+    ///
+    ///     // Fields the vendor may not report are `None`.
+    ///     if let Some(healthy) = status.healthy {
+    ///         println!("healthy: {healthy}");
+    ///     }
+    ///
+    ///     if let Some(busy) = status.busy {
+    ///         println!("busy: {busy}");
+    ///     }
+    ///
+    ///     if let Some(count) = status.pending_job_count {
+    ///         println!("{count} job(s) pending in the queue");
+    ///     }
+    ///
+    ///     if let Some(capacity) = status.capacity {
+    ///         println!(
+    ///             "{}/{} slots available",
+    ///             capacity.available_slots, capacity.max_slots
+    ///         );
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        #[allow(deprecated)]
+        let accessible = self.is_accessible().await?;
+        Ok(ResourceStatus {
+            status: if accessible {
+                ResourceStatusCode::Online
+            } else {
+                ResourceStatusCode::Offline
+            },
+            status_reason: None,
+            healthy: None,
+            busy: None,
+            capacity: None,
+            pending_job_count: None,
+        })
+    }
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
     ///

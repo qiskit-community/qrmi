@@ -42,6 +42,18 @@ pub enum GetAllQcsV1Error {
     UnknownValue(serde_json::Value),
 }
 
+/// struct for typed errors of method [`get_qc_v1`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum GetQcV1Error {
+    Status400(models::InvalidInput),
+    Status401(models::Unauthorized),
+    Status404(models::QcNotFound),
+    Status429(models::RateLimitExceeded),
+    Status500(models::InternalError),
+    UnknownValue(serde_json::Value),
+}
+
 /// struct for typed errors of method [`get_qc_health_v1`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -462,6 +474,57 @@ pub async fn qc_get_artifacts(
     } else {
         let content = resp.text().await?;
         let entity: Option<QcGetArtifactsError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent {
+            status,
+            content,
+            entity,
+        }))
+    }
+}
+
+///  Returns detailed information about a single quantum computer identified by its ID or alias, including its limits, health, pricing and additional info.
+pub async fn get_qc_v1(
+    configuration: &configuration::Configuration,
+    qc: &str,
+) -> Result<models::IqmServerQuantumComputerDetails, Error<GetQcV1Error>> {
+    // add a prefix to parameters to efficiently prevent name collisions
+    let p_path_qc = qc;
+
+    let uri_str = format!(
+        "{}/api/v1/quantum-computers/{qc}",
+        configuration.base_path,
+        qc = p_path_qc
+    );
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    if let Some(ref token) = configuration.bearer_access_token {
+        req_builder = req_builder.bearer_auth(token.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::IqmServerQuantumComputerDetails`"))),
+            ContentType::Unsupported(unknown_type) => Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::IqmServerQuantumComputerDetails`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<GetQcV1Error> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent {
             status,
             content,

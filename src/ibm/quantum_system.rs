@@ -10,21 +10,25 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::error::{required_env, QrmiError};
+use crate::common::{required_env, resolve_opt, resolve_opt_required};
+use crate::error::QrmiError;
 use crate::ibm::error::IbmError;
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceCapacity, ResourceStatus, ResourceStatusCode, ResourceType, Target,
+    TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use log::info;
 use quantum_system_api::utils::s3::S3Client;
 use quantum_system_api::{
-    models::Backend, models::BackendStatus, models::Job, models::JobStatus, models::LogLevel,
-    models::ProgramId, AuthMethod, Client, ClientBuilder,
+    models::Backend, models::BackendLanesConfiguration, models::BackendStatus, models::Job,
+    models::JobStatus, models::Jobs, models::LogLevel, models::ProgramId, AuthMethod, Client,
+    ClientBuilder,
 };
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::Jitter;
 use serde_json::json;
 use std::collections::HashMap;
-use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -53,15 +57,43 @@ impl IBMQuantumSystem {
     /// * `QRMI_IBM_QS_SERVICE_CRN`: Provisioned Quantum System API Service instance
     /// * `QRMI_JOB_TIMEOUT_SECONDS`: Time (in seconds) after which job should time out and get cancelled.
     pub fn new(resource_id: &str) -> Result<Self> {
-        // Check to see if the environment variables required to run this program are set.
-        let daapi_endpoint = required_env(format!("{resource_id}_QRMI_IBM_QS_ENDPOINT"))?;
+        Self::from_opt(resource_id, None)
+    }
+
+    /// Constructs a QRMI to access IBM Quantum System API Service from a
+    /// config map, instead of environment variables.
+    ///
+    /// Accepts the same keys as [`Self::new`]'s environment variables,
+    /// minus the `<resource_id>_` prefix. Each key also accepts its fully
+    /// lowercased form (e.g. `qrmi_ibm_qs_endpoint`) as a fallback if the
+    /// exact-case key isn't present in the map.
+    pub fn from_config(resource_id: &str, config: HashMap<String, String>) -> Result<Self> {
+        Self::from_opt(resource_id, Some(&config))
+    }
+
+    /// Shared parsing and client-building logic for [`Self::new`]
+    /// (`config: None`, reads OS environment variables) and
+    /// [`Self::from_config`] (`config: Some`, reads the given map).
+    fn from_opt(resource_id: &str, config: Option<&HashMap<String, String>>) -> Result<Self> {
+        // Config keys are the same name as the env vars, minus the
+        // `<resource_id>_` prefix (config maps are already scoped to one
+        // resource, so there's nothing to prefix).
+        let prefix = if config.is_some() {
+            String::new()
+        } else {
+            format!("{resource_id}_")
+        };
+        let daapi_endpoint =
+            resolve_opt_required(&format!("{prefix}QRMI_IBM_QS_ENDPOINT"), config)?;
 
         let binding = ClientBuilder::new(daapi_endpoint);
         let mut builder = binding;
 
-        let apikey = required_env(format!("{resource_id}_QRMI_IBM_QS_IAM_APIKEY"))?;
-        let service_crn = required_env(format!("{resource_id}_QRMI_IBM_QS_SERVICE_CRN"))?;
-        let iam_endpoint_url = required_env(format!("{resource_id}_QRMI_IBM_QS_IAM_ENDPOINT"))?;
+        let apikey = resolve_opt_required(&format!("{prefix}QRMI_IBM_QS_IAM_APIKEY"), config)?;
+        let service_crn =
+            resolve_opt_required(&format!("{prefix}QRMI_IBM_QS_SERVICE_CRN"), config)?;
+        let iam_endpoint_url =
+            resolve_opt_required(&format!("{prefix}QRMI_IBM_QS_IAM_ENDPOINT"), config)?;
 
         let auth_method = AuthMethod::IbmCloudIam {
             apikey,
@@ -80,21 +112,26 @@ impl IBMQuantumSystem {
             .with_timeout(Duration::from_secs(60))
             .with_retry_policy(retry_policy);
 
-        let s3_endpoint_for_daapi =
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT_FOR_QSAPI")).ok();
+        let s3_endpoint_for_daapi = resolve_opt(
+            &format!("{prefix}QRMI_IBM_QS_S3_ENDPOINT_FOR_QSAPI"),
+            config,
+        );
 
         if let (
-            Ok(aws_access_key_id),
-            Ok(aws_secret_access_key),
-            Ok(s3_endpoint),
-            Ok(s3_bucket),
-            Ok(s3_region),
+            Some(aws_access_key_id),
+            Some(aws_secret_access_key),
+            Some(s3_endpoint),
+            Some(s3_bucket),
+            Some(s3_region),
         ) = (
-            env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_ENDPOINT")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_BUCKET")),
-            env::var(format!("{resource_id}_QRMI_IBM_QS_S3_REGION")),
+            resolve_opt(&format!("{prefix}QRMI_IBM_QS_AWS_ACCESS_KEY_ID"), config),
+            resolve_opt(
+                &format!("{prefix}QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY"),
+                config,
+            ),
+            resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_ENDPOINT"), config),
+            resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_BUCKET"), config),
+            resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_REGION"), config),
         ) {
             builder.with_s3bucket(
                 &aws_access_key_id,
@@ -154,6 +191,39 @@ impl QuantumResource for IBMQuantumSystem {
             .get_backend::<Backend>(&self.backend_name)
             .await?;
         Ok(matches!(backend.status, BackendStatus::Online))
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let (backend, lane_config, jobs) = tokio::try_join!(
+            self.api_client.get_backend::<Backend>(&self.backend_name),
+            self.api_client
+                .get_backend_lanes_configuration::<BackendLanesConfiguration>(&self.backend_name),
+            self.api_client.list_jobs::<Jobs>()
+        )?;
+
+        let count = jobs
+            .jobs
+            .iter()
+            .filter(|job| job.backend == self.backend_name)
+            .count() as u64;
+
+        let status = match backend.status {
+            BackendStatus::Online => ResourceStatusCode::Online,
+            BackendStatus::Offline => ResourceStatusCode::Offline,
+            BackendStatus::Paused => ResourceStatusCode::Paused,
+        };
+
+        Ok(ResourceStatus {
+            status,
+            status_reason: None,
+            busy: backend.locked,
+            healthy: None,
+            capacity: Some(ResourceCapacity {
+                available_slots: lane_config.hpc_workload_manager.lanes.saturating_sub(count),
+                max_slots: lane_config.hpc_workload_manager.lanes,
+            }),
+            pending_job_count: None,
+        })
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
