@@ -17,12 +17,17 @@ use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::quantum_compute_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use log::error;
 use quantum_compute_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
 use quantum_compute_client::models;
+use quantum_compute_client::models::backends_response_v2_devices_inner_status::Name;
 use quantum_compute_client::models::create_job_request_one_of::LogLevel;
+use quantum_compute_client::models::create_session_200_response::Mode as SessionResponseMode;
+use quantum_compute_client::models::create_session_200_response::State;
 use quantum_compute_client::models::create_session_request_one_of::Mode;
 
 use serde_json::{json, Value};
@@ -123,6 +128,71 @@ impl IBMQuantumComputeService {
             token_lifetime: 0,
         })
     }
+
+    /// Maximum value accepted for the `offset` query parameter by the
+    /// jobs-list API, per the API specification.
+    const MAX_OFFSET: i32 = 2147483647;
+
+    async fn has_dedicated_active_session(&self) -> Result<bool> {
+        const PAGE_SIZE: i32 = 200;
+        let mut offset: i32 = 0;
+
+        loop {
+            let page = jobs_api::list_jobs(
+                &self.config,
+                Some("2025-01-01"),
+                Some(PAGE_SIZE),
+                Some(offset),
+                Some(true),
+                None,
+                Some(&self.backend_name),
+                None,
+                None,
+                Some("DESC"),
+                None,
+                None,
+                Some(true),
+            )
+            .await
+            .map_err(|e| classify(e, ResourceKind::Job))?;
+
+            let jobs = page.jobs.unwrap_or_default();
+            let page_len = jobs.len();
+
+            for job in &jobs {
+                if job.status != models::job_response::Status::Running {
+                    continue;
+                }
+
+                let Some(session_id) = &job.session_id else {
+                    continue;
+                };
+
+                let session_response =
+                    sessions_api::get_session(&self.config, session_id, Some("2025-01-01"))
+                        .await
+                        .map_err(|e| classify(e, ResourceKind::Session))?;
+
+                let is_dedicated_active = session_response.state == Some(State::Active)
+                    && session_response.mode == SessionResponseMode::Dedicated;
+
+                if is_dedicated_active {
+                    return Ok(true);
+                }
+            }
+
+            // Last page reached (fewer results than requested).
+            if (page_len as i32) < PAGE_SIZE {
+                return Ok(false);
+            }
+
+            // Stop before `offset` would exceed the API's documented maximum.
+            if offset > Self::MAX_OFFSET - PAGE_SIZE {
+                return Ok(false);
+            }
+            offset += PAGE_SIZE;
+        }
+    }
 }
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
@@ -160,6 +230,73 @@ impl QuantumResource for IBMQuantumComputeService {
             .unwrap_or_else(|| "unknown".to_string());
         // Return true if status is "active" or "online"
         Ok(status_str.to_lowercase() == "active" || status_str.to_lowercase() == "online")
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        // Ensure the bearer token is valid. This must happen before the
+        // concurrent calls below, since it mutably borrows `self`.
+        if let Err(e) = auth::check_token(
+            &self.api_key,
+            &self.iam_endpoint,
+            &mut self.config.bearer_access_token,
+            &mut self.token_expiration,
+            &mut self.token_lifetime,
+        )
+        .await
+        {
+            error!("Token renewal failed: {:?}", e);
+        }
+
+        // `list_backends` (to get this backend's device-level status) and
+        // the dedicated-session check (paging through `list_jobs` +
+        // `get_session`) don't depend on each other, so run them
+        // concurrently.
+        let (backends, has_dedicated_active_session) = tokio::try_join!(
+            async {
+                backends_api::list_backends(&self.config, Some("2025-01-01"))
+                    .await
+                    .map_err(|e| classify(e, ResourceKind::Backend))
+            },
+            self.has_dedicated_active_session(),
+        )?;
+
+        let devices = backends.devices.ok_or_else(|| {
+            QrmiError::ResourceNotFound(format!(
+                "backend list response is missing `devices` for {}",
+                self.backend_name
+            ))
+        })?;
+
+        let device = devices
+            .into_iter()
+            .find(|d| d.name == self.backend_name)
+            .ok_or_else(|| {
+                QrmiError::ResourceNotFound(format!(
+                    "backend `{}` not found in device list",
+                    self.backend_name
+                ))
+            })?;
+
+        let status = match device.status.name {
+            Name::Online => ResourceStatusCode::Online,
+            Name::Offline => ResourceStatusCode::Offline,
+            Name::Paused => ResourceStatusCode::Paused,
+        };
+
+        // A dedicated, active session in use, then marks as busy
+        let is_busy = matches!(
+            status,
+            ResourceStatusCode::Online if has_dedicated_active_session
+        );
+
+        Ok(ResourceStatus {
+            status,
+            status_reason: device.status.reason,
+            busy: Some(is_busy),
+            healthy: None,
+            capacity: None,
+            pending_job_count: device.queue_length.try_into().ok(),
+        })
     }
 
     /// Creates a new session.

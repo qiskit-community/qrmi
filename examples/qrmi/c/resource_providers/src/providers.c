@@ -73,17 +73,28 @@ int main(int argc, char *argv[]) {
       qrmi_resource_id(resources.resources[i], &id);
       printf("resource: %s\n", id);
 
-      bool is_accessible = false;
-      rc = qrmi_resource_is_accessible(resources.resources[i], &is_accessible);
+      QrmiResourceStatus *res_status = NULL;
+      rc = qrmi_resource_status(resources.resources[i], &res_status);
       if (rc == QRMI_RETURN_CODE_SUCCESS) {
-        if (is_accessible) {
-          fprintf(stdout, "%s can be accessed.\n", id);
+        QrmiResourceStatusCode status;
+        rc = qrmi_resource_status_code(res_status, &status);
+        qrmi_resource_status_free(res_status);
+        if (rc == QRMI_RETURN_CODE_SUCCESS) {
+          if (status == QRMI_RESOURCE_STATUS_CODE_ONLINE) {
+            fprintf(stderr, "%s can be accessed.\n", id);
+          } else {
+            fprintf(stderr, "%s cannot be accessed.\n", id);
+          }
         } else {
-          fprintf(stderr, "%s cannot be accessed.\n", id);
+          const char *last_error = qrmi_get_last_error();
+          fprintf(stderr, "qrmi_resource_status_code() failed. %s (%d)\n",
+                  last_error, qrmi_get_last_error_kind());
+          qrmi_string_free((char *)last_error);
         }
       } else {
         const char *last_error = qrmi_get_last_error();
-        fprintf(stderr, "qrmi_resource_is_accessible() failed. %s\n", last_error);
+        fprintf(stderr, "qrmi_resource_status() failed. %s (%d)\n",
+                last_error, qrmi_get_last_error_kind());
         qrmi_string_free((char *)last_error);
       }
       qrmi_string_free(id);

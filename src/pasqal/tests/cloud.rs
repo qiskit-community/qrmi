@@ -1,5 +1,5 @@
 use super::PasqalCloud;
-use crate::models::ResourceType;
+use crate::models::{ResourceStatusCode, ResourceType};
 use crate::pasqal::cloud_config::{
     expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalCloudConfig,
 };
@@ -66,10 +66,8 @@ async fn is_accessible_no_authentication() {
         task_kinds: std::collections::HashMap::new(),
     };
 
-    let accessible = qrmi
-        .is_accessible()
-        .await
-        .expect("is_accessible should succeed");
+    let res_status = qrmi.status().await.expect("status() should succeed").status;
+    let accessible = matches!(res_status, ResourceStatusCode::Online);
     mock_server.join().expect("server thread should join");
 
     // Verify that `is_accessible()` returns true

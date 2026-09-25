@@ -13,7 +13,9 @@
 use crate::common::{resolve_opt, resolve_opt_required};
 use crate::error::QrmiError;
 use crate::iqm::error::{classify, ResourceKind};
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
 use iqm_server_api::apis::calibration_sets_api::{
@@ -21,7 +23,7 @@ use iqm_server_api::apis::calibration_sets_api::{
 };
 use iqm_server_api::apis::configuration;
 use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
-use iqm_server_api::apis::quantum_computers_api::{get_qc_health_v1, qc_get_artifacts};
+use iqm_server_api::apis::quantum_computers_api::{get_qc_health_v1, get_qc_v1, qc_get_artifacts};
 use iqm_server_api::models::IqmServerJobStatus;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -155,6 +157,25 @@ impl QuantumResource for IQMServer {
             .await
             .map_err(|e| classify(e, ResourceKind::Backend))?;
         Ok(health.operational == "online" && health.health.healthy)
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let qc = get_qc_v1(&self.config, &self.backend_name)
+            .await
+            .map_err(|e| classify(e, ResourceKind::Backend))?;
+
+        Ok(ResourceStatus {
+            status: match qc.operational.as_str() {
+                "online" => ResourceStatusCode::Online,
+                "maintenance" => ResourceStatusCode::Paused,
+                _ => ResourceStatusCode::Offline,
+            },
+            status_reason: Some(format!("healthy updated at {}", qc.health.updated_at)),
+            healthy: Some(qc.health.healthy),
+            busy: None,
+            capacity: None,
+            pending_job_count: qc.queue_length.try_into().ok(),
+        })
     }
 
     /// Starts a job task.
