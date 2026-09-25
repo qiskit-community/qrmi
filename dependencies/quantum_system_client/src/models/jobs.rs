@@ -19,6 +19,7 @@ use std::str::FromStr;
 pub enum ProgramId {
     Estimator,
     Sampler,
+    Executor,
 }
 
 impl FromStr for ProgramId {
@@ -29,6 +30,7 @@ impl FromStr for ProgramId {
         match s {
             "estimator" => Ok(ProgramId::Estimator),
             "sampler" => Ok(ProgramId::Sampler),
+            "executor" => Ok(ProgramId::Executor),
             _ => Err(ProgramIdParseError),
         }
     }
@@ -46,9 +48,10 @@ impl<'de> Deserialize<'de> for ProgramId {
         match s.as_str() {
             "estimator" => Ok(ProgramId::Estimator),
             "sampler" => Ok(ProgramId::Sampler),
+            "executor" => Ok(ProgramId::Executor),
             _ => Err(serde::de::Error::unknown_variant(
                 &s,
-                &["estimator", "sampler"],
+                &["estimator", "sampler", "executor"],
             )),
         }
     }
@@ -59,6 +62,7 @@ impl fmt::Display for ProgramId {
         let s = match *self {
             ProgramId::Estimator => "estimator",
             ProgramId::Sampler => "sampler",
+            ProgramId::Executor => "executor",
         };
         write!(f, "{}", s)
     }

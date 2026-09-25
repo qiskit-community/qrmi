@@ -1,4 +1,5 @@
-# (C) Copyright 2025, 2026 IBM. All Rights Reserved.
+#
+# (C) Copyright 2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -8,7 +9,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""generating input files for samplerV2"""
+"""generating input files for Executor"""
 
 # pylint: disable=invalid-name, duplicate-code
 import sys
@@ -16,7 +17,12 @@ import json
 import argparse
 import requests
 
-import numpy as np
+from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
+
+from qiskit_ibm_runtime.quantum_program.params_converters import (
+    QUANTUM_PROGRAM_PARAMS_CONVERTERS,
+)
+from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
 
 try:
     # qiskit-ibm-runtime >= 0.46
@@ -24,25 +30,43 @@ try:
 except ModuleNotFoundError:
     # qiskit_ibm_runtime < 0.46
     from qiskit_ibm_runtime.utils import RuntimeEncoder
-from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
 from qiskit_ibm_runtime.models import BackendProperties, BackendConfiguration
-from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-from qiskit import qasm3
+from qiskit_ibm_runtime.quantum_program import QuantumProgram
+from qiskit_ibm_runtime.options_models.executor import ExecutorOptions
+import numpy as np
+from samplomatic import build
+from samplomatic.transpiler import generate_boxing_pass_manager
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-from qiskit.primitives.containers.sampler_pub import SamplerPub
-from qiskit.circuit.library import efficient_su2
+from qiskit.circuit import Parameter, QuantumCircuit
+
+DEFAULT_SCHEMA_VERSION = "v2.0"
 
 parser = argparse.ArgumentParser(
-    description="A tool to generate SamplerV2 input for testing"
+    description="A tool to generate Executor input for testing"
 )
 parser.add_argument("backend", help="Backend name")
 parser.add_argument("base_url", help="API endpoint")
 parser.add_argument("apikey", help="IAM API key")
-parser.add_argument("instance", help="Service CRN of your instance - starting with 'crn:v1:'")
+parser.add_argument(
+    "instance", help="Service CRN of your instance - starting with 'crn:v1:'"
+)
 parser.add_argument(
     "--iam_url", help="IAM endpoint", default="https://iam.cloud.ibm.com"
 )
+parser.add_argument(
+    "--schema_version",
+    help=f"Executor schema version. default: {DEFAULT_SCHEMA_VERSION}",
+    default=DEFAULT_SCHEMA_VERSION,
+)
 args = parser.parse_args()
+
+try:
+    converter = QUANTUM_PROGRAM_PARAMS_CONVERTERS[args.schema_version]
+except KeyError as err:
+    raise ValueError(
+        f"Invalid schema version '{args.schema_version}'. "
+        f"Supported versions: {list(QUANTUM_PROGRAM_PARAMS_CONVERTERS.keys())}"
+    ) from err
 
 # Use IAM based authentication
 token_manager = IAMAuthenticator(apikey=args.apikey, url=args.iam_url).token_manager
@@ -83,47 +107,61 @@ else:
 
 # Generate transpiler target from backend configuration & properties
 target = convert_to_target(backend_config, backend_props)
-pm = generate_preset_pass_manager(
-    optimization_level=1,
-    target=target,
-)
 
-# Create a circuit - You need at least one circuit as the input to the Sampler primitive.
-circuit = efficient_su2(127, entanglement="linear")
+# Generate the circuit
+circuit = QuantumCircuit(3)
+circuit.h(0)
+circuit.h(1)
+circuit.cz(0, 1)
+circuit.h(1)
+circuit.h(2)
+circuit.cz(1, 2)
+circuit.h(2)
+circuit.rz(Parameter("theta"), 0)
+circuit.rz(Parameter("phi"), 1)
+circuit.rz(Parameter("lam"), 2)
 circuit.measure_all()
-# The circuit is parametrized, so we will define the parameter values for execution
-param_values = np.random.rand(circuit.num_parameters)
 
-# The circuit and observable need to be transformed to only use instructions
-# supported by the QPU (referred to as instruction set architecture (ISA) circuits).
-# We'll use the transpiler to do this.
-pm = generate_preset_pass_manager(
-    optimization_level=1,
-    target=target,
-)
-isa_circuit = pm.run(circuit)
-print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
+# Transpile the circuit to ISA
+preset_pass_manager = generate_preset_pass_manager(target=target, optimization_level=3)
+isa_circuit = preset_pass_manager.run(circuit)
 
-shots = 10000
-pub = SamplerPub.coerce((isa_circuit, param_values), shots)
-qasm3_str = qasm3.dumps(
-    pub.circuit,
-    disable_constants=True,
-    allow_aliasing=True,
-    experimental=qasm3.ExperimentalFeatures.SWITCH_CASE_V1,
+boxing_pm = generate_boxing_pass_manager(
+    # Add gate twirling
+    enable_gates=True,
+    # Add measurement twirling
+    enable_measures=True,
 )
 
-param_array = pub.parameter_values.as_array(pub.circuit.parameters).tolist()
+boxed_circuit = boxing_pm.run(isa_circuit)
 
-# Generates JSON representation of primitive job
-input_json = {
-    "pubs": [(qasm3_str, param_array)],
-    "version": 2,
-    "support_qiskit": False,
-    "shots": shots,
-    "options": {},
-}
+# Build the template circuit and the samplex
+template_circuit, samplex = build(boxed_circuit)
 
+# Generate a quantum program
+program = QuantumProgram(shots=1024)
+
+# Append the circuit and the parameter values to the program
+program.append_circuit_item(
+    isa_circuit,
+    circuit_arguments=np.random.rand(10, 3),  # 10 sets of parameter values
+)
+
+# Append the template circuit and samplex as a samplex item
+program.append_samplex_item(
+    template_circuit,
+    samplex=samplex,
+    samplex_arguments={
+        "parameter_values": np.random.rand(10, 3),  # 10 sets of parameter values
+    },
+    shape=(2, 14, 10),
+)
+
+
+options = ExecutorOptions()
+params = converter.encoder(program, options)
+input_json = params.model_dump(mode="json")
+print(json.dumps(input_json, indent=2))
 
 def dump(json_data: dict, filename: str) -> None:
     """Write json data to the specified file
@@ -138,9 +176,9 @@ def dump(json_data: dict, filename: str) -> None:
 
 
 dump(
-    {"parameters": input_json, "program_id": "sampler"},
-    f"sampler_input_{args.backend}.json",
+    {"parameters": input_json, "program_id": "executor"},
+    f"executor_input_{args.backend}_{args.schema_version}.json",
 )
-dump(input_json, f"sampler_input_{args.backend}_params_only.json")
+dump(input_json, f"executor_input_{args.backend}_{args.schema_version}_params_only.json")
 
 print("done")

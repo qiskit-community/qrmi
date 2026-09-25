@@ -292,6 +292,10 @@ impl QuantumResource for IBMQuantumComputeService {
                     let parsed = serde_json::from_value::<NoiseLearnerInput>(val)?;
                     CreateJobRequestOneOfAllOfParams::NoiseLearnerInput(Box::new(parsed))
                 }
+                "executor" => {
+                    let val: Value = serde_json::from_str(&input)?;
+                    CreateJobRequestOneOfAllOfParams::ExecutorInput(Box::new(val))
+                }
                 &_ => return Err(IbmError::UnknownProgramId(format!("{program_id:?}")).into()),
             };
             let create_job_request_one_of = models::CreateJobRequestOneOf {
