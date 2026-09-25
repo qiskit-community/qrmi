@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     qrmi_service_resources_free(&resources);
     return EXIT_FAILURE;
   }
-  fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
+  fprintf(stdout, "acquisition token received\n");
 
   QrmiResourceMetadata *metadata = NULL;
   rc = qrmi_resource_metadata(selected, &metadata);
