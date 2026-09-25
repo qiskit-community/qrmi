@@ -31,16 +31,26 @@ that a ``.env`` file is available under the current directory.
 
 .. _this example: https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/c/pasqal_local
 
-+-----------------------------------+-----------------------------------+
-| Environment variables             | Descriptions                      |
-+===================================+===================================+
-| ``<backend_name>_QRMI_URL``       | URL of the QPU middleware         |
-|                                   | (e.g. ``http://localhost:4207``)  |
-+-----------------------------------+-----------------------------------+
-| ``QRMI_JOB_UID``                  | ID of the user executing the job  |
-+-----------------------------------+-----------------------------------+
-| ``QRMI_JOB_ID``                   | ID of the job                     |
-+-----------------------------------+-----------------------------------+
++-----------------------------------------------+------------------------------------+
+| Environment variables                         | Descriptions                       |
++===============================================+====================================+
+| ``<backend_name>_QRMI_WARDEN_URL``            | URL of the Warden middleware       |
+|                                               | (e.g. ``http://localhost:4207``).  |
+|                                               | ``<backend_name>_QRMI_URL`` is a   |
+|                                               | deprecated fallback.               |
++-----------------------------------------------+------------------------------------+
+| ``QRMI_JOB_UID``                              | ID of the user executing the job   |
++-----------------------------------------------+------------------------------------+
+| ``QRMI_JOB_ID``                               | ID of the scheduler job, including |
+|                                               | the array-task ID for array jobs   |
++-----------------------------------------------+------------------------------------+
+| ``QRMI_JOB_QPU_SLOTS``                        | (optional) QPU slots to claim when |
+|                                               | acquiring a Warden session.        |
+|                                               | Positive integer, default ``1``.   |
++-----------------------------------------------+------------------------------------+
+| ``<backend_name>_QRMI_JOB_ACQUISITION_TOKEN`` | (optional) Warden session acquired |
+|                                               | by the scheduler for this job      |
++-----------------------------------------------+------------------------------------+
 
 Where ``<backend_name>`` is the backend name passed as the first
 argument (e.g. ``PASQAL_LOCAL``).
