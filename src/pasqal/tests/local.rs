@@ -152,3 +152,21 @@ fn status_is_paused_during_warden_maintenance() {
     assert_eq!(status.status, ResourceStatusCode::Paused);
     assert_eq!(status.status_reason.as_deref(), Some("Calibration"));
 }
+
+#[test]
+fn from_config_accepts_acquisition_token() {
+    let mut config = slots_config(None);
+    config.insert(
+        "QRMI_JOB_ACQUISITION_TOKEN".to_string(),
+        "00000000-0000-4000-8000-000000000000".to_string(),
+    );
+    let qrmi = PasqalLocal::from_config("test_backend", config).unwrap();
+    assert_eq!(
+        qrmi.acquisition_token.as_deref(),
+        Some("00000000-0000-4000-8000-000000000000")
+    );
+    assert!(PasqalLocal::from_config("test_backend", slots_config(None))
+        .unwrap()
+        .acquisition_token
+        .is_none());
+}
