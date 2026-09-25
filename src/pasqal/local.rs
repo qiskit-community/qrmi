@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::common::{required_env, resolve_opt, resolve_opt_required};
+use crate::common::{resolve_opt, resolve_opt_required};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
@@ -25,6 +25,15 @@ pub struct PasqalLocal {
     pub(crate) backend_name: String,
     pub(crate) job_uid: i32,
     pub(crate) job_id: String,
+    /// Warden session used by [`QuantumResource::task_start`]. Resolved at
+    /// construction and updated by [`QuantumResource::acquire`], so task
+    /// operations never read process environment variables.
+    pub(crate) acquisition_token: Option<String>,
+    /// Name of the key the acquisition token is read from, for error messages.
+    pub(crate) acquisition_token_key: String,
+    /// Whether the resource was built from a config map rather than the
+    /// environment. Only affects which error is raised for a missing value.
+    pub(crate) from_config: bool,
 }
 
 impl PasqalLocal {
@@ -39,6 +48,8 @@ impl PasqalLocal {
     /// * `QRMI_JOB_ID`: id of the slurm job
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
+    /// * `<backend_name>_QRMI_JOB_ACQUISITION_TOKEN`: (optional) existing Warden
+    ///   session to use for tasks. If not set, call `acquire()` first.
     ///
     pub fn new(backend_name: &str) -> Result<Self> {
         Self::from_opt(backend_name, None)
@@ -90,11 +101,30 @@ impl PasqalLocal {
 
         let job_id = resolve_opt_required("QRMI_JOB_ID", config)?;
 
+        let acquisition_token_key = format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN");
+        let acquisition_token = resolve_opt(&acquisition_token_key, config);
+
         Ok(Self {
-            api_client: ClientBuilder::new(url).build().unwrap(),
+            api_client: ClientBuilder::new(url).build()?,
             backend_name: backend_name.to_string(),
             job_uid,
             job_id,
+            acquisition_token,
+            acquisition_token_key,
+            from_config: config.is_some(),
+        })
+    }
+}
+
+impl PasqalLocal {
+    fn session_id(&self) -> Result<String> {
+        self.acquisition_token.clone().ok_or_else(|| {
+            let name = self.acquisition_token_key.clone();
+            if self.from_config {
+                QrmiError::MissingConfigKey(name)
+            } else {
+                QrmiError::EnvVarNotSet(name)
+            }
         })
     }
 }
@@ -119,19 +149,25 @@ impl QuantumResource for PasqalLocal {
             .api_client
             .create_session(self.job_uid, &self.job_id)
             .await?;
+        self.acquisition_token = Some(session.id.clone());
         Ok(session.id)
     }
 
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
-        let session_id = required_env(&token_var)?;
+    async fn release(&mut self, id: &str) -> Result<()> {
+        let session_id = if id.is_empty() {
+            self.session_id()?
+        } else {
+            id.to_string()
+        };
         self.api_client.revoke_session(&session_id).await?;
+        if self.acquisition_token.as_deref() == Some(session_id.as_str()) {
+            self.acquisition_token = None;
+        }
         Ok(())
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
-        let session_id = required_env(&token_var)?;
+        let session_id = self.session_id()?;
 
         let Payload::PasqalCloud { sequence, job_runs } = payload else {
             return Err(QrmiError::UnsupportedPayload(format!("{payload:?}")));

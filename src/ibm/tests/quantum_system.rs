@@ -11,6 +11,7 @@
 // that they have been altered from the originals.
 
 use super::super::IBMQuantumSystem;
+use crate::error::QrmiError;
 use crate::models::ResourceType;
 use crate::QuantumResource;
 use quantum_system_api::ClientBuilder;
@@ -25,6 +26,7 @@ async fn resource_id_and_type_match_backend() {
     let mut qrmi = IBMQuantumSystem {
         api_client,
         backend_name: BACKEND_NAME.to_string(),
+        task_settings: Default::default(),
     };
 
     let resource_id = qrmi
@@ -84,4 +86,47 @@ fn from_config_missing_required_key_errors() {
         "http://localhost".to_string(),
     )]);
     assert!(IBMQuantumSystem::from_config("test_eagle", config).is_err());
+}
+
+#[test]
+fn from_config_captures_task_settings_from_map() {
+    let mut config = required_only_config();
+    config.insert("QRMI_JOB_TIMEOUT_SECONDS".to_string(), "600".to_string());
+    for (key, value) in [
+        ("QRMI_IBM_QS_S3_BUCKET", "bucket"),
+        ("QRMI_IBM_QS_S3_ENDPOINT", "http://localhost:9000"),
+        ("QRMI_IBM_QS_AWS_ACCESS_KEY_ID", "id"),
+        ("QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY", "secret"),
+        ("QRMI_IBM_QS_S3_REGION", "us-east"),
+    ] {
+        config.insert(key.to_string(), value.to_string());
+    }
+    let qrmi = IBMQuantumSystem::from_config("test_eagle", config).unwrap();
+
+    assert_eq!(qrmi.task_settings.timeout_secs().unwrap(), 600);
+    assert_eq!(qrmi.task_settings.s3().unwrap().bucket, "bucket");
+}
+
+#[test]
+fn from_config_reports_missing_task_settings_as_config_keys() {
+    let qrmi = IBMQuantumSystem::from_config("test_eagle", required_only_config()).unwrap();
+
+    assert!(matches!(
+        qrmi.task_settings.timeout_secs(),
+        Err(QrmiError::MissingConfigKey(key)) if key == "QRMI_JOB_TIMEOUT_SECONDS"
+    ));
+    assert!(matches!(
+        qrmi.task_settings.s3(),
+        Err(QrmiError::MissingConfigKey(key)) if key == "QRMI_IBM_QS_S3_BUCKET"
+    ));
+}
+
+#[test]
+fn from_config_rejects_invalid_timeout() {
+    let mut config = required_only_config();
+    config.insert("QRMI_JOB_TIMEOUT_SECONDS".to_string(), "soon".to_string());
+    assert!(matches!(
+        IBMQuantumSystem::from_config("test_eagle", config),
+        Err(QrmiError::ParseError { .. })
+    ));
 }

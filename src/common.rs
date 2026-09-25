@@ -15,9 +15,7 @@ mod create_resource;
 mod job_env;
 mod logging;
 
-pub(crate) use config::{
-    required_env, resolve_opt, resolve_opt_required, resolve_opt_required_any,
-};
+pub(crate) use config::{resolve_opt, resolve_opt_required, resolve_opt_required_any};
 pub(crate) use create_resource::{create_resource, create_resource_from_config};
 pub(crate) use job_env::get_job_qpu_resources_and_types;
 pub(crate) use logging::{initialize, set_log_sink, LogSink};

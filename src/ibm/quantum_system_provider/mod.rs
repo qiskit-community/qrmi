@@ -25,7 +25,6 @@ use log::warn;
 use provider_filter::BackendFilter;
 use quantum_system_api::{models::Backends, AuthMethod, ClientBuilder};
 use std::collections::HashMap;
-use std::env;
 
 /// A [`ResourceProvider`] that discovers backends available through IBM Quantum System.
 ///
@@ -89,14 +88,6 @@ impl IBMQuantumSystemProvider {
             client,
             provider_env: environment.clone(),
         })
-    }
-
-    /// Injects `{backend_name}_KEY=VALUE` environment variables so that
-    /// `IBMQuantumSystem::new(backend_name)` can find the connection parameters.
-    fn inject_backend_env(&self, backend_name: &str) {
-        for (key, value) in &self.provider_env {
-            env::set_var(format!("{backend_name}_{key}"), value);
-        }
     }
 }
 
@@ -172,9 +163,7 @@ impl ResourceProvider for IBMQuantumSystemProvider {
                     return None;
                 }
 
-                self.inject_backend_env(&name);
-
-                match IBMQuantumSystem::new(&name) {
+                match IBMQuantumSystem::from_config(&name, self.provider_env.clone()) {
                     Ok(r) => Some(Box::new(r) as Box<dyn QuantumResource + Send + Sync>),
                     Err(e) => {
                         warn!(

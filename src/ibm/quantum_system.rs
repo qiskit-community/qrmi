@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::common::{required_env, resolve_opt, resolve_opt_required};
+use crate::common::{resolve_opt, resolve_opt_required};
 use crate::error::QrmiError;
 use crate::ibm::error::IbmError;
 use crate::models::{
@@ -38,6 +38,71 @@ use async_trait::async_trait;
 pub struct IBMQuantumSystem {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
+    /// Settings only needed for job execution, resolved once at construction
+    /// so that task operations never read process environment variables.
+    pub(crate) task_settings: TaskSettings,
+}
+
+/// Job execution settings for [`IBMQuantumSystem`]. These are optional at
+/// construction (scheduler integrations don't need them) and only become
+/// required when a task operation uses them.
+#[derive(Default)]
+pub(crate) struct TaskSettings {
+    /// Prefix of the keys the settings were read from: `<resource_id>_` for
+    /// environment variables, empty for a config map.
+    pub(crate) key_prefix: String,
+    /// Whether the settings were read from a config map rather than the
+    /// environment. Only affects which error is raised for a missing value.
+    pub(crate) from_config: bool,
+    pub(crate) timeout_secs: Option<u64>,
+    pub(crate) s3_bucket: Option<String>,
+    pub(crate) s3_endpoint: Option<String>,
+    pub(crate) s3_access_key_id: Option<String>,
+    pub(crate) s3_secret_access_key: Option<String>,
+    pub(crate) s3_region: Option<String>,
+}
+
+impl TaskSettings {
+    fn required<'a>(&self, value: &'a Option<String>, key: &str) -> Result<&'a String> {
+        value.as_ref().ok_or_else(|| self.missing(key))
+    }
+
+    fn missing(&self, key: &str) -> QrmiError {
+        let name = format!("{}{key}", self.key_prefix);
+        if self.from_config {
+            QrmiError::MissingConfigKey(name)
+        } else {
+            QrmiError::EnvVarNotSet(name)
+        }
+    }
+
+    pub(crate) fn timeout_secs(&self) -> Result<u64> {
+        self.timeout_secs
+            .ok_or_else(|| self.missing("QRMI_JOB_TIMEOUT_SECONDS"))
+    }
+
+    pub(crate) fn s3(&self) -> Result<S3Env> {
+        Ok(S3Env {
+            bucket: self
+                .required(&self.s3_bucket, "QRMI_IBM_QS_S3_BUCKET")?
+                .clone(),
+            endpoint: self
+                .required(&self.s3_endpoint, "QRMI_IBM_QS_S3_ENDPOINT")?
+                .clone(),
+            access_key_id: self
+                .required(&self.s3_access_key_id, "QRMI_IBM_QS_AWS_ACCESS_KEY_ID")?
+                .clone(),
+            secret_access_key: self
+                .required(
+                    &self.s3_secret_access_key,
+                    "QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY",
+                )?
+                .clone(),
+            region: self
+                .required(&self.s3_region, "QRMI_IBM_QS_S3_REGION")?
+                .clone(),
+        })
+    }
 }
 
 impl IBMQuantumSystem {
@@ -117,28 +182,43 @@ impl IBMQuantumSystem {
             config,
         );
 
-        if let (
-            Some(aws_access_key_id),
-            Some(aws_secret_access_key),
-            Some(s3_endpoint),
-            Some(s3_bucket),
-            Some(s3_region),
-        ) = (
-            resolve_opt(&format!("{prefix}QRMI_IBM_QS_AWS_ACCESS_KEY_ID"), config),
-            resolve_opt(
+        let timeout_var = format!("{prefix}QRMI_JOB_TIMEOUT_SECONDS");
+        let timeout_secs = resolve_opt(&timeout_var, config)
+            .map(|value| {
+                value
+                    .parse::<u64>()
+                    .map_err(|source| QrmiError::ParseError {
+                        name: timeout_var,
+                        value,
+                        source: Box::new(source),
+                    })
+            })
+            .transpose()?;
+
+        let task_settings = TaskSettings {
+            key_prefix: prefix.clone(),
+            from_config: config.is_some(),
+            timeout_secs,
+            s3_bucket: resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_BUCKET"), config),
+            s3_endpoint: resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_ENDPOINT"), config),
+            s3_access_key_id: resolve_opt(
+                &format!("{prefix}QRMI_IBM_QS_AWS_ACCESS_KEY_ID"),
+                config,
+            ),
+            s3_secret_access_key: resolve_opt(
                 &format!("{prefix}QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY"),
                 config,
             ),
-            resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_ENDPOINT"), config),
-            resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_BUCKET"), config),
-            resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_REGION"), config),
-        ) {
+            s3_region: resolve_opt(&format!("{prefix}QRMI_IBM_QS_S3_REGION"), config),
+        };
+
+        if let Ok(s3) = task_settings.s3() {
             builder.with_s3bucket(
-                &aws_access_key_id,
-                &aws_secret_access_key,
-                &s3_endpoint,
-                &s3_bucket,
-                &s3_region,
+                &s3.access_key_id,
+                &s3.secret_access_key,
+                &s3.endpoint,
+                &s3.bucket,
+                &s3.region,
                 s3_endpoint_for_daapi,
             );
         } else {
@@ -146,33 +226,22 @@ impl IBMQuantumSystem {
         }
 
         Ok(Self {
-            api_client: builder.build().unwrap(),
+            api_client: builder.build()?,
             backend_name: resource_id.to_string(),
+            task_settings,
         })
     }
 }
 
-/// S3 connection details, read from the `<backend_name>_QRMI_IBM_QS_*` environment
-/// variables. Used by [`IBMQuantumSystem::task_result`] and
-/// [`IBMQuantumSystem::task_logs`], which both need to fetch an object from S3.
-struct S3Env {
-    bucket: String,
+/// S3 connection details, resolved from [`TaskSettings`]. Used by
+/// [`IBMQuantumSystem::task_result`] and [`IBMQuantumSystem::task_logs`],
+/// which both need to fetch an object from S3.
+pub(crate) struct S3Env {
+    pub(crate) bucket: String,
     endpoint: String,
     access_key_id: String,
     secret_access_key: String,
     region: String,
-}
-
-fn s3_env(backend_name: &str) -> Result<S3Env> {
-    Ok(S3Env {
-        bucket: required_env(format!("{backend_name}_QRMI_IBM_QS_S3_BUCKET"))?,
-        endpoint: required_env(format!("{backend_name}_QRMI_IBM_QS_S3_ENDPOINT"))?,
-        access_key_id: required_env(format!("{backend_name}_QRMI_IBM_QS_AWS_ACCESS_KEY_ID"))?,
-        secret_access_key: required_env(format!(
-            "{backend_name}_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY"
-        ))?,
-        region: required_env(format!("{backend_name}_QRMI_IBM_QS_S3_REGION"))?,
-    })
 }
 
 #[async_trait]
@@ -227,15 +296,7 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let timeout_env_name = format!("{0}_QRMI_JOB_TIMEOUT_SECONDS", self.backend_name);
-        let timeout = required_env(&timeout_env_name)?;
-        let timeout_secs = timeout
-            .parse::<u64>()
-            .map_err(|source| QrmiError::ParseError {
-                name: timeout_env_name,
-                value: timeout,
-                source: Box::new(source),
-            })?;
+        let timeout_secs = self.task_settings.timeout_secs()?;
 
         let Payload::QiskitPrimitive { input, program_id } = payload else {
             return Err(QrmiError::UnsupportedPayload(format!("{payload:?}")));
@@ -279,7 +340,7 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let s3 = s3_env(&self.backend_name)?;
+        let s3 = self.task_settings.s3()?;
         let s3_client = S3Client::new(
             s3.endpoint,
             s3.access_key_id,
@@ -320,7 +381,7 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn task_logs(&mut self, task_id: &str) -> Result<String> {
-        let s3 = s3_env(&self.backend_name)?;
+        let s3 = self.task_settings.s3()?;
         let s3_client = S3Client::new(
             s3.endpoint,
             s3.access_key_id,

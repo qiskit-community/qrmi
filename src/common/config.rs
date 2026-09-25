@@ -13,7 +13,7 @@ use crate::error::QrmiError;
 use std::collections::HashMap;
 
 /// Looks up `key` from `config` if given, otherwise from the OS environment.
-/// See [`required_env`]/[`resolve_opt_required`] for the mandatory case.
+/// See [`resolve_opt_required`] for the mandatory case.
 pub(crate) fn resolve_opt(key: &str, config: Option<&HashMap<String, String>>) -> Option<String> {
     match config {
         Some(map) => map
@@ -57,11 +57,4 @@ pub(crate) fn resolve_opt_required_any(
     keys.iter()
         .find_map(|key| resolve_opt(key, config))
         .ok_or_else(|| not_found_error(keys.join(" or "), config))
-}
-
-/// Reads a required environment variable, returning a [`QrmiError::EnvVarNotSet`]
-/// with the variable's name if it isn't set.
-pub(crate) fn required_env(name: impl Into<String>) -> Result<String, QrmiError> {
-    let name = name.into();
-    resolve_opt_required(&name, None)
 }

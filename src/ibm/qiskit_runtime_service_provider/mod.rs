@@ -25,7 +25,6 @@ use log::warn;
 use provider_filter::BackendFilter;
 use quantum_compute_client::apis::{auth, backends_api, configuration};
 use std::collections::HashMap;
-use std::env;
 
 /// A [`ResourceProvider`] that discovers backends available through IBM Qiskit Runtime
 /// Service(deprecated).
@@ -91,12 +90,6 @@ impl IBMQiskitRuntimeServiceProvider {
             iam_endpoint,
             provider_env: environment.clone(),
         })
-    }
-
-    fn inject_backend_env(&self, backend_name: &str) {
-        for (key, value) in &self.provider_env {
-            env::set_var(format!("{backend_name}_{key}"), value);
-        }
     }
 
     async fn is_backend_online(config: &configuration::Configuration, name: &str) -> bool {
@@ -224,9 +217,7 @@ impl ResourceProvider for IBMQiskitRuntimeServiceProvider {
                     return None;
                 }
 
-                self.inject_backend_env(&device.name);
-
-                match IBMQiskitRuntimeService::new(&device.name) {
+                match IBMQiskitRuntimeService::from_config(&device.name, self.provider_env.clone()) {
                     Ok(r) => Some(Box::new(r) as Box<dyn QuantumResource + Send + Sync>),
                     Err(e) => {
                         warn!(
