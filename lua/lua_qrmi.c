@@ -1295,11 +1295,87 @@ static const luaL_Reg config_methods[] = {
     {NULL, NULL}
 };
 
+/**
+ * @brief `qrmi.service_resources_from_config(config, runtime_config)` - Create
+ * the currently accessible resources defined in a QRMI config, without
+ * reading any environment variables.
+ *
+ * Wraps qrmi_service_resources_from_config(). Each static resource
+ * definition is built like `qrmi.new_from_config()`, using the definition's
+ * environment map merged with @p runtime_config, whose values take
+ * precedence. Dynamic resource definitions are skipped.
+ *
+ * Lua usage:
+ * @code
+ *   local config = qrmi.load_config("/etc/slurm/qrmi_config.json")
+ *   local resources, err = qrmi.service_resources_from_config(config, {
+ *       QRMI_JOB_ID = "1234",
+ *       QRMI_JOB_UID = "1000",
+ *   })
+ *   for id, resource in pairs(resources) do print(id, resource:type()) end
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments:
+ *   - [1] config (qrmi.config userdata) as returned by `qrmi.load_config()`
+ *   - [2] runtime_config (table, optional) string -> string values a config
+ *         file can't know in advance, e.g. `QRMI_JOB_ID`, `QRMI_JOB_UID`,
+ *         `QRMI_JOB_TIMEOUT_SECONDS`
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (resources: table of resource id -> qrmi.resource userdata)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_qrmi_service_resources_from_config(lua_State *L) {
+    lua_qrmi_config_t *config = check_config(L, 1);
+
+    size_t count = 0;
+    QrmiKeyValue *pairs = NULL;
+    if (!lua_isnoneornil(L, 2)) {
+        luaL_checktype(L, 2, LUA_TTABLE);
+        pairs = build_config_map_from_table(L, 2, &count);
+    }
+    QrmiConfigMap runtime_config;
+    runtime_config.variables = pairs;
+    runtime_config.length = count;
+
+    QrmiQuantumResources resources = {0};
+    QrmiReturnCode rc = qrmi_service_resources_from_config(config->handle, &runtime_config,
+                                                           &resources);
+    free_config_pairs(pairs, count);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) {
+        return push_qrmi_error(L, rc);
+    }
+
+    lua_newtable(L);
+    for (size_t i = 0; i < resources.length; i++) {
+        QrmiQuantumResource *handle = resources.resources[i];
+        char *resource_id = NULL;
+        if (qrmi_resource_id(handle, &resource_id) != QRMI_RETURN_CODE_SUCCESS) {
+            continue; /* left in the array, freed below */
+        }
+
+        /* Move the handle into its own userdata, so that it is freed by
+         * resource:free()/__gc like any other qrmi.resource, and clear its
+         * slot so qrmi_service_resources_free() below doesn't free it too. */
+        lua_qrmi_resource_t *ud = (lua_qrmi_resource_t *)lua_newuserdata(L, sizeof(lua_qrmi_resource_t));
+        ud->handle = handle;
+        ud->acquisition_token = NULL;
+        resources.resources[i] = NULL;
+        luaL_getmetatable(L, QRMI_RESOURCE_MT);
+        lua_setmetatable(L, -2);
+
+        lua_setfield(L, -2, resource_id);
+        qrmi_string_free(resource_id);
+    }
+    qrmi_service_resources_free(&resources);
+    return 1;
+}
+
 /** @brief Function table installed on the `qrmi` module table. */
 static const luaL_Reg qrmi_functions[] = {
     {"new",             l_qrmi_new},
     {"new_from_config", l_qrmi_new_from_config},
     {"load_config",     l_qrmi_load_config},
+    {"service_resources_from_config", l_qrmi_service_resources_from_config},
     {NULL, NULL}
 };
 
@@ -1310,7 +1386,8 @@ static const luaL_Reg qrmi_functions[] = {
  * itself so `resource:method()` calls dispatch through resource_methods)
  * and the completely independent `qrmi.config` metatable (dispatching
  * through config_methods), then returns the `qrmi` module table
- * (containing `qrmi.new`, `qrmi.new_from_config`, and `qrmi.load_config`).
+ * (containing `qrmi.new`, `qrmi.new_from_config`, `qrmi.load_config` and
+ * `qrmi.service_resources_from_config`).
  *
  * @param L Lua state.
  * @return Always 1 (the `qrmi` module table).
