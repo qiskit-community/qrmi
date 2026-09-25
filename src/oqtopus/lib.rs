@@ -202,7 +202,7 @@ fn build_config_json(
 
     let mut config = serde_json::Map::new();
 
-    if let Some(v) = lookup("BASE_URL") {
+    if let Some(v) = lookup("URL") {
         config.insert("url".into(), serde_json::Value::String(v));
     }
     if let Some(v) = lookup("API_TOKEN") {
