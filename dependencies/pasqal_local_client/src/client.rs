@@ -253,9 +253,26 @@ impl Client {
         } else {
             let status = resp.status();
             let json_text = resp.text().await?;
-            bail!("Status: {}, Fail {}", status, json_text);
+            bail!("Status: {}, Fail {}", status, redact_error_body(&json_text));
         }
     }
+}
+
+/// Drops request values that Warden echoes in validation errors.
+///
+/// FastAPI 422 responses repeat the rejected `input`, which may be a
+/// session credential taken from a request header.
+fn redact_error_body(body: &str) -> String {
+    let Ok(mut value) = serde_json::from_str::<serde_json::Value>(body) else {
+        return body.to_string();
+    };
+    if let Some(details) = value.get_mut("detail").and_then(|d| d.as_array_mut()) {
+        for detail in details.iter_mut().filter_map(|d| d.as_object_mut()) {
+            detail.remove("input");
+            detail.remove("ctx");
+        }
+    }
+    value.to_string()
 }
 
 /// A [`ClientBuilder`] can be used to create a [`Client`] with custom configuration.
@@ -291,11 +308,9 @@ impl ClientBuilder {
     /// let _builder = ClientBuilder::new("http://localhost:4207").build();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
-        let mut reqwest_client_builder = reqwest::Client::builder();
-        if cfg!(debug_assertions) {
-            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-        }
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        // No connection_verbose: it logs raw requests, including the
+        // X-Warden-Session and X-Munge-Cred credentials.
+        let reqwest_builder = ReqwestClientBuilder::new(reqwest::Client::builder().build()?);
 
         Ok(Client {
             base_url: self.base_url.clone(),
@@ -339,6 +354,15 @@ mod tests {
         let client = ClientBuilder::new(server.url()).build().unwrap();
 
         assert!(client.get_qpu_slots().await.unwrap().is_none());
+    }
+
+    #[test]
+    fn error_bodies_do_not_repeat_request_input() {
+        let body = r#"{"detail":[{"type":"uuid_parsing","loc":["header","X-Warden-Session"],"msg":"Input should be a valid UUID","input":"secret-session"}]}"#;
+        let redacted = super::redact_error_body(body);
+        assert!(!redacted.contains("secret-session"));
+        assert!(redacted.contains("Input should be a valid UUID"));
+        assert_eq!(super::redact_error_body("not json"), "not json");
     }
 
     #[tokio::test]
