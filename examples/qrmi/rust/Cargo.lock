@@ -1782,6 +1782,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
+name = "libloading"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2179,6 +2189,7 @@ dependencies = [
  "http 1.5.0",
  "iqm-server-api",
  "libc",
+ "libloading",
  "log",
  "pasqal-cloud-api",
  "pasqal-local-api",
@@ -2239,6 +2250,17 @@ dependencies = [
 [[package]]
 name = "qrmi-example-iqm-server"
 version = "0.4.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
+name = "qrmi-example-oqtopus"
+version = "0.1.0"
 dependencies = [
  "clap",
  "dotenv",

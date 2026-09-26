@@ -129,6 +129,7 @@ pub enum ResourceType {
     PasqalLocal,
     AliceBobFelis,
     IQMServer,
+    OQTOPUS,
 }
 impl From<ResourceType> for crate::models::ResourceType {
     fn from(value: ResourceType) -> Self {
@@ -144,6 +145,7 @@ impl From<ResourceType> for crate::models::ResourceType {
             ResourceType::PasqalLocal => crate::models::ResourceType::PasqalLocal,
             ResourceType::AliceBobFelis => crate::models::ResourceType::AliceBobFelis,
             ResourceType::IQMServer => crate::models::ResourceType::IQMServer,
+            ResourceType::OQTOPUS => crate::models::ResourceType::OQTOPUS,
         }
     }
 }
@@ -284,6 +286,7 @@ impl PyQuantumResource {
                 crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
                 crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
                 crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+                crate::models::ResourceType::OQTOPUS => ResourceType::OQTOPUS,
             }),
             Err(e) => Err(to_py_err(e)),
         }
@@ -420,6 +423,7 @@ impl PyResourceDef {
             crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
             crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
             crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+            crate::models::ResourceType::OQTOPUS => ResourceType::OQTOPUS,
         }
     }
 

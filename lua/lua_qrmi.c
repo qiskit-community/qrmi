@@ -80,6 +80,7 @@ static const QrmiResourceType g_all_resource_types[] = {
     QRMI_RESOURCE_TYPE_PASQAL_LOCAL,
     QRMI_RESOURCE_TYPE_ALICE_BOB_FELIS,
     QRMI_RESOURCE_TYPE_IQM_SERVER,
+    QRMI_RESOURCE_TYPE_OQTOPUS,
 };
 
 /**
@@ -582,6 +583,60 @@ static int submit_iqm_server_payload(lua_State *L, lua_qrmi_resource_t *ud, int 
 }
 
 /**
+ * @brief Build and submit a QRMI_PAYLOAD_OQTOPUS payload from a Lua sub-table.
+ *
+ * Used for `resource:task_start()`'s "oqtopus" key. `name`, `description`,
+ * `transpiler_info`, `simulator_info` and `mitigation_info`
+ * are optional and passed as NULL if omitted or nil.
+ *
+ * @param L Lua state.
+ * @param ud Resource to submit the task on.
+ * @param variant_idx Stack index of the sub-table holding `iqmjson`,
+ *                     `job_type`, `use_timeslot`, and `tag`.
+ * @return Number of values pushed onto the Lua stack (see l_task_start).
+ */
+static int submit_oqtopus_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
+    lua_getfield(L, variant_idx, "program");
+    const char *program = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "job_type");
+    const char *job_type = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "shots");
+    uint32_t shots = (uint32_t)luaL_checkinteger(L, -1);
+    lua_getfield(L, variant_idx, "name");
+    const char *name = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
+    lua_getfield(L, variant_idx, "description");
+    const char *description = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
+    lua_getfield(L, variant_idx, "transpiler_info");
+    const char *transpiler_info = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
+    lua_getfield(L, variant_idx, "simulator_info");
+    const char *simulator_info = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
+    lua_getfield(L, variant_idx, "mitigation_info");
+    const char *mitigation_info = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
+    
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_OQTOPUS;
+    payload.OQTOPUS.program = (char *)program;
+    payload.OQTOPUS.job_type = (char *)job_type;
+    payload.OQTOPUS.shots = shots;
+    payload.OQTOPUS.name = (char *)name;
+    payload.OQTOPUS.description = (char *)description;
+    payload.OQTOPUS.transpiler_info = (char *)transpiler_info;
+    payload.OQTOPUS.simulator_info = (char *)simulator_info;
+    payload.OQTOPUS.mitigation_info = (char *)mitigation_info;
+
+    char *task_id = NULL;
+    QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
+
+    lua_settop(L, variant_idx - 1); /* drop variant table */
+
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+
+    lua_pushstring(L, task_id);
+    qrmi_string_free(task_id);
+    return 1;
+}
+
+/**
  * @brief Build and submit a QRMI_PAYLOAD_PASQAL_CLOUD payload from a Lua sub-table.
  *
  * Used for `resource:task_start()`'s "pasqal_cloud" payload key, which is
@@ -741,11 +796,18 @@ static int l_task_start(lua_State *L) {
     }
     lua_pop(L, 1);
  
+    lua_getfield(L, 2, "oqtopus");
+    if (lua_istable(L, -1)) {
+        variant_idx = lua_gettop(L);
+        return submit_oqtopus_payload(L, ud, variant_idx);
+    }
+    lua_pop(L, 1);
+ 
     lua_pushnil(L);
     lua_pushstring(L,
         "task_start: payload table must contain one of 'qiskit_primitive', "
         "'iqm_server', 'pasqal_cloud' (used for both Pasqal Cloud and "
-        "Pasqal Local resources), or 'alice_bob_felis'");
+        "Pasqal Local resources), 'alice_bob_felis' or 'oqtopus'");
     return 2;
 }
 
