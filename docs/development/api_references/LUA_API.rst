@@ -81,6 +81,49 @@ Valid values for ``resource_type``: ``ibm-quantum-system`` /
 
    local resource, err = qrmi.new("ibm_kingston", "ibm-quantum-compute-service")
 
+``qrmi.new_from_config(resource_id, resource_type, config)``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create a quantum resource handle from an explicit config map.
+Wraps ``qrmi_resource_new_from_config()``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 15 65
+
+   * - Argument
+     - Type
+     - Description
+   * - ``resource_id``
+     - string
+     - The resource identifier, e.g. ``"ibm_kingston"``.
+   * - ``resource_type``
+     - string
+     - The canonical hyphenated resource type name. Accepts the same values
+       as ``qrmi.new()``.
+   * - ``config``
+     - table
+     - A string-to-string config map. The required and optional keys depend
+       on the resource type. They use the same names as the environment
+       variables, without the ``{resource_id}_`` prefix, e.g.
+       ``QRMI_WARDEN_URL`` or ``QRMI_IBM_QCS_SESSION_ID``. See the
+       ``from_config()`` doc comments in the QRMI Rust crate for details.
+
+**Returns:** on success, ``resource`` (``qrmi.resource`` userdata); on
+failure, ``nil, err``.
+
+.. code:: lua
+
+   local resource, err = qrmi.new_from_config("ibm_kingston", "ibm-quantum-compute-service", {
+     QRMI_IBM_QCS_ENDPOINT = "...",
+     QRMI_IBM_QCS_IAM_ENDPOINT = "...",
+     QRMI_IBM_QCS_IAM_APIKEY = "...",
+     QRMI_IBM_QCS_SERVICE_CRN = "...",
+   })
+   if not resource then
+     error(err)
+   end
+
 ``qrmi.load_config(filename)``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -104,10 +147,70 @@ Loads a ``qrmi_config.json`` file. Entirely independent from
 ``resource:is_accessible()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. deprecated:: 0.25.0
+   Use :ref:`resource:status() <resource-status>` instead.
+
 Checks whether the device is reachable.
 
 **Returns:** on success, ``accessible`` (boolean); on failure,
 ``nil, err``
+
+.. _resource-status:
+
+``resource:status()``
+~~~~~~~~~~~~~~~~~~~~~
+
+Fetch detailed status information as a Lua table.
+
+**Returns:** on success, a table with the fields described below; on failure,
+``nil, err``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Field
+     - Type
+     - Description
+   * - ``status``
+     - string
+     - One of ``"online"``, ``"offline"``, or ``"paused"``.
+   * - ``status_reason``
+     - string or nil
+     - The vendor-specific status reason.
+   * - ``busy``
+     - boolean or nil
+     - ``true`` if the resource is currently busy.
+   * - ``healthy``
+     - boolean or nil
+     - ``true`` if the resource is currently healthy.
+   * - ``pending_job_count``
+     - integer or nil
+     - The number of jobs pending in the queue.
+   * - ``capacity``
+     - table or nil
+     - Slot capacity information, with the two fields below.
+   * - ``capacity.available_slots``
+     - integer
+     - The number of slots currently available to be acquired.
+   * - ``capacity.max_slots``
+     - integer
+     - The maximum number of slots the resource supports.
+
+.. code:: lua
+
+   local st, err = resource:status()
+   if not st then
+     error(err)
+   end
+   print(st.status)             -- "online" | "offline" | "paused"
+   print(st.status_reason)      -- string or nil
+   print(st.busy)               -- boolean or nil
+   print(st.healthy)            -- boolean or nil
+   print(st.pending_job_count)  -- integer or nil
+   if st.capacity then
+     print(st.capacity.available_slots, st.capacity.max_slots)
+   end
 
 ``resource:id()``
 ~~~~~~~~~~~~~~~~~

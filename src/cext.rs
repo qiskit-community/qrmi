@@ -1251,9 +1251,9 @@ pub unsafe extern "C" fn qrmi_resource_status_healthy(
 ///   QrmiReturnCode rc = qrmi_resource_status(qrmi, &status);
 ///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
 ///     bool busy = false;
-///     rc = qrmi_resource_status_busy(status, &healthy);
+///     rc = qrmi_resource_status_busy(status, &busy);
 ///     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-///       printf("busy=%d\n", healthy);
+///       printf("busy=%d\n", busy);
 ///     } else if (rc == QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR) {
 ///       printf("this vendor does not report busy information\n");
 ///     } else {
