@@ -88,7 +88,7 @@ Quantum Resource Management Interface (QRMI)
    <div style="text-align:center">
 
 |License| |Current Release| |Platform| \ 
- |PyPI - Python Version| |manylinux| |C99| |Lua| |Minimum rustc 1.91| \ 
+ |PyPI - Python Version| |manylinux| |C99| |Lua| |Minimum rustc 1.98| \ 
  |Downloads| |Download2| |DOI| |arXiv| |CI|
 
 .. raw:: html
@@ -104,7 +104,7 @@ Quantum Resource Management Interface (QRMI)
 .. |manylinux| image:: https://img.shields.io/badge/manylinux-2__28-blue.svg?logo=linux&logoColor=white
 .. |C99| image:: https://img.shields.io/badge/C-C99-blue.svg?logo=c&logoColor=white
 .. |Lua| image:: https://img.shields.io/badge/lua-5.4%2B-blue.svg?logo=lua&logoColor=white
-.. |Minimum rustc 1.91| image:: https://img.shields.io/badge/rustc-1.91+-blue.svg
+.. |Minimum rustc 1.98| image:: https://img.shields.io/badge/rustc-1.98+-blue.svg
    :target: https://rust-lang.github.io/rfcs/2495-min-rust-version.html
 .. |Downloads| image:: https://img.shields.io/pypi/dm/qrmi.svg
    :target: https://pypi.org/project/qrmi/

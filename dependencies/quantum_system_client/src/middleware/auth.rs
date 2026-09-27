@@ -163,7 +163,7 @@ impl TokenManager {
                         let reason = status.canonical_reason().unwrap_or_default().to_string();
                         return Err(reqwest_middleware::Error::Middleware(anyhow!(format!(
                             "Failed to obtain access token. reason: {} ({}), url: {}",
-                            reason, status, &self.token_url
+                            reason, status, self.token_url
                         ))));
                     }
                 }

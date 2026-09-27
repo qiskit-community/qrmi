@@ -45,7 +45,7 @@ impl Client {
     /// - a job has not yet terminated and has to be cancelled before it can be deleted.
     ///
     pub async fn delete_job(&self, job_id: &str) -> Result<()> {
-        let url = format!("{}/v1/jobs/{}", self.base_url, &job_id);
+        let url = format!("{}/v1/jobs/{}", self.base_url, job_id);
         let resp_ = self.client.delete(&url).send().await;
 
         match resp_ {

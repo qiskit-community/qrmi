@@ -4,6 +4,7 @@
 
 #![allow(unused_imports)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::result_large_err)]
 
 extern crate reqwest;
 extern crate serde;
