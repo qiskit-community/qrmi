@@ -30,7 +30,7 @@ qrmi = QuantumResource(args.device_id, ResourceType.OQTOPUS)
 print(qrmi)
 print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type())}")
 
-print(qrmi.is_accessible())
+print(json.dumps(qrmi.status().to_dict(), indent=2))
 
 target_json = json.loads(qrmi.target().value)
 print(json.dumps(target_json, indent=2))

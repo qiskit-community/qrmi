@@ -17,7 +17,7 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {device_id}_QRMI_OQTOPUS_BASE_URL | OQTOPUS Cloud API endpoint URL |
+| {device_id}_QRMI_OQTOPUS_URL | OQTOPUS Cloud API endpoint URL |
 | {device_id}_QRMI_OQTOPUS_API_TOKEN | OQTOPUS Cloud API token |
 
 ## Create IQM JSON input file as input
@@ -42,8 +42,10 @@ options:
 ```
 For example,
 ```shell-session
-export qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
-export qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
+# .env
+qulacs_QRMI_OQTOPUS_URL=https://demo-api.oqtopus.io
+qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
+PY_BRIDGE_PATH=<path/to/liboqtopus_py_bridge.so>
 
 python example.py qulacs ../../../task_runner/oqtopus/bell_state.txt sampling 
 ```
