@@ -561,10 +561,7 @@ impl QuantumResource for Oqtopus {
         }
         job_spec.insert("name".into(), serde_json::json!(name));
         job_spec.insert("description".into(), serde_json::json!(description));
-        job_spec.insert(
-            "transpiler_info".into(),
-            parse_info(&transpiler_info)?,
-        );
+        job_spec.insert("transpiler_info".into(), parse_info(&transpiler_info)?);
         job_spec.insert("simulator_info".into(), parse_info(&simulator_info)?);
         job_spec.insert("mitigation_info".into(), parse_info(&mitigation_info)?);
 
