@@ -47,8 +47,10 @@ exclude = [
     'dependencies/quantum_compute_client/docs/*',
     'dependencies/quantum_compute_client/.openapi-generator/*',
 
-    'https://github.com/qiskit-community/qrmi/tree/main/examples/qrmi/*/oqtopus/*',
-    'https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/oqtopus/gen_sampling_inputs.py',
+    'https://github.com/qiskit-community/qrmi/*/main/examples/qrmi/*/oqtopus/*',
+    'https://github.com/qiskit-community/qrmi/*/main/examples/qrmi/c/oqtopus',
+    'https://github.com/qiskit-community/qrmi/*/main/examples/task_runner/oqtopus',
+    'https://github.com/qiskit-community/qrmi/*/main/examples/task_runner/oqtopus/*',
 ]
 
 accept = [200, 403]
