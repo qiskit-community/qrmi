@@ -1,6 +1,6 @@
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
-use pasqal_cloud_api::{AccessTokenRequest, Client, ClientBuilder};
+use pasqal_cloud_api::{AccessTokenRequest, Client, ClientBuilder, DeviceType};
 use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -235,4 +235,218 @@ async fn client_builder_service_account_credentials_refreshes_token_for_authenti
         .expect("authenticated request should succeed");
 
     assert_eq!(batch.data.job_ids, vec!["job-id".to_string()]);
+}
+
+fn client_for(server: &mockito::Server) -> Client {
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_base_url(server.url());
+    builder.with_token("opaque-token".to_string());
+    builder.build().expect("client should build")
+}
+
+#[tokio::test]
+async fn create_batch_posts_sequence_and_runs() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("POST", "/core-fast/api/v1/batches")
+        .match_header("authorization", "Bearer opaque-token")
+        .match_body(mockito::Matcher::Json(json!({
+            "sequence_builder": "{\"name\":\"seq\"}",
+            "jobs": [{"runs": 100}],
+            "device_type": "EMU_FREE",
+            "project_id": "project-id",
+        })))
+        .with_status(200)
+        .with_body(json!({"data":{"id":"batch-id"}}).to_string())
+        .create_async()
+        .await;
+
+    let batch = client_for(&server)
+        .create_batch("{\"name\":\"seq\"}".to_string(), 100, DeviceType::EmuFree)
+        .await
+        .expect("create_batch should succeed");
+
+    mock.assert_async().await;
+    assert_eq!(batch.data.id, "batch-id");
+}
+
+#[tokio::test]
+async fn create_cudaq_job_posts_sequence_and_shots() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("POST", "/core-fast/api/v1/cudaq/job")
+        .match_body(mockito::Matcher::Json(json!({
+            "machine": "EMU_MPS",
+            "shots": 50,
+            "project_id": "project-id",
+            "sequence": {"setup": {}, "hamiltonian": {}},
+        })))
+        .with_status(200)
+        .with_body(json!({"data":{"id":"cudaq-id"}}).to_string())
+        .create_async()
+        .await;
+
+    let job = client_for(&server)
+        .create_cudaq_job(
+            json!({"setup": {}, "hamiltonian": {}}),
+            50,
+            DeviceType::EmuMps,
+        )
+        .await
+        .expect("create_cudaq_job should succeed");
+
+    mock.assert_async().await;
+    assert_eq!(job.data.id, "cudaq-id");
+}
+
+#[tokio::test]
+async fn get_job_parses_every_status() {
+    let mut server = mockito::Server::new_async().await;
+    let mut client = client_for(&server);
+    for status in [
+        "PENDING",
+        "RUNNING",
+        "CANCELING",
+        "DONE",
+        "CANCELED",
+        "ERROR",
+    ] {
+        let mock = server
+            .mock("GET", "/core-fast/api/v2/jobs/job-id")
+            .with_status(200)
+            .with_body(json!({"data":{"status":status}}).to_string())
+            .create_async()
+            .await;
+
+        let job = client
+            .get_job("job-id")
+            .await
+            .expect("get_job should succeed");
+
+        mock.assert_async().await;
+        assert_eq!(format!("{:?}", job.data.status).to_uppercase(), status);
+        mock.remove_async().await;
+    }
+}
+
+#[tokio::test]
+async fn cancel_batch_patches_v2_endpoint() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("PATCH", "/core-fast/api/v2/batches/batch-id/cancel")
+        .match_header("authorization", "Bearer opaque-token")
+        .with_status(200)
+        .with_body(json!({"data":{}}).to_string())
+        .create_async()
+        .await;
+
+    client_for(&server)
+        .cancel_batch("batch-id")
+        .await
+        .expect("cancel_batch should succeed");
+
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn get_batch_results_returns_the_single_job_counter() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("GET", "/core-fast/api/v1/batches/batch-id/full_results")
+        .with_status(200)
+        .with_body(json!({"data":{"job-id":{"counter":{"01":3,"10":7}}}}).to_string())
+        .create_async()
+        .await;
+
+    let results = client_for(&server)
+        .get_batch_results("batch-id")
+        .await
+        .expect("get_batch_results should succeed");
+
+    let value: serde_json::Value = serde_json::from_str(&results).expect("results are JSON");
+    assert_eq!(value, json!({"counter":{"01":3,"10":7}}));
+}
+
+#[tokio::test]
+async fn get_batch_results_rejects_empty_and_multi_job_batches() {
+    let mut server = mockito::Server::new_async().await;
+    let mut client = client_for(&server);
+    server
+        .mock("GET", "/core-fast/api/v1/batches/empty/full_results")
+        .with_status(200)
+        .with_body(json!({"data":{}}).to_string())
+        .create_async()
+        .await;
+    server
+        .mock("GET", "/core-fast/api/v1/batches/multi/full_results")
+        .with_status(200)
+        .with_body(json!({"data":{"a":{"counter":{"0":1}},"b":{"counter":{"1":1}}}}).to_string())
+        .create_async()
+        .await;
+
+    let empty = client
+        .get_batch_results("empty")
+        .await
+        .expect_err("no jobs");
+    let multi = client
+        .get_batch_results("multi")
+        .await
+        .expect_err("two jobs");
+
+    assert!(empty.to_string().contains("No results found"));
+    assert!(multi.to_string().contains("multiple jobs"));
+}
+
+#[tokio::test]
+async fn get_device_specs_uses_public_specs_for_emulators() {
+    let mut server = mockito::Server::new_async().await;
+    let public = server
+        .mock("GET", "/core-fast/api/v1/devices/public-specs")
+        .match_header("authorization", mockito::Matcher::Missing)
+        .with_status(200)
+        .with_body(json!({"data":[{"device_type":"EMU_FREE","specs":"{}"}]}).to_string())
+        .create_async()
+        .await;
+    let private = server
+        .mock("GET", "/core-fast/api/v1/devices/specs/FRESNEL")
+        .match_header("authorization", "Bearer opaque-token")
+        .with_status(200)
+        .with_body(json!({"data":{"device_type":"FRESNEL","specs":"{}"}}).to_string())
+        .create_async()
+        .await;
+    let mut client = client_for(&server);
+
+    let emu = client
+        .get_device_specs(DeviceType::EmuFree)
+        .await
+        .expect("public specs should succeed");
+    let qpu = client
+        .get_device_specs(DeviceType::Fresnel)
+        .await
+        .expect("device specs should succeed");
+
+    public.assert_async().await;
+    private.assert_async().await;
+    assert_eq!(emu, r#"[{"device_type":"EMU_FREE","specs":"{}"}]"#);
+    assert_eq!(qpu, r#"[{"device_type":"FRESNEL","specs":"{}"}]"#);
+}
+
+#[tokio::test]
+async fn failed_request_reports_status_and_body() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("GET", "/core-fast/api/v2/batches/batch-id")
+        .with_status(422)
+        .with_body(r#"{"message":"Invalid sequence builder."}"#)
+        .create_async()
+        .await;
+
+    let err = client_for(&server)
+        .get_batch("batch-id")
+        .await
+        .expect_err("get_batch should fail");
+
+    let message = err.to_string();
+    assert!(message.contains("422"));
+    assert!(message.contains("Invalid sequence builder."));
 }
