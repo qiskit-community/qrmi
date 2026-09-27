@@ -101,8 +101,7 @@
             "description": "Payload for `oqtopus` QPU resource",
             "required": [
                 "job_type",
-                "program",
-                "shots"
+                "program"
             ],
             "properties": {
                 "job_type": {
@@ -122,7 +121,7 @@
                 "shots": {
                     "type": "integer",
                     "minimum": 1,
-                    "description": "Number of shots."
+                    "description": "Number of shots. Default is 1000."
                 },
                 "name": {
                     "type": "string",
@@ -134,15 +133,15 @@
                 },
                 "transpiler_info": {
                     "type": "string",
-                    "description": "Transpiler info."
+                    "description": "Transpiler settings. Pass a JSON string."
                 },
                 "simulator_info": {
                     "type": "string",
-                    "description": "Simulator info."
+                    "description": "Simulator settings. Pass a JSON string."
                 },
                 "mitigation_info": {
                     "type": "string",
-                    "description": "Mitigation info."
+                    "description": "Error mitigation settings. Pass a JSON string."
                 }
             }
         }

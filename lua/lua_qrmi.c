@@ -600,8 +600,16 @@ static int submit_oqtopus_payload(lua_State *L, lua_qrmi_resource_t *ud, int var
     const char *program = luaL_checkstring(L, -1);
     lua_getfield(L, variant_idx, "job_type");
     const char *job_type = luaL_checkstring(L, -1);
+    uint32_t shots_val;
+    const uint32_t *shots = NULL;
     lua_getfield(L, variant_idx, "shots");
-    uint32_t shots = (uint32_t)luaL_checkinteger(L, -1);
+    if (!lua_isnil(L, -1)) {
+        lua_Integer n = luaL_checkinteger(L, -1);
+        luaL_argcheck(L, n >= 1 && n <= UINT32_MAX, variant_idx,
+                      "shots must be between 1 and 4294967295");
+        shots_val = (uint32_t)n;
+        shots = &shots_val;
+    }
     lua_getfield(L, variant_idx, "name");
     const char *name = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
     lua_getfield(L, variant_idx, "description");

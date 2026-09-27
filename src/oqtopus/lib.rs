@@ -548,18 +548,27 @@ impl QuantumResource for Oqtopus {
             }
         };
 
-        let job_spec_json = serde_json::json!({
-            "job_type": job_type,
-            "device_id": self.device_id,
-            "program": program_value,
-            "shots": shots,
-            "name": name,
-            "description": description,
-            "transpiler_info": parse_info(&transpiler_info)?,
-            "simulator_info": parse_info(&simulator_info)?,
-            "mitigation_info": parse_info(&mitigation_info)?,
-        })
-        .to_string();
+        let mut job_spec = serde_json::Map::new();
+        job_spec.insert("job_type".into(), serde_json::json!(job_type));
+        job_spec.insert("device_id".into(), serde_json::json!(self.device_id));
+        job_spec.insert("program".into(), program_value);
+        // Omit "shots" entirely when unset, rather than sending null, so
+        // OqtopusJobSpec's own default shot count applies. OQTOPUS's
+        // JobsSubmitJobRequest has no default for this field, so an
+        // explicit null still fails pydantic validation.
+        if let Some(shots) = shots {
+            job_spec.insert("shots".into(), serde_json::json!(shots));
+        }
+        job_spec.insert("name".into(), serde_json::json!(name));
+        job_spec.insert("description".into(), serde_json::json!(description));
+        job_spec.insert(
+            "transpiler_info".into(),
+            parse_info(&transpiler_info)?,
+        );
+        job_spec.insert("simulator_info".into(), parse_info(&simulator_info)?);
+        job_spec.insert("mitigation_info".into(), parse_info(&mitigation_info)?);
+
+        let job_spec_json = serde_json::Value::Object(job_spec).to_string();
         let job_spec_json_c = CString::new(job_spec_json)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_spec json: {e}")))?;
 

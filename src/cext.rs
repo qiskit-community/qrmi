@@ -133,7 +133,7 @@ pub enum Payload {
         /// a plain string is treated as a single program.
         program: *mut c_char,
         /// Number of shots
-        shots: u32,
+        shots: *const u32,
         /// Job name. NULL if not set.
         name: *mut c_char,
         /// Job description. NULL if not set.
@@ -1725,6 +1725,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         let Ok(program_str) = CStr::from_ptr(program).to_str() else {
             return ReturnCode::Error;
         };
+        let shots_opt: Option<u32> = unsafe { shots.as_ref().copied() };
         let name_opt = if name.is_null() {
             None
         } else {
@@ -1766,7 +1767,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         qrmi_payload = Some(crate::models::Payload::Oqtopus {
             job_type: job_type_str.to_string(),
             program: program_str.to_string(),
-            shots,
+            shots: shots_opt,
             name: name_opt,
             description: description_opt,
             transpiler_info: transpiler_info_opt,

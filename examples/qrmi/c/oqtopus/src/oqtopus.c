@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
   payload.tag = QRMI_PAYLOAD_OQTOPUS;
   payload.OQTOPUS.job_type = argv[3];
   payload.OQTOPUS.program = (char*)input;
-  payload.OQTOPUS.shots = 1000;
+  payload.OQTOPUS.shots = NULL;
   payload.OQTOPUS.name = "Bell State Sampling";
   payload.OQTOPUS.description = "Bell state sampling example";
   payload.OQTOPUS.transpiler_info = NULL;

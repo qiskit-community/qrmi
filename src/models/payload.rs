@@ -42,20 +42,23 @@ pub enum Payload {
     },
     /// Payload for OQTOPUS Cloud
     Oqtopus {
-        /// "sampling" | "estimation" | "multi_manual" | "sse"
+        /// Job type. "sampling" | "estimation" | "multi_manual" | "sse"
         job_type: String,
         /// QASM3 (or Python script for sse) program. For multiple
         /// programs, pass a JSON array string (e.g. `["...", "..."]`);
         /// a plain string is treated as a single program.
         program: String,
-        shots: u32,
+        /// Number of shots. Default is 1000.
+        shots: Option<u32>,
+        /// Job name.
         name: Option<String>,
+        /// Job description.
         description: Option<String>,
-        /// JSON object string, or None
+        /// Transpiler settings. JSON object string, or None
         transpiler_info: Option<String>,
-        /// JSON object string, or None
+        /// Simulator settings. JSON object string, or None
         simulator_info: Option<String>,
-        /// JSON object string, or None
+        /// Error mitigation settings. JSON object string, or None
         mitigation_info: Option<String>,
     },
 }
