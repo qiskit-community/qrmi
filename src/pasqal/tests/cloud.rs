@@ -1,10 +1,11 @@
 use super::PasqalCloud;
-use crate::models::{ResourceStatusCode, ResourceType};
+use crate::error::QrmiErrorKind;
+use crate::models::{Payload, ResourceStatusCode, ResourceType, TaskStatus};
 use crate::pasqal::cloud_config::{
     expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalCloudConfig,
 };
 use crate::QuantumResource;
-use pasqal_cloud_api::ClientBuilder;
+use pasqal_cloud_api::{ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
@@ -546,4 +547,136 @@ fn normalize_cudaq_result_normalizes_all_supported_counter_shapes() {
             .expect("counter['000'] should be an integer");
         assert_eq!(count_000, 47);
     }
+}
+
+// Serves one HTTP response on a free local port and returns its address
+// together with a handle that yields the request line.
+fn serve_once(
+    status_line: &'static str,
+    body: &'static str,
+) -> (String, thread::JoinHandle<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind should succeed");
+    let addr = listener.local_addr().expect("local_addr should succeed");
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept should succeed");
+        let mut buf = [0_u8; 4096];
+        let n = stream.read(&mut buf).unwrap_or(0);
+        let request = String::from_utf8_lossy(&buf[..n]).to_string();
+        let response = format!(
+            "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+            status_line,
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(response.as_bytes());
+        let _ = stream.flush();
+        request.lines().next().unwrap_or_default().to_string()
+    });
+    (format!("http://{}", addr), server)
+}
+
+fn pasqal_cloud_at(base_url: String, token: &str) -> PasqalCloud {
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_base_url(base_url);
+    builder.with_token(token.to_string());
+    PasqalCloud {
+        api_client: builder.build().expect("client build should succeed"),
+        backend_name: "EMU_FREE".to_string(),
+        task_kinds: std::collections::HashMap::new(),
+    }
+}
+
+#[tokio::test]
+async fn status_reports_down_device_as_online_but_unhealthy() {
+    let (url, server) = serve_once(
+        "200 OK",
+        r#"{"data":[{"status":"DOWN","availability":"ACTIVE"}]}"#,
+    );
+    let mut qrmi = pasqal_cloud_at(url, "opaque_token");
+
+    let status = qrmi.status().await.expect("status() should succeed");
+    server.join().expect("server thread should join");
+
+    assert_eq!(status.status, ResourceStatusCode::Online);
+    assert_eq!(status.healthy, Some(false));
+    assert_eq!(
+        status.status_reason.as_deref(),
+        Some("device status DOWN, availability ACTIVE")
+    );
+}
+
+#[tokio::test]
+async fn status_reports_retired_device_as_offline() {
+    let (url, server) = serve_once(
+        "200 OK",
+        r#"{"data":[{"status":"UP","availability":"RETIRED"}]}"#,
+    );
+    let mut qrmi = pasqal_cloud_at(url, "opaque_token");
+
+    let status = qrmi.status().await.expect("status() should succeed");
+    server.join().expect("server thread should join");
+
+    assert_eq!(status.status, ResourceStatusCode::Offline);
+    assert_eq!(status.healthy, Some(true));
+}
+
+#[test]
+fn canceling_job_is_not_terminal() {
+    assert_eq!(
+        PasqalCloud::map_job_status(&JobStatus::Canceling),
+        TaskStatus::Running
+    );
+    assert_eq!(
+        PasqalCloud::map_job_status(&JobStatus::Canceled),
+        TaskStatus::Cancelled
+    );
+}
+
+#[tokio::test]
+async fn missing_batch_is_task_not_found() {
+    let (url, server) = serve_once("404 Not Found", r#"{"message":"batch not found"}"#);
+    let mut qrmi = pasqal_cloud_at(url, "opaque_token");
+
+    let err = qrmi
+        .task_status("missing-batch")
+        .await
+        .expect_err("task_status should fail");
+    let request_line = server.join().expect("server thread should join");
+
+    assert!(request_line.contains("/core-fast/api/v2/batches/missing-batch"));
+    assert_eq!(err.kind(), QrmiErrorKind::TaskNotFound);
+    assert!(err.to_string().contains("batch not found"));
+}
+
+#[tokio::test]
+async fn rejected_sequence_is_invalid_input() {
+    let (url, server) = serve_once(
+        "422 Unprocessable Entity",
+        r#"{"message":"Invalid sequence builder."}"#,
+    );
+    let mut qrmi = pasqal_cloud_at(url, "opaque_token");
+
+    let err = qrmi
+        .task_start(Payload::PasqalCloud {
+            sequence: r#"{"name":"pulser-sequence"}"#.to_string(),
+            job_runs: 10,
+        })
+        .await
+        .expect_err("task_start should fail");
+    server.join().expect("server thread should join");
+
+    assert_eq!(err.kind(), QrmiErrorKind::InvalidInput);
+    assert!(err.to_string().contains("Invalid sequence builder."));
+}
+
+#[tokio::test]
+async fn missing_credentials_is_authentication_failed() {
+    let mut qrmi = pasqal_cloud_at("http://127.0.0.1:9".to_string(), "");
+
+    let err = qrmi
+        .task_status("any-batch")
+        .await
+        .expect_err("task_status should fail without credentials");
+
+    assert_eq!(err.kind(), QrmiErrorKind::AuthenticationFailed);
 }
