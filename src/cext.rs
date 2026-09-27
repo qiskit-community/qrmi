@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 /// Integer return codes returned to C.
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReturnCode {
     /// Success.
     Success = 0,
@@ -233,9 +233,16 @@ thread_local! {
     static LAST_ERROR_KIND: RefCell<QrmiErrorKind> = const { RefCell::new(QrmiErrorKind::Other) };
 }
 
-/// Set last error message text
+/// Set last error message text with the generic error kind
 fn _set_last_error(msg: String) {
+    _set_last_error_with_kind(msg, QrmiErrorKind::Other);
+}
+
+/// Set last error message text and its machine-readable kind together, so
+/// that a message never pairs with the kind of an earlier error.
+fn _set_last_error_with_kind(msg: String, kind: QrmiErrorKind) {
     log::error!("{}", msg);
+    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
     LAST_ERROR.with(|cell| {
         *cell.borrow_mut() =
             Some(CString::new(msg).unwrap_or_else(|_| {
@@ -252,8 +259,7 @@ fn _set_last_error(msg: String) {
 /// instead of each call site choosing what to record.
 fn _fail(err: QrmiError) -> ReturnCode {
     let kind = err.kind();
-    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
-    _set_last_error(err.to_string());
+    _set_last_error_with_kind(err.to_string(), kind);
     ReturnCode::from(kind)
 }
 
@@ -261,9 +267,32 @@ fn _fail(err: QrmiError) -> ReturnCode {
 /// on failure) rather than a `ReturnCode` and so can't use `_fail`'s return
 /// value directly.
 fn _record_error(err: QrmiError) {
-    let kind = err.kind();
-    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
-    _set_last_error(err.to_string());
+    _set_last_error_with_kind(err.to_string(), err.kind());
+}
+
+/// Borrows a C string argument as UTF-8, recording which argument was
+/// invalid as the last error when it is not valid UTF-8.
+///
+/// # Safety
+///
+/// `ptr` must be non-null and point to a nul-terminated string.
+unsafe fn _utf8_arg<'a>(ptr: *const c_char, name: &str) -> Option<&'a str> {
+    let value = CStr::from_ptr(ptr).to_str().ok();
+    if value.is_none() {
+        _set_last_error(format!("{} is not a valid UTF-8 string", name));
+    }
+    value
+}
+
+/// Returns `$ret` from the enclosing function if `$ptr` is NULL, recording
+/// which argument was NULL as the last error.
+macro_rules! null_pointer_check {
+    ($ptr:ident, $ret:expr) => {
+        if $ptr.is_null() {
+            _set_last_error(format!("{} is NULL", stringify!($ptr)));
+            return $ret;
+        }
+    };
 }
 
 /// Converts a Rust string into a `CString` suitable for handing across the
@@ -364,7 +393,9 @@ pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> Ret
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_string_free(ptr: *mut c_char) -> ReturnCode {
     crate::common::initialize();
-    ffi_helpers::null_pointer_check!(ptr, ReturnCode::NullPointerError);
+    if ptr.is_null() {
+        return ReturnCode::NullPointerError;
+    }
     unsafe {
         drop(CString::from_raw(ptr));
     }
@@ -442,9 +473,9 @@ pub unsafe extern "C" fn qrmi_string_array_free(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_load(filename: *const c_char) -> *mut Config {
     crate::common::initialize();
-    ffi_helpers::null_pointer_check!(filename, std::ptr::null_mut());
+    null_pointer_check!(filename, std::ptr::null_mut());
 
-    if let Ok(file) = CStr::from_ptr(filename).to_str() {
+    if let Some(file) = _utf8_arg(filename, "filename") {
         let result = Box::new(Config::load(file));
         match *result {
             Ok(v) => {
@@ -523,12 +554,10 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
     resource_id: *const c_char,
 ) -> *mut ResourceDef {
     crate::common::initialize();
-    if config.is_null() {
-        return std::ptr::null_mut();
-    }
-    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
+    null_pointer_check!(config, std::ptr::null_mut());
+    null_pointer_check!(resource_id, std::ptr::null_mut());
 
-    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+    if let Some(id_str) = _utf8_arg(resource_id, "resource_id") {
         if let Some(resource) = (*config).resource_map.get(id_str) {
             let mut c_envvars = Vec::new();
             for (key, value) in resource.environment.clone().into_iter() {
@@ -670,9 +699,8 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
     names: *mut *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if config.is_null() || names.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(config, ReturnCode::NullPointerError);
+    null_pointer_check!(names, ReturnCode::NullPointerError);
 
     let keys = (*config).resource_map.keys();
     let count = keys.len();
@@ -726,8 +754,8 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_get_last_error() -> *mut c_char {
     crate::common::initialize();
-    LAST_ERROR.with(|cell| match &*cell.borrow() {
-        Some(cstr) => cstr.clone().into_raw(),
+    LAST_ERROR.with(|cell| match cell.borrow_mut().take() {
+        Some(cstr) => cstr.into_raw(),
         None => std::ptr::null_mut(),
     })
 }
@@ -780,9 +808,9 @@ pub unsafe extern "C" fn qrmi_resource_new(
     resource_type: ResourceType,
 ) -> *mut QuantumResource {
     crate::common::initialize();
-    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
+    null_pointer_check!(resource_id, std::ptr::null_mut());
 
-    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+    if let Some(id_str) = _utf8_arg(resource_id, "resource_id") {
         let res = match crate::common::create_resource(&resource_type, id_str) {
             Ok(v) => v,
             Err(err) => {
@@ -843,7 +871,7 @@ pub unsafe extern "C" fn qrmi_resource_new_from_config(
     config: *const ConfigMap,
 ) -> *mut QuantumResource {
     crate::common::initialize();
-    ffi_helpers::null_pointer_check!(resource_id, std::ptr::null_mut());
+    null_pointer_check!(resource_id, std::ptr::null_mut());
     if config.is_null() {
         _set_last_error("config is NULL".to_string());
         return std::ptr::null_mut();
@@ -857,7 +885,7 @@ pub unsafe extern "C" fn qrmi_resource_new_from_config(
         }
     };
 
-    if let Ok(id_str) = CStr::from_ptr(resource_id).to_str() {
+    if let Some(id_str) = _utf8_arg(resource_id, "resource_id") {
         let res =
             match crate::common::create_resource_from_config(&resource_type, id_str, config_map) {
                 Ok(v) => v,
@@ -943,10 +971,8 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
     outp: *mut bool,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
-    ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::Error);
 
     let result = (*qrmi)
         .runtime
@@ -987,9 +1013,8 @@ pub unsafe extern "C" fn qrmi_resource_status(
     outp: *mut *mut ResourceStatus,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
 
     let result = (*qrmi)
         .runtime
@@ -1084,9 +1109,8 @@ pub unsafe extern "C" fn qrmi_resource_status_code(
     outp: *mut crate::models::ResourceStatusCode,
 ) -> ReturnCode {
     crate::common::initialize();
-    if status.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(status, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
     *outp = (*status).inner.status.clone();
     ReturnCode::Success
 }
@@ -1202,9 +1226,8 @@ pub unsafe extern "C" fn qrmi_resource_status_healthy(
     outp: *mut bool,
 ) -> ReturnCode {
     crate::common::initialize();
-    if status.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(status, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
     match (*status).inner.healthy {
         Some(v) => {
             *outp = v;
@@ -1254,9 +1277,8 @@ pub unsafe extern "C" fn qrmi_resource_status_busy(
     outp: *mut bool,
 ) -> ReturnCode {
     crate::common::initialize();
-    if status.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(status, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
     match (*status).inner.busy {
         Some(v) => {
             *outp = v;
@@ -1306,9 +1328,8 @@ pub unsafe extern "C" fn qrmi_resource_status_pending_job_count(
     outp: *mut u64,
 ) -> ReturnCode {
     crate::common::initialize();
-    if status.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(status, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
     match (*status).inner.pending_job_count {
         Some(v) => {
             *outp = v;
@@ -1351,9 +1372,8 @@ pub unsafe extern "C" fn qrmi_resource_status_capacity(
     outp: *mut *mut crate::models::ResourceCapacity,
 ) -> ReturnCode {
     crate::common::initialize();
-    if status.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(status, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
     match (*status).inner.capacity.clone() {
         Some(cap) => {
             *outp = Box::into_raw(Box::new(cap));
@@ -1415,9 +1435,8 @@ pub unsafe extern "C" fn qrmi_resource_id(
     outp: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
 
     let result = (*qrmi)
         .runtime
@@ -1449,10 +1468,8 @@ pub unsafe extern "C" fn qrmi_resource_type(
     outp: *mut ResourceType,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
-    ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::Error);
 
     let result = (*qrmi)
         .runtime
@@ -1498,9 +1515,8 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
     acquisition_token: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() || acquisition_token.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(acquisition_token, ReturnCode::NullPointerError);
 
     let result = (*qrmi)
         .runtime
@@ -1555,25 +1571,19 @@ pub unsafe extern "C" fn qrmi_resource_release(
     acquisition_token: *const c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
-    ffi_helpers::null_pointer_check!(acquisition_token, ReturnCode::Error);
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(acquisition_token, ReturnCode::Error);
 
-    if let Ok(token) = CStr::from_ptr(acquisition_token).to_str() {
-        let result = (*qrmi)
-            .runtime
-            .block_on(async { (*qrmi).inner.release(token).await });
-        match result {
-            Ok(()) => {
-                return ReturnCode::Success;
-            }
-            Err(err) => {
-                return _fail(err);
-            }
-        }
+    let Some(token) = _utf8_arg(acquisition_token, "acquisition_token") else {
+        return ReturnCode::Error;
+    };
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.release(token).await });
+    match result {
+        Ok(()) => ReturnCode::Success,
+        Err(err) => _fail(err),
     }
-    ReturnCode::Success
 }
 
 /// @ingroup QrmiQuantumResource
@@ -1622,15 +1632,15 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
     task_id: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() || task_id.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(payload, ReturnCode::NullPointerError);
+    null_pointer_check!(task_id, ReturnCode::NullPointerError);
 
     let mut qrmi_payload: Option<crate::models::Payload> = None;
     if let Payload::QiskitPrimitive { input, program_id } = *payload {
-        if let (Ok(program_id_str), Ok(input_str)) = (
-            CStr::from_ptr(program_id).to_str(),
-            CStr::from_ptr(input).to_str(),
+        if let (Some(program_id_str), Some(input_str)) = (
+            _utf8_arg(program_id, "program_id"),
+            _utf8_arg(input, "input"),
         ) {
             qrmi_payload = Some(crate::models::Payload::QiskitPrimitive {
                 input: input_str.to_string(),
@@ -1638,7 +1648,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             });
         }
     } else if let Payload::PasqalCloud { sequence, job_runs } = *payload {
-        if let Ok(sequence_str) = CStr::from_ptr(sequence).to_str() {
+        if let Some(sequence_str) = _utf8_arg(sequence, "sequence") {
             qrmi_payload = Some(crate::models::Payload::PasqalCloud {
                 sequence: sequence_str.to_string(),
                 job_runs,
@@ -1649,9 +1659,9 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         input_params,
     } = *payload
     {
-        if let (Ok(human_qir_str), Ok(input_params_str)) = (
-            CStr::from_ptr(human_qir).to_str(),
-            CStr::from_ptr(input_params).to_str(),
+        if let (Some(human_qir_str), Some(input_params_str)) = (
+            _utf8_arg(human_qir, "human_qir"),
+            _utf8_arg(input_params, "input_params"),
         ) {
             qrmi_payload = Some(crate::models::Payload::AliceBobFelis {
                 human_qir: human_qir_str.to_string(),
@@ -1665,10 +1675,10 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         use_timeslot,
     } = *payload
     {
-        let Ok(json_str) = CStr::from_ptr(iqmjson).to_str() else {
+        let Some(json_str) = _utf8_arg(iqmjson, "iqmjson") else {
             return ReturnCode::Error;
         };
-        let Ok(type_str) = CStr::from_ptr(job_type).to_str() else {
+        let Some(type_str) = _utf8_arg(job_type, "job_type") else {
             return ReturnCode::Error;
         };
         let tag_opt = if tag.is_null() {
@@ -1689,25 +1699,27 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         });
     }
 
-    if qrmi_payload.is_some() {
-        let result = (*qrmi)
-            .runtime
-            .block_on(async { (*qrmi).inner.task_start(qrmi_payload.unwrap()).await });
-        match result {
-            Ok(job_id) => {
-                if let Ok(job_id_cstr) = CString::new(job_id) {
-                    unsafe {
-                        *task_id = job_id_cstr.into_raw();
-                    }
-                    return ReturnCode::Success;
+    let Some(qrmi_payload) = qrmi_payload else {
+        return ReturnCode::Error;
+    };
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.task_start(qrmi_payload).await });
+    match result {
+        Ok(job_id) => match CString::new(job_id) {
+            Ok(job_id_cstr) => {
+                unsafe {
+                    *task_id = job_id_cstr.into_raw();
                 }
+                ReturnCode::Success
             }
-            Err(err) => {
-                return _fail(err);
+            Err(_) => {
+                _set_last_error("task ID contains a NUL byte".to_string());
+                ReturnCode::Error
             }
-        }
+        },
+        Err(err) => _fail(err),
     }
-    ReturnCode::Error
 }
 
 /// @ingroup QrmiQuantumResource
@@ -1741,13 +1753,11 @@ pub unsafe extern "C" fn qrmi_resource_task_stop(
     task_id: *const c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
 
-    ffi_helpers::null_pointer_check!(task_id, ReturnCode::Error);
+    null_pointer_check!(task_id, ReturnCode::Error);
 
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
+    if let Some(task_id_str) = _utf8_arg(task_id, "task_id") {
         let result = (*qrmi)
             .runtime
             .block_on(async { (*qrmi).inner.task_stop(task_id_str).await });
@@ -1801,14 +1811,12 @@ pub unsafe extern "C" fn qrmi_resource_task_status(
     status: *mut TaskStatus,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
 
-    ffi_helpers::null_pointer_check!(task_id, ReturnCode::Error);
-    ffi_helpers::null_pointer_check!(status, ReturnCode::Error);
+    null_pointer_check!(task_id, ReturnCode::Error);
+    null_pointer_check!(status, ReturnCode::Error);
 
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
+    if let Some(task_id_str) = _utf8_arg(task_id, "task_id") {
         let result = (*qrmi)
             .runtime
             .block_on(async { (*qrmi).inner.task_status(task_id_str).await });
@@ -1862,14 +1870,12 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
     outp: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
 
-    ffi_helpers::null_pointer_check!(task_id, ReturnCode::Error);
-    ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
+    null_pointer_check!(task_id, ReturnCode::Error);
+    null_pointer_check!(outp, ReturnCode::Error);
 
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
+    if let Some(task_id_str) = _utf8_arg(task_id, "task_id") {
         let result = (*qrmi)
             .runtime
             .block_on(async { (*qrmi).inner.task_result(task_id_str).await });
@@ -1927,14 +1933,12 @@ pub unsafe extern "C" fn qrmi_resource_task_logs(
     outp: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
 
-    ffi_helpers::null_pointer_check!(task_id, ReturnCode::Error);
-    ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
+    null_pointer_check!(task_id, ReturnCode::Error);
+    null_pointer_check!(outp, ReturnCode::Error);
 
-    if let Ok(task_id_str) = CStr::from_ptr(task_id).to_str() {
+    if let Some(task_id_str) = _utf8_arg(task_id, "task_id") {
         let result = (*qrmi)
             .runtime
             .block_on(async { (*qrmi).inner.task_logs(task_id_str).await });
@@ -1986,9 +1990,7 @@ pub unsafe extern "C" fn qrmi_resource_target(
     outp: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() {
-        return ReturnCode::Error;
-    }
+    null_pointer_check!(qrmi, ReturnCode::Error);
 
     let result = (*qrmi)
         .runtime
@@ -2035,9 +2037,8 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
     outp: *mut *mut ResourceMetadata,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(qrmi, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
 
     let metadata = (*qrmi)
         .runtime
@@ -2113,9 +2114,9 @@ pub unsafe extern "C" fn qrmi_resource_metadata_value(
     if metadata.is_null() {
         return std::ptr::null_mut();
     }
-    ffi_helpers::null_pointer_check!(key, std::ptr::null_mut());
+    null_pointer_check!(key, std::ptr::null_mut());
 
-    if let Ok(key_str) = CStr::from_ptr(key).to_str() {
+    if let Some(key_str) = _utf8_arg(key, "key") {
         if let Some(val) = (*metadata).inner.get(key_str) {
             if let Ok(value_cstr) = CString::new(val.as_str()) {
                 return value_cstr.into_raw();
@@ -2160,9 +2161,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata_keys(
     key_names: *mut *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if metadata.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(metadata, ReturnCode::NullPointerError);
 
     let keys = (*metadata).inner.keys();
     let count = keys.len();
@@ -2385,9 +2384,8 @@ pub unsafe extern "C" fn qrmi_provider_resources(
     resources_out: *mut QuantumResources,
 ) -> ReturnCode {
     crate::common::initialize();
-    if provider.is_null() || resources_out.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(provider, ReturnCode::NullPointerError);
+    null_pointer_check!(resources_out, ReturnCode::NullPointerError);
 
     let filters_opt: Option<String> = if filters.is_null() {
         None
@@ -2515,9 +2513,8 @@ pub unsafe extern "C" fn qrmi_provider_least_busy(
     resource_out: *mut *mut QuantumResource,
 ) -> ReturnCode {
     crate::common::initialize();
-    if provider.is_null() || resource_out.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(provider, ReturnCode::NullPointerError);
+    null_pointer_check!(resource_out, ReturnCode::NullPointerError);
 
     let filters_opt: Option<String> = if filters.is_null() {
         None
@@ -2611,9 +2608,7 @@ pub unsafe extern "C" fn qrmi_service_resources(
     resources_out: *mut QuantumResources,
 ) -> ReturnCode {
     crate::common::initialize();
-    if resources_out.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(resources_out, ReturnCode::NullPointerError);
 
     // One `Runtime`, shared (via `Arc`) across every `QuantumResource`
     // handle this call produces -- same approach `qrmi_provider_resources`
@@ -2683,4 +2678,112 @@ pub unsafe extern "C" fn qrmi_service_resources_free(
     // matches the `qrmi_service_*` family it was populated by, and so it
     // shows up under this file's `QrmiService` Doxygen group.
     unsafe { qrmi_provider_resources_free(resources) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::ResourceType;
+    use async_trait::async_trait;
+
+    struct StubResource;
+
+    #[async_trait]
+    impl crate::QuantumResource for StubResource {
+        async fn resource_id(&mut self) -> crate::Result<String> {
+            Ok("stub".to_string())
+        }
+        async fn resource_type(&mut self) -> crate::Result<ResourceType> {
+            Ok(ResourceType::PasqalCloud)
+        }
+        async fn is_accessible(&mut self) -> crate::Result<bool> {
+            Ok(true)
+        }
+    }
+
+    fn stub_qrmi() -> QuantumResource {
+        QuantumResource {
+            inner: Box::new(StubResource),
+            runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+        }
+    }
+
+    unsafe fn take_last_error() -> Option<String> {
+        let ptr = qrmi_get_last_error();
+        if ptr.is_null() {
+            return None;
+        }
+        let msg = CStr::from_ptr(ptr).to_string_lossy().into_owned();
+        qrmi_string_free(ptr);
+        Some(msg)
+    }
+
+    #[test]
+    fn last_error_is_cleared_after_read() {
+        unsafe {
+            let rc = qrmi_resource_task_start(
+                std::ptr::null_mut(),
+                std::ptr::null(),
+                std::ptr::null_mut(),
+            );
+            assert_eq!(rc, ReturnCode::NullPointerError);
+            assert_eq!(take_last_error().as_deref(), Some("qrmi is NULL"));
+            assert_eq!(take_last_error(), None);
+        }
+    }
+
+    #[test]
+    fn message_only_error_resets_kind() {
+        unsafe {
+            let rc = _fail(QrmiError::TaskNotFound("t".to_string()));
+            assert_eq!(rc, ReturnCode::TaskNotFoundError);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+
+            let mut qrmi = stub_qrmi();
+            let rc = qrmi_resource_task_start(&mut qrmi, std::ptr::null(), std::ptr::null_mut());
+            assert_eq!(rc, ReturnCode::NullPointerError);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+            assert_eq!(take_last_error().as_deref(), Some("payload is NULL"));
+        }
+    }
+
+    #[test]
+    fn release_rejects_invalid_utf8_token() {
+        unsafe {
+            let mut qrmi = stub_qrmi();
+            let token = CString::from_vec_unchecked(vec![0xff, 0xfe]);
+            let rc = qrmi_resource_release(&mut qrmi, token.as_ptr());
+            assert_eq!(rc, ReturnCode::Error);
+            assert_eq!(
+                take_last_error().as_deref(),
+                Some("acquisition_token is not a valid UTF-8 string")
+            );
+
+            let token = CString::new("token").unwrap();
+            assert_eq!(
+                qrmi_resource_release(&mut qrmi, token.as_ptr()),
+                ReturnCode::Success
+            );
+        }
+    }
+
+    #[test]
+    fn task_start_reports_invalid_utf8_payload() {
+        unsafe {
+            let mut qrmi = stub_qrmi();
+            let sequence = CString::from_vec_unchecked(vec![0xff]);
+            let payload = Payload::PasqalCloud {
+                sequence: sequence.as_ptr() as *mut c_char,
+                job_runs: 1,
+            };
+            let mut task_id: *mut c_char = std::ptr::null_mut();
+            let rc = qrmi_resource_task_start(&mut qrmi, &payload, &mut task_id);
+            assert_eq!(rc, ReturnCode::Error);
+            assert!(task_id.is_null());
+            assert_eq!(
+                take_last_error().as_deref(),
+                Some("sequence is not a valid UTF-8 string")
+            );
+        }
+    }
 }

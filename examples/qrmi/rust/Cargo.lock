@@ -1047,17 +1047,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ffi_helpers"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06bad5d1e3a9cfc3825643e055eb7f1fc1b1d52d1543c8ddb9107abd6497f2e"
-dependencies = [
- "anyhow",
- "libc",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "find-msvc-tools"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2164,7 +2153,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.25.0"
+version = "0.25.1"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2173,7 +2162,6 @@ dependencies = [
  "clap",
  "dotenv",
  "env_logger",
- "ffi_helpers",
  "futures",
  "glob",
  "http 1.5.0",
