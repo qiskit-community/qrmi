@@ -12,9 +12,9 @@
 use clap::Parser;
 use dotenv::dotenv;
 use qrmi::{oqtopus::Oqtopus, models::Payload, models::TaskStatus, QuantumResource};
-use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::fs::File;
 
 use std::{thread, time};
 
@@ -25,6 +25,18 @@ struct Args {
     /// device ID
     #[arg(short, long)]
     device_id: String,
+
+    /// QASM file
+    #[arg(short, long)]
+    input: String,
+
+    /// job name
+    #[arg(short, long)]
+    name: String,
+
+    /// # of shots
+    #[arg(short, long)]
+    shots: u32,
 }
 
 #[tokio::main]
@@ -43,10 +55,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         qrmi.resource_type().await?.as_str()
     );
 
-    let accessible = qrmi.is_accessible().await?;
+    let accessible = matches!(
+        qrmi.status().await?.status,
+        qrmi::models::ResourceStatusCode::Online
+    );
     if !accessible {
-        panic!("{} is not accessible", args.device_id);
+        println!("{} is not accessible", args.device_id);
     }
 
+    let lock = qrmi.acquire().await?;
+
+    println!("{:#?}", qrmi.metadata().await);
+
+    let target = qrmi.target().await;
+    if let Ok(v) = target {
+        println!("{}", v.value);
+    }
+
+    let f = File::open(args.input).expect("file not found");
+    let mut buf_reader = BufReader::new(f);
+    let mut contents = String::new();
+    buf_reader.read_to_string(&mut contents)?;
+
+    let payload = Payload::Oqtopus {
+        job_type: "sampling".to_string(),
+        program: contents,
+        shots: args.shots,
+        name: Some(args.name),
+        description: None,
+        transpiler_info: None,
+        simulator_info: None,
+        mitigation_info: None,
+    };
+
+    let job_id = qrmi.task_start(payload).await?;
+    println!("Job ID: {}", job_id);
+    let one_sec = time::Duration::from_millis(1000);
+    loop {
+        let status = qrmi.task_status(&job_id).await?;
+        println!("{:?}", status);
+        if matches!(status, TaskStatus::Completed) {
+            println!("{}", qrmi.task_result(&job_id).await?.value);
+            break;
+        } else if matches!(status, TaskStatus::Failed | TaskStatus::Cancelled) {
+            break;
+        }
+        thread::sleep(one_sec);
+    }
+    let _ = qrmi.release(&lock).await;
     Ok(())
 }

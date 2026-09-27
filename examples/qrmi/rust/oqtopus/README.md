@@ -43,8 +43,10 @@ Options:
 
 For example,
 ```shell-session
-export qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
-export qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
+# .env
+qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
+qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
+PY_BRIDGE_PATH=<path/to/liboqtopus_py_bridge.so>
 
-../target/release/qrmi-example-oqtopus -d qulacs
+../target/release/qrmi-example-oqtopus --device-id qulacs --input ../../../task_runner/oqtopus/bell_state.txt --name "QRMI Rust example" --shots 500
 ```
