@@ -95,6 +95,56 @@
                     "description": "Optional user-defined tag associated with the job. Can be used for external identification or filtering jobs. Max length is 50 characters."
                 }
             }
+        },
+        {
+            "type": "object",
+            "description": "Payload for `oqtopus` QPU resource",
+            "required": [
+                "job_type",
+                "program",
+                "shots"
+            ],
+            "properties": {
+                "job_type": {
+                    "type": "string",
+                    "enum": [
+                        "sampling",
+                        "estimation",
+                        "multi_manual",
+                        "sse"
+                    ],
+                    "description": "Job type."
+                },
+                "program": {
+                    "type": "string",
+                    "description": "QASM3 (or Python script for sse) program. For multiple programs, pass a JSON array string (e.g. `[\"...\", \"...\"]`); a plain string is treated as a single program."
+                },
+                "shots": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of shots."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Job name."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Job description."
+                },
+                "transpiler_info": {
+                    "type": "string",
+                    "description": "Transpiler info."
+                },
+                "simulator_info": {
+                    "type": "string",
+                    "description": "Simulator info."
+                },
+                "mitigation_info": {
+                    "type": "string",
+                    "description": "Mitigation info."
+                }
+            }
         }
     ]
 }
