@@ -46,8 +46,6 @@ exclude = [
     'dependencies/quantum_compute_client/src/*',
     'dependencies/quantum_compute_client/docs/*',
     'dependencies/quantum_compute_client/.openapi-generator/*',
-
-    'docs/examples/bindings/*/OQTOPUS.rst',
 ]
 
 accept = [200, 403]
