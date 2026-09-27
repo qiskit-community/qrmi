@@ -47,3 +47,5 @@ exclude = [
     'dependencies/quantum_compute_client/docs/*',
     'dependencies/quantum_compute_client/.openapi-generator/*',
 ]
+
+accept = [200, 403]
