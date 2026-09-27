@@ -34,9 +34,9 @@ struct Args {
     #[arg(short, long)]
     name: String,
 
-    /// # of shots
+    /// # of shots. If omitted, OQTOPUS's default shot count is used.
     #[arg(short, long)]
-    shots: u32,
+    shots: Option<u32>,
 }
 
 #[tokio::main]
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let payload = Payload::Oqtopus {
         job_type: "sampling".to_string(),
-        program: contents,
+        program: vec![contents],
         shots: args.shots,
         name: Some(args.name),
         description: None,

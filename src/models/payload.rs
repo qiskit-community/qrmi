@@ -44,10 +44,9 @@ pub enum Payload {
     Oqtopus {
         /// Job type. "sampling" | "estimation" | "multi_manual" | "sse"
         job_type: String,
-        /// QASM3 (or Python script for sse) program. For multiple
-        /// programs, pass a JSON array string (e.g. `["...", "..."]`);
-        /// a plain string is treated as a single program.
-        program: String,
+        /// QASM3 (or Python script for sse) program(s). A single-element
+        /// `Vec` is a single program; `sse` jobs require exactly one.
+        program: Vec<String>,
         /// Number of shots. Default is 1000.
         shots: Option<u32>,
         /// Job name.

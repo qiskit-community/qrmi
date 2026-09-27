@@ -597,7 +597,26 @@ static int submit_iqm_server_payload(lua_State *L, lua_qrmi_resource_t *ud, int 
  */
 static int submit_oqtopus_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
     lua_getfield(L, variant_idx, "program");
-    const char *program = luaL_checkstring(L, -1);
+    int program_field_idx = lua_gettop(L);
+    size_t num_programs;
+    const char **programs;
+    if (lua_istable(L, program_field_idx)) {
+        num_programs = (size_t)lua_rawlen(L, program_field_idx);
+        luaL_argcheck(L, num_programs >= 1, variant_idx,
+                      "program table must have at least one element");
+        programs = (const char **)lua_newuserdata(
+            L, sizeof(const char *) * num_programs);
+        for (size_t i = 0; i < num_programs; i++) {
+            lua_rawgeti(L, program_field_idx, (lua_Integer)(i + 1));
+            programs[i] = luaL_checkstring(L, -1);
+            lua_pop(L, 1);
+        }
+    } else {
+        /* A plain string is treated as a single program. */
+        num_programs = 1;
+        programs = (const char **)lua_newuserdata(L, sizeof(const char *));
+        programs[0] = luaL_checkstring(L, program_field_idx);
+    }
     lua_getfield(L, variant_idx, "job_type");
     const char *job_type = luaL_checkstring(L, -1);
     uint32_t shots_val;
@@ -623,7 +642,8 @@ static int submit_oqtopus_payload(lua_State *L, lua_qrmi_resource_t *ud, int var
     
     QrmiPayload payload;
     payload.tag = QRMI_PAYLOAD_OQTOPUS;
-    payload.OQTOPUS.program = (char *)program;
+    payload.OQTOPUS.num_programs = num_programs;
+    payload.OQTOPUS.programs = programs;
     payload.OQTOPUS.job_type = (char *)job_type;
     payload.OQTOPUS.shots = shots;
     payload.OQTOPUS.name = (char *)name;

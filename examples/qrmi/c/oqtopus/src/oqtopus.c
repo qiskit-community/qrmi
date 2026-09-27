@@ -94,10 +94,13 @@ int main(int argc, char *argv[]) {
 
   const char *input = read_file(argv[2]);
 
+  const char *programs[] = {input};
+
   QrmiPayload payload;
   payload.tag = QRMI_PAYLOAD_OQTOPUS;
   payload.OQTOPUS.job_type = argv[3];
-  payload.OQTOPUS.program = (char*)input;
+  payload.OQTOPUS.num_programs = 1;
+  payload.OQTOPUS.programs = programs;
   payload.OQTOPUS.shots = NULL;
   payload.OQTOPUS.name = "Bell State Sampling";
   payload.OQTOPUS.description = "Bell state sampling example";

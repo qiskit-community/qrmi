@@ -115,8 +115,12 @@
                     "description": "Job type."
                 },
                 "program": {
-                    "type": "string",
-                    "description": "QASM3 (or Python script for sse) program. For multiple programs, pass a JSON array string (e.g. `[\"...\", \"...\"]`); a plain string is treated as a single program."
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1,
+                    "description": "QASM3 (or Python script for sse) program(s), as an array of strings. A single program is a single-element array. `sse` jobs require exactly one program."
                 },
                 "shots": {
                     "type": "integer",

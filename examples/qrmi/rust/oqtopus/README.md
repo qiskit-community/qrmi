@@ -38,12 +38,15 @@ $ cargo build --release
 $ ../target/release/qrmi-example-oqtopus -h
 QRMI for OQTOPUS - Example
 
-Usage: qrmi-example-oqtopus [OPTIONS] --device-id <DEVICE_ID>
+Usage: qrmi-example-oqtopus [OPTIONS] --device-id <DEVICE_ID> --input <INPUT> --name <NAME>
 
 Options:
-  -d, --device-id <DEVICE_ID>        Device ID
-  -h, --help                         Print help
-  -V, --version                      Print version
+  -d, --device-id <DEVICE_ID>  device ID
+  -i, --input <INPUT>          QASM file
+  -n, --name <NAME>            job name
+  -s, --shots <SHOTS>          # of shots. If omitted, OQTOPUS's default shot count is used
+  -h, --help                   Print help
+  -V, --version                Print version
 ```
 
 For example,

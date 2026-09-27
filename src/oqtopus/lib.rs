@@ -533,13 +533,6 @@ impl QuantumResource for Oqtopus {
             )));
         };
 
-        let program_value = if program.trim_start().starts_with('[') {
-            serde_json::from_str::<serde_json::Value>(&program)
-                .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid program JSON array: {e}")))?
-        } else {
-            serde_json::Value::String(program)
-        };
-
         let parse_info = |s: &Option<String>| -> Result<serde_json::Value> {
             match s {
                 None => Ok(serde_json::Value::Null),
@@ -551,7 +544,7 @@ impl QuantumResource for Oqtopus {
         let mut job_spec = serde_json::Map::new();
         job_spec.insert("job_type".into(), serde_json::json!(job_type));
         job_spec.insert("device_id".into(), serde_json::json!(self.device_id));
-        job_spec.insert("program".into(), program_value);
+        job_spec.insert("program".into(), serde_json::json!(program));
         // Omit "shots" entirely when unset, rather than sending null, so
         // OqtopusJobSpec's own default shot count applies. OQTOPUS's
         // JobsSubmitJobRequest has no default for this field, so an
