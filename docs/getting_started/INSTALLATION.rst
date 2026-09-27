@@ -321,7 +321,9 @@ Build with Munge support for Pasqal Local
 
 By default, QRMI is built without Munge support. If you need to use the
 Pasqal Local client which relies on Munge for authentication, you must
-enable the ``munge`` feature during the build process.
+enable the ``munge`` feature during the build process. The Linux wheels
+published on PyPI already include Munge support and bundle ``libmunge``;
+the host still needs a running ``munged`` to use Pasqal Local.
 
 #. Build the Rust library:
 

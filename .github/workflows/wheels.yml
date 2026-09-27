@@ -209,8 +209,9 @@ jobs:
       run: |
         make create-venv
         source $(make get-venv-activate)
-        # Indirect package dependencies for the pulser-core wheel
-        CIBW_BEFORE_ALL="dnf install -y openblas-devel libjpeg-turbo-devel zlib-devel" cibuildwheel
+        # munge-devel for the munge feature, the rest are indirect package
+        # dependencies for the pulser-core wheel
+        CIBW_BEFORE_ALL="dnf install -y munge-devel openblas-devel libjpeg-turbo-devel zlib-devel" cibuildwheel
     - if: inputs.lint == true
       name: Lint wheels
       run: |

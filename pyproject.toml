@@ -101,10 +101,14 @@ manylinux-x86_64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 
+# Published Linux wheels enable the munge feature needed by Pasqal Local.
+# auditwheel bundles libmunge, so the wheels install without munge on the
+# host; building from the sdist keeps munge optional. The --features list
+# replaces [tool.maturin] features, so it repeats them.
 [tool.cibuildwheel.linux]
-before-all = 'curl -sSf https://sh.rustup.rs | sh -s -- -y'
+before-all = 'dnf install -y munge-devel && curl -sSf https://sh.rustup.rs | sh -s -- -y'
 before-test = 'pip install -r requirements-dev.txt'
-environment = { PATH='$HOME/.cargo/bin:$PATH' }
+environment = { PATH='$HOME/.cargo/bin:$PATH', MATURIN_PEP517_ARGS='--features munge,pyo3/abi3,qrmi/pyo3' }
 skip = '*musllinux* cp*t-*'
 test-extras = ["ibm", "pasqal"]
 test-command = [
