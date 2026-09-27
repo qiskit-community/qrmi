@@ -7,8 +7,8 @@
 ## Install dependencies
 
 ```shell-session
-$ source ~/py311_qrmi_venv/bin/activate
-$ pip install -r ../requirements.txt
+$ source ~/py312_oqtopus_venv/bin/activate
+$ pip install oqtopus_client
 ```
 
 ## Set environment variables
@@ -19,6 +19,7 @@ Because QRMI is an environment variable driven software library, all configurati
 | ---- | ---- |
 | {device_id}_QRMI_OQTOPUS_URL | OQTOPUS Cloud API endpoint URL |
 | {device_id}_QRMI_OQTOPUS_API_TOKEN | OQTOPUS Cloud API token |
+| PY_BRIDGE_PATH | Path to liboqtopus_py_bridge.so |
 
 ## Create IQM JSON input file as input
 
