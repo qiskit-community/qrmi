@@ -69,7 +69,7 @@ install the latest (and most thoroughly tested) version.
 ### Prerequisites
 
 - Compilation requires the following tools:
-  - [Rust compiler 1.91 or above](https://www.rust-lang.org/tools/install)
+  - [Rust compiler 1.98 or above](https://www.rust-lang.org/tools/install)
   - A C compiler
     - For example, GCC (gcc) on Linux and Clang (clang-tools-extra) for Rust unknown targets/cross compilations. QRMI is compatible with a compiler conforming to the C11 standard.
     - make/cmake (make/cmake RPM for RHEL compatible OS)

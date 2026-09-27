@@ -47,7 +47,7 @@ impl Client {
     /// - a job has already terminated and cannot be cancelled.
     /// - an internal server error occurs.
     pub async fn cancel_job(&self, job_id: &str, delete_job: bool) -> Result<()> {
-        let url = format!("{}/v1/jobs/{}/cancel", self.base_url, &job_id);
+        let url = format!("{}/v1/jobs/{}/cancel", self.base_url, job_id);
         let resp_ = self.client.post(&url).send().await;
 
         match resp_ {
