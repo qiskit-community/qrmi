@@ -38,8 +38,9 @@ lua example.lua <device_id> <QASM program file> <job_type('sampling','estimation
 ```
 For example,
 ```shell-session
-export qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
+export qulacs_QRMI_OQTOPUS_URL=https://demo-api.oqtopus.io
 export qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
+export PY_BRIDGE_PATH=<path/to/liboqtopus_py_bridge.so>
 
 lua example.lua qulacs ../../../task_runner/oqtopus/bell_state.txt sampling
 ```

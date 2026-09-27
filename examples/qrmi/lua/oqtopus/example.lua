@@ -40,8 +40,23 @@ print("id:", id, id_err)
 local rtype, rtype_err = resource:type()
 print("type:", rtype, rtype_err)
 
-local accessible, aerr = resource:is_accessible()
-print("is_accessible:", accessible, aerr)
+local rstatus, rstatus_err = resource:status()
+if not rstatus then
+    print("status failed:", rstatus_err)
+else
+    print("status:")
+    print("  status            =", rstatus.status)
+    print("  status_reason     =", rstatus.status_reason)
+    print("  healthy           =", rstatus.healthy)
+    print("  busy              =", rstatus.busy)
+    print("  pending_job_count =", rstatus.pending_job_count)
+    if rstatus.capacity then
+        print("  capacity.available_slots =", rstatus.capacity.available_slots)
+        print("  capacity.max_slots       =", rstatus.capacity.max_slots)
+    else
+        print("  capacity          = nil")
+    end
+end
 
 -- Read the task input payload from an external file, using its content as-is.
 local payload_file = io.open(arg[2], "r")
@@ -54,7 +69,7 @@ payload_file:close()
 
 print("program =", program)
 local task_id, start_err = resource:task_start({
-    iqm_server = {
+    oqtopus = {
         job_type = arg[3],
         program = program, 
         shots = 1000,
