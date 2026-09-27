@@ -17,9 +17,13 @@ Because QRMI is an environment variable driven software library, all configurati
 
 | Environment variables | Descriptions |
 | ---- | ---- |
-| {device_id}_QRMI_OQTOPUS_URL | OQTOPUS Cloud API endpoint URL |
+| {device_id}_QRMI_OQTOPUS_URL | OQTOPUS Cloud API endpoint |
 | {device_id}_QRMI_OQTOPUS_API_TOKEN | OQTOPUS Cloud API token |
-| PY_BRIDGE_PATH | Path to liboqtopus_py_bridge.so |
+| {device_id}_QRMI_OQTOPUS_PROXY | Proxy. Optional. |
+| {device_id}_QRMI_OQTOPUS_TIMEOUT | HTTP request timeout seconds. (e.g. 30.0). Optional. |
+| {device_id}_QRMI_OQTOPUS_RETRY_BACKOFF_SECONDS | Exponential backoff base seconds.(e.g. 0.2). Optional |
+| {device_id}_QRMI_OQTOPUS_RETRY_STATUS_CODES | HTTP status codes treated as retryable. (e.g. 429,500,502,503). Optional. |
+| {device_id}_QRMI_OQTOPUS_RETRY_METHODS | HTTP methods treated as retryable.(e.g. GET,POST). Optional. |
 
 ## Create IQM JSON input file as input
 

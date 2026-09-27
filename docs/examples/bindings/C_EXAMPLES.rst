@@ -13,4 +13,5 @@ QRMI Examples in C
     Pasqal Cloud <c/PASQAL_CLOUD>
     Pasqal Local <c/PASQAL_LOCAL>
     Alice and Bob Felis <c/ALICE_AND_BOB>
+    OQTOPUS <c/OQTOPUS>
     QRMI Provider <c/PROVIDER>

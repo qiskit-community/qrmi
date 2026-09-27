@@ -18,7 +18,7 @@ import argparse
 from dotenv import load_dotenv
 from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
-parser = argparse.ArgumentParser(description="An example of IBM Quantum System QRMI")
+parser = argparse.ArgumentParser(description="An example of OQTOPUS QRMI")
 parser.add_argument("device_id", help="OQTOPUS device ID")
 parser.add_argument("program", help="program input")
 parser.add_argument("job_type", help="job type")
