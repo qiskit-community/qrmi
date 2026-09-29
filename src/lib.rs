@@ -273,6 +273,16 @@ pub trait QuantumResource: Send + Sync {
     ///
     /// * `payload`: payload for task execution. This might be serialized data or streaming.
     ///
+    /// # Errors
+    ///
+    /// An error of any kind other than [`QrmiErrorKind::Other`] means that no
+    /// task was created, whether QRMI rejected the payload locally or the
+    /// vendor's API refused the request. [`QrmiErrorKind::Other`] (connection
+    /// failures, unclassified vendor responses, ...) makes no such promise: the
+    /// request may have been accepted, so the task may exist. Implementations
+    /// must keep this contract, e.g. by reporting a failure after a vendor-side
+    /// job was already created as [`QrmiError::Other`].
+    ///
     /// # Example
     ///
     /// ```no_run

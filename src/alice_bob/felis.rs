@@ -78,7 +78,12 @@ impl AliceBobFelis {
             resolve_opt_required_any(&[&prefixed_endpoint, "QRMI_AB_FELIS_BASE_ENDPOINT"], config)?;
         let mut config = configuration::Configuration::new();
         config.base_path = endpoint;
-        config.basic_auth = decode_api_key(&api_key).unwrap();
+        // The key is a secret, so the error names the setting, not the value.
+        config.basic_auth = decode_api_key(&api_key).map_err(|err| {
+            QrmiError::InvalidConfig(format!(
+                "QRMI_AB_FELIS_API_KEY is not a base64-encoded 'user:password' API key: {err}"
+            ))
+        })?;
         Ok(Self {
             config,
             backend_name: backend_name.to_string(),
@@ -147,15 +152,21 @@ impl QuantumResource for AliceBobFelis {
                 input_data_format: Some(json!("HUMAN_QIR")),
                 output_data_format: Some(json!("HISTOGRAM")),
                 target: self.felis_target.clone(),
-                input_params: serde_json::from_str(&input_params).unwrap(),
+                input_params: serde_json::from_str(&input_params)?,
             };
 
             let external_job = jobs_service::create_job(&self.config, job, None)
                 .await
                 .map_err(|e| classify(e, ResourceKind::Backend))?;
+            // The job exists from here on, so an upload failure must not look
+            // like a refused request (see `QuantumResource::task_start`).
             jobs_service::upload_input(&self.config, &external_job.id, human_qir, None)
                 .await
-                .map_err(|e| classify(e, ResourceKind::Job))?;
+                .map_err(|e| {
+                    QrmiError::Other(anyhow::Error::new(classify(e, ResourceKind::Job)).context(
+                        format!("input upload failed for created job {}", external_job.id),
+                    ))
+                })?;
             // If here we can assume all went well
             Ok(external_job.id)
         } else {
@@ -227,3 +238,7 @@ impl QuantumResource for AliceBobFelis {
         metadata
     }
 }
+
+#[cfg(test)]
+#[path = "tests/felis.rs"]
+mod tests;

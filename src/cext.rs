@@ -99,7 +99,7 @@ pub enum Payload {
         /// "estimator" or "sampler"
         program_id: *mut c_char,
     },
-    /// Payload for Pasqal Cloud
+    /// Payload for Pasqal Cloud and Pasqal Local resources
     PasqalCloud {
         /// Pulser sequence
         sequence: *mut c_char,
@@ -556,7 +556,7 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 
 /// @ingroup QrmiConfig
 /// Converts ResourceType to string representation used in qrmi_config.json, e.g.
-/// @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QUANTUM_COMPUTE_SERVICE to `ibm-quantum-compute-service`.
+/// @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE to `ibm-quantum-compute-service`.
 ///
 /// # Safety
 ///
@@ -565,20 +565,62 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 /// # Example
 ///
 /// @code
-///   char *type_as_str = qrmi_config_resource_type_to_str(QRMI_RESOURCE_TYPE_QUANTUM_COMPUTE_SERVICE):
+///   const char *type_as_str = qrmi_config_resource_type_to_str(QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE);
 ///   printf("%s\n", type_as_str);
 /// @endcode
 ///
 /// @param type (QrmiResourceType) ResourceType variant
-/// @return string representation of ResourceType.
+/// @return string representation of ResourceType. The string is static; do not free it.
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_resource_type_to_str(r#type: ResourceType) -> *const c_char {
     crate::common::initialize();
-    if let Ok(type_as_str) = CString::new(r#type.as_str()) {
-        return type_as_str.into_raw();
+    r#type.as_c_str().as_ptr()
+}
+
+/// @ingroup QrmiConfig
+/// Parses the string representation used in qrmi_config.json and
+/// `QRMI_JOB_QPU_TYPES`, e.g. `pasqal-local` to
+/// @ref QrmiResourceType::QRMI_RESOURCE_TYPE_PASQAL_LOCAL.
+///
+/// # Safety
+///
+/// * The memory pointed to by `type_str` must contain a valid nul terminator.
+///
+/// * `outp` must be non-null.
+///
+/// # Example
+///
+/// @code
+///   QrmiResourceType type;
+///   if (qrmi_config_resource_type_from_str("pasqal-local", &type) == QRMI_RETURN_CODE_SUCCESS) {
+///     QrmiQuantumResource *qrmi = qrmi_resource_new("your_resource_name", type);
+///   }
+/// @endcode
+///
+/// @param (type_str) [in] string representation of ResourceType
+/// @param (outp) [out] ResourceType variant if succeeded
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded, @ref QrmiReturnCode::QRMI_RETURN_CODE_INVALID_INPUT_ERROR for an unknown string.
+/// @version 0.26.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_config_resource_type_from_str(
+    type_str: *const c_char,
+    outp: *mut ResourceType,
+) -> ReturnCode {
+    crate::common::initialize();
+    if type_str.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
     }
-    std::ptr::null()
+    let value = CStr::from_ptr(type_str).to_string_lossy();
+    match ResourceType::from_qpu_type_str(&value) {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _fail(QrmiError::InvalidInput(format!(
+            "unknown resource type: {value}"
+        ))),
+    }
 }
 
 /// @ingroup QrmiConfig
@@ -1610,6 +1652,11 @@ pub unsafe extern "C" fn qrmi_resource_release(
 ///   }
 /// @endcode
 ///
+/// Any failure code other than @ref QrmiReturnCode::QRMI_RETURN_CODE_ERROR means
+/// that no task was created: QRMI or the vendor's API refused the request.
+/// @ref QrmiReturnCode::QRMI_RETURN_CODE_ERROR leaves that unknown (e.g. a lost
+/// response), so the task may exist.
+///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (payload) [in] payload
 /// @param (task_id) [out] A task identifier if succeeded. Must call qrmi_string_free() to free if no longer used.
@@ -1622,7 +1669,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
     task_id: *mut *mut c_char,
 ) -> ReturnCode {
     crate::common::initialize();
-    if qrmi.is_null() || task_id.is_null() {
+    if qrmi.is_null() || payload.is_null() || task_id.is_null() {
         return ReturnCode::NullPointerError;
     }
 
@@ -1665,49 +1712,49 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         use_timeslot,
     } = *payload
     {
-        let Ok(json_str) = CStr::from_ptr(iqmjson).to_str() else {
-            return ReturnCode::Error;
-        };
-        let Ok(type_str) = CStr::from_ptr(job_type).to_str() else {
-            return ReturnCode::Error;
-        };
-        let tag_opt = if tag.is_null() {
-            None
-        } else {
-            CStr::from_ptr(tag).to_str().ok().map(|s| s.to_string())
-        };
-        let use_timeslot_opt = match use_timeslot {
-            1 => Some(true),
-            _ => Some(false),
-        };
+        if let (Ok(json_str), Ok(type_str)) = (
+            CStr::from_ptr(iqmjson).to_str(),
+            CStr::from_ptr(job_type).to_str(),
+        ) {
+            let tag_opt = if tag.is_null() {
+                None
+            } else {
+                CStr::from_ptr(tag).to_str().ok().map(|s| s.to_string())
+            };
+            let use_timeslot_opt = match use_timeslot {
+                1 => Some(true),
+                _ => Some(false),
+            };
 
-        qrmi_payload = Some(crate::models::Payload::IQMServer {
-            iqmjson: json_str.to_string(),
-            job_type: type_str.to_string(),
-            tag: tag_opt,
-            use_timeslot: use_timeslot_opt,
-        });
-    }
-
-    if qrmi_payload.is_some() {
-        let result = (*qrmi)
-            .runtime
-            .block_on(async { (*qrmi).inner.task_start(qrmi_payload.unwrap()).await });
-        match result {
-            Ok(job_id) => {
-                if let Ok(job_id_cstr) = CString::new(job_id) {
-                    unsafe {
-                        *task_id = job_id_cstr.into_raw();
-                    }
-                    return ReturnCode::Success;
-                }
-            }
-            Err(err) => {
-                return _fail(err);
-            }
+            qrmi_payload = Some(crate::models::Payload::IQMServer {
+                iqmjson: json_str.to_string(),
+                job_type: type_str.to_string(),
+                tag: tag_opt,
+                use_timeslot: use_timeslot_opt,
+            });
         }
     }
-    ReturnCode::Error
+
+    // Nothing has been sent yet, so this is a refusal rather than an unknown outcome.
+    let Some(qrmi_payload) = qrmi_payload else {
+        return _fail(QrmiError::InvalidInput(
+            "payload strings must be valid UTF-8".to_string(),
+        ));
+    };
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.task_start(qrmi_payload).await });
+    match result {
+        Ok(job_id) => match CString::new(job_id) {
+            Ok(job_id_cstr) => {
+                *task_id = job_id_cstr.into_raw();
+                ReturnCode::Success
+            }
+            // The task exists, but its identifier cannot be returned.
+            Err(_) => ReturnCode::Error,
+        },
+        Err(err) => _fail(err),
+    }
 }
 
 /// @ingroup QrmiQuantumResource

@@ -87,7 +87,6 @@ int main(int argc, char *argv[]) {
     if (rc == QRMI_RETURN_CODE_SUCCESS) {
       const char *type_str = qrmi_config_resource_type_to_str(resource_type);
       fprintf(stdout, "  %-30s type=%s\n", id, type_str);
-      qrmi_string_free((char *)type_str);
     }
 
     if (resource_name != NULL && selected == NULL &&
