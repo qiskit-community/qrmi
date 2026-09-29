@@ -18,7 +18,7 @@ from qiskit.circuit import QuantumCircuit
 from qiskit_pasqal_provider.providers.gate import HamiltonianGate, InterpolatePoints
 from qiskit_pasqal_provider.providers.sampler import SamplerV2
 from qrmi.primitives.pasqal.sampler import QRMIPasqalBackend
-from qrmi.pulser.service import QRMIService
+from qrmi import QRMIService
 
 # Create QRMI
 load_dotenv()
