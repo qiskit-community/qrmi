@@ -2667,7 +2667,7 @@ pub unsafe extern "C" fn qrmi_service_resources(
 /// @param (runtime_config) [in] Optional values applied to every resource
 /// @param (resources_out) [out] Pointer to a QrmiQuantumResources struct to populate
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.25.0
+/// @version 0.26.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_service_resources_from_config(
     config: *const Config,

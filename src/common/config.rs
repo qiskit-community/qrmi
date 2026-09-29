@@ -24,10 +24,13 @@ pub(crate) fn resolve_opt(key: &str, config: Option<&HashMap<String, String>>) -
     }
 }
 
-fn not_found_error(name: String, config: Option<&HashMap<String, String>>) -> QrmiError {
-    match config {
-        Some(_) => QrmiError::MissingConfigKey(name),
-        None => QrmiError::EnvVarNotSet(name),
+/// Returns [`QrmiError::MissingConfigKey`] for a value missing from a config
+/// map, or [`QrmiError::EnvVarNotSet`] for one missing from the environment.
+pub(crate) fn not_found_error(name: String, from_config: bool) -> QrmiError {
+    if from_config {
+        QrmiError::MissingConfigKey(name)
+    } else {
+        QrmiError::EnvVarNotSet(name)
     }
 }
 
@@ -38,7 +41,7 @@ pub(crate) fn resolve_opt_required(
     key: &str,
     config: Option<&HashMap<String, String>>,
 ) -> Result<String, QrmiError> {
-    resolve_opt(key, config).ok_or_else(|| not_found_error(key.into(), config))
+    resolve_opt(key, config).ok_or_else(|| not_found_error(key.into(), config.is_some()))
 }
 
 /// Like [`resolve_opt_required`], but tries each of `keys` in order and only
@@ -56,5 +59,5 @@ pub(crate) fn resolve_opt_required_any(
     keys.dedup();
     keys.iter()
         .find_map(|key| resolve_opt(key, config))
-        .ok_or_else(|| not_found_error(keys.join(" or "), config))
+        .ok_or_else(|| not_found_error(keys.join(" or "), config.is_some()))
 }

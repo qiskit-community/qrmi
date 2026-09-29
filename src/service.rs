@@ -104,8 +104,9 @@ impl QRMIService {
     ///
     /// # Errors
     ///
-    /// Returns an error if constructing or querying the status of one of the
-    /// defined resources fails.
+    /// Returns an error if constructing one of the defined resources fails,
+    /// e.g. because a required key is missing. Resources whose status can't
+    /// be read are skipped.
     pub async fn from_config(
         config: &Config,
         runtime_config: &HashMap<String, String>,
@@ -129,18 +130,23 @@ impl QRMIService {
         Self::from_candidates(candidates).await
     }
 
-    /// Keeps the candidates that are currently online.
+    /// Keeps the candidates that are currently online. A candidate whose
+    /// status can't be read is treated as not accessible, so that one
+    /// unreachable resource doesn't hide the others.
     async fn from_candidates(
         candidates: Vec<Box<dyn QuantumResource + Send + Sync>>,
     ) -> Result<Self> {
         let mut resources: HashMap<String, Box<dyn QuantumResource + Send + Sync>> = HashMap::new();
         for mut resource in candidates {
             let resource_id = resource.resource_id().await?;
-            let res_status = resource.status().await?;
-            if matches!(res_status.status, crate::models::ResourceStatusCode::Online) {
-                resources.insert(resource_id, resource);
-            } else {
-                log::debug!("{} is not accessible now. ignored.", resource_id);
+            match resource.status().await {
+                Ok(res_status)
+                    if matches!(res_status.status, crate::models::ResourceStatusCode::Online) =>
+                {
+                    resources.insert(resource_id, resource);
+                }
+                Ok(_) => log::debug!("{} is not accessible now. ignored.", resource_id),
+                Err(e) => log::warn!("{}: failed to get status ({}). ignored.", resource_id, e),
             }
         }
 
@@ -219,6 +225,11 @@ mod tests {
                         "name": "PASQAL_LOCAL",
                         "type": "pasqal-local",
                         "environment": {"QRMI_WARDEN_URL": url}
+                    },
+                    {
+                        "name": "PASQAL_UNREACHABLE",
+                        "type": "pasqal-local",
+                        "environment": {"QRMI_WARDEN_URL": "http://127.0.0.1:1"}
                     },
                     {
                         "name": "ibm_dynamic",

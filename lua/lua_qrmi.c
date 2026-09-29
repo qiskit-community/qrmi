@@ -1349,8 +1349,12 @@ static int l_qrmi_service_resources_from_config(lua_State *L) {
     for (size_t i = 0; i < resources.length; i++) {
         QrmiQuantumResource *handle = resources.resources[i];
         char *resource_id = NULL;
-        if (qrmi_resource_id(handle, &resource_id) != QRMI_RETURN_CODE_SUCCESS) {
-            continue; /* left in the array, freed below */
+        QrmiReturnCode id_rc = qrmi_resource_id(handle, &resource_id);
+        if (id_rc != QRMI_RETURN_CODE_SUCCESS) {
+            /* Handles already moved into the table are freed by __gc. */
+            qrmi_service_resources_free(&resources);
+            lua_pop(L, 1);
+            return push_qrmi_error(L, id_rc);
         }
 
         /* Move the handle into its own userdata, so that it is freed by

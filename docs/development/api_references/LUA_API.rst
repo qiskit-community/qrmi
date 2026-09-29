@@ -137,6 +137,45 @@ Loads a ``qrmi_config.json`` file. Entirely independent from
 
    local config, err = qrmi.load_config("/etc/slurm/qrmi_config.json")
 
+``qrmi.service_resources_from_config(config, runtime_config)``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Creates the currently accessible resources defined in a QRMI config, without
+reading any environment variables. Wraps
+``qrmi_service_resources_from_config()``. Each static resource definition is
+built like ``qrmi.new_from_config()``, using the definition's ``environment``
+map merged with ``runtime_config``, whose values take precedence. Dynamic
+resource definitions are skipped.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 15 65
+
+   * - Argument
+     - Type
+     - Description
+   * - ``config``
+     - ``qrmi.config``
+     - As returned by ``qrmi.load_config()``.
+   * - ``runtime_config``
+     - table (optional)
+     - A string-to-string map of values a config file can't know in advance,
+       e.g. ``QRMI_JOB_ID``, ``QRMI_JOB_UID`` or ``QRMI_JOB_TIMEOUT_SECONDS``.
+
+**Returns:** on success, ``resources`` (a table of resource id ->
+``qrmi.resource``); on failure, ``nil, err``.
+
+.. code:: lua
+
+   local config = assert(qrmi.load_config("/etc/slurm/qrmi_config.json"))
+   local resources, err = qrmi.service_resources_from_config(config, {
+     QRMI_JOB_ID = "1234",
+     QRMI_JOB_UID = "1000",
+   })
+   for id, resource in pairs(resources) do
+     print(id, resource:type())
+   end
+
 
 --------------
 

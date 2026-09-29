@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::common::{resolve_opt, resolve_opt_required};
+use crate::common::{not_found_error, resolve_opt, resolve_opt_required};
 use crate::error::QrmiError;
 use crate::ibm::error::IbmError;
 use crate::models::{
@@ -68,12 +68,7 @@ impl TaskSettings {
     }
 
     fn missing(&self, key: &str) -> QrmiError {
-        let name = format!("{}{key}", self.key_prefix);
-        if self.from_config {
-            QrmiError::MissingConfigKey(name)
-        } else {
-            QrmiError::EnvVarNotSet(name)
-        }
+        not_found_error(format!("{}{key}", self.key_prefix), self.from_config)
     }
 
     pub(crate) fn timeout_secs(&self) -> Result<u64> {

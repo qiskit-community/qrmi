@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::common::{resolve_opt, resolve_opt_required};
+use crate::common::{not_found_error, resolve_opt, resolve_opt_required};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
@@ -118,14 +118,9 @@ impl PasqalLocal {
 
 impl PasqalLocal {
     fn session_id(&self) -> Result<String> {
-        self.acquisition_token.clone().ok_or_else(|| {
-            let name = self.acquisition_token_key.clone();
-            if self.from_config {
-                QrmiError::MissingConfigKey(name)
-            } else {
-                QrmiError::EnvVarNotSet(name)
-            }
-        })
+        self.acquisition_token
+            .clone()
+            .ok_or_else(|| not_found_error(self.acquisition_token_key.clone(), self.from_config))
     }
 }
 
