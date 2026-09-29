@@ -138,7 +138,8 @@ documentation`_ and the CUDA-Q repository has been cloned into ``/shared``.
    # 1) Rebuild QRMI
    cd /shared/qrmi
    cargo build --release --lib
-   # For pasqal-local support
+   # Pasqal Local works as-is (Munge is loaded at runtime). To link
+   # libmunge at build time instead, needing the Munge development package:
    cargo build --release --lib --features munge
 
    # 2) Build CUDA-Q with local QRMI

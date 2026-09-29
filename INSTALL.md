@@ -49,7 +49,7 @@ install the latest (and most thoroughly tested) version.
   - [Building Optional Libraries](#building-optional-libraries)
     - [Building `task_runner`](#building-task_runner)
       - [Running with Python](#running-with-python)
-      - [Build with Munge support for Pasqal Local](#build-with-munge-support-for-pasqal-local)
+      - [Build with explicit Munge support for Pasqal Local](#build-with-explicit-munge-support-for-pasqal-local)
 - [Further Resources](#further-resources)
   - [Examples](#examples)
   - [Logging](#logging)
@@ -281,9 +281,11 @@ repository.
 `task_runner` for Python is already included in the QRMI Python package. Users can use the `task_runner` command after installing qrmi. For detailed instructions on how to use it, please refer to the
 [`task_runner` README](python/qrmi/tools/task_runner/README.md).
 
-##### Build with Munge support for Pasqal Local
+##### Build with explicit Munge support for Pasqal Local
 
-By default, QRMI is built without Munge support. If you need to use the Pasqal Local client which relies on Munge for authentication, you must enable the `munge` feature during the build process.
+The Pasqal Local client authenticates via Munge, which QRMI loads dynamically at runtime by default — no build flag needed, only Munge installed on the host.
+
+The `munge` feature links `libmunge` at build time instead, so a missing library fails at startup rather than at first use. It requires the Munge development package (for the `libmunge.so` symlink), not just the runtime one.
 
 1. Build the Rust library:
 

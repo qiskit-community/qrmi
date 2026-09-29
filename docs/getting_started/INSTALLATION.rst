@@ -325,12 +325,12 @@ against quantum hardware. Under the hood, it uses the QRMI library.
       detailed instructions on how to use it, please refer to the  :ref:`task_runner README <task_runner>`.
 
 
-Build with Munge support for Pasqal Local
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Build with explicit Munge support for Pasqal Local
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default, QRMI is built without Munge support. If you need to use the
-Pasqal Local client which relies on Munge for authentication, you must
-enable the ``munge`` feature during the build process.
+The Pasqal Local client relies on Munge for authentication. By default, QRMI loads `libmunge` dynamically at runtime (via `dlopen`), so no special build flag is needed and you only need Munge installed on the host running QRMI.
+
+If you'd rather link against `libmunge` at build time, enable the `munge` feature. This requires the Munge development package (providing `libmunge.so`) on the build machine.
 
 #. Build the Rust library:
 
