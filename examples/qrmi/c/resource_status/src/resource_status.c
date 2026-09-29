@@ -9,6 +9,7 @@
  * copyright notice, and modified files need to carry a notice indicating
  * that they have been altered from the originals.
  */
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
   if (!qrmi) {
     const char *last_error = qrmi_get_last_error();
     fprintf(stderr, "Failed to create QRMI for %s/%s. %s (%d)\n", argv[2],
-            resource_type, last_error, qrmi_get_last_error_kind());
+            argv[1], last_error, qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
     return EXIT_FAILURE;
   }
@@ -95,8 +96,8 @@ int main(int argc, char *argv[]) {
   QrmiResourceCapacity *capacity = NULL;
   rc = qrmi_resource_status_capacity(status, &capacity);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-    fprintf(stdout, "available_slots=%u\n", capacity->available_slots);
-    fprintf(stdout, "max_slots=%u\n", capacity->max_slots);
+    fprintf(stdout, "available_slots=%" PRIu64 "\n", capacity->available_slots);
+    fprintf(stdout, "max_slots=%" PRIu64 "\n", capacity->max_slots);
     qrmi_resource_capacity_free(capacity);
   } else {
     const char *last_error = qrmi_get_last_error();
