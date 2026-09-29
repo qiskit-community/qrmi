@@ -24,6 +24,7 @@ pub(crate) unsafe fn free_cred(ptr: *mut c_char) {
 #[cfg(feature = "munge")]
 mod linked {
     use super::*;
+    use std::sync::Once;
 
     #[link(name = "munge")]
     extern "C" {
@@ -37,12 +38,19 @@ mod linked {
         fn munge_strerror(err: c_int) -> *const c_char;
     }
 
+    static LOG_ONCE: Once = Once::new();
+
     pub(crate) unsafe fn call_munge_encode(
         cred: *mut *mut c_char,
         ctx: *mut c_void,
         data: *const c_void,
         len: usize,
     ) -> Result<c_int, String> {
+        LOG_ONCE.call_once(|| {
+            log::debug!(
+                "munge: using build-time dynamically linked libmunge (feature = \"munge\")"
+            );
+        });
         Ok(munge_encode(cred, ctx, data, len))
     }
 
@@ -68,14 +76,21 @@ mod dynamic {
     fn library() -> Result<&'static Library, String> {
         LIB.get_or_init(|| unsafe {
             // libmunge.so (devel symlink) or libmunge.so.2 (runtime lib package).
-            Library::new("libmunge.so")
-                .or_else(|_| Library::new("libmunge.so.2"))
-                .map_err(|e| {
-                    format!(
-                        "munge support was not compiled in and libmunge could not be \
-                         loaded dynamically ({e}). Install munge or rebuild with --features munge."
-                    )
-                })
+            let mut last_err = None;
+            for name in ["libmunge.so", "libmunge.so.2"] {
+                match Library::new(name) {
+                    Ok(lib) => {
+                        log::debug!("munge: loaded {name} dynamically at runtime (dlopen)");
+                        return Ok(lib);
+                    }
+                    Err(e) => last_err = Some(e),
+                }
+            }
+            Err(format!(
+                "munge support was not compiled in and libmunge could not be \
+                 loaded dynamically ({}). Install munge or rebuild with --features munge.",
+                last_err.expect("names list is non-empty")
+            ))
         })
         .as_ref()
         .map_err(|e| e.clone())
