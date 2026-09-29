@@ -32,7 +32,7 @@ mod linked {
             cred: *mut *mut c_char,
             ctx: *mut c_void,
             data: *const c_void,
-            len: usize,
+            len: c_int,
         ) -> c_int;
 
         fn munge_strerror(err: c_int) -> *const c_char;
@@ -44,7 +44,7 @@ mod linked {
         cred: *mut *mut c_char,
         ctx: *mut c_void,
         data: *const c_void,
-        len: usize,
+        len: c_int,
     ) -> Result<c_int, String> {
         LOG_ONCE.call_once(|| {
             log::debug!(
@@ -59,8 +59,8 @@ mod linked {
     }
 }
 
-// Fallback: dlopen libmunge.so at runtime so the client works on hosts that
-// have it installed without a special build.
+// Fallback: dlopen libmunge.so/libmunge.so.2 at runtime so the client works on hosts that
+// have qrmi installed without a special build or the munge-devel package installed.
 #[cfg(not(feature = "munge"))]
 mod dynamic {
     use super::*;
@@ -68,7 +68,7 @@ mod dynamic {
     use std::sync::OnceLock;
 
     type MungeEncodeFn =
-        unsafe extern "C" fn(*mut *mut c_char, *mut c_void, *const c_void, usize) -> c_int;
+        unsafe extern "C" fn(*mut *mut c_char, *mut c_void, *const c_void, c_int) -> c_int;
     type MungeStrerrorFn = unsafe extern "C" fn(c_int) -> *const c_char;
 
     static LIB: OnceLock<Result<Library, String>> = OnceLock::new();
@@ -100,7 +100,7 @@ mod dynamic {
         cred: *mut *mut c_char,
         ctx: *mut c_void,
         data: *const c_void,
-        len: usize,
+        len: c_int,
     ) -> Result<c_int, String> {
         let lib = library()?;
         let func: Symbol<MungeEncodeFn> = lib

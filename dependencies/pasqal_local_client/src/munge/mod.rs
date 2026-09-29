@@ -18,6 +18,9 @@ use std::ffi::CStr;
 use std::ptr;
 
 pub fn encode(payload: &[u8]) -> Result<String, MungeError> {
+    let len = std::os::raw::c_int::try_from(payload.len())
+        .map_err(|_| MungeError::EncodeFailed("payload too large for munge_encode".into()))?;
+
     let mut cred_ptr = ptr::null_mut();
 
     let rc = unsafe {
@@ -25,7 +28,7 @@ pub fn encode(payload: &[u8]) -> Result<String, MungeError> {
             &mut cred_ptr,
             ptr::null_mut(),
             payload.as_ptr() as *const _,
-            payload.len(),
+            len,
         )
     }
     .map_err(MungeError::Unavailable)?;
