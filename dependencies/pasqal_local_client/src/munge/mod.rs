@@ -44,6 +44,7 @@ pub fn encode(payload: &[u8]) -> Result<String, MungeError> {
     }
 
     let token = unsafe { CStr::from_ptr(cred_ptr).to_string_lossy().into_owned() };
+    unsafe { ffi::free_cred(cred_ptr) };
 
     Ok(token)
 }

@@ -11,6 +11,15 @@
 
 use std::os::raw::{c_char, c_int, c_void};
 
+extern "C" {
+    fn free(ptr: *mut c_void);
+}
+
+/// Releases a credential string allocated by `munge_encode`.
+pub(crate) unsafe fn free_cred(ptr: *mut c_char) {
+    free(ptr as *mut c_void);
+}
+
 // Requires libmunge headers/lib at build time.
 #[cfg(feature = "munge")]
 mod linked {
@@ -58,12 +67,15 @@ mod dynamic {
 
     fn library() -> Result<&'static Library, String> {
         LIB.get_or_init(|| unsafe {
-            Library::new("libmunge.so").map_err(|e| {
-                format!(
-                    "munge support was not compiled in and libmunge.so could not be \
-                     loaded dynamically ({e}). Install munge or rebuild with --features munge."
-                )
-            })
+            // libmunge.so (devel symlink) or libmunge.so.2 (runtime lib package).
+            Library::new("libmunge.so")
+                .or_else(|_| Library::new("libmunge.so.2"))
+                .map_err(|e| {
+                    format!(
+                        "munge support was not compiled in and libmunge could not be \
+                         loaded dynamically ({e}). Install munge or rebuild with --features munge."
+                    )
+                })
         })
         .as_ref()
         .map_err(|e| e.clone())
