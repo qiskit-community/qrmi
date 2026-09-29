@@ -2068,6 +2068,8 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
         return ReturnCode::NullPointerError;
     }
 
+    // TODO: migrate to describe() once the C API exposes QuantumResourceInfo
+    #[allow(deprecated)]
     let metadata = (*qrmi)
         .runtime
         .block_on(async { (*qrmi).inner.metadata().await });

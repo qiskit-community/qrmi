@@ -88,7 +88,7 @@ mod version_info {
     pub static VERSION_INFO: [u8; VERSION_LEN] = str_to_array(VERSION_STR);
 }
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus, QuantumResourceInfo};
+use crate::models::{Payload, QuantumResourceInfo, ResourceType, Target, TaskResult, TaskStatus};
 use async_trait::async_trait;
 
 /// Result type used throughout the `QuantumResource` / `ResourceProvider` APIs.
@@ -443,10 +443,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    #[deprecated(
-        since = "0.25.0",
-        note = "use `describe()` instead"
-    )]
+    #[deprecated(since = "0.25.0", note = "use `describe()` instead")]
     async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
         let resource_type = std::any::type_name::<Self>();
         log::warn!(

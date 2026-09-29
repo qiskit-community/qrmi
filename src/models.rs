@@ -14,16 +14,16 @@
 
 mod config;
 mod payload;
+mod resource_info;
 mod resource_status;
 mod target;
 mod task_result;
 mod task_status;
-mod resource_info;
 
 pub use self::config::{Config, ResourceDef, ResourceType};
 pub use self::payload::Payload;
+pub use self::resource_info::{QuantumResourceInfo, QubitType};
 pub use self::resource_status::{ResourceCapacity, ResourceStatus, ResourceStatusCode};
 pub use self::target::Target;
 pub use self::task_result::TaskResult;
 pub use self::task_status::TaskStatus;
-pub use self::resource_info::{QuantumResourceInfo, QubitType};

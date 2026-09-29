@@ -10,9 +10,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+use crate::models::ResourceType;
 use serde::Serialize;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum QubitType {
     /// Superconducting Quantum Computers
     Superconducting,
@@ -25,11 +26,10 @@ pub enum QubitType {
     /// Semiconductor-based Quantum Computers
     Semiconductor,
     /// Other types of Quantum Computers
-    #[default]
     Other,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize)]
 pub struct QuantumResourceInfo {
     // Common
     pub resource_id: String,   // same as one can be obtained by resource_id()
@@ -48,4 +48,26 @@ pub struct QuantumResourceInfo {
 
     // Extra: vendor-specific, structured or raw data
     pub extra: serde_json::Value,
+}
+
+impl QuantumResourceInfo {
+    /// Creates a new instance with the required fields set; optional fields are left empty.
+    pub fn new(resource_id: String, resource_type: &ResourceType, qubit_type: QubitType) -> Self {
+        Self {
+            resource_id,
+            resource_type: resource_type.as_str().to_string(),
+            backend_display_name: String::new(),
+            num_qubits: 0,
+            qubit_type,
+            processor_name: None,
+            processor_revision: None,
+            description: None,
+            is_simulator: false,
+            has_queue: false,
+            max_shots: None,
+            pending_job_count: None,
+            status: String::new(),
+            extra: serde_json::Value::Null,
+        }
+    }
 }

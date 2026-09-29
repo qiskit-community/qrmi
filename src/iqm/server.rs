@@ -311,16 +311,11 @@ impl QuantumResource for IQMServer {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        let qubit_type = QubitType::Superconducting;
-        let resource_id = self.resource_id().await?;
-        let resource_type = self.resource_type().await?;
-        let resource_info = QuantumResourceInfo {
-            qubit_type,
-            resource_id,
-            resource_type: resource_type.as_str().to_string(),
-            ..Default::default()
-        };
-        Ok(resource_info)
+        Ok(QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::Superconducting,
+        ))
     }
 
     /// Starts a job task.

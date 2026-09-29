@@ -117,16 +117,11 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        let qubit_type = QubitType::NeuralAtom;
-        let resource_id = self.resource_id().await?;
-        let resource_type = self.resource_type().await?;
-        let resource_info = QuantumResourceInfo {
-            qubit_type,
-            resource_id,
-            resource_type: resource_type.as_str().to_string(),
-            ..Default::default()
-        };
-        Ok(resource_info)
+        Ok(QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::NeuralAtom,
+        ))
     }
 
     async fn acquire(&mut self) -> Result<String> {
