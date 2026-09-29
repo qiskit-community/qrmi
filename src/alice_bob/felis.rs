@@ -15,7 +15,9 @@
 use crate::alice_bob::error::{classify, ResourceKind};
 use crate::common::resolve_opt_required_any;
 use crate::error::QrmiError;
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    HardwarePlatform, Payload, QuantumResourceInfo, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
 use alice_bob_felis::helpers::decode_api_key;
@@ -139,6 +141,16 @@ impl QuantumResource for AliceBobFelis {
     async fn is_accessible(&mut self) -> Result<bool> {
         // We can implement this later
         Ok(true)
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let mut info = QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            HardwarePlatform::Superconducting,
+        );
+        info.extra = json!({ "felis_target": self.felis_target });
+        Ok(info)
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {

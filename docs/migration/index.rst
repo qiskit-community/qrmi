@@ -24,6 +24,7 @@ Migration Guides
     :maxdepth: 2
     
     v0.26.3
+    v0.27.0_describe
     v0.25.0_status
     v0.25.0
     v0.24.0

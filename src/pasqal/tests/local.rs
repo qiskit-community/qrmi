@@ -1,6 +1,7 @@
-use crate::QrmiErrorKind;
+use crate::{QrmiErrorKind, QuantumResource};
 
-use super::PasqalLocal;
+use super::{parse_device_specs, PasqalLocal};
+use crate::models::{HardwarePlatform, QuantumResourceInfo, ResourceType};
 use std::collections::HashMap;
 
 fn local_config() -> HashMap<String, String> {
@@ -86,4 +87,50 @@ fn acquisition_token_falls_back_to_environment() {
     let token = qrmi.acquisition_token();
     std::env::remove_var("session_env_QRMI_JOB_ACQUISITION_TOKEN");
     assert_eq!(token.unwrap(), "session-env");
+}
+
+#[test]
+fn apply_device_specs_maps_pulser_device() {
+    let specs = r#"{"name": "FRESNEL", "max_atom_num": 100, "max_runs": 1000, "channels": []}"#;
+    let target = serde_json::json!([{"device_type": "FRESNEL", "specs": specs}]).to_string();
+    let mut info = QuantumResourceInfo::new(
+        "fresnel".to_string(),
+        &ResourceType::PasqalLocal,
+        HardwarePlatform::NeutralAtom,
+    );
+    parse_device_specs(&mut info, &target).unwrap();
+    assert_eq!(info.backend_display_name, Some("FRESNEL".to_string()));
+    assert_eq!(info.num_qubits, Some(100));
+    assert_eq!(info.max_shots, Some(1000));
+    assert_eq!(info.has_queue, Some(true));
+}
+
+#[tokio::test]
+async fn describe_succeeds_when_warden_unreachable() {
+    // Bind then drop to get a port nothing listens on.
+    let addr = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap();
+    let config = HashMap::from([
+        ("QRMI_WARDEN_URL".to_string(), format!("http://{addr}")),
+        ("QRMI_JOB_UID".to_string(), "1000".to_string()),
+        ("QRMI_JOB_ID".to_string(), "1".to_string()),
+    ]);
+    let mut qrmi = PasqalLocal::from_config("FRESNEL", config).unwrap();
+    let info = qrmi.describe().await.unwrap();
+    assert_eq!(info.resource_id, "FRESNEL");
+    assert_eq!(info.num_qubits, None);
+    assert_eq!(info.status, None);
+}
+
+#[test]
+fn parse_device_specs_rejects_invalid_specs() {
+    let target = serde_json::json!([{"device_type": "X", "specs": "not json"}]).to_string();
+    let mut info = QuantumResourceInfo::new(
+        "x".to_string(),
+        &ResourceType::PasqalLocal,
+        HardwarePlatform::NeutralAtom,
+    );
+    assert!(parse_device_specs(&mut info, &target).is_err());
 }
