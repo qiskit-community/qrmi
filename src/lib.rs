@@ -88,7 +88,7 @@ mod version_info {
     pub static VERSION_INFO: [u8; VERSION_LEN] = str_to_array(VERSION_STR);
 }
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus, QuantumResourceInfo};
 use async_trait::async_trait;
 
 /// Result type used throughout the `QuantumResource` / `ResourceProvider` APIs.
@@ -220,6 +220,8 @@ pub trait QuantumResource: Send + Sync {
             pending_job_count: None,
         })
     }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo>;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
     ///
@@ -441,6 +443,10 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
+    #[deprecated(
+        since = "0.25.0",
+        note = "use `describe()` instead"
+    )]
     async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
         let resource_type = std::any::type_name::<Self>();
         log::warn!(

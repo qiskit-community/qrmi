@@ -11,7 +11,9 @@
 // that they have been altered from the originals.
 
 use crate::common::{required_env, resolve_opt, resolve_opt_required};
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, QuantumResourceInfo, QubitType, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
 use pasqal_local_api::{Client, ClientBuilder, JobStatus};
@@ -112,6 +114,19 @@ impl QuantumResource for PasqalLocal {
     async fn is_accessible(&mut self) -> Result<bool> {
         let accessible = self.api_client.get_accessible().await?;
         Ok(accessible.is_accessible)
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let qubit_type = QubitType::NeuralAtom;
+        let resource_id = self.resource_id().await?;
+        let resource_type = self.resource_type().await?;
+        let resource_info = QuantumResourceInfo {
+            qubit_type,
+            resource_id,
+            resource_type: resource_type.as_str().to_string(),
+            ..Default::default()
+        };
+        Ok(resource_info)
     }
 
     async fn acquire(&mut self) -> Result<String> {
