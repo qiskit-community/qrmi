@@ -157,6 +157,18 @@ impl<'de> Deserialize<'de> for JobStatus {
     }
 }
 
+impl fmt::Display for JobStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match *self {
+            JobStatus::Running => "Running",
+            JobStatus::Completed => "Completed",
+            JobStatus::Failed => "Failed",
+            JobStatus::Cancelled => "Cancelled",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, PartialEq)]
 #[serde(rename_all(serialize = "lowercase"))]
 /// Storage type

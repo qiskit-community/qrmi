@@ -90,7 +90,7 @@ impl PrimitiveJob {
     ///         .unwrap();
     ///
     ///     let primitive_job = client
-    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None)
+    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None, None)
     ///         .await?;
     ///     let _job = primitive_job
     ///         .get_job::<Job>()

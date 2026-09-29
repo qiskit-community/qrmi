@@ -104,4 +104,4 @@ class QRMIBaseEstimatorV2(BaseEstimatorV2):
             input=json.dumps(input_json), program_id="estimator"
         )
         job_id = self._qrmi.task_start(payload)
-        return RuntimeJobV2(self._qrmi, job_id, delete_job=True)
+        return RuntimeJobV2(self._qrmi, job_id)
