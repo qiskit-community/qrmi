@@ -18,6 +18,7 @@ mod resource_status;
 mod target;
 mod task_result;
 mod task_status;
+mod resource_info;
 
 pub use self::config::{Config, ResourceDef, ResourceType};
 pub use self::payload::Payload;
@@ -25,3 +26,4 @@ pub use self::resource_status::{ResourceCapacity, ResourceStatus, ResourceStatus
 pub use self::target::Target;
 pub use self::task_result::TaskResult;
 pub use self::task_status::TaskStatus;
+pub use self::resource_info::{QuantumResourceInfo, QubitType};
