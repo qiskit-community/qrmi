@@ -38,8 +38,9 @@ This allows:
 
 - May require network access, services, or real backends.
 - One file per resource type, e.g. `python/tests/integration/test_pasqal_local.py`.
-- Run on pushes to `main` by `.github/workflows/e2e.yml`, which starts a local
-  stand-in for each resource (Warden with its mock QPU, Simulated Quantum Resource).
+- Run on pushes to `main`, weekly and on demand by `.github/workflows/e2e.yml`,
+  which starts a local stand-in for each resource (Warden with its mock QPU,
+  Simulated Quantum Resource).
   To add a resource type, add a test file and a job in that workflow.
 
 ## Conventions

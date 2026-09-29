@@ -10,6 +10,10 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore: [ "docs/**", "**.md", "**.rst" ]
+  # Weekly as well, since Warden and the simulator track their main branches.
+  # Runs at 00:00 UTC every Saturday, like on-schedule.yml.
+  schedule:
+  - cron: '0 0 * * 6'
   workflow_dispatch:
 
 concurrency:
