@@ -36,7 +36,7 @@ try:
 except RuntimeError:
     device = pulser.DigitalAnalogDevice
     print(
-        "Could not find device from the QRMI connection. Defaulted to 'DigitalAnaloDevice'"
+        "Could not find device from the QRMI connection. Defaulted to 'DigitalAnalogDevice'"
     )
 
 reg = Register(
