@@ -18,6 +18,7 @@ so submitted sequences are emulated with QuTiP. Also requires these environment 
 """
 
 import os
+import time
 
 import numpy as np
 import pulser
@@ -64,7 +65,11 @@ def test_task_stop(qrmi, sequence):
         Payload.PasqalCloud(sequence=sequence.to_abstract_repr(), job_runs=1000)
     )
     qrmi.task_stop(task_id)
-    assert qrmi.task_status(task_id) == TaskStatus.Cancelled
+    # Warden cancels a job the scheduler already picked up in the background.
+    deadline = time.monotonic() + 10
+    while (status := qrmi.task_status(task_id)) != TaskStatus.Cancelled:
+        assert time.monotonic() < deadline, f"task still {status} after task_stop"
+        time.sleep(0.5)
 
 
 def test_pulser_backend(qrmi, sequence):
