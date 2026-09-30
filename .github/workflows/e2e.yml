@@ -41,7 +41,7 @@ jobs:
     - name: System info
       id: sysinfo
       run: echo "python-version=$(make get-python-version)" >> "$GITHUB_OUTPUT"
-    - uses: astral-sh/setup-uv@v10
+    - uses: astral-sh/setup-uv@v10.2.0
       with:
         python-version: ${{ steps.sysinfo.outputs.python-version }}
         cache-dependency-glob: requirements-dev.txt
@@ -73,7 +73,7 @@ jobs:
         repository: pasqal-io/warden
         ref: ${{ env.WARDEN_REF }}
         path: warden
-    - uses: astral-sh/setup-uv@v10
+    - uses: astral-sh/setup-uv@v10.2.0
       with:
         python-version: ${{ needs.wheel.outputs.python-version }}
         activate-environment: true
@@ -137,7 +137,7 @@ jobs:
         repository: qrmi-community/simulated_quantum_resource
         ref: ${{ env.QSA_SIM_REF }}
         path: qsa-sim
-    - uses: astral-sh/setup-uv@v10
+    - uses: astral-sh/setup-uv@v10.2.0
       with:
         python-version: ${{ needs.wheel.outputs.python-version }}
         activate-environment: true
