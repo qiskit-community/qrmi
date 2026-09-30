@@ -30,6 +30,7 @@ from qiskit_pasqal_provider.providers import SamplerV2 as PasqalSamplerV2
 from qiskit_pasqal_provider.providers.pulse_utils import (
     gen_seq,
     get_register_from_circuit,
+    place_register,
 )
 
 from qrmi import Payload, QuantumResource, TaskStatus
@@ -194,8 +195,8 @@ class QRMIPasqalBackend:
         **_: Any,
     ) -> QRMIPasqalJob:
         """Submit a circuit to QRMI and return a Pasqal job handle."""
-        analog_register = get_register_from_circuit(run_input)
         device = get_device(self._qrmi)
+        analog_register = place_register(get_register_from_circuit(run_input), device)
 
         seq = gen_seq(
             analog_register=analog_register,

@@ -85,14 +85,19 @@ class _FakeQRMI:
 
 def _patch_sequence_build(monkeypatch):
     seq = _Seq()
+    placed_register = object()
     monkeypatch.setattr(
         pasqal_sampler, "get_register_from_circuit", lambda _qc: object()
     )
     monkeypatch.setattr(
-        pasqal_sampler,
-        "gen_seq",
-        lambda analog_register, device, circuit: seq,
+        pasqal_sampler, "place_register", lambda _register, _device: placed_register
     )
+
+    def _gen_seq(analog_register, device, circuit):
+        assert analog_register is placed_register
+        return seq
+
+    monkeypatch.setattr(pasqal_sampler, "gen_seq", _gen_seq)
     return seq
 
 
