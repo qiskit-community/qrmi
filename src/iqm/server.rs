@@ -197,12 +197,19 @@ impl IQMServer {
     ///  "status": {"health": {"healthy": true, "updated_at": "..."}}, ...}
     /// ```
     ///
-    /// Only `operational`, `health` and `queue_length` are read in that
-    /// case; `pending_job_count` is `None` when `queue_length` is absent.
+    /// Only `status.health` and `queue_length` are read in that case. Older
+    /// servers report no operational state, so they are treated as online;
+    /// `pending_job_count` is `None` when `queue_length` is absent.
     /// A body that fits neither shape returns the spec deserialization
     /// error, so an unexpected response is still reported, not guessed at.
     pub(crate) fn resource_status_from_qc_details(body: Value) -> Result<ResourceStatus> {
+        // Extract the three values status() needs. `queue_length` is i64 in
+        // both branches: the spec model has it as i32, while the legacy
+        // branch reads it with `Value::as_i64`.
         let (operational, health, queue_length) =
+            // 1) Spec shape. New IQM Servers and the issue's reproduction
+            //    stub take this branch. `body` is cloned because
+            //    `from_value` consumes it and branch 2 still needs it.
             match serde_json::from_value::<IqmServerQuantumComputerDetails>(body.clone()) {
                 Ok(qc) => (
                     qc.operational,
@@ -212,6 +219,7 @@ impl IQMServer {
                     // Required by the spec, so always present here.
                     Some(i64::from(qc.queue_length)),
                 ),
+                // 2) Not the spec shape.
                 Err(spec_err) => {
                     // Only the known older on-prem shape (e.g. ORNL), which
                     // nests health under `status.health`, is accepted.
@@ -224,24 +232,18 @@ impl IQMServer {
                     // debug, not warn: status() is polled frequently and
                     // this is the expected path on those servers.
                     log::debug!(
-                    "quantum computer details did not match the IQM Server API spec ({spec_err}); \
+                        "quantum computer details did not match the IQM Server API spec ({spec_err}); \
                          reading them as the older `status.health` shape"
-                );
+                    );
                     // `{"healthy": ..., "updated_at": ...}` or null. A
                     // malformed object (e.g. no `updated_at`) is an error.
                     let health =
                         serde_json::from_value::<Option<QcHealthDetail>>(legacy_health.clone())?;
-                    // Older servers report no operational state at all, so
-                    // fall back to "online" -- the same default as the
-                    // generated model's `default_operational()`. The
-                    // reported ORNL payload has none of these keys;
-                    // `/status/operational` is checked defensively in case a
-                    // server nests it next to `status.health`.
-                    let operational = ["/operational", "/operational_status"]
-                        .iter()
-                        .find_map(|ptr| body.pointer(ptr).and_then(Value::as_str))
-                        .unwrap_or("online")
-                        .to_string();
+                    // Older servers have no operational state at all (no
+                    // `operational` / `operational_status`), so treat them as
+                    // online -- the same default as the generated model's
+                    // `default_operational()`.
+                    let operational = "online".to_string();
                     // Older servers omit `queue_length`; `None` then means
                     // "queue length unknown", not "empty queue".
                     let queue_length = body.get("queue_length").and_then(Value::as_i64);
@@ -252,15 +254,19 @@ impl IQMServer {
         Ok(ResourceStatus {
             status: match operational.as_str() {
                 "online" => ResourceStatusCode::Online,
+                // The spec's only non-online state.
                 "maintenance" => ResourceStatusCode::Paused,
+                // Unknown values are treated as unavailable.
                 _ => ResourceStatusCode::Offline,
             },
+            // No reason when there is no health reading (e.g. maintenance).
             status_reason: health
                 .as_ref()
                 .map(|h| format!("healthy updated at {}", h.updated_at)),
             healthy: health.map(|h| h.healthy),
             busy: None,
             capacity: None,
+            // A negative (invalid) count becomes `None` rather than an error.
             pending_job_count: queue_length.and_then(|n| n.try_into().ok()),
         })
     }

@@ -251,14 +251,6 @@ fn status_legacy_null_health() {
 }
 
 #[test]
-fn status_legacy_reads_operational_under_status() {
-    let mut body = legacy_qc_details(Value::Null);
-    body["status"]["operational"] = json!("maintenance");
-    let st = IQMServer::resource_status_from_qc_details(body).expect("should parse");
-    assert_eq!(st.status, ResourceStatusCode::Paused);
-}
-
-#[test]
 fn status_spec_missing_queue_length_without_legacy_health_is_error() {
     // Not the spec shape (queue_length is required) and not the legacy
     // shape (no status.health): must be reported, not guessed at.
