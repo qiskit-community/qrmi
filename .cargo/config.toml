@@ -1,0 +1,2 @@
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "debuginfo=2", "-C", "strip=none"]
