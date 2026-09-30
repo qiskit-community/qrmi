@@ -11,21 +11,17 @@
 // that they have been altered from the originals.
 
 use super::super::IBMQuantumSystem;
-use crate::models::ResourceType;
+use super::s3_env;
+use crate::error::QrmiError;
+use crate::models::{Payload, ResourceType};
 use crate::QuantumResource;
-use quantum_system_api::ClientBuilder;
 use std::collections::HashMap;
 
 #[tokio::test]
 async fn resource_id_and_type_match_backend() {
     const BACKEND_NAME: &str = "test_eagle";
-    let api_client = ClientBuilder::new("http://127.0.0.1:8080")
-        .build()
-        .expect("client build should succeed");
-    let mut qrmi = IBMQuantumSystem {
-        api_client,
-        backend_name: BACKEND_NAME.to_string(),
-    };
+    let mut qrmi = IBMQuantumSystem::from_config(BACKEND_NAME, required_only_config())
+        .expect("construction should succeed");
 
     let resource_id = qrmi
         .resource_id()
@@ -84,4 +80,66 @@ fn from_config_missing_required_key_errors() {
         "http://localhost".to_string(),
     )]);
     assert!(IBMQuantumSystem::from_config("test_eagle", config).is_err());
+}
+
+fn sampler_payload() -> Payload {
+    Payload::QiskitPrimitive {
+        input: "{}".to_string(),
+        program_id: "sampler".to_string(),
+    }
+}
+
+#[tokio::test]
+async fn task_start_reads_job_timeout_from_config() {
+    let mut qrmi = IBMQuantumSystem::from_config("test_eagle", required_only_config())
+        .expect("construction should succeed");
+    // Fails before any network access.
+    let err = qrmi.task_start(sampler_payload()).await.unwrap_err();
+    assert!(
+        matches!(err, QrmiError::MissingConfigKey(ref key) if key == "QRMI_JOB_TIMEOUT_SECONDS")
+    );
+}
+
+#[tokio::test]
+async fn task_start_rejects_malformed_job_timeout() {
+    let mut config = required_only_config();
+    config.insert("QRMI_JOB_TIMEOUT_SECONDS".to_string(), "abc".to_string());
+    // Construction doesn't read the timeout, so it still succeeds.
+    let mut qrmi =
+        IBMQuantumSystem::from_config("test_eagle", config).expect("construction should succeed");
+    let err = qrmi.task_start(sampler_payload()).await.unwrap_err();
+    assert!(
+        matches!(err, QrmiError::ParseError { ref name, .. } if name == "QRMI_JOB_TIMEOUT_SECONDS")
+    );
+}
+
+#[test]
+fn s3_env_reads_from_config() {
+    let mut config = required_only_config();
+    for (key, value) in [
+        ("QRMI_IBM_QS_S3_BUCKET", "my-bucket"),
+        ("QRMI_IBM_QS_S3_ENDPOINT", "http://localhost:9000"),
+        ("QRMI_IBM_QS_AWS_ACCESS_KEY_ID", "dummy"),
+        ("QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY", "dummy"),
+        ("QRMI_IBM_QS_S3_REGION", "us-east-1"),
+    ] {
+        config.insert(key.to_string(), value.to_string());
+    }
+    let qrmi =
+        IBMQuantumSystem::from_config("test_eagle", config).expect("construction should succeed");
+    let s3 = s3_env(&qrmi.settings).expect("S3 settings should be read from config");
+    assert_eq!(s3.bucket, "my-bucket");
+}
+
+#[tokio::test]
+async fn task_result_reads_s3_settings_from_config() {
+    let mut qrmi = IBMQuantumSystem::from_config("test_eagle", required_only_config())
+        .expect("construction should succeed");
+    // Fails before any network access.
+    let err = qrmi
+        .task_result("some-task")
+        .await
+        .err()
+        .expect("task_result should fail");
+    assert!(matches!(err, QrmiError::MissingConfigKey(ref key) if key == "QRMI_IBM_QS_S3_BUCKET"));
 }
