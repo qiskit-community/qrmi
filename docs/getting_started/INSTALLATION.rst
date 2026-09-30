@@ -326,7 +326,7 @@ against quantum hardware. Under the hood, it uses the QRMI library.
 
 
 Build with explicit Munge support for Pasqal Local
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Pasqal Local client relies on Munge for authentication. By default, QRMI loads `libmunge` dynamically at runtime (via `dlopen`), so no special build flag is needed and you only need Munge installed on the host running QRMI.
 

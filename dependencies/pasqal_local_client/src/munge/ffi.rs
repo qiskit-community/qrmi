@@ -59,41 +59,64 @@ mod linked {
     }
 }
 
-// Fallback: dlopen libmunge.so/libmunge.so.2 at runtime so the client works on hosts that
-// have qrmi installed without a special build or the munge-devel package installed.
+// Fallback: dlopen libmunge at runtime so the client works on hosts that have qrmi
+// installed without a special build or the munge-devel package installed.
 #[cfg(not(feature = "munge"))]
 mod dynamic {
     use super::*;
-    use libloading::{Library, Symbol};
+    use libloading::Library;
     use std::sync::OnceLock;
 
     type MungeEncodeFn =
         unsafe extern "C" fn(*mut *mut c_char, *mut c_void, *const c_void, c_int) -> c_int;
     type MungeStrerrorFn = unsafe extern "C" fn(c_int) -> *const c_char;
 
-    static LIB: OnceLock<Result<Library, String>> = OnceLock::new();
+    struct Munge {
+        // `encode` and `strerror` are raw fn pointers copied out of `Symbol<'lib, _>`, so the
+        // borrow checker no longer ties them to the library. Owning the `Library` here
+        // defers its `dlclose` until this struct is dropped, keeping them valid.
+        _lib: Library,
+        encode: MungeEncodeFn,
+        strerror: MungeStrerrorFn,
+    }
 
-    fn library() -> Result<&'static Library, String> {
-        LIB.get_or_init(|| unsafe {
-            // libmunge.so (devel symlink) or libmunge.so.2 (runtime lib package).
-            let mut last_err = None;
-            for name in ["libmunge.so", "libmunge.so.2"] {
-                match Library::new(name) {
-                    Ok(lib) => {
-                        log::debug!("munge: loaded {name} dynamically at runtime (dlopen)");
-                        return Ok(lib);
-                    }
-                    Err(e) => last_err = Some(e),
-                }
-            }
-            Err(format!(
-                "munge support was not compiled in and libmunge could not be \
-                 loaded dynamically ({}). Install munge or rebuild with --features munge.",
-                last_err.expect("names list is non-empty")
-            ))
+    // Only a successful load is cached, so a process started before munge was installed
+    // picks it up on the next request instead of failing until restart.
+    static MUNGE: OnceLock<Munge> = OnceLock::new();
+
+    unsafe fn load(name: &str) -> Result<Munge, libloading::Error> {
+        let lib = Library::new(name)?;
+        let encode = *lib.get::<MungeEncodeFn>(b"munge_encode\0")?;
+        let strerror = *lib.get::<MungeStrerrorFn>(b"munge_strerror\0")?;
+        Ok(Munge {
+            _lib: lib,
+            encode,
+            strerror,
         })
-        .as_ref()
-        .map_err(|e| e.clone())
+    }
+
+    fn munge() -> Result<&'static Munge, String> {
+        if let Some(m) = MUNGE.get() {
+            return Ok(m);
+        }
+        // The fn pointer types above match ABI 2, so prefer the versioned soname and only
+        // fall back to the unversioned devel symlink.
+        let mut errors = Vec::new();
+        for name in ["libmunge.so.2", "libmunge.so"] {
+            match unsafe { load(name) } {
+                Ok(m) => {
+                    log::debug!("munge: loaded {name} dynamically at runtime (dlopen)");
+                    // A concurrent caller may have won the race; either result is equivalent.
+                    return Ok(MUNGE.get_or_init(|| m));
+                }
+                Err(e) => errors.push(format!("{name}: {e}")),
+            }
+        }
+        Err(format!(
+            "libmunge could not be loaded ({}). Install munge (the package providing \
+             libmunge.so.2) on this host.",
+            errors.join("; ")
+        ))
     }
 
     pub(crate) unsafe fn call_munge_encode(
@@ -102,19 +125,11 @@ mod dynamic {
         data: *const c_void,
         len: c_int,
     ) -> Result<c_int, String> {
-        let lib = library()?;
-        let func: Symbol<MungeEncodeFn> = lib
-            .get(b"munge_encode\0")
-            .map_err(|e| format!("munge_encode symbol not found: {e}"))?;
-        Ok(func(cred, ctx, data, len))
+        Ok((munge()?.encode)(cred, ctx, data, len))
     }
 
     pub(crate) unsafe fn call_munge_strerror(err: c_int) -> Result<*const c_char, String> {
-        let lib = library()?;
-        let func: Symbol<MungeStrerrorFn> = lib
-            .get(b"munge_strerror\0")
-            .map_err(|e| format!("munge_strerror symbol not found: {e}"))?;
-        Ok(func(err))
+        Ok((munge()?.strerror)(err))
     }
 }
 
