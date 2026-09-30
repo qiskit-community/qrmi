@@ -14,7 +14,7 @@ Pasqal Cloud QRMI - CUDA-Q Examples
 Prerequisites
 -------------
 
--  Rust 1.85.1 or above
+-  Rust 1.98 or above
 -  Python 3.11 or 3.12
 -  Install the :ref:`QRMI Python package <install_source>`
 -  CUDA-Q installed with the Pasqal backend built
