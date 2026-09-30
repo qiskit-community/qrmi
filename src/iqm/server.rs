@@ -206,25 +206,44 @@ impl IQMServer {
             match serde_json::from_value::<IqmServerQuantumComputerDetails>(body.clone()) {
                 Ok(qc) => (
                     qc.operational,
+                    // `health` is nullable in the spec (null during
+                    // maintenance or before the first health check).
                     qc.health.map(|h| *h),
+                    // Required by the spec, so always present here.
                     Some(i64::from(qc.queue_length)),
                 ),
                 Err(spec_err) => {
+                    // Only the known older on-prem shape (e.g. ORNL), which
+                    // nests health under `status.health`, is accepted.
+                    // Anything else is a genuinely unexpected response, so
+                    // report the spec deserialization error instead of
+                    // guessing.
                     let Some(legacy_health) = body.pointer("/status/health") else {
                         return Err(spec_err.into());
                     };
+                    // debug, not warn: status() is polled frequently and
+                    // this is the expected path on those servers.
                     log::debug!(
                     "quantum computer details did not match the IQM Server API spec ({spec_err}); \
                          reading them as the older `status.health` shape"
                 );
+                    // `{"healthy": ..., "updated_at": ...}` or null. A
+                    // malformed object (e.g. no `updated_at`) is an error.
                     let health =
                         serde_json::from_value::<Option<QcHealthDetail>>(legacy_health.clone())?;
-                    let operational =
-                        ["/operational", "/operational_status", "/status/operational"]
-                            .iter()
-                            .find_map(|ptr| body.pointer(ptr).and_then(Value::as_str))
-                            .unwrap_or("online")
-                            .to_string();
+                    // Older servers report no operational state at all, so
+                    // fall back to "online" -- the same default as the
+                    // generated model's `default_operational()`. The
+                    // reported ORNL payload has none of these keys;
+                    // `/status/operational` is checked defensively in case a
+                    // server nests it next to `status.health`.
+                    let operational = ["/operational", "/operational_status"]
+                        .iter()
+                        .find_map(|ptr| body.pointer(ptr).and_then(Value::as_str))
+                        .unwrap_or("online")
+                        .to_string();
+                    // Older servers omit `queue_length`; `None` then means
+                    // "queue length unknown", not "empty queue".
                     let queue_length = body.get("queue_length").and_then(Value::as_i64);
                     (operational, health, queue_length)
                 }
@@ -265,6 +284,15 @@ impl QuantumResource for IQMServer {
     /// Derived from [`Self::status`] rather than calling
     /// `/quantum-computers/{qc}/health`, whose response shape differs
     /// between IQM Server versions.
+    ///
+    /// Nothing is lost by not calling `/health`: everything it returns is
+    /// already in the `/quantum-computers/{qc}` response that `status()`
+    /// reads, on both server generations --
+    ///
+    /// | `/health` field | spec (new) server | older server (e.g. ORNL) |
+    /// |---|---|---|
+    /// | `operational` | `operational_status` / `operational` | absent in both responses |
+    /// | `healthy`, `updated_at` | `health.healthy`, `health.updated_at` | `status.health.healthy`, `status.health.updated_at` |
     async fn is_accessible(&mut self) -> Result<bool> {
         let st = self.status().await?;
         Ok(st.status == ResourceStatusCode::Online && st.healthy == Some(true))
