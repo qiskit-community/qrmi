@@ -20,6 +20,7 @@
 
 use anyhow::{bail, Result};
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -67,14 +68,21 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
 }
 impl ResourceType {
     pub fn as_str(&self) -> &str {
+        self.as_c_str()
+            .to_str()
+            .expect("resource type names are ASCII")
+    }
+
+    /// Same name as [`Self::as_str`], as a static C string for the C API.
+    pub fn as_c_str(&self) -> &'static CStr {
         match self {
-            ResourceType::IBMQuantumSystem => "ibm-quantum-system",
-            ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
-            ResourceType::IBMQuantumComputeService => "ibm-quantum-compute-service",
-            ResourceType::PasqalCloud => "pasqal-cloud",
-            ResourceType::PasqalLocal => "pasqal-local",
-            ResourceType::AliceBobFelis => "alice-bob-felis",
-            ResourceType::IQMServer => "iqm-server",
+            ResourceType::IBMQuantumSystem => c"ibm-quantum-system",
+            ResourceType::QiskitRuntimeService => c"qiskit-runtime-service",
+            ResourceType::IBMQuantumComputeService => c"ibm-quantum-compute-service",
+            ResourceType::PasqalCloud => c"pasqal-cloud",
+            ResourceType::PasqalLocal => c"pasqal-local",
+            ResourceType::AliceBobFelis => c"alice-bob-felis",
+            ResourceType::IQMServer => c"iqm-server",
         }
     }
 
