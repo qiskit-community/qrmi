@@ -93,7 +93,7 @@ def _patch_sequence_build(monkeypatch):
         pasqal_sampler, "place_register", lambda _register, _device: placed_register
     )
 
-    def _gen_seq(analog_register, device, circuit):
+    def _gen_seq(analog_register, device, circuit):  # pylint: disable=unused-argument
         assert analog_register is placed_register
         return seq
 
