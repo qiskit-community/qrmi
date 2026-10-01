@@ -61,14 +61,28 @@ async fn failed_request_reports_status_and_body() {
 
 #[cfg(not(feature = "munge"))]
 #[tokio::test]
-async fn authenticated_requests_need_munge_feature() {
-    let server = mockito::Server::new_async().await;
-    let client = client_for(&server);
+async fn authenticated_requests_report_missing_libmunge() {
+    let libmunge_installed = unsafe { libloading::Library::new("libmunge.so.2") }.is_ok();
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("POST", "/sessions")
+        .expect(0)
+        .create_async()
+        .await;
 
-    let err = client
-        .create_session(1000, "42")
-        .await
-        .expect_err("create_session should fail without munge");
+    let result = client_for(&server).create_session(1000, "42").await;
 
-    assert!(err.to_string().contains("Munge support is disabled"));
+    if libmunge_installed {
+        // What follows a successful load depends on munged and the server, not on this test.
+        if let Err(err) = result {
+            assert!(!err.to_string().contains("munge unavailable"), "{err}");
+        }
+    } else {
+        mock.assert_async().await;
+        let message = result
+            .expect_err("create_session should fail without libmunge")
+            .to_string();
+        assert!(message.contains("munge unavailable"), "{message}");
+        assert!(message.contains("libmunge could not be loaded"), "{message}");
+    }
 }
