@@ -42,6 +42,8 @@ int main(int argc, char *argv[]) {
 
     QrmiReturnCode rc = QRMI_RETURN_CODE_SUCCESS;
     char *resource_id = NULL;
+    char *acquisition_token = NULL;
+    bool acquired_here = false;
     rc = qrmi_resource_id(qrmi, &resource_id);
     if (rc == QRMI_RETURN_CODE_SUCCESS) {
         QrmiResourceType resource_type;
@@ -79,22 +81,29 @@ int main(int argc, char *argv[]) {
         goto error;
     }
 
-    char *acquisition_token = NULL;
-    rc = qrmi_resource_acquire(qrmi, &acquisition_token);
-    if (rc != QRMI_RETURN_CODE_SUCCESS) {
-        const char *last_error = qrmi_get_last_error();
-        fprintf(stdout, "qrmi_resource_acquire() failed. %s\n", last_error);
-        qrmi_string_free((char *)last_error);
-        goto error;
-    }
-    fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
-
-    // Set acquisition token as env variable <backend_name>_QRMI_JOB_ACQUISITION_TOKEN
     const char *suffix = "_QRMI_JOB_ACQUISITION_TOKEN";
     char *token_var = malloc(strlen(backend_name) + strlen(suffix) + 1);
     strcpy(token_var, backend_name);
     strcat(token_var, suffix);
-    setenv(token_var, acquisition_token, 1);
+    const char *scheduler_token = getenv(token_var);
+    acquired_here = scheduler_token == NULL || *scheduler_token == '\0';
+    if (acquired_here) {
+        rc = qrmi_resource_acquire(qrmi, &acquisition_token);
+        if (rc != QRMI_RETURN_CODE_SUCCESS) {
+            const char *last_error = qrmi_get_last_error();
+            fprintf(stderr, "qrmi_resource_acquire() failed. %s\n", last_error);
+            qrmi_string_free((char *)last_error);
+            free(token_var);
+            goto error;
+        }
+        setenv(token_var, acquisition_token, 1);
+    } else {
+        acquisition_token = strdup(scheduler_token);
+        if (acquisition_token == NULL) {
+            free(token_var);
+            goto error;
+        }
+    }
     free(token_var);
 
     char *target = NULL;
@@ -156,15 +165,28 @@ int main(int argc, char *argv[]) {
 
     qrmi_string_free((char *)job_id);
 
-    rc = qrmi_resource_release(qrmi, acquisition_token);
-    fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
-    qrmi_string_free((char *)acquisition_token);
+    if (acquired_here) {
+        rc = qrmi_resource_release(qrmi, acquisition_token);
+        fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
+        qrmi_string_free(acquisition_token);
+    } else {
+        free(acquisition_token);
+    }
+    acquisition_token = NULL;
 
     qrmi_resource_free(qrmi);
 
     return EXIT_SUCCESS;
 
 error:
+    if (acquisition_token != NULL) {
+        if (acquired_here) {
+            qrmi_resource_release(qrmi, acquisition_token);
+            qrmi_string_free(acquisition_token);
+        } else {
+            free(acquisition_token);
+        }
+    }
     qrmi_resource_free(qrmi);
     return EXIT_FAILURE;
 }

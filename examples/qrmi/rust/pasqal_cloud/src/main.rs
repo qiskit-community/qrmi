@@ -57,7 +57,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let lock = qrmi.acquire().await?;
-    println!("acquisition token = {}", lock);
 
     println!("{:#?}", qrmi.metadata().await);
 
