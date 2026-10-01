@@ -529,9 +529,9 @@ impl QuantumResource for Oqtopus {
         // OqtopusJobSpec's own dataclass defaults apply downstream.
         let mut job_spec_value: serde_json::Value = serde_json::from_str(&job_spec)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_spec JSON: {e}")))?;
-        let obj = job_spec_value.as_object_mut().ok_or_else(|| {
-            QrmiError::Other(anyhow::anyhow!("job_spec must be a JSON object"))
-        })?;
+        let obj = job_spec_value
+            .as_object_mut()
+            .ok_or_else(|| QrmiError::Other(anyhow::anyhow!("job_spec must be a JSON object")))?;
         obj.insert("device_id".into(), serde_json::json!(self.device_id));
 
         let job_spec_json = job_spec_value.to_string();
