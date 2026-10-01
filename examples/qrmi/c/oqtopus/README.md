@@ -35,7 +35,7 @@ $ make
 ## How to run this example
 ```shell-session
 $ ./build/oqtopus
-oqtopus <device_id> <QASM program file> <job_type('sampling','estimation', 'multi_manual' or 'sse')>
+oqtopus <Device ID> <Job spec JSON file> <Job type('sampling','estimation', 'multi_manual' or 'sse')>
 ```
 For example,
 ```shell-session
@@ -44,6 +44,5 @@ qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
 qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
 PY_BRIDGE_PATH=/shared/sandbox/OQTOPUS/qrmi/target/release/liboqtopus_py_bridge.so
 
-./oqtopus qulacs ../../../../task_runner/oqtopus/bell_state.txt sampling
-
+./oqtopus qulacs ../../../../task_runner/oqtopus/sampling_input_qulacs.json sampling
 ```

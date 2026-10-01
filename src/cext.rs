@@ -126,26 +126,17 @@ pub enum Payload {
     },
     /// Payload for OQTOPUS Cloud
     Oqtopus {
-        /// "sampling" | "estimation" | "multi_manual" | "sse"
-        job_type: *mut c_char,
-        /// Number of programs pointed to by `programs`.
-        num_programs: usize,
-        /// QASM3 (or Python script for sse) program(s). An array of
-        /// `num_programs` nul-terminated UTF-8 strings. A single-element
-        /// array is a single program; `sse` jobs require exactly one.
-        programs: *const *const c_char,
-        /// Number of shots
-        shots: *const u32,
-        /// Job name. NULL if not set.
-        name: *mut c_char,
-        /// Job description. NULL if not set.
-        description: *mut c_char,
-        /// Transpiler settings as a JSON object string. NULL if not set.
-        transpiler_info: *mut c_char,
-        /// Simulator settings as a JSON object string. NULL if not set.
-        simulator_info: *mut c_char,
-        /// Error mitigation settings as a JSON object string. NULL if not set.
-        mitigation_info: *mut c_char,
+        /// Job spec, as a JSON object string matching the keyword
+        /// arguments of Python's `OqtopusJobSpec` dataclass, minus
+        /// `device_id` (QRMI fills that in automatically). Required
+        /// keys: `job_type` (one of "sampling", "estimation",
+        /// "multi_manual", "sse") and `program` (array of strings; a
+        /// single program is a single-element array; `sse` jobs require
+        /// exactly one). Optional keys: `shots` (integer; omit the key
+        /// entirely to use OQTOPUS's default of 1000 — sending `null`
+        /// fails), `name`, `description`, `transpiler_info`,
+        /// `simulator_info`, `mitigation_info`, and `operator`.
+        job_spec: *mut c_char,
     },
 }
 
@@ -1612,9 +1603,8 @@ pub unsafe extern "C" fn qrmi_resource_release(
 ///
 /// * The memory pointed to by `sequence` in QrmiPayload_PasqalCloud_Body must contain a valid nul terminator.
 ///
-/// * In QrmiPayload_Oqtopus_Body, `programs` must be non-null and point to
-///   an array of exactly `num_programs` valid, nul-terminated UTF-8 C
-///   strings; `num_programs` must be at least 1.
+/// * The memory pointed to by `job_spec` in QrmiPayload_Oqtopus_Body
+///   must contain a valid nul terminator.
 ///
 /// # Example
 ///
@@ -1714,80 +1704,13 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             tag: tag_opt,
             use_timeslot: use_timeslot_opt,
         });
-    } else if let Payload::Oqtopus {
-        job_type,
-        num_programs,
-        programs,
-        shots,
-        name,
-        description,
-        transpiler_info,
-        simulator_info,
-        mitigation_info,
-    } = *payload
-    {
-        let Ok(job_type_str) = CStr::from_ptr(job_type).to_str() else {
+    } else if let Payload::Oqtopus { job_spec } = *payload {
+        let Ok(job_spec_str) = CStr::from_ptr(job_spec).to_str() else {
             return ReturnCode::Error;
-        };
-        if programs.is_null() || num_programs == 0 {
-            return ReturnCode::Error;
-        }
-        let program_ptrs = std::slice::from_raw_parts(programs, num_programs);
-        let mut program_vec: Vec<String> = Vec::with_capacity(num_programs);
-        for &p in program_ptrs {
-            let Ok(p_str) = CStr::from_ptr(p).to_str() else {
-                return ReturnCode::Error;
-            };
-            program_vec.push(p_str.to_string());
-        }
-        let shots_opt: Option<u32> = unsafe { shots.as_ref().copied() };
-        let name_opt = if name.is_null() {
-            None
-        } else {
-            CStr::from_ptr(name).to_str().ok().map(|s| s.to_string())
-        };
-        let description_opt = if description.is_null() {
-            None
-        } else {
-            CStr::from_ptr(description)
-                .to_str()
-                .ok()
-                .map(|s| s.to_string())
-        };
-        let transpiler_info_opt = if transpiler_info.is_null() {
-            None
-        } else {
-            CStr::from_ptr(transpiler_info)
-                .to_str()
-                .ok()
-                .map(|s| s.to_string())
-        };
-        let simulator_info_opt = if simulator_info.is_null() {
-            None
-        } else {
-            CStr::from_ptr(simulator_info)
-                .to_str()
-                .ok()
-                .map(|s| s.to_string())
-        };
-        let mitigation_info_opt = if mitigation_info.is_null() {
-            None
-        } else {
-            CStr::from_ptr(mitigation_info)
-                .to_str()
-                .ok()
-                .map(|s| s.to_string())
         };
 
         qrmi_payload = Some(crate::models::Payload::Oqtopus {
-            job_type: job_type_str.to_string(),
-            program: program_vec,
-            shots: shots_opt,
-            name: name_opt,
-            description: description_opt,
-            transpiler_info: transpiler_info_opt,
-            simulator_info: simulator_info_opt,
-            mitigation_info: mitigation_info_opt,
+            job_spec: job_spec_str.to_string(),
         });
     }
 

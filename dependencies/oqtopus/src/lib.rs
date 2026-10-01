@@ -28,6 +28,16 @@
 //! launched `app`, or set programmatically before `app`/`py_loader` runs
 //! this code) -- see `py_loader`'s use of `PYTHONHOME` to find the
 //! `.so` itself, which is the same value CPython needs here.
+//!
+//! `cargo test`'s test binary is a normal executable, which can't
+//! resolve the unresolved `Py_*` symbols the way the dlopen'd cdylib
+//! can, so the default `extension-module` feature must be turned off to
+//! run the unit tests at the bottom of this file:
+//! `cargo test --no-default-features`. With that feature off, pyo3
+//! links against libpython normally at build time (a Python 3
+//! interpreter with dev headers must be discoverable, e.g. via
+//! `PYTHONHOME`/`PYO3_PYTHON`, the same as any other Python-embedding
+//! Rust project).
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -403,11 +413,12 @@ pub unsafe extern "C" fn get_job_status(
     }
 }
 
-/// Calls `oqtopus_client`'s `OqtopusClient.get_device(device_id)`,
-/// serializes the resulting `OqtopusDevice` dataclass to a JSON string
-/// (via `vars()` + `json.dumps(..., default=str)`, so any field type
-/// without a direct JSON mapping falls back to its `str()`
-/// representation instead of raising), and returns that string.
+/// Calls `oqtopus_client`'s `OqtopusClient.get_device(device_id)` and
+/// serializes the resulting `OqtopusDevice`'s underlying `raw` pydantic
+/// model (`DevicesDeviceInfo`) to a JSON string via
+/// `raw.model_dump(mode="json")`, re-parsing the embedded `device_info`
+/// JSON string field so it nests as a proper object instead of being
+/// double-encoded, and returns that string.
 ///
 /// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
 ///
@@ -458,38 +469,52 @@ pub unsafe extern "C" fn get_device_json(
             |py, device_id, config_json| {
                 let client = build_client(py, config_json)?;
                 let device = client.call_method1("get_device", (device_id,))?;
-
-                // OqtopusDevice's declared dataclass fields only contain
-                // `raw`; the actual data lives in the instance's
-                // __dict__, so use vars() instead of dataclasses.asdict().
-                let builtins = py.import("builtins")?;
-                let device_dict = builtins.call_method1("vars", (device,))?;
-                let device_dict = device_dict.cast::<PyDict>()?;
-
-                let json_mod = py.import("json")?;
-
-                // device_info is itself a JSON string; parse it so it
-                // nests as a proper object instead of being embedded as
-                // an escaped string. If parsing fails for any reason,
-                // leave it as-is.
-                if let Some(device_info_str) = device_dict.get_item("device_info")? {
-                    if let Ok(device_info_str) = device_info_str.extract::<String>() {
-                        if let Ok(parsed) = json_mod.call_method1("loads", (device_info_str,)) {
-                            device_dict.set_item("device_info", parsed)?;
-                        }
-                    }
-                }
-
-                let str_fn = builtins.getattr("str")?;
-                let kwargs = PyDict::new(py);
-                kwargs.set_item("default", str_fn)?;
-
-                json_mod
-                    .call_method("dumps", (device_dict,), Some(&kwargs))?
-                    .extract()
+                device_to_json(py, &device)
             },
         )
     }
+}
+
+/// Converts an `OqtopusDevice` Python object (as returned by
+/// `OqtopusClient.get_device()`) into a JSON string.
+///
+/// `OqtopusDevice` is a frozen, `slots=True` dataclass whose only stored
+/// field is `raw` (every other attribute, e.g. `.status`, is a
+/// `@property` delegating to `self.raw.<field>`); `slots=True` means
+/// instances have no `__dict__`, so `vars(device)` raises `TypeError`.
+/// `raw` is a pydantic model (`DevicesDeviceInfo`), so this serializes
+/// that directly via `model_dump(mode="json")` instead.
+///
+/// Pulled out of `get_device_json` so it can be exercised directly in
+/// tests without going through the C ABI (see the `tests` module below).
+fn device_to_json(py: Python<'_>, device: &Bound<'_, PyAny>) -> PyResult<String> {
+    let raw = device.getattr("raw")?;
+    let kwargs = PyDict::new(py);
+    kwargs.set_item("mode", "json")?;
+    let device_dict = raw.call_method("model_dump", (), Some(&kwargs))?;
+    let device_dict = device_dict.cast::<PyDict>()?;
+
+    let json_mod = py.import("json")?;
+    let builtins = py.import("builtins")?;
+
+    // device_info is itself a JSON string; parse it so it nests as a
+    // proper object instead of being embedded as an escaped string. If
+    // parsing fails for any reason, leave it as-is.
+    if let Some(device_info_str) = device_dict.get_item("device_info")? {
+        if let Ok(device_info_str) = device_info_str.extract::<String>() {
+            if let Ok(parsed) = json_mod.call_method1("loads", (device_info_str,)) {
+                device_dict.set_item("device_info", parsed)?;
+            }
+        }
+    }
+
+    let str_fn = builtins.getattr("str")?;
+    let kwargs = PyDict::new(py);
+    kwargs.set_item("default", str_fn)?;
+
+    json_mod
+        .call_method("dumps", (device_dict,), Some(&kwargs))?
+        .extract()
 }
 
 /// Calls `oqtopus_client`'s `OqtopusClient.get_job_result(job_id)` and
@@ -585,14 +610,18 @@ pub unsafe extern "C" fn get_job_result_json(
 /// Calls `oqtopus_client`'s `OqtopusClient.submit_job(OqtopusJobSpec)` and
 /// returns the resulting job ID.
 ///
-/// `job_spec_json` is a single JSON object describing the job:
-/// `{"job_type": "sampling", "device_id": "...", "program": "...",
-/// "shots": 1000, "name": null, "description": null,
+/// `job_spec_json` is a single JSON object whose keys are passed
+/// directly as `**kwargs` to the `OqtopusJobSpec` dataclass constructor
+/// (e.g. `{"job_type": "sampling", "device_id": "...", "program":
+/// ["..."], "shots": 1000, "name": null, "description": null,
 /// "transpiler_info": null, "simulator_info": null,
-/// "mitigation_info": null}`. `job_type` selects which
-/// `OqtopusJobSpec.<job_type>(...)` classmethod builds the spec
-/// (`sampling`, `estimation`, `multi_manual`, or `sse`); the remaining
-/// keys are passed through as `**kwargs`.
+/// "mitigation_info": null}`). `OqtopusJobSpec` is a plain dataclass, so
+/// constructing it this way is equivalent to using one of its
+/// `.sampling()`/`.estimation()`/`.multi_manual()`/`.sse()` classmethod
+/// builders — those just call the constructor with `job_type` filled
+/// in. A key omitted entirely (rather than sent as `null`) lets the
+/// dataclass's own default apply, e.g. omitting `shots` uses OQTOPUS's
+/// default of 1000.
 ///
 /// C ABI entry point, looked up by name (`dlsym`) from `py_loader`.
 ///
@@ -648,16 +677,15 @@ pub unsafe extern "C" fn submit_job(
                 let spec_dict = json_mod.call_method1("loads", (job_spec_json,))?;
                 let spec_dict = spec_dict.cast::<PyDict>()?;
 
-                let job_type: String = spec_dict
-                    .get_item("job_type")?
-                    .ok_or_else(|| {
-                        pyo3::exceptions::PyValueError::new_err("job_spec_json missing job_type")
-                    })?
-                    .extract()?;
-                spec_dict.del_item("job_type")?;
-
-                let builder = job_spec_cls(py)?.getattr(job_type.as_str())?;
-                let job_spec = builder.call((), Some(spec_dict))?;
+                // OqtopusJobSpec is a plain dataclass, so it can be built
+                // directly from the parsed JSON object as keyword
+                // arguments (OqtopusJobSpec(**spec_dict)); no need to pick
+                // a job_type-specific builder classmethod like
+                // `.sampling()`/`.estimation()` first. `to_model()` and
+                // `to_s3_submit_job_info()` (called inside
+                // `client.submit_job()`) only read attributes off the
+                // instance, so both construction paths are equivalent.
+                let job_spec = job_spec_cls(py)?.call((), Some(spec_dict))?;
 
                 let response = client.call_method1("submit_job", (job_spec,))?;
 
@@ -683,5 +711,107 @@ pub unsafe extern "C" fn submit_job(
                 ))
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! These tests need libpython linked normally (not as an unresolved,
+    //! dlopen-at-runtime extension-module), so run them with:
+    //! `cargo test --no-default-features` (see Cargo.toml). A plain
+    //! `cargo test` builds with the default `extension-module` feature
+    //! on and the test binary will fail to link.
+
+    use super::*;
+    use pyo3::types::PyModule;
+
+    /// Regression test for a real bug fixed in `device_to_json`:
+    /// `OqtopusDevice` (oqtopus-client 1.2.0) is a
+    /// `@dataclass(frozen=True, slots=True)` whose only stored field is
+    /// `raw`; every other attribute (`status`, `device_type`, ...) is a
+    /// `@property` delegating to `self.raw.<field>`. `slots=True` means
+    /// instances have no `__dict__`, so `vars(device)` raises
+    /// `TypeError` -- which is what this code originally did, breaking
+    /// both `status()` and `target()`.
+    ///
+    /// This builds a fake object with the same shape as the real
+    /// `OqtopusDevice`/`DevicesDeviceInfo` pair (a `raw` attribute whose
+    /// only usable entry point is `model_dump(mode=...)`, no `__dict__`
+    /// -equivalent on the outer object) and checks `device_to_json`
+    /// produces the expected JSON, with `device_info` nested as a real
+    /// object rather than double-encoded as a string.
+    #[test]
+    fn device_to_json_uses_raw_model_dump_not_vars() {
+        Python::initialize();
+        Python::attach(|py| {
+            let fake_module = PyModule::from_code(
+                py,
+                c"
+class FakeRaw:
+    '''Stands in for the pydantic DevicesDeviceInfo model: the only
+    thing device_to_json is allowed to call on it is model_dump().'''
+    def model_dump(self, mode=None):
+        return {
+            'device_id': 'qulacs',
+            'device_type': 'simulator',
+            'status': 'available',
+            'n_pending_jobs': 0,
+            'n_qubits': 16,
+            'basis_gates': ['sx', 'x', 'rz', 'cx'],
+            'supported_instructions': ['measure', 'barrier'],
+            # device_info comes back from the real API as a JSON string,
+            # not a nested object -- device_to_json must re-parse it.
+            'device_info': '{\"name\": \"qulacs\", \"n_qubits\": 16}',
+            'description': 'Qulacs Simulator',
+        }
+
+class FakeDevice:
+    '''Stands in for OqtopusDevice: slots=True, so no __dict__, and the
+    only stored attribute is `raw`. vars(FakeDevice(...)) raises
+    TypeError here exactly like the real dataclass does.'''
+    __slots__ = ('raw',)
+    def __init__(self, raw):
+        self.raw = raw
+",
+                c"fake_oqtopus_device.py",
+                c"fake_oqtopus_device",
+            )
+            .expect("failed to compile fake OqtopusDevice test module");
+
+            let fake_raw = fake_module
+                .getattr("FakeRaw")
+                .unwrap()
+                .call0()
+                .expect("failed to construct FakeRaw");
+            let fake_device = fake_module
+                .getattr("FakeDevice")
+                .unwrap()
+                .call1((fake_raw,))
+                .expect("failed to construct FakeDevice");
+
+            // Sanity check that this fixture really does reproduce the
+            // TypeError vars(device) raised before the fix, so this test
+            // would have caught the original bug.
+            let builtins = py.import("builtins").unwrap();
+            let vars_result = builtins.call_method1("vars", (&fake_device,));
+            assert!(
+                vars_result.is_err(),
+                "fixture doesn't reproduce the bug: vars() should fail on a slots=True object"
+            );
+
+            let json_str = device_to_json(py, &fake_device)
+                .expect("device_to_json should not call vars() and should succeed");
+
+            let parsed: serde_json::Value =
+                serde_json::from_str(&json_str).expect("device_to_json must return valid JSON");
+
+            assert_eq!(parsed["device_id"], "qulacs");
+            assert_eq!(parsed["status"], "available");
+            assert_eq!(parsed["n_qubits"], 16);
+            // device_info must be nested as a real JSON object, not left
+            // as a double-encoded string.
+            assert_eq!(parsed["device_info"]["n_qubits"], 16);
+            assert!(parsed["device_info"].is_object());
+        });
     }
 }

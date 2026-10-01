@@ -2200,6 +2200,7 @@ name = "oqtopus_py_bridge"
 version = "0.1.0"
 dependencies = [
  "pyo3",
+ "serde_json",
 ]
 
 [[package]]

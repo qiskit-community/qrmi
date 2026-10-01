@@ -11,10 +11,10 @@
 
 use clap::Parser;
 use dotenv::dotenv;
-use qrmi::{oqtopus::Oqtopus, models::Payload, models::TaskStatus, QuantumResource};
+use qrmi::{models::Payload, models::TaskStatus, oqtopus::Oqtopus, QuantumResource};
+use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::fs::File;
 
 use std::{thread, time};
 
@@ -26,17 +26,9 @@ struct Args {
     #[arg(short, long)]
     device_id: String,
 
-    /// QASM file
+    /// Job spec JSON file
     #[arg(short, long)]
-    input: String,
-
-    /// job name
-    #[arg(short, long)]
-    name: String,
-
-    /// # of shots. If omitted, OQTOPUS's default shot count is used.
-    #[arg(short, long)]
-    shots: Option<u32>,
+    job_spec: String,
 }
 
 #[tokio::main]
@@ -72,21 +64,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", v.value);
     }
 
-    let f = File::open(args.input).expect("file not found");
+    let f = File::open(args.job_spec).expect("file not found");
     let mut buf_reader = BufReader::new(f);
     let mut contents = String::new();
     buf_reader.read_to_string(&mut contents)?;
 
-    let payload = Payload::Oqtopus {
-        job_type: "sampling".to_string(),
-        program: vec![contents],
-        shots: args.shots,
-        name: Some(args.name),
-        description: None,
-        transpiler_info: None,
-        simulator_info: None,
-        mitigation_info: None,
-    };
+    let payload = Payload::Oqtopus { job_spec: contents };
 
     let job_id = qrmi.task_start(payload).await?;
     println!("Job ID: {}", job_id);

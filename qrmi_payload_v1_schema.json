@@ -100,52 +100,12 @@
             "type": "object",
             "description": "Payload for `oqtopus` QPU resource",
             "required": [
-                "job_type",
-                "program"
+                "job_spec"
             ],
             "properties": {
-                "job_type": {
+                "job_spec": {
                     "type": "string",
-                    "enum": [
-                        "sampling",
-                        "estimation",
-                        "multi_manual",
-                        "sse"
-                    ],
-                    "description": "Job type."
-                },
-                "program": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "minItems": 1,
-                    "description": "QASM3 (or Python script for sse) program(s), as an array of strings. A single program is a single-element array. `sse` jobs require exactly one program."
-                },
-                "shots": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "description": "Number of shots. Default is 1000."
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Job name."
-                },
-                "description": {
-                    "type": "string",
-                    "description": "Job description."
-                },
-                "transpiler_info": {
-                    "type": "string",
-                    "description": "Transpiler settings. Pass a JSON string."
-                },
-                "simulator_info": {
-                    "type": "string",
-                    "description": "Simulator settings. Pass a JSON string."
-                },
-                "mitigation_info": {
-                    "type": "string",
-                    "description": "Error mitigation settings. Pass a JSON string."
+                    "description": "Job spec, as a JSON object string matching the keyword arguments of Python's `OqtopusJobSpec` dataclass, minus `device_id` (QRMI fills that in automatically). Required keys: `job_type` (one of \"sampling\", \"estimation\", \"multi_manual\", \"sse\") and `program` (array of strings; a single program is a single-element array; `sse` jobs require exactly one). Optional keys: `shots` (integer; omit the key entirely to use OQTOPUS's default of 1000 — sending `null` fails), `name`, `description`, `transpiler_info`, `simulator_info`, `mitigation_info`, and `operator` (for estimation jobs)."
                 }
             }
         }

@@ -22,10 +22,6 @@ Because QRMI is an environment variable driven software library, all configurati
 
 Refer [this tool](../../../task_runner/oqtopus) to generate. You can customize quantum circuits by editing the code.
 
-> [!NOTE]
-> Use the file with name ending `_params_only.json`, e.g. `oqtopus_params_only.json`.
-
-
 ## How to build this example
 
 ```shell-session
@@ -38,13 +34,11 @@ $ cargo build --release
 $ ../target/release/qrmi-example-oqtopus -h
 QRMI for OQTOPUS - Example
 
-Usage: qrmi-example-oqtopus [OPTIONS] --device-id <DEVICE_ID> --input <INPUT> --name <NAME>
+Usage: qrmi-example-oqtopus --device-id <DEVICE_ID> --job-spec <JOB_SPEC>
 
 Options:
   -d, --device-id <DEVICE_ID>  device ID
-  -i, --input <INPUT>          QASM file
-  -n, --name <NAME>            job name
-  -s, --shots <SHOTS>          # of shots. If omitted, OQTOPUS's default shot count is used
+  -j, --job-spec <JOB_SPEC>    Job spec JSON file
   -h, --help                   Print help
   -V, --version                Print version
 ```
@@ -56,5 +50,5 @@ qulacs_QRMI_OQTOPUS_BASE_URL=https://demo-api.oqtopus.io
 qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
 PY_BRIDGE_PATH=<path/to/liboqtopus_py_bridge.so>
 
-../target/release/qrmi-example-oqtopus --device-id qulacs --input ../../../task_runner/oqtopus/bell_state.txt --name "QRMI Rust example" --shots 500
+../target/release/qrmi-example-oqtopus --device-id qulacs --job-spec ../../../task_runner/oqtopus/sampling_input_qulacs.json 
 ```

@@ -15,6 +15,7 @@ import time
 import json
 from qiskit import QuantumCircuit
 from qiskit import qasm3
+
 # pylint: disable=no-name-in-module
 from qrmi import (
     Payload,
@@ -53,16 +54,15 @@ qc.measure_all()
 
 qasm_string = qasm3.dumps(qc)
 print(qasm_string)
-payload = Payload.Oqtopus(
-    name="Bell State Sampling",
-    description="Bell state sampling example",
-    job_type="sampling",
-    program=[qasm_string],
-    shots=1000,
-    transpiler_info=None,
-    simulator_info=None,
-    mitigation_info=None,
+job_spec = json.dumps(
+    {
+        "name": "QRMI Bell State Sampling",
+        "description": "Bell state sampling example",
+        "job_type": "sampling",
+        "program": [qasm_string],
+    }
 )
+payload = Payload.Oqtopus(job_spec=job_spec)
 job_id = qrmi.task_start(payload)
 print(f"Task started {job_id}")
 

@@ -42,23 +42,20 @@ pub enum Payload {
     },
     /// Payload for OQTOPUS Cloud
     Oqtopus {
-        /// Job type. "sampling" | "estimation" | "multi_manual" | "sse"
-        job_type: String,
-        /// QASM3 (or Python script for sse) program(s). A single-element
-        /// `Vec` is a single program; `sse` jobs require exactly one.
-        program: Vec<String>,
-        /// Number of shots. Default is 1000.
-        shots: Option<u32>,
-        /// Job name.
-        name: Option<String>,
-        /// Job description.
-        description: Option<String>,
-        /// Transpiler settings. JSON object string, or None
-        transpiler_info: Option<String>,
-        /// Simulator settings. JSON object string, or None
-        simulator_info: Option<String>,
-        /// Error mitigation settings. JSON object string, or None
-        mitigation_info: Option<String>,
+        /// Job spec, as a JSON object string matching the keyword
+        /// arguments of Python's `OqtopusJobSpec` dataclass, minus
+        /// `device_id` (QRMI fills that in automatically from the
+        /// resource itself). Required keys: `job_type` (string: one of
+        /// "sampling", "estimation", "multi_manual", "sse") and
+        /// `program` (array of strings; a single program is a
+        /// single-element array; `sse` jobs require exactly one).
+        /// Optional keys: `shots` (integer; omit the key entirely to use
+        /// OQTOPUS's own default of 1000 — sending `null` fails, since
+        /// `OqtopusJobSpec.shots` is a plain `int` field, not
+        /// `Optional[int]`), `name`, `description`, `transpiler_info`,
+        /// `simulator_info`, `mitigation_info`, and `operator` (for
+        /// estimation jobs).
+        job_spec: String,
     },
 }
 #[cfg(feature = "pyo3")]

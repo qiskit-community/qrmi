@@ -20,8 +20,8 @@ from qrmi import QuantumResource, ResourceType, Payload, TaskStatus
 
 parser = argparse.ArgumentParser(description="An example of OQTOPUS QRMI")
 parser.add_argument("device_id", help="OQTOPUS device ID")
-parser.add_argument("program", help="program input")
-parser.add_argument("job_type", help="job type")
+parser.add_argument("job_spec", help="Job spec")
+parser.add_argument("job_type", help="Job type")
 args = parser.parse_args()
 
 load_dotenv()
@@ -35,18 +35,10 @@ print(json.dumps(qrmi.status().to_dict(), indent=2))
 target_json = json.loads(qrmi.target().value)
 print(json.dumps(target_json, indent=2))
 
-with open(args.program, encoding="utf-8") as f:
-    program = f.read()
-    payload = Payload.Oqtopus(
-        name="Bell State Sampling",
-        description="Bell state sampling example",
-        job_type=args.job_type,
-        program=[program],
-        shots=1000,
-        transpiler_info=None,
-        simulator_info=None,
-        mitigation_info=None,
-    )
+with open(args.job_spec, encoding="utf-8") as f:
+    job_spec = json.load(f)
+    job_spec = json.dumps(job_spec, indent=2)
+    payload = Payload.Oqtopus(job_spec=job_spec)
     job_id = qrmi.task_start(payload)
     print(f"Task started {job_id}")
 

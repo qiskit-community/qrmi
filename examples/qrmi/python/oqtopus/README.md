@@ -33,14 +33,14 @@ Refer [this tool](../../../task_runner/oqtopus) to generate.
 
 ```shell-session
 $ python example.py -h
-usage: example.py [-h] device_id
+usage: example.py [-h] device_id job_spec job_type
 
-An example of IBM Quantum System QRMI
+An example of OQTOPUS QRMI
 
 positional arguments:
   device_id   OQTOPUS device ID
-  program     QASM program file
-  job_type    job type
+  job_spec    Job spec
+  job_type    Job type
 
 options:
   -h, --help  show this help message and exit
@@ -52,5 +52,5 @@ qulacs_QRMI_OQTOPUS_URL=https://demo-api.oqtopus.io
 qulacs_QRMI_OQTOPUS_API_TOKEN=your api token
 PY_BRIDGE_PATH=<path/to/liboqtopus_py_bridge.so>
 
-python example.py qulacs ../../../task_runner/oqtopus/bell_state.txt sampling 
+python example.py qulacs ../../../task_runner/oqtopus/sampling_input_qulacs.json sampling
 ```

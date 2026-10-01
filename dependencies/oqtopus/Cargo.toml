@@ -12,4 +12,16 @@ rust-version.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.29.0", features =  ["anyhow", "extension-module"] }
+pyo3 = { version = "0.29.0", features =  ["anyhow"] }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[features]
+default = ["extension-module"]
+# `extension-module` leaves Py_* symbols unresolved at build time (see the
+# crate doc comment), which is required for the real cdylib build but
+# breaks `cargo test`'s normal test binary (it can't resolve those
+# symbols without the runtime dlopen dance `py_loader` does). Run tests
+# with this feature off instead: `cargo test --no-default-features`.
+extension-module = ["pyo3/extension-module"]

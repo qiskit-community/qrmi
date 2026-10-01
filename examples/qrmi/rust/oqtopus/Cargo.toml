@@ -12,4 +12,5 @@ clap = { version = "4.5.20", features = ["derive"] }
 dotenv = "0.15.0"
 env_logger = "0.11.7"
 qrmi = { workspace = true }
+serde_json = "1.0"
 tokio = { version = "1.40.0", features = ["full"] }

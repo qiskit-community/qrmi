@@ -11,6 +11,8 @@
  */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "qrmi.h"
@@ -21,8 +23,8 @@ extern const char *read_file(const char *);
 int main(int argc, char *argv[]) {
 
   if (argc != 4) {
-    fprintf(stderr, "oqtopus <device_id> <QASM program file> "
-                    "<job_type('sampling','estimation', 'multi_manual' or 'sse')>\n");
+    fprintf(stderr, "oqtopus <Device ID> <Job spec JSON file> "
+                    "<Job type('sampling','estimation', 'multi_manual' or 'sse')>\n");
     return EXIT_SUCCESS;
   }
 
@@ -92,21 +94,11 @@ int main(int argc, char *argv[]) {
     goto error;
   }
 
-  const char *input = read_file(argv[2]);
-
-  const char *programs[] = {input};
+  const char *job_spec = read_file(argv[2]);
 
   QrmiPayload payload;
   payload.tag = QRMI_PAYLOAD_OQTOPUS;
-  payload.OQTOPUS.job_type = argv[3];
-  payload.OQTOPUS.num_programs = 1;
-  payload.OQTOPUS.programs = programs;
-  payload.OQTOPUS.shots = NULL;
-  payload.OQTOPUS.name = "Bell State Sampling";
-  payload.OQTOPUS.description = "Bell state sampling example";
-  payload.OQTOPUS.transpiler_info = NULL;
-  payload.OQTOPUS.simulator_info = NULL;
-  payload.OQTOPUS.mitigation_info = NULL;
+  payload.OQTOPUS.job_spec = (char *)job_spec;
 
   char *job_id = NULL;
   rc = qrmi_resource_task_start(qrmi, &payload, &job_id);
@@ -115,11 +107,11 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "failed to start a task. . %s (%d)\n", last_error,
             qrmi_get_last_error_kind());
     qrmi_string_free((char *)last_error);
-    free((void *)input);
+    free((void *)job_spec);
     goto error;
   }
   fprintf(stdout, "Job ID: %s\n", job_id);
-  free((void *)input);
+  free((void *)job_spec);
 
   QrmiTaskStatus status;
   while (1) {

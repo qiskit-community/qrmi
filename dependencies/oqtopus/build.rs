@@ -16,7 +16,11 @@ fn main() {
     // resolved at dlopen time, either by the host Python interpreter or by
     // us manually loading libpython first), we need to tell the macOS linker
     // to allow this.
-    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+    // Only needed for the real extension-module build; `cargo test` runs
+    // with that feature off (see Cargo.toml) and links libpython
+    // normally, so this flag isn't needed (and isn't correct) there.
+    let extension_module = std::env::var("CARGO_FEATURE_EXTENSION_MODULE").is_ok();
+    if extension_module && std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
     }
 }

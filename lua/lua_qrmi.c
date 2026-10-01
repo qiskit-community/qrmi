@@ -585,77 +585,29 @@ static int submit_iqm_server_payload(lua_State *L, lua_qrmi_resource_t *ud, int 
 /**
  * @brief Build and submit a QRMI_PAYLOAD_OQTOPUS payload from a Lua sub-table.
  *
- * Used for `resource:task_start()`'s "oqtopus" key. `name`, `description`,
- * `transpiler_info`, `simulator_info` and `mitigation_info`
- * are optional and passed as NULL if omitted or nil.
+ * Used for `resource:task_start()`'s "oqtopus" key. `job_spec` is a JSON
+ * object string matching the keyword arguments of Python's
+ * `OqtopusJobSpec` dataclass, minus `device_id` (QRMI fills that in
+ * automatically). See QrmiPayload_Oqtopus_Body in qrmi.h for the field
+ * list.
  *
  * @param L Lua state.
  * @param ud Resource to submit the task on.
- * @param variant_idx Stack index of the sub-table holding `iqmjson`,
- *                     `job_type`, `use_timeslot`, and `tag`.
+ * @param variant_idx Stack index of the sub-table holding `job_spec`.
  * @return Number of values pushed onto the Lua stack (see l_task_start).
  */
 static int submit_oqtopus_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
-    lua_getfield(L, variant_idx, "program");
-    int program_field_idx = lua_gettop(L);
-    size_t num_programs;
-    const char **programs;
-    if (lua_istable(L, program_field_idx)) {
-        num_programs = (size_t)lua_rawlen(L, program_field_idx);
-        luaL_argcheck(L, num_programs >= 1, variant_idx,
-                      "program table must have at least one element");
-        programs = (const char **)lua_newuserdata(
-            L, sizeof(const char *) * num_programs);
-        for (size_t i = 0; i < num_programs; i++) {
-            lua_rawgeti(L, program_field_idx, (lua_Integer)(i + 1));
-            programs[i] = luaL_checkstring(L, -1);
-            lua_pop(L, 1);
-        }
-    } else {
-        /* A plain string is treated as a single program. */
-        num_programs = 1;
-        programs = (const char **)lua_newuserdata(L, sizeof(const char *));
-        programs[0] = luaL_checkstring(L, program_field_idx);
-    }
-    lua_getfield(L, variant_idx, "job_type");
-    const char *job_type = luaL_checkstring(L, -1);
-    uint32_t shots_val;
-    const uint32_t *shots = NULL;
-    lua_getfield(L, variant_idx, "shots");
-    if (!lua_isnil(L, -1)) {
-        lua_Integer n = luaL_checkinteger(L, -1);
-        luaL_argcheck(L, n >= 1 && n <= UINT32_MAX, variant_idx,
-                      "shots must be between 1 and 4294967295");
-        shots_val = (uint32_t)n;
-        shots = &shots_val;
-    }
-    lua_getfield(L, variant_idx, "name");
-    const char *name = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-    lua_getfield(L, variant_idx, "description");
-    const char *description = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-    lua_getfield(L, variant_idx, "transpiler_info");
-    const char *transpiler_info = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-    lua_getfield(L, variant_idx, "simulator_info");
-    const char *simulator_info = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-    lua_getfield(L, variant_idx, "mitigation_info");
-    const char *mitigation_info = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-    
+    lua_getfield(L, variant_idx, "job_spec");
+    const char *job_spec = luaL_checkstring(L, -1);
+
     QrmiPayload payload;
     payload.tag = QRMI_PAYLOAD_OQTOPUS;
-    payload.OQTOPUS.num_programs = num_programs;
-    payload.OQTOPUS.programs = programs;
-    payload.OQTOPUS.job_type = (char *)job_type;
-    payload.OQTOPUS.shots = shots;
-    payload.OQTOPUS.name = (char *)name;
-    payload.OQTOPUS.description = (char *)description;
-    payload.OQTOPUS.transpiler_info = (char *)transpiler_info;
-    payload.OQTOPUS.simulator_info = (char *)simulator_info;
-    payload.OQTOPUS.mitigation_info = (char *)mitigation_info;
+    payload.OQTOPUS.job_spec = (char *)job_spec;
 
     char *task_id = NULL;
     QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
 
-    lua_settop(L, variant_idx - 1); /* drop variant table */
+    lua_settop(L, variant_idx - 1); /* drop variant table, job_spec */
 
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
 

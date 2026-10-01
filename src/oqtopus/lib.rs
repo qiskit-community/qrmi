@@ -517,48 +517,24 @@ impl QuantumResource for Oqtopus {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let Payload::Oqtopus {
-            job_type,
-            program,
-            shots,
-            name,
-            description,
-            transpiler_info,
-            simulator_info,
-            mitigation_info,
-        } = payload
-        else {
+        let Payload::Oqtopus { job_spec } = payload else {
             return Err(QrmiError::Other(anyhow::anyhow!(
                 "unsupported payload for Oqtopus backend"
             )));
         };
 
-        let parse_info = |s: &Option<String>| -> Result<serde_json::Value> {
-            match s {
-                None => Ok(serde_json::Value::Null),
-                Some(s) => serde_json::from_str(s)
-                    .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid JSON: {e}"))),
-            }
-        };
+        // `job_spec` already carries everything OqtopusJobSpec needs
+        // except `device_id`, which QRMI knows and injects here. Any key
+        // the caller omits (e.g. "shots") stays omitted, so
+        // OqtopusJobSpec's own dataclass defaults apply downstream.
+        let mut job_spec_value: serde_json::Value = serde_json::from_str(&job_spec)
+            .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_spec JSON: {e}")))?;
+        let obj = job_spec_value.as_object_mut().ok_or_else(|| {
+            QrmiError::Other(anyhow::anyhow!("job_spec must be a JSON object"))
+        })?;
+        obj.insert("device_id".into(), serde_json::json!(self.device_id));
 
-        let mut job_spec = serde_json::Map::new();
-        job_spec.insert("job_type".into(), serde_json::json!(job_type));
-        job_spec.insert("device_id".into(), serde_json::json!(self.device_id));
-        job_spec.insert("program".into(), serde_json::json!(program));
-        // Omit "shots" entirely when unset, rather than sending null, so
-        // OqtopusJobSpec's own default shot count applies. OQTOPUS's
-        // JobsSubmitJobRequest has no default for this field, so an
-        // explicit null still fails pydantic validation.
-        if let Some(shots) = shots {
-            job_spec.insert("shots".into(), serde_json::json!(shots));
-        }
-        job_spec.insert("name".into(), serde_json::json!(name));
-        job_spec.insert("description".into(), serde_json::json!(description));
-        job_spec.insert("transpiler_info".into(), parse_info(&transpiler_info)?);
-        job_spec.insert("simulator_info".into(), parse_info(&simulator_info)?);
-        job_spec.insert("mitigation_info".into(), parse_info(&mitigation_info)?);
-
-        let job_spec_json = serde_json::Value::Object(job_spec).to_string();
+        let job_spec_json = job_spec_value.to_string();
         let job_spec_json_c = CString::new(job_spec_json)
             .map_err(|e| QrmiError::Other(anyhow::anyhow!("invalid job_spec json: {e}")))?;
 

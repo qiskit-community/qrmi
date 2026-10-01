@@ -2266,6 +2266,7 @@ dependencies = [
  "dotenv",
  "env_logger",
  "qrmi",
+ "serde_json",
  "tokio",
 ]
 

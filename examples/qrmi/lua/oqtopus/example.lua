@@ -15,7 +15,7 @@ local qrmi = require("qrmi")
 
 if #arg ~= 3 then
     print("Missing arguments\n")
-    print("Usage: lua example.lua <device_id> <QASM program file> <job_type('sampling','estimation', 'multi_manual' or 'sse')>\n")
+    print("Usage: lua example.lua <device_id> <job_spec file> <job_type('sampling','estimation', 'multi_manual' or 'sse')>\n")
     os.exit(1)
 end
 
@@ -64,20 +64,13 @@ if not payload_file then
     print("failed to open "  .. arg[2])
     os.exit(1)
 end
-local program = payload_file:read("*a")
+local job_spec = payload_file:read("*a")
 payload_file:close()
 
-print("program =", program)
+print("job_spec =", job_spec)
 local task_id, start_err = resource:task_start({
     oqtopus = {
-        job_type = arg[3],
-        program = program, -- a plain string is one program; use a table like {"prog1", "prog2"} for multiple
-        shots = 1000,
-        name = "Bell State Sampling",
-        description = "Bell state sampling example",
-        transpiler_info = nil,
-        simulator_info = nil,
-        mitigation_info = nil,
+        job_spec = job_spec,
     }
 })
 if not task_id then
