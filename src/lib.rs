@@ -87,6 +87,23 @@ mod version_info {
     pub static VERSION_INFO: [u8; VERSION_LEN] = str_to_array(VERSION_STR);
 }
 
+/// Returns the version of the QRMI library as a string.
+///
+/// This includes the crate version and git commit hash (when available).
+///
+/// # Example
+///
+/// ```no_run
+/// use qrmi;
+///
+/// fn main() {
+///     println!("QRMI version: {}", qrmi::get_version());
+/// }
+/// ```
+pub fn get_version() -> String {
+    format!("{}-{}", env!("CARGO_PKG_VERSION"), env!("GIT_HASH"))
+}
+
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use async_trait::async_trait;
 

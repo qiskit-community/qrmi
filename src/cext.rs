@@ -751,6 +751,40 @@ pub unsafe extern "C" fn qrmi_get_last_error_kind() -> ReturnCode {
     LAST_ERROR_KIND.with(|cell| ReturnCode::from(*cell.borrow()))
 }
 
+/// @ingroup QrmiCore
+/// Returns the version of the QRMI library.
+///
+/// # Behavior
+/// * Returns a null-terminated C string containing the version in the format
+///   "<crate_version>-<git_hash>".
+/// * The caller takes ownership of the returned string and must release it
+///   with `qrmi_string_free()` once done with it (or it will leak).
+/// * If the git hash is unavailable (e.g. not built from a git repo), it will
+///   be reported as "unknown".
+///
+/// # Example
+///
+/// @code
+///   char *version = qrmi_get_version();
+///   if (version != NULL) {
+///     printf("QRMI version: %s\n", version);
+///     qrmi_string_free(version);
+///   }
+/// @endcode
+///
+/// @return A heap-allocated version string. Must be freed with
+///         `qrmi_string_free()`. Returns NULL only on allocation failure.
+/// @version 0.26.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_get_version() -> *mut c_char {
+    crate::common::initialize();
+    let version = format!("{}-{}", env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
+    match CString::new(version) {
+        Ok(cstr) => cstr.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 /// @ingroup QrmiQuantumResource
 /// Returns a QrmiQuantumResource handle.
 ///
