@@ -97,4 +97,4 @@ class QRMIBaseSamplerV2(BaseSamplerV2):
             input=json.dumps(input_json), program_id="sampler"
         )
         job_id = self._qrmi.task_start(payload)
-        return RuntimeJobV2(self._qrmi, job_id, delete_job=True)
+        return RuntimeJobV2(self._qrmi, job_id)

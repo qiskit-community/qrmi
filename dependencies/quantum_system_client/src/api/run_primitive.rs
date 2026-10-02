@@ -13,6 +13,7 @@ use crate::error::QuantumSystemError;
 use crate::Client;
 use crate::Result;
 use log::debug;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use serde::de::DeserializeOwned;
@@ -27,6 +28,17 @@ const S3KEY_LOGS_PREFIX: &str = "logs_";
 impl Client {
     /// Invokes a Qiskit Runtime primitive. Parameters to inject into the primitive are defined in [EstimatorV2 input](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/estimator_v2_schema.json) and [SamplerV2 input](https://github.com/Qiskit/ibm-quantum-schemas/blob/main/schemas/sampler_v2_schema.json).
     /// [`Client`] needs to be created by the [`ClientBuilder`](crate::ClientBuilder) with [`with_s3bucket`](crate::ClientBuilder::with_s3bucket) to use this function.
+    ///
+    /// # Tags
+    ///
+    /// If `tags` is `Some` and not empty, the key-value pairs are attached as S3 object
+    /// tags to the input object (`input_<id>.json`) when it is uploaded. The results and
+    /// logs objects are uploaded by the Quantum System API service via presigned URLs,
+    /// so they are not tagged by this function.
+    ///
+    /// S3 allows at most 10 tags per object, keys up to 128 characters and values up
+    /// to 256 characters. If these limits are exceeded, the upload fails and an error
+    /// is returned.
     ///
     /// # Example
     ///
@@ -63,8 +75,14 @@ impl Client {
     ///         .build()
     ///         .unwrap();
     ///
+    ///     // Optional tags attached to the input object (`input_<id>.json`) in S3.
+    ///     let tags = std::collections::HashMap::from([
+    ///         ("qrmi:jid".to_string(), "12345".to_string()),
+    ///         ("qrmi:program_type".to_string(), "sampler".to_string()),
+    ///     ]);
+    ///
     ///     let _primitive_job = client
-    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None)
+    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None, Some(&tags))
     ///         .await?;
     ///     Ok(())
     /// }
@@ -86,6 +104,7 @@ impl Client {
     /// - S3 connection failed.
     /// - S3 bucket is not found.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub async fn run_primitive(
         &self,
         backend: &str,
@@ -94,6 +113,7 @@ impl Client {
         log_level: LogLevel,
         payload: &serde_json::Value,
         job_id: Option<String>,
+        tags: Option<&HashMap<String, String>>,
     ) -> Result<PrimitiveJob> {
         let s3_config = self.s3_config.clone().ok_or_else(|| {
             QuantumSystemError::Other {
@@ -126,6 +146,7 @@ impl Client {
             .bucket(s3_bucket.clone())
             .key(job_param_key.clone())
             .body(converted_vec.into())
+            .set_tagging(tags.and_then(encode_tagging))
             .send()
             .await
         {
@@ -235,7 +256,7 @@ impl PrimitiveJob {
     ///         .unwrap();
     ///
     ///     let primitive_job = client
-    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None)
+    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None, None)
     ///         .await?;
     ///     let _result = primitive_job.get_result::<serde_json::Value>().await?;
     ///     Ok(())
@@ -328,7 +349,7 @@ impl PrimitiveJob {
     ///         .unwrap();
     ///
     ///     let primitive_job = client
-    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None)
+    ///         .run_primitive("ibm_brisbane", ProgramId::Sampler, 3600, LogLevel::Info, &payload, None, None)
     ///         .await?;
     ///     let _logs = primitive_job.get_logs().await?;
     ///     Ok(())
@@ -375,5 +396,46 @@ impl PrimitiveJob {
                 body: text_data,
             })
         }
+    }
+}
+
+/// Encodes tags into the URL query format used by the `x-amz-tagging` header
+/// (e.g. `key1=value1&key2=value2`). Keys are sorted so that the output is
+/// deterministic. Returns `None` if `tags` is empty.
+fn encode_tagging(tags: &HashMap<String, String>) -> Option<String> {
+    if tags.is_empty() {
+        return None;
+    }
+    let mut pairs: Vec<(&String, &String)> = tags.iter().collect();
+    pairs.sort();
+    let encoded = form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(pairs)
+        .finish();
+    // form_urlencoded encodes a space as `+` (and a literal `+` as `%2B`).
+    // Use `%20` instead so that the value is decoded unambiguously.
+    Some(encoded.replace('+', "%20"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_tagging_empty() {
+        assert_eq!(encode_tagging(&HashMap::new()), None);
+    }
+
+    #[test]
+    fn encode_tagging_sorted_and_escaped() {
+        let tags = HashMap::from([
+            ("qrmi:uid".to_string(), "1000".to_string()),
+            ("qrmi:jid".to_string(), "42".to_string()),
+            ("note".to_string(), "a b&c=d".to_string()),
+            ("plus".to_string(), "1+1".to_string()),
+        ]);
+        assert_eq!(
+            encode_tagging(&tags).as_deref(),
+            Some("note=a%20b%26c%3Dd&plus=1%2B1&qrmi%3Ajid=42&qrmi%3Auid=1000")
+        );
     }
 }
