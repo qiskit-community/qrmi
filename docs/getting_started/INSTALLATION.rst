@@ -325,12 +325,38 @@ against quantum hardware. Under the hood, it uses the QRMI library.
       detailed instructions on how to use it, please refer to the  :ref:`task_runner README <task_runner>`.
 
 
-Build with explicit Munge support for Pasqal Local
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _munge_support:
 
-The Pasqal Local client relies on Munge for authentication. By default, QRMI loads `libmunge` dynamically at runtime (via `dlopen`), so no special build flag is needed and you only need Munge installed on the host running QRMI.
+Munge support for Pasqal Local
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you'd rather link against `libmunge` at build time, enable the `munge` feature. This requires the Munge development package (providing `libmunge.so`) on the build machine.
+The Pasqal Local client authenticates with `Munge`_, so the host running QRMI
+needs Munge installed and running. ``libmunge`` is a shared library in both
+build modes; the ``munge`` feature only changes when it is loaded:
+
+.. list-table::
+   :header-rows: 1
+   :stub-columns: 1
+
+   * -
+     - Default build (PyPI wheels)
+     - ``--features munge``
+   * - Build machine needs
+     - Nothing
+     - Munge development package (``libmunge.so``)
+   * - ``libmunge`` is loaded
+     - On the first Pasqal Local request (``dlopen``)
+     - At process startup, by the dynamic loader
+   * - If Munge is missing on the host
+     - Only Pasqal Local requests fail, with
+       ``munge unavailable: libmunge could not be loaded (...)``
+     - Loading QRMI fails (for example ``import qrmi`` raises
+       ``ImportError``), whichever resources are used
+
+.. _Munge: https://dun.github.io/munge/
+
+The default build needs no flag. Use the ``munge`` feature when you prefer a
+missing Munge to be detected as soon as QRMI is loaded:
 
 #. Build the Rust library:
 

@@ -49,7 +49,7 @@ install the latest (and most thoroughly tested) version.
   - [Building Optional Libraries](#building-optional-libraries)
     - [Building `task_runner`](#building-task_runner)
       - [Running with Python](#running-with-python)
-      - [Build with explicit Munge support for Pasqal Local](#build-with-explicit-munge-support-for-pasqal-local)
+      - [Munge support for Pasqal Local](#munge-support-for-pasqal-local)
 - [Further Resources](#further-resources)
   - [Examples](#examples)
   - [Logging](#logging)
@@ -281,11 +281,17 @@ repository.
 `task_runner` for Python is already included in the QRMI Python package. Users can use the `task_runner` command after installing qrmi. For detailed instructions on how to use it, please refer to the
 [`task_runner` README](python/qrmi/tools/task_runner/README.md).
 
-##### Build with explicit Munge support for Pasqal Local
+##### Munge support for Pasqal Local
 
-The Pasqal Local client authenticates via Munge, which QRMI loads dynamically at runtime by default — no build flag needed, only Munge installed on the host.
+The Pasqal Local client authenticates with [Munge](https://dun.github.io/munge/), so the host running QRMI needs Munge installed and running. `libmunge` is a shared library in both build modes; the `munge` feature only changes when it is loaded:
 
-The `munge` feature links `libmunge` at build time instead, so a missing library fails at startup rather than at first use. It requires the Munge development package (for the `libmunge.so` symlink), not just the runtime one.
+| | Default build (PyPI wheels) | `--features munge` |
+|---|---|---|
+| Build machine needs | Nothing | Munge development package (`libmunge.so`) |
+| `libmunge` is loaded | On the first Pasqal Local request (`dlopen`) | At process startup, by the dynamic loader |
+| If Munge is missing on the host | Only Pasqal Local requests fail, with `munge unavailable: libmunge could not be loaded (...)` | Loading QRMI fails (for example `import qrmi` raises `ImportError`), whichever resources are used |
+
+The default build needs no flag. Use the `munge` feature when you prefer a missing Munge to be detected as soon as QRMI is loaded:
 
 1. Build the Rust library:
 
