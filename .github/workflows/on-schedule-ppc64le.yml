@@ -1,0 +1,52 @@
+---
+# ppc64le scheduled workflow
+# Runs separately from on-schedule.yml (Saturday) to avoid hitting the 6-hour
+# GitHub Actions per-run limit. ppc64le builds are slow because:
+#   - Python wheels (e.g. grpcio, scipy) have no pre-built ppc64le binaries and
+#     must be compiled from source (~24 min per venv).
+#   - cibuildwheel installs the Rust toolchain fresh for each Python version.
+
+name: Schedule (ppc64le)
+
+on:
+  # Runs at 00:00 UTC every Sunday
+  schedule:
+  - cron: '0 0 * * 0'
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+  libqrmi-ppc64le:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/libqrmi.yml
+    with:
+      arch-x86_64: false
+      arch-ppc64le: true
+      arch-arm64: false
+      build-target: 'all'
+      unit-test-target: 'all'
+      lint-target: 'all'
+      # format-check and vendor-tarball are already covered by on-schedule.yml
+      # on Saturday; skip them here to save time.
+      format-check: false
+      libqrmi-tarball: true
+      libqrmi-rpm-x86: false
+      vendor-tarball: false
+      artifact-prefix: 'schedule-ppc64le'
+
+  wheels-ppc64le:
+    if: github.repository_owner == 'qiskit-community'
+    uses: ./.github/workflows/wheels.yml
+    with:
+      arch-x86_64: false
+      arch-ppc64le: true
+      arch-arm64: false
+      unit-test: true
+      # format-check and sdist are already covered by on-schedule.yml on Saturday.
+      format-check: false
+      lint: true
+      sdist: false
+      artifact-prefix: 'schedule-ppc64le'

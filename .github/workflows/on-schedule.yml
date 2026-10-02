@@ -1,5 +1,7 @@
 ---
-# workflow that runs a major set of tests on a defined schedule 
+# workflow that runs a major set of tests on a defined schedule
+# ppc64le is handled separately in on-schedule-ppc64le.yml (Sunday) to avoid
+# hitting the 6-hour GitHub Actions per-run limit.
 
 name: Schedule
 
@@ -18,14 +20,13 @@ jobs:
     if: github.repository_owner == 'qiskit-community'
     uses: ./.github/workflows/broken-links.yml
 
-  # Select all supported architectures for libqrmi in this worflow.
-  # All tasks are performed in the selected architectures
+  # x86_64 and arm64 only. ppc64le is handled in on-schedule-ppc64le.yml.
   libqrmi:
     if: github.repository_owner == 'qiskit-community'
     uses: ./.github/workflows/libqrmi.yml
     with:
       arch-x86_64: true
-      arch-ppc64le: true
+      arch-ppc64le: false
       arch-arm64: true
       build-target: 'all'
       unit-test-target: 'all'
@@ -36,14 +37,13 @@ jobs:
       vendor-tarball: true
       artifact-prefix: 'schedule'
 
-  # Select all supported architectures for wheels in this worflow.
-  # All tasks are performed in the selected architectures
+  # x86_64 and arm64 only. ppc64le is handled in on-schedule-ppc64le.yml.
   wheels:
     if: github.repository_owner == 'qiskit-community'
     uses: ./.github/workflows/wheels.yml
     with:
       arch-x86_64: true
-      arch-ppc64le: true
+      arch-ppc64le: false
       arch-arm64: true
       unit-test: true
       format-check: true
