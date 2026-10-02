@@ -23,6 +23,9 @@ load_dotenv()
 
 qrmi_conn = PulserQRMIConnection()
 
+print("DESCRIBE")
+print(qrmi_conn._qrmi.describe())
+
 # Generate Pulser device.
 # Emulator targets may not expose device specs so we fall back to DigitalAnalogDevice.
 # For a real program, you may want to manually fetch the device specs and construct the corresponding Pulser device.

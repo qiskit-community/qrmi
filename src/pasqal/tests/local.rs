@@ -1,6 +1,7 @@
 use crate::QrmiErrorKind;
 
-use super::PasqalLocal;
+use super::{apply_device_specs, PasqalLocal};
+use crate::models::{QuantumResourceInfo, QubitType, ResourceType};
 use std::collections::HashMap;
 
 #[test]
@@ -54,4 +55,31 @@ fn job_uid_parsing_fail_raises_qrmi_error() {
         panic!("expected an error passing 'abcd' to QRMI_JOB_UID, but got OK");
     };
     assert_eq!(expected, err.kind())
+}
+
+#[test]
+fn apply_device_specs_maps_pulser_device() {
+    let specs = r#"{"name": "FRESNEL", "max_atom_num": 100, "max_runs": 1000, "channels": []}"#;
+    let target = serde_json::json!([{"device_type": "FRESNEL", "specs": specs}]).to_string();
+    let mut info = QuantumResourceInfo::new(
+        "fresnel".to_string(),
+        &ResourceType::PasqalLocal,
+        QubitType::NeuralAtom,
+    );
+    apply_device_specs(&mut info, &target).unwrap();
+    assert_eq!(info.backend_display_name, "FRESNEL");
+    assert_eq!(info.num_qubits, 100);
+    assert_eq!(info.max_shots, Some(1000));
+    assert!(info.has_queue);
+}
+
+#[test]
+fn apply_device_specs_rejects_invalid_specs() {
+    let target = serde_json::json!([{"device_type": "X", "specs": "not json"}]).to_string();
+    let mut info = QuantumResourceInfo::new(
+        "x".to_string(),
+        &ResourceType::PasqalLocal,
+        QubitType::NeuralAtom,
+    );
+    assert!(apply_device_specs(&mut info, &target).is_err());
 }
