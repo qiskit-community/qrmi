@@ -221,6 +221,26 @@ pub trait QuantumResource: Send + Sync {
         })
     }
 
+    /// Returns the configuration and attributes of this resource, such as
+    /// qubit type, number of qubits or pending job count. Replaces the
+    /// deprecated `metadata()`.
+    ///
+    /// Fields the vendor does not report are `None` (or left at their
+    /// default). Vendor-specific data (e.g. basis gates) goes in `extra`.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
+    ///
+    ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
+    ///     let info = qrmi.describe().await?;
+    ///     println!("{}", serde_json::to_string_pretty(&info)?);
+    ///     Ok(())
+    /// }
+    /// ```
     async fn describe(&mut self) -> Result<QuantumResourceInfo>;
 
     /// Acquires quantum resource and returns acquisition token if succeeded. If no one owns the lock, it acquires the lock and returns immediately. If another owns the lock, block until we are able to acquire lock.
@@ -443,7 +463,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    #[deprecated(since = "0.25.0", note = "use `describe()` instead")]
+    #[deprecated(since = "0.26.0", note = "use `describe()` instead")]
     async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
         let resource_type = std::any::type_name::<Self>();
         log::warn!(

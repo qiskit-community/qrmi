@@ -377,8 +377,27 @@ impl PyQuantumResource {
         }
     }
 
+    /// Returns the configuration and attributes of this resource as a
+    /// JSON-serializable dict. Replaces the deprecated ``metadata()``.
+    #[gen_stub(override_return_type(type_repr = "dict[str, typing.Any]", imports = ("typing")))]
+    fn describe<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        crate::common::initialize();
+        let result = py.detach(|| self.rt.block_on(async { self.qrmi.describe().await }));
+        let info = result.map_err(to_py_err)?;
+        pythonize::pythonize(py, &info)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+
+    /// Deprecated: use ``describe()`` instead.
     fn metadata(&mut self, py: Python<'_>) -> PyResult<std::collections::HashMap<String, String>> {
         crate::common::initialize();
+        PyErr::warn(
+            py,
+            &py.get_type::<pyo3::exceptions::PyDeprecationWarning>(),
+            c"metadata() is deprecated, use describe() instead",
+            1,
+        )?;
+        #[allow(deprecated)]
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.metadata().await }));
         Ok(result)
     }

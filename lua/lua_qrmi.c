@@ -917,6 +917,9 @@ static int l_task_stop(lua_State *L) {
  * function returns, so no extra userdata/GC bookkeeping is needed on the
  * Lua side.
  *
+ * @deprecated Use resource:describe() instead.
+ * This function will be removed in a future release.
+ *
  * Lua usage:
  * @code
  *   local meta, err = resource:metadata()
@@ -930,6 +933,9 @@ static int l_task_stop(lua_State *L) {
  */
 static int l_metadata(lua_State *L) {
     lua_qrmi_resource_t *ud = check_resource(L, 1);
+
+    fprintf(stderr,
+        "warning: resource:metadata() is deprecated, use resource:describe() instead\n");
 
     QrmiResourceMetadata *metadata = NULL;
     QrmiReturnCode rc = qrmi_resource_metadata(ud->handle, &metadata);
@@ -1063,6 +1069,33 @@ static int l_status(lua_State *L) {
 }
 
 /**
+ * @brief `resource:describe()` - Fetch the resource's configuration and attributes.
+ *
+ * Wraps qrmi_resource_describe().
+ *
+ * Lua usage:
+ * @code
+ *   local info_json, err = resource:describe()
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments: [1] resource (qrmi.resource userdata).
+ * @return Number of values pushed onto the Lua stack.
+ *         On success: 1 (info_json: string, a JSON object)
+ *         On failure: 2 (nil, err: string)
+ */
+static int l_describe(lua_State *L) {
+    lua_qrmi_resource_t *ud = check_resource(L, 1);
+
+    char *info = NULL;
+    QrmiReturnCode rc = qrmi_resource_describe(ud->handle, &info);
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+
+    lua_pushstring(L, info);
+    qrmi_string_free(info);
+    return 1;
+}
+
+/**
  * @brief `resource:target()` - Fetch the device's target information.
  *
  * Wraps qrmi_resource_target().
@@ -1160,6 +1193,7 @@ static const luaL_Reg resource_methods[] = {
     {"task_result",   l_task_result},
     {"task_logs",     l_task_logs},
     {"task_stop",     l_task_stop},
+    {"describe",      l_describe},
     {"metadata",      l_metadata},
     {"target",        l_target},
     {"free",          l_resource_free},

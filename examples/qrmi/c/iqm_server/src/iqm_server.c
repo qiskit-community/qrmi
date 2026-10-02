@@ -53,21 +53,11 @@ int main(int argc, char *argv[]) {
     qrmi_string_free(resource_id);
   }
 
-  QrmiResourceMetadata *metadata = NULL;
-  rc = qrmi_resource_metadata(qrmi, &metadata);
+  char *info = NULL;
+  rc = qrmi_resource_describe(qrmi, &info);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-    size_t num_keys = 0;
-    char **metadata_keys = NULL;
-    rc = qrmi_resource_metadata_keys(metadata, &num_keys, &metadata_keys);
-    if (rc == QRMI_RETURN_CODE_SUCCESS) {
-      for (int i = 0; i < num_keys; i++) {
-        char *value = qrmi_resource_metadata_value(metadata, metadata_keys[i]);
-        printf("metadata key=[%s], value=[%s]\n", metadata_keys[i], value);
-        qrmi_string_free(value);
-      }
-      qrmi_string_array_free(num_keys, metadata_keys);
-    }
-    qrmi_resource_metadata_free(metadata);
+    printf("describe: %s\n", info);
+    qrmi_string_free(info);
   }
 
   QrmiResourceStatus *res_status = NULL;
