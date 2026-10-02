@@ -83,9 +83,11 @@ async fn authenticated_requests_report_missing_libmunge() {
             .expect_err("create_session should fail without libmunge")
             .to_string();
         assert!(message.contains("munge unavailable"), "{message}");
-        assert!(
-            message.contains("libmunge could not be loaded"),
-            "{message}"
-        );
+        let expected = if cfg!(target_os = "linux") {
+            "libmunge could not be loaded"
+        } else {
+            "munge is only supported on Linux"
+        };
+        assert!(message.contains(expected), "{message}");
     }
 }

@@ -96,6 +96,10 @@ mod dynamic {
     }
 
     fn munge() -> Result<&'static Munge, String> {
+        // Munge has no Windows port and the sonames below are Linux-only.
+        if cfg!(not(target_os = "linux")) {
+            return Err("munge is only supported on Linux.".into());
+        }
         if let Some(m) = MUNGE.get() {
             return Ok(m);
         }
