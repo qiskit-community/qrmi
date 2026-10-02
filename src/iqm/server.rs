@@ -23,8 +23,9 @@ use iqm_server_api::apis::calibration_sets_api::{
 };
 use iqm_server_api::apis::configuration;
 use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
-use iqm_server_api::apis::quantum_computers_api::{get_qc_health_v1, get_qc_v1, qc_get_artifacts};
-use iqm_server_api::models::IqmServerJobStatus;
+use iqm_server_api::apis::quantum_computers_api::{qc_get_artifacts, GetQcV1Error};
+use iqm_server_api::apis::ResponseContent;
+use iqm_server_api::models::{IqmServerJobStatus, IqmServerQuantumComputerDetails, QcHealthDetail};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -138,6 +139,137 @@ impl IQMServer {
             Err(e) => Err(classify(e, resource_kind)),
         }
     }
+
+    /// Fetches `GET /api/v1/quantum-computers/{qc}` and returns the body as
+    /// raw JSON.
+    ///
+    /// Same request as the generated `get_qc_v1`, which can't be used here
+    /// because it deserializes straight into
+    /// [`IqmServerQuantumComputerDetails`] and so fails on the older
+    /// response shape that [`Self::resource_status_from_qc_details`] still
+    /// has to accept. Errors are built as the generated client would
+    /// build them, so [`classify`] treats them the same.
+    async fn fetch_qc_details(&self) -> Result<Value> {
+        let fetch = async {
+            let uri_str = format!(
+                "{}/api/v1/quantum-computers/{}",
+                self.config.base_path, self.backend_name
+            );
+            let mut req_builder = self.config.client.get(&uri_str);
+            if let Some(ref user_agent) = self.config.user_agent {
+                req_builder = req_builder.header(http::header::USER_AGENT, user_agent.clone());
+            }
+            if let Some(ref token) = self.config.bearer_access_token {
+                req_builder = req_builder.bearer_auth(token.clone());
+            }
+            let resp = req_builder.send().await?;
+            let status = resp.status();
+            let content = resp.text().await?;
+            if status.is_client_error() || status.is_server_error() {
+                let entity: Option<GetQcV1Error> = serde_json::from_str(&content).ok();
+                return Err(iqm_server_api::apis::Error::ResponseError(
+                    ResponseContent {
+                        status,
+                        content,
+                        entity,
+                    },
+                ));
+            }
+            Ok(serde_json::from_str::<Value>(&content)?)
+        };
+        fetch
+            .await
+            .map_err(|e: iqm_server_api::apis::Error<GetQcV1Error>| {
+                classify(e, ResourceKind::Backend)
+            })
+    }
+
+    /// Builds a [`ResourceStatus`] from a `GET /quantum-computers/{qc}`
+    /// response body.
+    ///
+    /// The body is first read as the spec's
+    /// [`IqmServerQuantumComputerDetails`]. If that fails, it is read again
+    /// as the older on-premises shape, which puts health under
+    /// `status.health` and has no `queue_length`:
+    ///
+    /// ```json
+    /// {"id": "...", "alias": "default", ...,
+    ///  "status": {"health": {"healthy": true, "updated_at": "..."}}, ...}
+    /// ```
+    ///
+    /// Only `status.health` and `queue_length` are read in that case. Older
+    /// servers report no operational state, so they are treated as online;
+    /// `pending_job_count` is `None` when `queue_length` is absent.
+    /// A body that fits neither shape returns the spec deserialization
+    /// error, so an unexpected response is still reported, not guessed at.
+    pub(crate) fn resource_status_from_qc_details(body: Value) -> Result<ResourceStatus> {
+        // Extract the three values status() needs. `queue_length` is i64 in
+        // both branches: the spec model has it as i32, while the legacy
+        // branch reads it with `Value::as_i64`.
+        let (operational, health, queue_length) =
+            // 1) Spec shape. New IQM Servers and the issue's reproduction
+            //    stub take this branch. `body` is cloned because
+            //    `from_value` consumes it and branch 2 still needs it.
+            match serde_json::from_value::<IqmServerQuantumComputerDetails>(body.clone()) {
+                Ok(qc) => (
+                    qc.operational,
+                    // `health` is nullable in the spec (null during
+                    // maintenance or before the first health check).
+                    qc.health.map(|h| *h),
+                    // Required by the spec, so always present here.
+                    Some(i64::from(qc.queue_length)),
+                ),
+                // 2) Not the spec shape.
+                Err(spec_err) => {
+                    // Only the known older on-prem shape (e.g. ORNL), which
+                    // nests health under `status.health`, is accepted.
+                    // Anything else is a genuinely unexpected response, so
+                    // report the spec deserialization error instead of
+                    // guessing.
+                    let Some(legacy_health) = body.pointer("/status/health") else {
+                        return Err(spec_err.into());
+                    };
+                    // debug, not warn: status() is polled frequently and
+                    // this is the expected path on those servers.
+                    log::debug!(
+                        "quantum computer details did not match the IQM Server API spec ({spec_err}); \
+                         reading them as the older `status.health` shape"
+                    );
+                    // `{"healthy": ..., "updated_at": ...}` or null. A
+                    // malformed object (e.g. no `updated_at`) is an error.
+                    let health =
+                        serde_json::from_value::<Option<QcHealthDetail>>(legacy_health.clone())?;
+                    // Older servers have no operational state at all (no
+                    // `operational` / `operational_status`), so treat them as
+                    // online -- the same default as the generated model's
+                    // `default_operational()`.
+                    let operational = "online".to_string();
+                    // Older servers omit `queue_length`; `None` then means
+                    // "queue length unknown", not "empty queue".
+                    let queue_length = body.get("queue_length").and_then(Value::as_i64);
+                    (operational, health, queue_length)
+                }
+            };
+
+        Ok(ResourceStatus {
+            status: match operational.as_str() {
+                "online" => ResourceStatusCode::Online,
+                // The spec's only non-online state.
+                "maintenance" => ResourceStatusCode::Paused,
+                // Unknown values are treated as unavailable.
+                _ => ResourceStatusCode::Offline,
+            },
+            // No reason when there is no health reading (e.g. maintenance).
+            status_reason: health
+                .as_ref()
+                .map(|h| format!("healthy updated at {}", h.updated_at)),
+            healthy: health.map(|h| h.healthy),
+            busy: None,
+            capacity: None,
+            // A negative (invalid) count becomes `None` rather than an error.
+            pending_job_count: queue_length.and_then(|n| n.try_into().ok()),
+        })
+    }
 }
 
 // Implement the QuantumResource trait using the asynchronous wrappers.
@@ -151,31 +283,30 @@ impl QuantumResource for IQMServer {
         Ok(ResourceType::IQMServer)
     }
 
-    /// Asynchronously checks if a backend is accessible.
+    /// Asynchronously checks if a backend is accessible: online and
+    /// reported healthy. A missing or `null` health reading counts as not
+    /// accessible.
+    ///
+    /// Derived from [`Self::status`] rather than calling
+    /// `/quantum-computers/{qc}/health`, whose response shape differs
+    /// between IQM Server versions.
+    ///
+    /// Nothing is lost by not calling `/health`: everything it returns is
+    /// already in the `/quantum-computers/{qc}` response that `status()`
+    /// reads, on both server generations --
+    ///
+    /// | `/health` field | spec (new) server | older server (e.g. ORNL) |
+    /// |---|---|---|
+    /// | `operational` | `operational_status` / `operational` | absent in both responses |
+    /// | `healthy`, `updated_at` | `health.healthy`, `health.updated_at` | `status.health.healthy`, `status.health.updated_at` |
     async fn is_accessible(&mut self) -> Result<bool> {
-        let health = get_qc_health_v1(&self.config, &self.backend_name)
-            .await
-            .map_err(|e| classify(e, ResourceKind::Backend))?;
-        Ok(health.operational == "online" && health.health.healthy)
+        let st = self.status().await?;
+        Ok(st.status == ResourceStatusCode::Online && st.healthy == Some(true))
     }
 
     async fn status(&mut self) -> Result<ResourceStatus> {
-        let qc = get_qc_v1(&self.config, &self.backend_name)
-            .await
-            .map_err(|e| classify(e, ResourceKind::Backend))?;
-
-        Ok(ResourceStatus {
-            status: match qc.operational.as_str() {
-                "online" => ResourceStatusCode::Online,
-                "maintenance" => ResourceStatusCode::Paused,
-                _ => ResourceStatusCode::Offline,
-            },
-            status_reason: Some(format!("healthy updated at {}", qc.health.updated_at)),
-            healthy: Some(qc.health.healthy),
-            busy: None,
-            capacity: None,
-            pending_job_count: qc.queue_length.try_into().ok(),
-        })
+        let body = self.fetch_qc_details().await?;
+        Self::resource_status_from_qc_details(body)
     }
 
     /// Starts a job task.

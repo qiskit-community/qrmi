@@ -240,14 +240,12 @@ impl PyQuantumResource {
                 1, // stacklevel
             ),
         )?;
-        let result = py.detach(|| self.rt.block_on(async { self.qrmi.status().await }));
-        match result {
-            Ok(v) => Ok(matches!(
-                v.status,
-                crate::models::ResourceStatusCode::Online
-            )),
-            Err(e) => Err(to_py_err(e)),
-        }
+        // Deliberately calls the (deprecated) trait method rather than
+        // deriving the answer from status(): each vendor keeps its own
+        // definition of "accessible", so this binding's behavior is unchanged.
+        #[allow(deprecated)]
+        let result = py.detach(|| self.rt.block_on(async { self.qrmi.is_accessible().await }));
+        result.map_err(to_py_err)
     }
 
     fn status(&mut self, py: Python<'_>) -> PyResult<ResourceStatus> {

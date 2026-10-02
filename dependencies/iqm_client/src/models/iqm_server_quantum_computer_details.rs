@@ -60,8 +60,14 @@ pub struct IqmServerQuantumComputerDetails {
     )]
     pub operational: String,
     /// Health readings, or `null` when the quantum computer is under maintenance\nor has not been health checked yet.
-    #[serde(rename = "health")]
-    pub health: Box<models::QcHealthDetail>,
+    ///
+    /// NOTE: hand-patched, not regenerated from the OpenAPI spec. `health`
+    /// is not in the spec's `required` list and is documented as nullable,
+    /// but was generated as a required, non-nullable field, so a spec-
+    /// conforming `null` (e.g. during maintenance) failed to deserialize.
+    /// `default` covers the key being absent; `Option` covers `null`.
+    #[serde(rename = "health", default)]
+    pub health: Option<Box<models::QcHealthDetail>>,
     /// Number of pending pay-as-you-go jobs queued on this quantum computer.
     #[serde(rename = "queue_length")]
     pub queue_length: i32,
@@ -84,7 +90,6 @@ impl IqmServerQuantumComputerDetails {
         pulla_enabled: bool,
         limits: IqmServerQcLimits,
         operational: String,
-        health: Box<models::QcHealthDetail>,
         queue_length: i32,
         pricing: IqmServerQcPricing,
         additional_info: IqmServerQcAdditionalInfo,
@@ -99,7 +104,7 @@ impl IqmServerQuantumComputerDetails {
             pulla_enabled,
             limits,
             operational,
-            health,
+            health: None,
             queue_length,
             pricing,
             additional_info,

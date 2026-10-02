@@ -948,12 +948,16 @@ pub unsafe extern "C" fn qrmi_resource_is_accessible(
     }
     ffi_helpers::null_pointer_check!(outp, ReturnCode::Error);
 
+    // Deliberately calls the (deprecated) trait method rather than
+    // deriving the answer from status(): each vendor keeps its own
+    // definition of "accessible", so this binding's behavior is unchanged.
+    #[allow(deprecated)]
     let result = (*qrmi)
         .runtime
-        .block_on(async { (*qrmi).inner.status().await });
+        .block_on(async { (*qrmi).inner.is_accessible().await });
     match result {
         Ok(v) => {
-            *outp = matches!(v.status, crate::models::ResourceStatusCode::Online);
+            *outp = v;
             ReturnCode::Success
         }
         Err(err) => _fail(err),
