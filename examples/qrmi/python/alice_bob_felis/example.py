@@ -30,7 +30,7 @@ qrmi = QuantumResource(args.target, ResourceType.AliceBobFelis)
 lock = qrmi.acquire()
 target_json = json.loads(qrmi.target().value)
 
-print(qrmi.metadata())
+print(qrmi.describe())
 
 # Prepare submission
 input_params = {"nbShots": 50, "averageNbPhotons": 4}

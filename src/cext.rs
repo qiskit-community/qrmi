@@ -2039,7 +2039,61 @@ pub unsafe extern "C" fn qrmi_resource_target(
 }
 
 /// @ingroup QrmiQuantumResource
+/// Returns the configuration and attributes of this resource (qubit type, number of qubits, pending job count, vendor-specific `extra` data, etc.) as a JSON object string.
+///
+/// # Safety
+///
+/// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
+///
+/// * `outp` must be non-null.
+///
+/// # Example
+///
+/// @code
+///   char *info = NULL;
+///   QrmiReturnCode rc = qrmi_resource_describe(qrmi, &info);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     printf("info = %s\n", info);
+///     qrmi_string_free(info);
+///   }
+/// @endcode
+///
+/// @param (qrmi) [in] A QrmiQuantumResource handle
+/// @param (outp) [out] A JSON serialized QuantumResourceInfo if succeeded. Must call qrmi_string_free() to free if no longer used.
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.26.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_describe(
+    qrmi: *mut QuantumResource,
+    outp: *mut *mut c_char,
+) -> ReturnCode {
+    crate::common::initialize();
+    if qrmi.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.describe().await });
+    match result {
+        Ok(v) => {
+            if let Ok(Ok(json_cstr)) = serde_json::to_string(&v).map(CString::new) {
+                *outp = json_cstr.into_raw();
+                return ReturnCode::Success;
+            }
+        }
+        Err(err) => {
+            return _fail(err);
+        }
+    }
+    ReturnCode::Error
+}
+
+/// @ingroup QrmiQuantumResource
 /// Returns a resource metadata
+///
+/// @deprecated Use qrmi_resource_describe() instead. This function will be
+/// removed in a future release.
 ///
 /// # Safety
 ///
@@ -2068,6 +2122,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
         return ReturnCode::NullPointerError;
     }
 
+    #[allow(deprecated)]
     let metadata = (*qrmi)
         .runtime
         .block_on(async { (*qrmi).inner.metadata().await });

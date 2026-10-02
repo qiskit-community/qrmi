@@ -10,7 +10,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, QuantumResourceInfo, QubitType, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::pasqal::error::PasqalError;
 use crate::{QrmiError, QuantumResource, Result};
 use anyhow::Context;
@@ -266,6 +268,13 @@ impl QuantumResource for PasqalCloud {
         Ok(device.availability == "ACTIVE")
     }
 
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        Ok(QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::NeuralAtom,
+        ))
+    }
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         debug!(
             "Starting task on PasqalCloud QRMI (backend '{}')",
