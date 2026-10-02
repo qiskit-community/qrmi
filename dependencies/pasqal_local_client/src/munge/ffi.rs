@@ -80,8 +80,6 @@ mod dynamic {
         strerror: MungeStrerrorFn,
     }
 
-    // Only a successful load is cached, so a process started before munge was installed
-    // picks it up on the next request instead of failing until restart.
     static MUNGE: OnceLock<Munge> = OnceLock::new();
 
     unsafe fn load(name: &str) -> Result<Munge, libloading::Error> {
