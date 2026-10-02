@@ -14,6 +14,7 @@ use crate::models::ResourceType;
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum QubitType {
     /// Superconducting Quantum Computers
     Superconducting,
@@ -29,7 +30,9 @@ pub enum QubitType {
     Other,
 }
 
-#[derive(Serialize)]
+/// Configuration and attributes of a quantum resource, returned by
+/// [`crate::QuantumResource::describe`].
+#[derive(Debug, Clone, Serialize)]
 pub struct QuantumResourceInfo {
     // Common
     pub resource_id: String,   // same as one can be obtained by resource_id()
@@ -69,5 +72,25 @@ impl QuantumResourceInfo {
             status: String::new(),
             extra: serde_json::Value::Null,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_serializes_with_defaults() {
+        let info = QuantumResourceInfo::new(
+            "fresnel".to_string(),
+            &ResourceType::PasqalLocal,
+            QubitType::NeuralAtom,
+        );
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(json["resource_id"], "fresnel");
+        assert_eq!(json["resource_type"], "pasqal-local");
+        assert_eq!(json["qubit_type"], "neural_atom");
+        assert!(json["max_shots"].is_null());
+        assert!(json["extra"].is_null());
     }
 }

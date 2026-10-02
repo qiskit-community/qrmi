@@ -18,7 +18,8 @@
 
 use crate::error::QrmiError;
 use crate::models::{
-    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+    Payload, QuantumResourceInfo, QubitType, ResourceStatus, ResourceStatusCode, ResourceType,
+    Target, TaskResult, TaskStatus,
 };
 use crate::oqtopus::models::{OqtopusDeviceInfo, OqtopusDeviceStatus};
 use crate::{QuantumResource, Result};
@@ -475,6 +476,14 @@ impl QuantumResource for Oqtopus {
             capacity: None,
             pending_job_count: Some(device.n_pending_jobs),
         })
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        Ok(QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::Superconducting,
+        ))
     }
 
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {

@@ -246,7 +246,17 @@ Stops a running task.
 
 **Returns:** on success, `ok` (boolean, always true); on failure, `nil, err`
 
+### `resource:describe()`
+
+Fetches the resource's configuration and attributes (qubit type, number of
+qubits, pending job count, vendor-specific `extra` data, etc.) as a JSON
+object string. Wraps `qrmi_resource_describe`.
+
+**Returns:** on success, `info_json` (string); on failure, `nil, err`
+
 ### `resource:metadata()`
+
+> **Deprecated:** use `resource:describe()` instead. Prints a warning to stderr.
 
 Fetches the resource's metadata as a Lua table (combines
 `qrmi_resource_metadata` + `qrmi_resource_metadata_keys` +
