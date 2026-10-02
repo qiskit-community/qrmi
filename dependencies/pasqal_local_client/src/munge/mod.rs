@@ -27,13 +27,14 @@ pub fn encode(payload: &[u8]) -> Result<String, MungeError> {
             payload.as_ptr() as *const _,
             payload.len(),
         )
-    };
+    }
+    .map_err(MungeError::Unavailable)?;
 
     if rc != 0 {
         let msg = unsafe {
-            CStr::from_ptr(ffi::munge_strerror(rc))
-                .to_string_lossy()
-                .into_owned()
+            ffi::munge_strerror(rc)
+                .map(|s| CStr::from_ptr(s).to_string_lossy().into_owned())
+                .unwrap_or_else(|e| e)
         };
         return Err(MungeError::EncodeFailed(msg));
     }

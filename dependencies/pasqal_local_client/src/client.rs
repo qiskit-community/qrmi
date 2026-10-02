@@ -11,7 +11,6 @@
 
 //! Pasqal Cloud API Client
 
-#[cfg(feature = "munge")]
 use crate::munge;
 use anyhow::{bail, Result};
 
@@ -91,21 +90,14 @@ impl Client {
             reqwest::header::HeaderValue::from_static("application/json"),
         );
 
-        // Generate fresh munge token for each request
-        #[cfg(feature = "munge")]
-        {
-            let token = munge::encode(b"")?;
-            headers.insert(
-                reqwest::header::HeaderName::from_static("x-munge-cred"),
-                reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
-            );
-            Ok(headers)
-        }
-
-        #[cfg(not(feature = "munge"))]
-        {
-            bail!("Munge support is disabled. Compile with --features munge to use the Pasqal Local client.")
-        }
+        // Generate fresh munge token for each request. If the `munge` feature
+        // wasn't compiled in, this falls back to dynamically loading libmunge.so.
+        let token = munge::encode(b"")?;
+        headers.insert(
+            reqwest::header::HeaderName::from_static("x-munge-cred"),
+            reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
+        );
+        Ok(headers)
     }
 
     pub async fn get_jobs(&self) -> Result<Vec<JobResponse>> {

@@ -14,12 +14,14 @@ use std::fmt;
 #[derive(Debug)]
 pub enum MungeError {
     EncodeFailed(String),
+    Unavailable(String),
 }
 
 impl fmt::Display for MungeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MungeError::EncodeFailed(msg) => write!(f, "munge encode failed: {msg}"),
+            MungeError::Unavailable(msg) => write!(f, "munge unavailable: {msg}"),
         }
     }
 }
