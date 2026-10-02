@@ -12,11 +12,12 @@
 
 use clap::Parser;
 use dotenv::dotenv;
+use qrmi::QuantumResource;
 use qrmi::{
     alice_bob::AliceBobFelis, ibm::IBMQiskitRuntimeService, ibm::IBMQuantumComputeService,
-    ibm::IBMQuantumSystem, iqm::IQMServer, pasqal::PasqalCloud, pasqal::PasqalLocal,
+    ibm::IBMQuantumSystem, iqm::IQMServer, oqtopus::Oqtopus, pasqal::PasqalCloud,
+    pasqal::PasqalLocal,
 };
-use qrmi::QuantumResource;
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]
@@ -50,6 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "pasqal-local" => Box::new(PasqalLocal::new(&args.resource_id)?),
         "alice-bob-felis" => Box::new(AliceBobFelis::new(&args.resource_id)?),
         "iqm-server" => Box::new(IQMServer::new(&args.resource_id)?),
+        "oqtopus" => Box::new(Oqtopus::new(&args.resource_id)?),
         _ => unreachable!("args.resource_type should be validated before this match"),
     };
 

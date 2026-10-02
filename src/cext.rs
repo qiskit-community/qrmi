@@ -124,6 +124,20 @@ pub enum Payload {
         /// Optional user-defined tag associated with the job
         tag: *mut c_char,
     },
+    /// Payload for OQTOPUS Cloud
+    Oqtopus {
+        /// Job spec, as a JSON object string matching the keyword
+        /// arguments of Python's `OqtopusJobSpec` dataclass, minus
+        /// `device_id` (QRMI fills that in automatically). Required
+        /// keys: `job_type` (one of "sampling", "estimation",
+        /// "multi_manual", "sse") and `program` (array of strings; a
+        /// single program is a single-element array; `sse` jobs require
+        /// exactly one). Optional keys: `shots` (integer; omit the key
+        /// entirely to use OQTOPUS's default of 1000 — sending `null`
+        /// fails), `name`, `description`, `transpiler_info`,
+        /// `simulator_info`, `mitigation_info`, and `operator`.
+        job_spec: *mut c_char,
+    },
 }
 
 /// A key-value pair
@@ -1593,6 +1607,9 @@ pub unsafe extern "C" fn qrmi_resource_release(
 ///
 /// * The memory pointed to by `sequence` in QrmiPayload_PasqalCloud_Body must contain a valid nul terminator.
 ///
+/// * The memory pointed to by `job_spec` in QrmiPayload_Oqtopus_Body
+///   must contain a valid nul terminator.
+///
 /// # Example
 ///
 /// @code
@@ -1690,6 +1707,14 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
             job_type: type_str.to_string(),
             tag: tag_opt,
             use_timeslot: use_timeslot_opt,
+        });
+    } else if let Payload::Oqtopus { job_spec } = *payload {
+        let Ok(job_spec_str) = CStr::from_ptr(job_spec).to_str() else {
+            return ReturnCode::Error;
+        };
+
+        qrmi_payload = Some(crate::models::Payload::Oqtopus {
+            job_spec: job_spec_str.to_string(),
         });
     }
 

@@ -43,6 +43,8 @@ int main(int argc, char *argv[]) {
     resource_type = QRMI_RESOURCE_TYPE_ALICE_BOB_FELIS;
   } else if (!strcmp(argv[1], "iqm-server")) {
     resource_type = QRMI_RESOURCE_TYPE_IQM_SERVER;
+  } else if (!strcmp(argv[1], "oqtopus")) {
+    resource_type = QRMI_RESOURCE_TYPE_OQTOPUS;
   } else {
     fprintf(stderr, "resource type: %s is not supported.", argv[1]);
     return EXIT_FAILURE;

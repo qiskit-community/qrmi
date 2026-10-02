@@ -41,6 +41,7 @@ _resource_type_map = {
     "pasqal-local": ResourceType.PasqalLocal,
     "alice-bob-felis": ResourceType.AliceBobFelis,
     "iqm-server": ResourceType.IQMServer,
+    "oqtopus": ResourceType.OQTOPUS,
 }
 
 load_dotenv()

@@ -1,0 +1,2 @@
+qiskit
+oqtopus_client

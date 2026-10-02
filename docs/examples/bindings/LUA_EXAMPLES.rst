@@ -11,3 +11,4 @@ QRMI Examples in Lua
     IQM Server <lua/IQM_SERVER>
     Pasqal Cloud/Local <lua/PASQAL_CLOUD>
     Alice and Bob Felis <lua/ALICE_AND_BOB>
+    OQTOPUS <lua/OQTOPUS>

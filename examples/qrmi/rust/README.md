@@ -3,6 +3,7 @@
 * [IBM Quantum System QRMI](./ibm_quantum_system)
 * [IBM Quantum Compute Service QRMI](./ibm_quantum_compute_service)
 * [IQM Server QRMI](./iqm_server)
+* [OQTOPUS](./oqtopus)
 * [Pasqal Cloud QRMI](./pasqal_cloud)
 * [Pasqal Local QRMI](./pasqal_local)
 * [Alice and Bob Felis](./alice_bob_felis)

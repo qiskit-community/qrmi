@@ -61,6 +61,9 @@ iqm = [
 alice-bob = [
   "qiskit-alice-bob-provider",
 ]
+oqtopus = [
+  "oqtopus-client",
+]
 docs = [
   "sphinx>=9.1.0",
   "sphinx-autobuild>=2025.08.25",

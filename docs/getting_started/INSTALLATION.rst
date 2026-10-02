@@ -32,6 +32,7 @@ To use a specific quantum resource, install QRMI with the corresponding optional
    pip install "qrmi[iqm]"       # Include dependencies for IQM
    pip install "qrmi[pasqal]"    # Include dependencies for Pasqal
    pip install "qrmi[alice-bob]" # Include dependencies for Alice and Bob
+   pip install "qrmi[oqtopus]"   # Include dependencies for OQTOPUS
    pip install "qrmi[all]"       # Include dependencies for all quantum resources except `alice-bob`
 
 Or combine multiple resources:
@@ -198,6 +199,14 @@ This section will guide you through building QRMI for C, Python and Lua.
          source ~/py312_qrmi_venv/bin/activate
          pip install /shared/qrmi/target/release/maturin/wheels/qrmi-0.7.1-cp312-abi3-manylinux_2_34_aarch64.whl
 
+   .. tab:: Additional library for OQTOPUS
+
+      .. code-block:: bash
+
+         . ~/.cargo/env
+         cd dependencies/oqtopus
+         cargo clean
+         cargo build --locked --release
 
 .. _installing_lua_bindings:
 

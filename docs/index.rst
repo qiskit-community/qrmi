@@ -17,7 +17,7 @@ Quantum Resource Management Interface (QRMI)
 .. rubric:: Supported Vendors
    :class: centered
 
-.. grid:: 1 2 4 4
+.. grid:: 1 2 5 5
 
     .. grid-item::
 
@@ -53,6 +53,14 @@ Quantum Resource Management Interface (QRMI)
 
     .. grid-item::
 
+        .. figure:: /_static/images/oqtopus-logo-light.png
+           :figclass: light-only
+           :width: 100%
+           :target: https://oqtopus-team.github.io/
+           :align: center
+
+    .. grid-item::
+
         .. figure:: /_static/images/ibm-quantum-logo-dark.png
            :figclass: dark-only
            :width: 90%
@@ -81,6 +89,14 @@ Quantum Resource Management Interface (QRMI)
            :figclass: dark-only
            :width: 50%
            :target: https://iqm.tech/
+           :align: center
+
+    .. grid-item::
+
+        .. figure:: /_static/images/oqtopus-logo-dark.png
+           :figclass: dark-only
+           :width: 100%
+           :target: https://oqtopus-team.github.io/
            :align: center
 
 .. raw:: html
