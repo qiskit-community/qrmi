@@ -1,1 +1,1 @@
-pulser>=1.9.0
+pulser-core>=1.9.0

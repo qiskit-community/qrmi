@@ -1,0 +1,26 @@
+{
+  "id": "0b5a0f36-1a8b-4d57-8a0e-0f6f1f3f6c03",
+  "alias": "garnet",
+  "display_name": "Garnet",
+  "description": "stub",
+  "backend_type": "qpu",
+  "number_of_qubits": 20,
+  "pulla_enabled": false,
+  "limits": {
+    "max_instructions_per_circuit": 10000,
+    "max_shots_per_circuit": 100000,
+    "max_circuits_per_job": 200,
+    "max_executions_per_job": 1000000,
+    "max_queued_jobs_per_user": 10
+  },
+  "operational": "maintenance",
+  "health": null,
+  "queue_length": 0,
+  "pricing": {"payg_price_per_second": "0.30"},
+  "additional_info": {
+    "academy_url": "https://example.com/academy",
+    "best_suited_for": [],
+    "documentation_url": "https://example.com/docs",
+    "mock_url": "https://example.com/mock"
+  }
+}

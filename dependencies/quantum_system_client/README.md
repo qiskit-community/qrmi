@@ -31,7 +31,7 @@ This Rust API client provides all functionalities provided by Quantum System API
 
 ## Prerequisites
 
-* Rust 1.98 or above
+* Rust 1.91 or above
 
 ## How to build
 ```shell-session

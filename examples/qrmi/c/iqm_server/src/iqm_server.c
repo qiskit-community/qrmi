@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     rc = qrmi_resource_status_code(res_status, &status);
     qrmi_resource_status_free(res_status);
     if (rc == QRMI_RETURN_CODE_SUCCESS) {
-      if (status == QRMI_RESOURCE_STATUS_CODE_ONLINE) {
+      if (status != QRMI_RESOURCE_STATUS_CODE_ONLINE) {
         fprintf(stderr, "%s cannot be accessed.\n", argv[1]);
         goto error;
       }

@@ -52,14 +52,17 @@ ibm = [
   "qiskit_qasm3_import",
 ]
 pasqal = [
-  "qiskit-pasqal-provider>=0.1.1",
-  "pulser>=1.9.0",
+  "qiskit-pasqal-provider>=0.5.0",
+  "pulser-core>=1.9.0",
 ]
 iqm = [
   "iqm-client[qiskit]",
 ]
 alice-bob = [
   "qiskit-alice-bob-provider",
+]
+oqtopus = [
+  "oqtopus-client",
 ]
 docs = [
   "sphinx>=9.1.0",

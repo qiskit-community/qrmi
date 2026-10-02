@@ -1,0 +1,12 @@
+# Workaround for macOS 27 (Xcode 27 ld): release builds of the Python
+# extension fail to import with "mis-aligned LINKEDIT string pool".
+# Keeping debug info (equivalent to CARGO_PROFILE_RELEASE_DEBUG=true)
+# makes the LINKEDIT string pool land 8-byte aligned. strip=none is
+# required because the release profile otherwise still strips debuginfo.
+#
+# This works by changing the layout, not by fixing the root cause.
+# Remove once the toolchain is bumped to rustc >= 1.98.0, which fixes it.
+# See: https://github.com/2AMLogic/klayout-tools/issues/2261
+#      https://github.com/Airstream-Club-International/aci-export/pull/22
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "debuginfo=2", "-C", "strip=none"]

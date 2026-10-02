@@ -13,4 +13,5 @@ QRMI Examples in Python
     Pasqal Cloud - CUDA-Q <python/PASQAL_CLOUD_CUDAQ>
     Pasqal Local <python/PASQAL_LOCAL>
     Alice and Bob Felis <python/ALICE_AND_BOB>
+    OQTOPUS <python/OQTOPUS>
     QRMI Provider <python/PROVIDER>

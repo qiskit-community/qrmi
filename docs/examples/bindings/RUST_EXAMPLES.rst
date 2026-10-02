@@ -13,4 +13,5 @@ QRMI Examples in Rust
     Pasqal Cloud <rust/PASQAL_CLOUD>
     Pasqal Local <rust/PASQAL_LOCAL>
     Alice and Bob Felis <rust/ALICE_AND_BOB>
+    OQTOPUS <rust/OQTOPUS>
     QRMI Provider <rust/PROVIDER>

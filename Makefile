@@ -32,23 +32,15 @@ ifeq ($(INSIDE_CONTAINER),1)
 endif
 	PYO3_PYTHON=python$(PYTHON_VERSION) cargo build --locked $(CARGO_PROFILE_FLAG) --bin stubgen --features="pyo3"
 
+C_EXAMPLES = $(patsubst %/CMakeLists.txt,%,$(wildcard examples/qrmi/c/*/CMakeLists.txt))
+
 build-c-examples: $(LIBQRMI_SO_PATH)
-	@mkdir -p examples/qrmi/c/ibm_quantum_system/build
-	@cd examples/qrmi/c/ibm_quantum_system/build && \
-		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
-		cmake --build .
-	@mkdir -p examples/qrmi/c/quantum_compute_client/build
-	@cd examples/qrmi/c/quantum_compute_client/build && \
-		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
-		cmake --build .
-	@mkdir -p examples/qrmi/c/pasqal_cloud/build
-	@cd examples/qrmi/c/pasqal_cloud/build && \
-		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
-		cmake --build .
-	@mkdir -p examples/qrmi/c/config/build
-	@cd examples/qrmi/c/config/build && \
-		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
-		cmake --build .
+	@set -e; for dir in $(C_EXAMPLES); do \
+		mkdir -p $$dir/build && \
+		(cd $$dir/build && \
+			cmake -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) .. && \
+			cmake --build .); \
+	done
 
 $(WHEELS_PATH):
 	@source $(PYTHON_VENV_ACTIVATE) && \
@@ -104,6 +96,7 @@ test-doc:
 test-deps:
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum-system-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-cloud-api
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-local-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum_compute_client
 
 test-rust-examples:

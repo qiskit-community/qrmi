@@ -129,6 +129,7 @@ pub enum ResourceType {
     PasqalLocal,
     AliceBobFelis,
     IQMServer,
+    OQTOPUS,
 }
 impl From<ResourceType> for crate::models::ResourceType {
     fn from(value: ResourceType) -> Self {
@@ -144,6 +145,7 @@ impl From<ResourceType> for crate::models::ResourceType {
             ResourceType::PasqalLocal => crate::models::ResourceType::PasqalLocal,
             ResourceType::AliceBobFelis => crate::models::ResourceType::AliceBobFelis,
             ResourceType::IQMServer => crate::models::ResourceType::IQMServer,
+            ResourceType::OQTOPUS => crate::models::ResourceType::OQTOPUS,
         }
     }
 }
@@ -240,14 +242,12 @@ impl PyQuantumResource {
                 1, // stacklevel
             ),
         )?;
-        let result = py.detach(|| self.rt.block_on(async { self.qrmi.status().await }));
-        match result {
-            Ok(v) => Ok(matches!(
-                v.status,
-                crate::models::ResourceStatusCode::Online
-            )),
-            Err(e) => Err(to_py_err(e)),
-        }
+        // Deliberately calls the (deprecated) trait method rather than
+        // deriving the answer from status(): each vendor keeps its own
+        // definition of "accessible", so this binding's behavior is unchanged.
+        #[allow(deprecated)]
+        let result = py.detach(|| self.rt.block_on(async { self.qrmi.is_accessible().await }));
+        result.map_err(to_py_err)
     }
 
     fn status(&mut self, py: Python<'_>) -> PyResult<ResourceStatus> {
@@ -284,6 +284,7 @@ impl PyQuantumResource {
                 crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
                 crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
                 crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+                crate::models::ResourceType::OQTOPUS => ResourceType::OQTOPUS,
             }),
             Err(e) => Err(to_py_err(e)),
         }
@@ -420,6 +421,7 @@ impl PyResourceDef {
             crate::models::ResourceType::PasqalLocal => ResourceType::PasqalLocal,
             crate::models::ResourceType::AliceBobFelis => ResourceType::AliceBobFelis,
             crate::models::ResourceType::IQMServer => ResourceType::IQMServer,
+            crate::models::ResourceType::OQTOPUS => ResourceType::OQTOPUS,
         }
     }
 

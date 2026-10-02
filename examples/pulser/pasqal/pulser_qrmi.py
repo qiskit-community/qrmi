@@ -17,24 +17,11 @@ from pulser.backend.remote import JobParams
 from pulser.register import Register
 
 from qrmi.pulser.connection import PulserQRMIConnection
-from qrmi.pulser.service import QRMIService
 
 # Create QRMI
 load_dotenv()
-service = QRMIService()
 
-resources = service.resources()
-if len(resources) == 0:
-    raise RuntimeError("No quantum resource is available.")
-
-# Select QR
-for res in resources:
-    print(f"Available resource: id={res.resource_id()} type={str(res.resource_type())}")
-
-# For this example, we select the first resource
-qrmi = resources[0]
-
-qrmi_conn = PulserQRMIConnection(qrmi)
+qrmi_conn = PulserQRMIConnection()
 
 # Generate Pulser device.
 # Emulator targets may not expose device specs so we fall back to DigitalAnalogDevice.

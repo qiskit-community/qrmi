@@ -35,7 +35,7 @@ print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type(
 
 # Check if QR it's accessible
 is_avail = qrmi.status().status == ResourceStatusCode.Online
-print("Pasqal Cloud QR is %s accessible" % "not" if not is_avail else "")
+print("Pasqal Cloud QR is %saccessible" % ("" if is_avail else "not "))
 
 # Get target
 target = qrmi.target()

@@ -17,7 +17,7 @@ Quantum Resource Management Interface (QRMI)
 .. rubric:: Supported Vendors
    :class: centered
 
-.. grid:: 1 2 4 4
+.. grid:: 1 2 5 5
 
     .. grid-item::
 
@@ -53,6 +53,14 @@ Quantum Resource Management Interface (QRMI)
 
     .. grid-item::
 
+        .. figure:: /_static/images/oqtopus-logo-light.png
+           :figclass: light-only
+           :width: 100%
+           :target: https://oqtopus-team.github.io/
+           :align: center
+
+    .. grid-item::
+
         .. figure:: /_static/images/ibm-quantum-logo-dark.png
            :figclass: dark-only
            :width: 90%
@@ -83,12 +91,20 @@ Quantum Resource Management Interface (QRMI)
            :target: https://iqm.tech/
            :align: center
 
+    .. grid-item::
+
+        .. figure:: /_static/images/oqtopus-logo-dark.png
+           :figclass: dark-only
+           :width: 100%
+           :target: https://oqtopus-team.github.io/
+           :align: center
+
 .. raw:: html
 
    <div style="text-align:center">
 
 |License| |Current Release| |Platform| \ 
- |PyPI - Python Version| |manylinux| |C99| |Lua| |Minimum rustc 1.98| \ 
+ |PyPI - Python Version| |manylinux| |C99| |Lua| |Minimum rustc 1.91| \ 
  |Downloads| |Download2| |DOI| |arXiv| |CI|
 
 .. raw:: html
@@ -104,7 +120,7 @@ Quantum Resource Management Interface (QRMI)
 .. |manylinux| image:: https://img.shields.io/badge/manylinux-2__28-blue.svg?logo=linux&logoColor=white
 .. |C99| image:: https://img.shields.io/badge/C-C99-blue.svg?logo=c&logoColor=white
 .. |Lua| image:: https://img.shields.io/badge/lua-5.4%2B-blue.svg?logo=lua&logoColor=white
-.. |Minimum rustc 1.98| image:: https://img.shields.io/badge/rustc-1.98+-blue.svg
+.. |Minimum rustc 1.91| image:: https://img.shields.io/badge/rustc-1.91+-blue.svg
    :target: https://rust-lang.github.io/rfcs/2495-min-rust-version.html
 .. |Downloads| image:: https://img.shields.io/pypi/dm/qrmi.svg
    :target: https://pypi.org/project/qrmi/

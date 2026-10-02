@@ -1,0 +1,171 @@
+---
+# End-to-end tests of the Python bindings against local stand-ins of on-prem quantum resources.
+# - wheel builds QRMI once (with Munge, needed by Pasqal Local) and shares it with every backend job.
+# - Each backend job starts its service, installs the wheel and runs python/tests/integration/test_<backend>.py.
+# To add a backend, add a job that follows the same steps and a matching test file.
+
+name: E2E
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore: [ "docs/**", "**.md", "**.rst" ]
+  # Weekly as well, since Warden and the simulator track their main branches.
+  # Runs at 00:00 UTC every Saturday, like on-schedule.yml.
+  schedule:
+  - cron: '0 0 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  WARDEN_REF: main
+  QSA_SIM_REF: main
+
+jobs:
+  wheel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      python-version: ${{ steps.sysinfo.outputs.python-version }}
+    env:
+      # Debug build without debug info: compiles and caches faster than --release.
+      CARGO_PROFILE_DEV_DEBUG: 0
+    steps:
+    - uses: actions/checkout@v6
+    - name: System info
+      id: sysinfo
+      run: echo "python-version=$(make get-python-version)" >> "$GITHUB_OUTPUT"
+    - uses: astral-sh/setup-uv@v10.2.0
+      with:
+        python-version: ${{ steps.sysinfo.outputs.python-version }}
+        cache-dependency-glob: requirements-dev.txt
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - name: Install Munge
+      run: sudo apt-get update && sudo apt-get install -y libmunge-dev
+    - name: Build wheel
+      run: uvx --from "$(grep ^maturin requirements-dev.txt)" maturin build --features munge,pyo3/abi3,qrmi/pyo3 --out dist
+    - uses: actions/upload-artifact@v7
+      with:
+        name: e2e-wheel
+        path: dist/*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  pasqal-local:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [wheel]
+    env:
+      PASQAL_LOCAL_QRMI_WARDEN_URL: http://127.0.0.1:4207
+      QRMI_JOB_ID: "1"
+      # Emulate submitted sequences with QuTiP instead of returning canned results.
+      MOCK_QPU_API_EMUL: "1"
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
+      with:
+        repository: pasqal-io/warden
+        ref: ${{ env.WARDEN_REF }}
+        path: warden
+    - uses: astral-sh/setup-uv@v10.2.0
+      with:
+        python-version: ${{ needs.wheel.outputs.python-version }}
+        activate-environment: true
+        cache-dependency-glob: |
+          pyproject.toml
+          warden/requirements.txt
+    - name: Start Munge
+      run: |
+        sudo apt-get update && sudo apt-get install -y munge
+        sudo systemctl start munge
+        munge -n | unmunge
+        echo "QRMI_JOB_UID=$(id -u)" >> "$GITHUB_ENV"
+    - name: Start Warden and mock QPU
+      working-directory: warden
+      run: |
+        uv venv .venv && uv pip install -p .venv -r requirements.txt
+        cat > config.yaml <<EOF
+        api: {port: 4207, admin_users: ["$(id -u)"]}
+        database: {backend: sqlite, name: $PWD/warden.db}
+        qpu: {uri: "http://127.0.0.1:8000"}
+        EOF
+        .venv/bin/alembic -c warden/api/alembic.ini upgrade head
+        nohup .venv/bin/python -m uvicorn mock_qpu_api.app:app --app-dir tests > mock-qpu.log 2>&1 &
+        nohup .venv/bin/python -m warden > warden.log 2>&1 &
+        curl -sf --retry 30 --retry-all-errors --retry-delay 1 "$PASQAL_LOCAL_QRMI_WARDEN_URL/accessible"
+    - uses: actions/download-artifact@v8
+      with:
+        name: e2e-wheel
+        path: dist
+    - name: Install wheel
+      run: uv pip install "$(ls dist/*.whl)[pasqal]" pytest
+    - name: Run tests
+      run: pytest -v python/tests/integration/test_pasqal_local.py
+    - if: failure()
+      name: Show service logs
+      working-directory: warden
+      run: tail -n 200 warden.log mock-qpu.log
+
+  ibm-quantum-system:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [wheel]
+    env:
+      QSASIM_IAM_APIKEY: e2eapikey
+      QSASIM_SERVICE_CRN: crn:v1:local:qsa_sim
+      QSASIM_BIND_PORT: 8290
+      fake_lagos_QRMI_IBM_QS_ENDPOINT: http://127.0.0.1:8290
+      fake_lagos_QRMI_IBM_QS_IAM_ENDPOINT: http://127.0.0.1:8290
+      fake_lagos_QRMI_IBM_QS_IAM_APIKEY: e2eapikey
+      fake_lagos_QRMI_IBM_QS_SERVICE_CRN: crn:v1:local:qsa_sim
+      fake_lagos_QRMI_IBM_QS_AWS_ACCESS_KEY_ID: e2eaccesskey
+      fake_lagos_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY: e2esecretkey
+      fake_lagos_QRMI_IBM_QS_S3_ENDPOINT: http://127.0.0.1:9000
+      fake_lagos_QRMI_IBM_QS_S3_BUCKET: e2e
+      fake_lagos_QRMI_IBM_QS_S3_REGION: us-east
+      fake_lagos_QRMI_JOB_TIMEOUT_SECONDS: 300
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
+      with:
+        repository: qrmi-community/simulated_quantum_resource
+        ref: ${{ env.QSA_SIM_REF }}
+        path: qsa-sim
+    - uses: astral-sh/setup-uv@v10.2.0
+      with:
+        python-version: ${{ needs.wheel.outputs.python-version }}
+        activate-environment: true
+        cache-dependency-glob: |
+          pyproject.toml
+          qsa-sim/requirements.txt
+    # Run the simulator from source, the same service its docker-compose.yml builds. Its S3 store is
+    # moto instead of MinIO, which no longer publishes container images.
+    - name: Start Simulated Quantum Resource
+      working-directory: qsa-sim
+      run: |
+        uv venv .venv && uv pip install -p .venv -r requirements.txt "moto[server]==5.2.3"
+        nohup .venv/bin/moto_server -p 9000 > moto.log 2>&1 &
+        nohup .venv/bin/python -m qsa_sim.app config.yaml > qsa-sim.log 2>&1 &
+        curl -sf --retry 30 --retry-all-errors --retry-delay 1 -o /dev/null "$fake_lagos_QRMI_IBM_QS_S3_ENDPOINT/moto-api/"
+        .venv/bin/python -c "import boto3, os; boto3.client('s3', endpoint_url=os.environ['fake_lagos_QRMI_IBM_QS_S3_ENDPOINT'],
+          aws_access_key_id=os.environ['fake_lagos_QRMI_IBM_QS_AWS_ACCESS_KEY_ID'],
+          aws_secret_access_key=os.environ['fake_lagos_QRMI_IBM_QS_AWS_SECRET_ACCESS_KEY']).create_bucket(Bucket=os.environ['fake_lagos_QRMI_IBM_QS_S3_BUCKET'])"
+        curl -sf --retry 30 --retry-all-errors --retry-delay 1 "$fake_lagos_QRMI_IBM_QS_ENDPOINT/version"
+    - uses: actions/download-artifact@v8
+      with:
+        name: e2e-wheel
+        path: dist
+    - name: Install wheel
+      run: uv pip install "$(ls dist/*.whl)[ibm]" pytest
+    - name: Run tests
+      run: pytest -v python/tests/integration/test_ibm_quantum_system.py
+    - if: failure()
+      name: Show service logs
+      working-directory: qsa-sim
+      run: tail -n 200 qsa-sim.log moto.log
