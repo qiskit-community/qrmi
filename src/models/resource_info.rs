@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::ResourceType;
+use crate::models::{ResourceStatusCode, ResourceType};
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
@@ -47,7 +47,7 @@ pub struct QuantumResourceInfo {
     pub has_queue: bool,
     pub max_shots: Option<u64>,
     pub pending_job_count: Option<u64>, // number of jobs currently queued on the backend
-    pub status: String, // quantum resource status (online, offline, maintenance etc. TBD)
+    pub status: Option<ResourceStatusCode>, // same as status().status; None if not reported
 
     // Extra: vendor-specific, structured or raw data
     pub extra: serde_json::Value,
@@ -69,7 +69,7 @@ impl QuantumResourceInfo {
             has_queue: false,
             max_shots: None,
             pending_job_count: None,
-            status: String::new(),
+            status: None,
             extra: serde_json::Value::Null,
         }
     }
@@ -91,6 +91,7 @@ mod tests {
         assert_eq!(json["resource_type"], "pasqal-local");
         assert_eq!(json["qubit_type"], "neural_atom");
         assert!(json["max_shots"].is_null());
+        assert!(json["status"].is_null());
         assert!(json["extra"].is_null());
     }
 }

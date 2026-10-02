@@ -117,11 +117,14 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        Ok(QuantumResourceInfo::new(
+        let mut info = QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
             QubitType::NeuralAtom,
-        ))
+        );
+        apply_device_specs(&mut info, &self.target().await?.value)?;
+        info.status = Some(self.status().await?.status);
+        Ok(info)
     }
 
     async fn acquire(&mut self) -> Result<String> {
@@ -195,6 +198,25 @@ impl QuantumResource for PasqalLocal {
         metadata.insert("backend_name".to_string(), self.backend_name.clone());
         metadata
     }
+}
+
+/// Fills `info` from the Pulser device specs returned by `target()`,
+/// i.e. `[{"device_type": ..., "specs": "<Pulser device JSON>"}]`.
+fn apply_device_specs(info: &mut QuantumResourceInfo, target: &str) -> Result<()> {
+    #[derive(serde::Deserialize)]
+    struct Entry {
+        specs: String,
+    }
+    let [entry]: [Entry; 1] = serde_json::from_str(target)?;
+    let specs: serde_json::Value = serde_json::from_str(&entry.specs)?;
+    info.backend_display_name = specs["name"].as_str().unwrap_or_default().to_string();
+    info.num_qubits = specs["max_atom_num"]
+        .as_u64()
+        .and_then(|n| u32::try_from(n).ok())
+        .unwrap_or(0);
+    info.max_shots = specs["max_runs"].as_u64();
+    info.has_queue = true;
+    Ok(())
 }
 
 #[cfg(test)]
