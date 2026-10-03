@@ -82,6 +82,7 @@ class App:
         "pasqal-cloud": ResourceType.PasqalCloud,
         "iqm-server": ResourceType.IQMServer,
         "alice-bob-felis": ResourceType.AliceBobFelis,
+        "oqtopus": ResourceType.OQTOPUS,
     }
 
     def __init__(self, name: str, input_filename: str, output_filename: str):
@@ -197,6 +198,12 @@ class App:
                 payload = Payload.AliceBobFelis(
                     human_qir=json.dumps(task_input["human_qir"]),
                     input_params=json.dumps(task_input["input_params"]),
+                )
+            elif res_type in [
+                ResourceType.OQTOPUS,
+            ]:
+                payload = Payload.Oqtopus(
+                    job_spec=json.dumps(task_input["job_spec"]),
                 )
             else:
                 payload = Payload.PasqalCloud(
