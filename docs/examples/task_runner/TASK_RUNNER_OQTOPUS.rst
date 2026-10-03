@@ -1,7 +1,7 @@
 .. _task_runner_oqtopus:
 
-Tools to Generate OQTOPUS program input from Qiskit QuantumCircuit
-==================================================================
+Tools to Generate OQTOPUS job spec JSON input from Qiskit QuantumCircuit
+========================================================================
 
 .. container:: buttons
 
@@ -11,7 +11,7 @@ Tools to Generate OQTOPUS program input from Qiskit QuantumCircuit
 
 --------------
 
-The tools demonstrate the generation of OQTOPUS program input from a quantum
+The tools demonstrate the generation of OQTOPUS job spec JSON input from a quantum
 circuit example.
 
 
@@ -37,17 +37,18 @@ Tools
 
 .. _gen_sampling_inputs.py: https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/oqtopus/gen_sampling_inputs.py
 
-Genetates OQTOPUS program input from Bell-state QuantumCircuit.
+Genetates OQTOPUS job spec JSON input from Bell-state QuantumCircuit.
 
 Usage:
 
 .. code-block:: bash
 
-   usage: gen_sampling_inputs.py [-h] output
+   usage: gen_sampling_inputs.py [-h] device_id
 
+   A tool to generate OQTOPUS job spec JSON input from Bell-state QuantumCircuit
 
    positional arguments:
-     output      output file
+     device_id   device ID
 
    options:
      -h, --help  show this help message and exit
@@ -56,4 +57,4 @@ Example:
 
 .. code-block:: bash
 
-   python gen_sampling_inputs.py bell_state.txt
+   python gen_sampling_inputs.py qulacs
