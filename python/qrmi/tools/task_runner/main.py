@@ -203,7 +203,7 @@ class App:
                 ResourceType.OQTOPUS,
             ]:
                 payload = Payload.Oqtopus(
-                    job_spec=json.dumps(task_input["job_spec"]),
+                    job_spec=json.dumps(task_input),
                 )
             else:
                 payload = Payload.PasqalCloud(
