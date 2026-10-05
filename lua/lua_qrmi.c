@@ -1075,23 +1075,128 @@ static int l_status(lua_State *L) {
  *
  * Lua usage:
  * @code
- *   local info_json, err = resource:describe()
+ *   local info, err = resource:describe()
  * @endcode
  *
  * @param L Lua state. Stack arguments: [1] resource (qrmi.resource userdata).
  * @return Number of values pushed onto the Lua stack.
- *         On success: 1 (info_json: string, a JSON object)
+ *         On success: 1 (info: table)
  *         On failure: 2 (nil, err: string)
  */
 static int l_describe(lua_State *L) {
     lua_qrmi_resource_t *ud = check_resource(L, 1);
 
-    char *info = NULL;
+    QrmiQuantumResourceInfo *info = NULL;
     QrmiReturnCode rc = qrmi_resource_describe(ud->handle, &info);
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
 
-    lua_pushstring(L, info);
-    qrmi_string_free(info);
+    lua_newtable(L);
+
+    char *resource_id = qrmi_quantum_resource_info_resource_id(info);
+    lua_pushstring(L, resource_id);
+    qrmi_string_free(resource_id);
+    lua_setfield(L, -2, "resource_id");
+
+    char *resource_type = qrmi_quantum_resource_info_resource_type(info);
+    lua_pushstring(L, resource_type);
+    qrmi_string_free(resource_type);
+    lua_setfield(L, -2, "resource_type");
+
+    char *backend_display_name = qrmi_quantum_resource_info_backend_display_name(info);
+    lua_pushstring(L, backend_display_name);
+    qrmi_string_free(backend_display_name);
+    lua_setfield(L, -2, "backend_display_name");
+
+    uint32_t num_qubits = 0;
+    qrmi_quantum_resource_info_num_qubits(info, &num_qubits);
+    lua_pushinteger(L, (lua_Integer)num_qubits);
+    lua_setfield(L, -2, "num_qubits");
+
+    QrmiQubitType qubit_type;
+    qrmi_quantum_resource_info_qubit_type(info, &qubit_type);
+    lua_pushstring(L, qrmi_qubit_type_to_string(qubit_type));
+    lua_setfield(L, -2, "qubit_type");
+
+    char *processor_name = qrmi_quantum_resource_info_processor_name(info);
+    if (processor_name) {
+        lua_pushstring(L, processor_name);
+        qrmi_string_free(processor_name);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "processor_name");
+
+    char *processor_revision = qrmi_quantum_resource_info_processor_revision(info);
+    if (processor_revision) {
+        lua_pushstring(L, processor_revision);
+        qrmi_string_free(processor_revision);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "processor_revision");
+
+    char *description = qrmi_quantum_resource_info_description(info);
+    if (description) {
+        lua_pushstring(L, description);
+        qrmi_string_free(description);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "description");
+
+    bool is_simulator = false;
+    qrmi_quantum_resource_info_is_simulator(info, &is_simulator);
+    lua_pushboolean(L, is_simulator);
+    lua_setfield(L, -2, "is_simulator");
+
+    bool has_queue = false;
+    qrmi_quantum_resource_info_has_queue(info, &has_queue);
+    lua_pushboolean(L, has_queue);
+    lua_setfield(L, -2, "has_queue");
+
+    uint64_t max_shots = 0;
+    if (qrmi_quantum_resource_info_max_shots(info, &max_shots) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushinteger(L, (lua_Integer)max_shots);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "max_shots");
+
+    uint64_t pending_job_count = 0;
+    if (qrmi_quantum_resource_info_pending_job_count(info, &pending_job_count) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushinteger(L, (lua_Integer)pending_job_count);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "pending_job_count");
+
+    QrmiResourceStatusCode status_code;
+    if (qrmi_quantum_resource_info_status(info, &status_code) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushstring(L, status_code_to_string(status_code));
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "status");
+
+    char *last_updated = qrmi_quantum_resource_info_last_updated(info);
+    if (last_updated) {
+        lua_pushstring(L, last_updated);
+        qrmi_string_free(last_updated);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "last_updated");
+
+    char *extra = qrmi_quantum_resource_info_extra(info);
+    if (extra) {
+        lua_pushstring(L, extra);
+        qrmi_string_free(extra);
+    } else {
+        lua_pushnil(L);
+    }
+    lua_setfield(L, -2, "extra");
+
+    qrmi_quantum_resource_info_free(info);
     return 1;
 }
 

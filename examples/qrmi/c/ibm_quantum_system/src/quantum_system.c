@@ -54,11 +54,15 @@ int main(int argc, char *argv[]) {
     qrmi_string_free(resource_id);
   }
 
-  char *info = NULL;
+  QrmiQuantumResourceInfo *info = NULL;
   rc = qrmi_resource_describe(qrmi, &info);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-    printf("describe: %s\n", info);
-    qrmi_string_free(info);
+    char *backend_display_name = qrmi_quantum_resource_info_backend_display_name(info);
+    uint32_t num_qubits = 0;
+    qrmi_quantum_resource_info_num_qubits(info, &num_qubits);
+    printf("describe: backend_display_name=%s, num_qubits=%u\n", backend_display_name, num_qubits);
+    qrmi_string_free(backend_display_name);
+    qrmi_quantum_resource_info_free(info);
   }
 
   QrmiResourceStatus *res_status = NULL;
