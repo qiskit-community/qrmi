@@ -67,10 +67,10 @@ fn apply_device_specs_maps_pulser_device() {
         QubitType::NeuralAtom,
     );
     apply_device_specs(&mut info, &target).unwrap();
-    assert_eq!(info.backend_display_name, "FRESNEL");
-    assert_eq!(info.num_qubits, 100);
+    assert_eq!(info.backend_display_name, Some("FRESNEL".to_string()));
+    assert_eq!(info.num_qubits, Some(100));
     assert_eq!(info.max_shots, Some(1000));
-    assert!(info.has_queue);
+    assert_eq!(info.has_queue, Some(true));
 }
 
 #[test]

@@ -1103,13 +1103,20 @@ static int l_describe(lua_State *L) {
     lua_setfield(L, -2, "resource_type");
 
     char *backend_display_name = qrmi_quantum_resource_info_backend_display_name(info);
-    lua_pushstring(L, backend_display_name);
-    qrmi_string_free(backend_display_name);
+    if (backend_display_name) {
+        lua_pushstring(L, backend_display_name);
+        qrmi_string_free(backend_display_name);
+    } else {
+        lua_pushnil(L);
+    }
     lua_setfield(L, -2, "backend_display_name");
 
     uint32_t num_qubits = 0;
-    qrmi_quantum_resource_info_num_qubits(info, &num_qubits);
-    lua_pushinteger(L, (lua_Integer)num_qubits);
+    if (qrmi_quantum_resource_info_num_qubits(info, &num_qubits) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushinteger(L, (lua_Integer)num_qubits);
+    } else {
+        lua_pushnil(L);
+    }
     lua_setfield(L, -2, "num_qubits");
 
     QrmiQubitType qubit_type;
@@ -1145,13 +1152,19 @@ static int l_describe(lua_State *L) {
     lua_setfield(L, -2, "description");
 
     bool is_simulator = false;
-    qrmi_quantum_resource_info_is_simulator(info, &is_simulator);
-    lua_pushboolean(L, is_simulator);
+    if (qrmi_quantum_resource_info_is_simulator(info, &is_simulator) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushboolean(L, is_simulator);
+    } else {
+        lua_pushnil(L);
+    }
     lua_setfield(L, -2, "is_simulator");
 
     bool has_queue = false;
-    qrmi_quantum_resource_info_has_queue(info, &has_queue);
-    lua_pushboolean(L, has_queue);
+    if (qrmi_quantum_resource_info_has_queue(info, &has_queue) == QRMI_RETURN_CODE_SUCCESS) {
+        lua_pushboolean(L, has_queue);
+    } else {
+        lua_pushnil(L);
+    }
     lua_setfield(L, -2, "has_queue");
 
     uint64_t max_shots = 0;

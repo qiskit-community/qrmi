@@ -2168,7 +2168,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
 }
 
 /// @ingroup QrmiQuantumResourceInfo
-/// Returns the human-readable backend name reported by the provider API.
+/// Returns the human-readable backend name reported by the provider API, if reported.
 ///
 /// # Safety
 ///
@@ -2176,7 +2176,8 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
 ///
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @return The backend's display name. Must call qrmi_string_free() to
-///         free if no longer used. Returns NULL if `info` is NULL.
+///         free if no longer used. Returns NULL if `info` is NULL or the
+///         vendor did not report this field.
 /// @version 0.26.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
@@ -2186,14 +2187,17 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
     if info.is_null() {
         return std::ptr::null_mut();
     }
-    match CString::new((*info).inner.backend_display_name.as_str()) {
-        Ok(cstr) => cstr.into_raw(),
-        Err(_) => std::ptr::null_mut(),
+    match &(*info).inner.backend_display_name {
+        Some(v) => match CString::new(v.as_str()) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
     }
 }
 
 /// @ingroup QrmiQuantumResourceInfo
-/// Returns the number of qubits the resource exposes.
+/// Returns the number of qubits the resource exposes, if reported.
 ///
 /// # Safety
 ///
@@ -2204,6 +2208,8 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @param (outp) [out] The number of qubits
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
 /// @version 0.26.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
@@ -2214,8 +2220,15 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
     if info.is_null() || outp.is_null() {
         return ReturnCode::NullPointerError;
     }
-    *outp = (*info).inner.num_qubits;
-    ReturnCode::Success
+    match (*info).inner.num_qubits {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _fail(QrmiError::UnsupportedFunction(
+            "this vendor does not report a qubit count".to_string(),
+        )),
+    }
 }
 
 /// @ingroup QrmiQuantumResourceInfo
@@ -2354,7 +2367,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
 }
 
 /// @ingroup QrmiQuantumResourceInfo
-/// Returns whether the resource is a simulator.
+/// Returns whether the resource is a simulator, if reported.
 ///
 /// # Safety
 ///
@@ -2365,6 +2378,8 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @param (outp) [out] Whether the resource is a simulator
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
 /// @version 0.26.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
@@ -2375,12 +2390,19 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
     if info.is_null() || outp.is_null() {
         return ReturnCode::NullPointerError;
     }
-    *outp = (*info).inner.is_simulator;
-    ReturnCode::Success
+    match (*info).inner.is_simulator {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _fail(QrmiError::UnsupportedFunction(
+            "this vendor does not report whether the resource is a simulator".to_string(),
+        )),
+    }
 }
 
 /// @ingroup QrmiQuantumResourceInfo
-/// Returns whether the resource has its own (second-level) job queue.
+/// Returns whether the resource has its own (second-level) job queue, if reported.
 ///
 /// # Safety
 ///
@@ -2391,6 +2413,8 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @param (outp) [out] Whether the resource has its own queue
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
 /// @version 0.26.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
@@ -2401,8 +2425,15 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
     if info.is_null() || outp.is_null() {
         return ReturnCode::NullPointerError;
     }
-    *outp = (*info).inner.has_queue;
-    ReturnCode::Success
+    match (*info).inner.has_queue {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _fail(QrmiError::UnsupportedFunction(
+            "this vendor does not report whether the resource has its own queue".to_string(),
+        )),
+    }
 }
 
 /// @ingroup QrmiQuantumResourceInfo
