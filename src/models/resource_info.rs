@@ -38,14 +38,14 @@ pub struct QuantumResourceInfo {
     // Common
     pub resource_id: String,   // same as one can be obtained by resource_id()
     pub resource_type: String, // same as one can be obtained by resource_name()
-    pub backend_display_name: String, // Human-readable name reported by the provider API
-    pub num_qubits: u32,
+    pub backend_display_name: Option<String>, // Human-readable name reported by the provider API; None if not reported
+    pub num_qubits: Option<u32>,              // None if not reported
     pub qubit_type: QubitType,
     pub processor_name: Option<String>, // e.g. hardware generation name
     pub processor_revision: Option<String>,
     pub description: Option<String>,
-    pub is_simulator: bool,
-    pub has_queue: bool,
+    pub is_simulator: Option<bool>, // None if not reported
+    pub has_queue: Option<bool>,    // None if not reported
     pub max_shots: Option<u64>,
     pub pending_job_count: Option<u64>, // number of jobs currently queued on the backend
     pub status: Option<ResourceStatusCode>, // same as status().status; None if not reported
@@ -64,14 +64,14 @@ impl QuantumResourceInfo {
         Self {
             resource_id,
             resource_type: resource_type.as_str().to_string(),
-            backend_display_name: String::new(),
-            num_qubits: 0,
+            backend_display_name: None,
+            num_qubits: None,
             qubit_type,
             processor_name: None,
             processor_revision: None,
             description: None,
-            is_simulator: false,
-            has_queue: false,
+            is_simulator: None,
+            has_queue: None,
             max_shots: None,
             pending_job_count: None,
             status: None,
@@ -96,6 +96,10 @@ mod tests {
         assert_eq!(json["resource_id"], "fresnel");
         assert_eq!(json["resource_type"], "pasqal-local");
         assert_eq!(json["qubit_type"], "neural_atom");
+        assert!(json["backend_display_name"].is_null());
+        assert!(json["num_qubits"].is_null());
+        assert!(json["is_simulator"].is_null());
+        assert!(json["has_queue"].is_null());
         assert!(json["max_shots"].is_null());
         assert!(json["status"].is_null());
         assert!(json["last_updated"].is_null());
