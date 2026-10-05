@@ -13,6 +13,7 @@
 use crate::models::{ResourceStatusCode, ResourceType};
 use serde::Serialize;
 
+#[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QubitType {
@@ -48,6 +49,10 @@ pub struct QuantumResourceInfo {
     pub max_shots: Option<u64>,
     pub pending_job_count: Option<u64>, // number of jobs currently queued on the backend
     pub status: Option<ResourceStatusCode>, // same as status().status; None if not reported
+    /// RFC 3339 timestamp of when this information was last generated or
+    /// refreshed on the vendor's side (e.g. the calibration/maintenance
+    /// date), if reported.
+    pub last_updated: Option<String>,
 
     // Extra: vendor-specific, structured or raw data
     pub extra: serde_json::Value,
@@ -70,6 +75,7 @@ impl QuantumResourceInfo {
             max_shots: None,
             pending_job_count: None,
             status: None,
+            last_updated: None,
             extra: serde_json::Value::Null,
         }
     }
@@ -92,6 +98,7 @@ mod tests {
         assert_eq!(json["qubit_type"], "neural_atom");
         assert!(json["max_shots"].is_null());
         assert!(json["status"].is_null());
+        assert!(json["last_updated"].is_null());
         assert!(json["extra"].is_null());
     }
 }

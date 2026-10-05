@@ -248,11 +248,17 @@ Stops a running task.
 
 ### `resource:describe()`
 
-Fetches the resource's configuration and attributes (qubit type, number of
-qubits, pending job count, vendor-specific `extra` data, etc.) as a JSON
-object string. Wraps `qrmi_resource_describe`.
+Fetches the resource's configuration and attributes as a Lua table:
+`resource_id`, `resource_type`, `backend_display_name` (strings),
+`num_qubits` (integer), `qubit_type` (string, e.g. `"neural_atom"`),
+`processor_name`, `processor_revision`, `description`, `last_updated`
+(strings or `nil`), `is_simulator`, `has_queue` (booleans), `max_shots`,
+`pending_job_count` (integers or `nil`), `status` (string, e.g.
+`"online"`, or `nil`), and `extra` (a JSON object string with
+vendor-specific data, or `nil`). Wraps `qrmi_resource_describe` and its
+`qrmi_quantum_resource_info_*` accessors.
 
-**Returns:** on success, `info_json` (string); on failure, `nil, err`
+**Returns:** on success, `info` (table); on failure, `nil, err`
 
 ### `resource:metadata()`
 
