@@ -13,8 +13,8 @@ Every PR that touches a vendor implementation falls into one of three tiers. Sta
 | Tier | Typical changes | Review rule |
 |---|---|---|
 | **A: Approval required** | Changes to behaviour or APIs, such as job submission, authentication, or configuration semantics | Vendor approval is required before merge. The timeout does not apply. |
-| **B: Review requested** | Refactors, dependency bumps, updates that follow changes to the shared interface | The vendor is requested as a reviewer. If there is no reply within the vendor's timeout, maintainers may merge. |
-| **C: Notify only** | Typos, docs, lint, formatting, CI | Maintainers may merge. The vendor is tagged for visibility only. |
+| **B: Review requested** | Refactors, dependency bumps, updates that follow changes to the shared interface, small internal bug fixes | The vendor is requested as a reviewer. If there is no reply within the vendor's timeout(default 1 week), maintainers may merge. |
+| **C: Notify only** | Typos, docs, lint, formatting, CI, example code changes | Maintainers may merge. The vendor is tagged for visibility only. |
 
 If you are unsure which tier applies, choose the higher one.
 
@@ -62,6 +62,8 @@ Each vendor fills in its own row and can update it at any time by opening a PR a
 |---|---|---|---|---|
 | AnB | Jamie Machin | C (interim) | [__] | Emulators only for now; revisit after the backend rework |
 | Pasqal | Aleksander Wennersteen | [A / B / C] | [__] | [__] |
+| IBM, IQM, OQTPUS | Munetaka Ohtani | A | [__] | [__] |
+| [Vendor] | [Name] | [A / B / C] | [__] | [__] |
 | [Vendor] | [Name] | [A / B / C] | [__] | [__] |
 
 **Column guide**
