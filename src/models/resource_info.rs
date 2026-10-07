@@ -23,8 +23,8 @@ pub enum QubitType {
     TrappedIon,
     /// Photonic Quantum Computers,
     Photonic,
-    /// Neural-Atom Quantum Computers
-    NeuralAtom,
+    /// Neutral-Atom Quantum Computers
+    NeutralAtom,
     /// Semiconductor-based Quantum Computers
     Semiconductor,
     /// Other types of Quantum Computers
@@ -90,12 +90,12 @@ mod tests {
         let info = QuantumResourceInfo::new(
             "fresnel".to_string(),
             &ResourceType::PasqalLocal,
-            QubitType::NeuralAtom,
+            QubitType::NeutralAtom,
         );
         let json = serde_json::to_value(&info).unwrap();
         assert_eq!(json["resource_id"], "fresnel");
         assert_eq!(json["resource_type"], "pasqal-local");
-        assert_eq!(json["qubit_type"], "neural_atom");
+        assert_eq!(json["qubit_type"], "neutral_atom");
         assert!(json["backend_display_name"].is_null());
         assert!(json["num_qubits"].is_null());
         assert!(json["is_simulator"].is_null());

@@ -57,11 +57,16 @@ int main(int argc, char *argv[]) {
   QrmiQuantumResourceInfo *info = NULL;
   rc = qrmi_resource_describe(qrmi, &info);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+    /* Optional fields: NULL / non-success when the vendor does not report them. */
     char *backend_display_name = qrmi_quantum_resource_info_backend_display_name(info);
-    uint32_t num_qubits = 0;
-    qrmi_quantum_resource_info_num_qubits(info, &num_qubits);
-    printf("describe: backend_display_name=%s, num_qubits=%u\n", backend_display_name, num_qubits);
-    qrmi_string_free(backend_display_name);
+    if (backend_display_name != NULL) {
+      printf("describe: backend_display_name=%s\n", backend_display_name);
+      qrmi_string_free(backend_display_name);
+    }
+    uint32_t num_qubits;
+    if (qrmi_quantum_resource_info_num_qubits(info, &num_qubits) == QRMI_RETURN_CODE_SUCCESS) {
+      printf("describe: num_qubits=%u\n", num_qubits);
+    }
     qrmi_quantum_resource_info_free(info);
   }
 

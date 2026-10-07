@@ -2259,7 +2259,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_qubit_type(
 
 /// @ingroup QrmiQuantumResourceInfo
 /// Converts a QrmiQubitType value to a human-readable, lowercase string
-/// ("superconducting", "trapped_ion", "photonic", "neural_atom",
+/// ("superconducting", "trapped_ion", "photonic", "neutral_atom",
 /// "semiconductor", "other"). Intended for logging and diagnostic output.
 ///
 /// @param (qubit_type) [in] A QrmiQubitType value
@@ -2273,7 +2273,7 @@ pub extern "C" fn qrmi_qubit_type_to_string(qubit_type: crate::models::QubitType
         QubitType::Superconducting => c"superconducting".as_ptr(),
         QubitType::TrappedIon => c"trapped_ion".as_ptr(),
         QubitType::Photonic => c"photonic".as_ptr(),
-        QubitType::NeuralAtom => c"neural_atom".as_ptr(),
+        QubitType::NeutralAtom => c"neutral_atom".as_ptr(),
         QubitType::Semiconductor => c"semiconductor".as_ptr(),
         QubitType::Other => c"other".as_ptr(),
     }
