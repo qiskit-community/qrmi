@@ -2067,7 +2067,7 @@ pub unsafe extern "C" fn qrmi_resource_target(
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (outp) [out] A QrmiQuantumResourceInfo handle if succeeded. Must call qrmi_quantum_resource_info_free() to free if no longer used.
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_describe(
     qrmi: *mut QuantumResource,
@@ -2102,7 +2102,7 @@ pub unsafe extern "C" fn qrmi_resource_describe(
 ///
 /// @param (ptr) [in] A QrmiQuantumResourceInfo handle to be free
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_free(
     ptr: *mut QuantumResourceInfo,
@@ -2127,7 +2127,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_free(
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @return The resource identifier. Must call qrmi_string_free() to free
 ///         if no longer used. Returns NULL if `info` is NULL.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_id(
     info: *mut QuantumResourceInfo,
@@ -2152,7 +2152,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_id(
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @return The resource type. Must call qrmi_string_free() to free if no
 ///         longer used. Returns NULL if `info` is NULL.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
     info: *mut QuantumResourceInfo,
@@ -2178,7 +2178,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
 /// @return The backend's display name. Must call qrmi_string_free() to
 ///         free if no longer used. Returns NULL if `info` is NULL or the
 ///         vendor did not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
     info: *mut QuantumResourceInfo,
@@ -2210,7 +2210,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
 ///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
 ///         if the vendor does not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
     info: *mut QuantumResourceInfo,
@@ -2243,7 +2243,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
 /// @param (info) [in] A QrmiQuantumResourceInfo handle
 /// @param (outp) [out] The qubit type
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_qubit_type(
     info: *mut QuantumResourceInfo,
@@ -2265,7 +2265,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_qubit_type(
 /// @param (qubit_type) [in] A QrmiQubitType value
 /// @return A statically-allocated, human-readable string. Must NOT be
 ///         freed and remains valid for the lifetime of the program.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub extern "C" fn qrmi_qubit_type_to_string(qubit_type: crate::models::QubitType) -> *const c_char {
     use crate::models::QubitType;
@@ -2290,7 +2290,7 @@ pub extern "C" fn qrmi_qubit_type_to_string(qubit_type: crate::models::QubitType
 /// @return The processor name. Must call qrmi_string_free() to free if no
 ///         longer used. Returns NULL if `info` is NULL or the vendor did
 ///         not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_name(
     info: *mut QuantumResourceInfo,
@@ -2319,7 +2319,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_name(
 /// @return The processor revision. Must call qrmi_string_free() to free
 ///         if no longer used. Returns NULL if `info` is NULL or the
 ///         vendor did not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_revision(
     info: *mut QuantumResourceInfo,
@@ -2348,7 +2348,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_revision(
 /// @return The description. Must call qrmi_string_free() to free if no
 ///         longer used. Returns NULL if `info` is NULL or the vendor did
 ///         not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
     info: *mut QuantumResourceInfo,
@@ -2380,7 +2380,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
 ///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
 ///         if the vendor does not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
     info: *mut QuantumResourceInfo,
@@ -2415,7 +2415,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
 ///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
 ///         if the vendor does not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
     info: *mut QuantumResourceInfo,
@@ -2450,7 +2450,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
 ///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
 ///         if the vendor does not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_max_shots(
     info: *mut QuantumResourceInfo,
@@ -2485,7 +2485,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_max_shots(
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
 ///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
 ///         if the vendor does not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_pending_job_count(
     info: *mut QuantumResourceInfo,
@@ -2521,7 +2521,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_pending_job_count(
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
 ///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
 ///         if the vendor does not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_status(
     info: *mut QuantumResourceInfo,
@@ -2554,7 +2554,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_status(
 /// @return The timestamp. Must call qrmi_string_free() to free if no
 ///         longer used. Returns NULL if `info` is NULL or the vendor did
 ///         not report this field.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_last_updated(
     info: *mut QuantumResourceInfo,
@@ -2584,7 +2584,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_last_updated(
 /// @return The extra data, serialized as JSON. Must call
 ///         qrmi_string_free() to free if no longer used. Returns NULL if
 ///         `info` is NULL or no extra data was reported.
-/// @version 0.26.0
+/// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_extra(
     info: *mut QuantumResourceInfo,

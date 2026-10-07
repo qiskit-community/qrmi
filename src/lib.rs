@@ -471,7 +471,7 @@ pub trait QuantumResource: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    #[deprecated(since = "0.26.0", note = "use `describe()` instead")]
+    #[deprecated(since = "0.27.0", note = "use `describe()` instead")]
     async fn metadata(&mut self) -> std::collections::HashMap<String, String> {
         let resource_type = std::any::type_name::<Self>();
         log::warn!(
