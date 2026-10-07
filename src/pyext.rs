@@ -391,11 +391,14 @@ impl PyQuantumResource {
     /// Deprecated: use ``describe()`` instead.
     fn metadata(&mut self, py: Python<'_>) -> PyResult<std::collections::HashMap<String, String>> {
         crate::common::initialize();
-        PyErr::warn(
-            py,
-            &py.get_type::<pyo3::exceptions::PyDeprecationWarning>(),
-            c"metadata() is deprecated, use describe() instead",
-            1,
+        let warnings = py.import("warnings")?;
+        warnings.call_method1(
+            "warn",
+            (
+                "metadata() is deprecated, use describe() instead",
+                py.get_type::<pyo3::exceptions::PyDeprecationWarning>(),
+                1, // stacklevel
+            ),
         )?;
         #[allow(deprecated)]
         let result = py.detach(|| self.rt.block_on(async { self.qrmi.metadata().await }));
