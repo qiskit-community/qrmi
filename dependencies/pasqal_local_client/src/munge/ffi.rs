@@ -103,13 +103,24 @@ mod dynamic {
         }
         // The fn pointer types above match ABI 2, so prefer the versioned soname and only
         // fall back to the unversioned devel symlink.
+        let m = unsafe { load_first(&["libmunge.so.2", "libmunge.so"]) }?;
+        // A concurrent caller may have won the race; either result is equivalent.
+        Ok(MUNGE.get_or_init(|| m))
+    }
+
+    /// Loads the first library of `names` that provides the munge symbols.
+    ///
+    /// # Safety
+    ///
+    /// Loading a library runs its initialisation routines, so `names` must only
+    /// refer to trusted libraries.
+    unsafe fn load_first(names: &[&str]) -> Result<Munge, String> {
         let mut errors = Vec::new();
-        for name in ["libmunge.so.2", "libmunge.so"] {
-            match unsafe { load(name) } {
+        for name in names {
+            match load(name) {
                 Ok(m) => {
                     log::debug!("munge: loaded {name} dynamically at runtime (dlopen)");
-                    // A concurrent caller may have won the race; either result is equivalent.
-                    return Ok(MUNGE.get_or_init(|| m));
+                    return Ok(m);
                 }
                 Err(e) => errors.push(format!("{name}: {e}")),
             }
@@ -132,6 +143,24 @@ mod dynamic {
 
     pub(crate) unsafe fn call_munge_strerror(err: c_int) -> Result<*const c_char, String> {
         Ok((munge()?.strerror)(err))
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn load_first_reports_every_library_that_failed() {
+            let names = ["libmunge-missing-a.so", "libmunge-missing-b.so"];
+            let err = unsafe { load_first(&names) }
+                .err()
+                .expect("loading missing libraries should fail");
+
+            assert!(err.contains("libmunge could not be loaded"), "{err}");
+            for name in names {
+                assert!(err.contains(name), "{err}");
+            }
+        }
     }
 }
 
