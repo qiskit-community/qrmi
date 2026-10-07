@@ -272,7 +272,7 @@ impl QuantumResource for PasqalCloud {
         Ok(QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
-            QubitType::NeuralAtom,
+            QubitType::NeutralAtom,
         ))
     }
     async fn task_start(&mut self, payload: Payload) -> Result<String> {

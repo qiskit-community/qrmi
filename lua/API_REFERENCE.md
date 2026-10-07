@@ -250,7 +250,7 @@ Stops a running task.
 
 Fetches the resource's configuration and attributes as a Lua table:
 `resource_id`, `resource_type` (strings, always present), `qubit_type`
-(string, e.g. `"neural_atom"`, always present), `backend_display_name`,
+(string, e.g. `"neutral_atom"`, always present), `backend_display_name`,
 `processor_name`, `processor_revision`, `description`, `last_updated`
 (strings or `nil`), `num_qubits`, `max_shots`, `pending_job_count`
 (integers or `nil`), `is_simulator`, `has_queue` (booleans or `nil`),

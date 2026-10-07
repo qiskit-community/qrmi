@@ -120,10 +120,24 @@ impl QuantumResource for PasqalLocal {
         let mut info = QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
-            QubitType::NeuralAtom,
+            QubitType::NeutralAtom,
         );
-        apply_device_specs(&mut info, &self.target().await?.value)?;
-        info.status = Some(self.status().await?.status);
+        info.is_simulator = Some(false);
+        // Specs and status are best-effort: describe() must still answer
+        // when the QPU or Warden is unreachable.
+        if let Err(e) = self
+            .target()
+            .await
+            .and_then(|t| parse_device_specs(&mut info, &t.value))
+        {
+            warn!("{}: device specs unavailable: {e}", self.backend_name);
+        }
+        info.status = self
+            .status()
+            .await
+            .inspect_err(|e| warn!("{}: status unavailable: {e}", self.backend_name))
+            .ok()
+            .map(|s| s.status);
         Ok(info)
     }
 
@@ -202,7 +216,7 @@ impl QuantumResource for PasqalLocal {
 
 /// Fills `info` from the Pulser device specs returned by `target()`,
 /// i.e. `[{"device_type": ..., "specs": "<Pulser device JSON>"}]`.
-fn apply_device_specs(info: &mut QuantumResourceInfo, target: &str) -> Result<()> {
+fn parse_device_specs(info: &mut QuantumResourceInfo, target: &str) -> Result<()> {
     #[derive(serde::Deserialize)]
     struct Entry {
         specs: String,
