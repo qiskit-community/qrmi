@@ -46,10 +46,12 @@ required environment variables are listed below.
 |                                               | ``<backend_name>_QRMI_URL`` is a   |
 |                                               | deprecated fallback.               |
 +-----------------------------------------------+------------------------------------+
-| ``QRMI_JOB_UID``                              | ID of the user executing the job   |
+| ``QRMI_JOB_UID``                              | ID of the user executing the job.  |
+|                                               | Needed only to acquire a session.  |
 +-----------------------------------------------+------------------------------------+
 | ``QRMI_JOB_ID``                               | ID of the scheduler job, including |
-|                                               | the array-task ID for array jobs   |
+|                                               | the array-task ID for array jobs.  |
+|                                               | Needed only to acquire a session.  |
 +-----------------------------------------------+------------------------------------+
 | ``QRMI_JOB_QPU_SLOTS``                        | (optional) QPU slots to claim when |
 |                                               | acquiring a Warden session.        |

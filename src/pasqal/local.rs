@@ -26,10 +26,10 @@ use async_trait::async_trait;
 pub struct PasqalLocal {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
-    pub(crate) job_uid: i32,
-    pub(crate) job_id: String,
-    pub(crate) acquisition_token: Option<String>,
+    pub(crate) job_uid: Option<i32>,
+    pub(crate) job_id: Option<String>,
     pub(crate) qpu_slots: i32,
+    pub(crate) acquisition_token: Option<String>,
 }
 
 impl PasqalLocal {
@@ -40,8 +40,10 @@ impl PasqalLocal {
     /// * `backend_name` - The name of the backend/device to use
     ///
     /// # Environment variables
-    /// * `QRMI_JOB_UID`: uid of the scheduler job
-    /// * `QRMI_JOB_ID`: scheduler job or array-task ID
+    /// * `QRMI_JOB_UID`: uid of the scheduler job, required to acquire a
+    ///   Warden session
+    /// * `QRMI_JOB_ID`: scheduler job or array-task ID, required to acquire a
+    ///   Warden session
     /// * `QRMI_JOB_QPU_SLOTS`: optional number of QPU slots to claim when
     ///   acquiring a Warden session (default `1`)
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
@@ -88,18 +90,22 @@ impl PasqalLocal {
                 None => return Err(err),
             },
         };
-        let job_uid_str = resolve_opt_required("QRMI_JOB_UID", config)?;
-        let job_uid: i32 = job_uid_str
-            .parse()
-            .map_err(|source| QrmiError::ParseError {
-                name: "QRMI_JOB_UID".to_string(),
-                value: job_uid_str,
-                source: Box::new(source),
-            })?;
-
-        let job_id = resolve_opt_required("QRMI_JOB_ID", config)?;
-        let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
+        // The job identity is only needed by acquire(), so a process outside
+        // a job (e.g. a license poller calling status()) can omit it.
+        let job_uid = resolve_opt("QRMI_JOB_UID", config)
+            .map(|value| {
+                value
+                    .parse::<i32>()
+                    .map_err(|source| QrmiError::ParseError {
+                        name: "QRMI_JOB_UID".to_string(),
+                        value,
+                        source: Box::new(source),
+                    })
+            })
+            .transpose()?;
+        let job_id = resolve_opt("QRMI_JOB_ID", config);
         let qpu_slots = parse_qpu_slots(resolve_opt("QRMI_JOB_QPU_SLOTS", config))?;
+        let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
 
         Ok(Self {
             api_client: ClientBuilder::new(url).build()?,
@@ -146,9 +152,14 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn acquire(&mut self) -> Result<String> {
+        let (Some(job_uid), Some(job_id)) = (self.job_uid, self.job_id.as_deref()) else {
+            return Err(QrmiError::InvalidConfig(
+                "QRMI_JOB_UID and QRMI_JOB_ID are required to acquire a Warden session".into(),
+            ));
+        };
         let session = self
             .api_client
-            .create_session(self.job_uid, &self.job_id, self.qpu_slots)
+            .create_session(job_uid, job_id, self.qpu_slots)
             .await?;
         self.acquisition_token = Some(session.id.clone());
         Ok(session.id)

@@ -9,6 +9,8 @@ Pasqal Local now uses the Warden session API that supports QPU slots:
   ``X-Warden-Session`` header instead of putting it in the URL.
 - ``status()`` reports Warden maintenance as ``paused`` and, when Warden manages
   QPU slots, the available and total slots as ``capacity``.
+- ``QRMI_JOB_UID`` and ``QRMI_JOB_ID`` are needed only to acquire a session, so
+  ``status()`` also works outside a job, e.g. in a Slurm license poller.
 
 How to migrate
 --------------

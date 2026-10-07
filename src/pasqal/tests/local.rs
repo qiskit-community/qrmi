@@ -49,6 +49,21 @@ fn from_config_errors_on_missing_key() {
     assert!(PasqalLocal::from_config("test_backend", config).is_err());
 }
 
+#[tokio::test]
+async fn from_config_without_job_identity_cannot_acquire() {
+    use crate::QuantumResource;
+
+    let config = HashMap::from([(
+        "QRMI_WARDEN_URL".to_string(),
+        "http://localhost:8006".to_string(),
+    )]);
+    let mut qrmi = PasqalLocal::from_config("test_backend", config).unwrap();
+    let Err(err) = qrmi.acquire().await else {
+        panic!("expected acquire() without QRMI_JOB_UID/QRMI_JOB_ID to fail");
+    };
+    assert_eq!(err.kind(), QrmiErrorKind::InvalidConfig);
+}
+
 #[test]
 fn job_uid_parsing_fail_raises_qrmi_error() {
     let config = HashMap::from([
