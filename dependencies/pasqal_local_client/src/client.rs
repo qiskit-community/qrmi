@@ -82,8 +82,7 @@ pub struct CreateSessionPayload {
 }
 
 impl Client {
-    /// Return authentication headers for request with a fresh munge token.
-    /// Falls back to dynamically loading libmunge.so if not linked at build time.
+    /// Return authentication headers for request with a fresh munge token
     async fn create_headers(&self) -> Result<header::HeaderMap> {
         let mut headers = header::HeaderMap::new();
         headers.insert(
