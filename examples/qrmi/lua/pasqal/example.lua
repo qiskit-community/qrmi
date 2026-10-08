@@ -27,12 +27,14 @@ if not resource then
 end
 print("resource created")
 
-local meta, meta_err = resource:metadata()
-if not meta then
-    print("metadata failed:", meta_err)
+
+-- Fields the vendor does not report are nil, so pairs() skips them.
+local info, info_err = resource:describe()
+if not info then
+    print("describe failed:", info_err)
 else
-    print("metadata:")
-    for k, v in pairs(meta) do
+    print("describe:")
+    for k, v in pairs(info) do
         print("  " .. k .. " = " .. tostring(v))
     end
 end

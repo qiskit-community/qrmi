@@ -35,6 +35,11 @@ after_includes = """
  *
  *  Functions used when accessing Quantum resource metadata from the QRMI C API.
  *
+ *  @defgroup QrmiQuantumResourceInfo Quantum Resource Info
+ *
+ *  Functions used when accessing a Quantum resource's configuration and
+ *  attributes (as returned by qrmi_resource_describe()) from the QRMI C API.
+ *
  *  @defgroup QrmiResourceProvider Resource Provider
  *
  *  Functions used to dynamically discover quantum resources from a vendor
@@ -68,6 +73,8 @@ rename_variants = "ScreamingSnakeCase"
 "ResourceDef" = "QrmiResourceDef"
 "Payload" = "QrmiPayload"
 "ReturnCode" = "QrmiReturnCode"
+"QuantumResourceInfo" = "QrmiQuantumResourceInfo"
+"QubitType" = "QrmiQubitType"
 
 [export]
 # VERSION_INFO is a build-time marker embedded into the `.version_info` ELF

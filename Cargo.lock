@@ -2615,6 +2615,7 @@ dependencies = [
  "libc",
  "libloading",
  "log",
+ "mockito",
  "pasqal-cloud-api",
  "pasqal-local-api",
  "pyo3",

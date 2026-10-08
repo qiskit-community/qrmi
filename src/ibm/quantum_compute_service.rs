@@ -18,7 +18,8 @@ use crate::ibm::quantum_compute_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
 use crate::models::{
-    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+    Payload, QuantumResourceInfo, QubitType, ResourceStatus, ResourceStatusCode, ResourceType,
+    Target, TaskResult, TaskStatus,
 };
 use crate::{QuantumResource, Result};
 use log::error;
@@ -297,6 +298,18 @@ impl QuantumResource for IBMQuantumComputeService {
             capacity: None,
             pending_job_count: device.queue_length.try_into().ok(),
         })
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let mut info = QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::Superconducting,
+        );
+        if let Some(session_id) = &self.session_id {
+            info.extra = serde_json::json!({ "session_id": session_id });
+        }
+        Ok(info)
     }
 
     /// Creates a new session.

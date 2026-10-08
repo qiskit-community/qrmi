@@ -62,6 +62,33 @@ impl Client {
             .ok_or_else(|| anyhow::anyhow!("No devices found for type {:?}", device_type))
     }
 
+    /// Returns the client's project from the Account API, see:
+    /// https://docs.pasqal.com/cloud/api/account/operations/get-apiv1projectsprojectid/
+    pub async fn get_project(&mut self) -> Result<models::GetProjectResponseData> {
+        let url = format!(
+            "{}/account/api/v1/projects/{}",
+            self.base_url, self.project_id
+        );
+        let resp: models::Response<models::GetProjectResponseData> = self.get(&url).await?;
+        Ok(resp.data)
+    }
+
+    /// Returns the jobs and shots waiting in each queue of a device, see:
+    /// https://docs.pasqal.com/cloud/api/core/operations/get_queue_size_api_v1_devices__dt_name__queue_size_get/
+    pub async fn get_queue_size(
+        &mut self,
+        device_type: models::DeviceType,
+    ) -> Result<models::GetQueueSizeResponseData> {
+        let url = format!(
+            "{}/core-fast/api/v1/devices/{}/queue-size",
+            self.base_url, device_type,
+        );
+        let resp: models::Response<Option<models::GetQueueSizeResponseData>> =
+            self.get(&url).await?;
+        resp.data
+            .ok_or_else(|| anyhow::anyhow!("No queue size returned for {}", device_type))
+    }
+
     /// Pasqal Cloud works with batches of jobs rather than
     /// individual jobs, see:
     /// https://docs.pasqal.com/cloud/batches/

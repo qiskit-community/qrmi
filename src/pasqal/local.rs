@@ -11,12 +11,15 @@
 // that they have been altered from the originals.
 
 use crate::common::{required_env, resolve_opt, resolve_opt_required};
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, QuantumResourceInfo, QubitType, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
 use pasqal_local_api::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 
+use super::parse_device_specs;
 use async_trait::async_trait;
 
 /// QRMI implementation for Pasqal Local
@@ -112,6 +115,31 @@ impl QuantumResource for PasqalLocal {
     async fn is_accessible(&mut self) -> Result<bool> {
         let accessible = self.api_client.get_accessible().await?;
         Ok(accessible.is_accessible)
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let mut info = QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::NeutralAtom,
+        );
+        info.is_simulator = Some(false);
+        // Specs and status are best-effort: describe() must still answer
+        // when the QPU or Warden is unreachable.
+        if let Err(e) = self
+            .target()
+            .await
+            .and_then(|t| parse_device_specs(&mut info, &t.value))
+        {
+            warn!("{}: device specs unavailable: {e}", self.backend_name);
+        }
+        info.status = self
+            .status()
+            .await
+            .inspect_err(|e| warn!("{}: status unavailable: {e}", self.backend_name))
+            .ok()
+            .map(|s| s.status);
+        Ok(info)
     }
 
     async fn acquire(&mut self) -> Result<String> {

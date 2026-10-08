@@ -96,3 +96,6 @@ rpmbuild/
 docs/_build/
 docs/_build_linkcheck/
 docs/_api/
+
+# Python stubs
+python/qrmi/_core/*.pyi

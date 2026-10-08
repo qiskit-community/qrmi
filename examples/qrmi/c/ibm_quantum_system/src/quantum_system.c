@@ -54,21 +54,20 @@ int main(int argc, char *argv[]) {
     qrmi_string_free(resource_id);
   }
 
-  QrmiResourceMetadata *metadata = NULL;
-  rc = qrmi_resource_metadata(qrmi, &metadata);
+  QrmiQuantumResourceInfo *info = NULL;
+  rc = qrmi_resource_describe(qrmi, &info);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
-    size_t num_keys = 0;
-    char **metadata_keys = NULL;
-    rc = qrmi_resource_metadata_keys(metadata, &num_keys, &metadata_keys);
-    if (rc == QRMI_RETURN_CODE_SUCCESS) {
-      for (int i = 0; i < num_keys; i++) {
-        char *value = qrmi_resource_metadata_value(metadata, metadata_keys[i]);
-        printf("metadata key=[%s], value=[%s]\n", metadata_keys[i], value);
-        qrmi_string_free(value);
-      }
-      qrmi_string_array_free(num_keys, metadata_keys);
+    /* Optional fields: NULL / non-success when the vendor does not report them. */
+    char *backend_display_name = qrmi_quantum_resource_info_backend_display_name(info);
+    if (backend_display_name != NULL) {
+      printf("describe: backend_display_name=%s\n", backend_display_name);
+      qrmi_string_free(backend_display_name);
     }
-    qrmi_resource_metadata_free(metadata);
+    uint32_t num_qubits;
+    if (qrmi_quantum_resource_info_num_qubits(info, &num_qubits) == QRMI_RETURN_CODE_SUCCESS) {
+      printf("describe: num_qubits=%u\n", num_qubits);
+    }
+    qrmi_quantum_resource_info_free(info);
   }
 
   QrmiResourceStatus *res_status = NULL;

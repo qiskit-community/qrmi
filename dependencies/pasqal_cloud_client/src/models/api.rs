@@ -43,6 +43,24 @@ pub struct GetDeviceSpecsResponseData {
     pub specs: String,
 }
 
+/// Subset of the Account API project fields used by QRMI; others are ignored.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetProjectResponseData {
+    pub queue_priority: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetQueueSizeResponseData {
+    pub device_queues: Vec<DeviceQueue>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeviceQueue {
+    pub queue: String,
+    pub number_of_jobs: Option<u64>,
+    pub number_of_shots: Option<u64>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateBatchResponseData {
     pub id: String,

@@ -28,7 +28,9 @@ use crate::ibm::error::{classify, IbmError, ResourceKind};
 use crate::ibm::qiskit_runtime_service::models::{
     CreateJobRequestOneOfAllOfParams, EstimatorV2Input, NoiseLearnerInput, SamplerV2Input,
 };
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, QuantumResourceInfo, QubitType, ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::{QuantumResource, Result};
 use log::error;
 use quantum_compute_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
@@ -171,6 +173,18 @@ impl QuantumResource for IBMQiskitRuntimeService {
             .unwrap_or_else(|| "unknown".to_string());
         // Return true if status is "active" or "online"
         Ok(status_str.to_lowercase() == "active" || status_str.to_lowercase() == "online")
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let mut info = QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::Superconducting,
+        );
+        if let Some(session_id) = &self.session_id {
+            info.extra = serde_json::json!({ "session_id": session_id });
+        }
+        Ok(info)
     }
 
     /// Creates a new session.
