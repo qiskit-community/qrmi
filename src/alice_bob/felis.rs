@@ -139,11 +139,13 @@ impl QuantumResource for AliceBobFelis {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        Ok(QuantumResourceInfo::new(
+        let mut info = QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
             QubitType::Superconducting,
-        ))
+        );
+        info.extra = json!({ "felis_target": self.felis_target });
+        Ok(info)
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {

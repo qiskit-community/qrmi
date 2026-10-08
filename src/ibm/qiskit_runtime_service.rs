@@ -176,11 +176,15 @@ impl QuantumResource for IBMQiskitRuntimeService {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        Ok(QuantumResourceInfo::new(
+        let mut info = QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
             QubitType::Superconducting,
-        ))
+        );
+        if let Some(session_id) = &self.session_id {
+            info.extra = serde_json::json!({ "session_id": session_id });
+        }
+        Ok(info)
     }
 
     /// Creates a new session.
