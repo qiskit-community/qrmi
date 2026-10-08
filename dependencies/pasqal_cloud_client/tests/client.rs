@@ -450,3 +450,55 @@ async fn failed_request_reports_status_and_body() {
     assert!(message.contains("422"));
     assert!(message.contains("Invalid sequence builder."));
 }
+
+#[tokio::test]
+async fn get_queue_size_is_authenticated_and_parses_queues() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("GET", "/core-fast/api/v1/devices/FRESNEL/queue-size")
+        .match_header("authorization", "Bearer opaque-token")
+        .with_status(200)
+        .with_body(
+            json!({"data":{"device_queues":[
+                {"queue":"default","number_of_jobs":3,"number_of_shots":300},
+                {"queue":"priority","number_of_jobs":null,"number_of_shots":null}
+            ]}})
+            .to_string(),
+        )
+        .create_async()
+        .await;
+
+    let resp = client_for(&server)
+        .get_queue_size(DeviceType::Fresnel)
+        .await
+        .expect("queue size should succeed");
+
+    mock.assert_async().await;
+    assert_eq!(resp.device_queues.len(), 2);
+    assert_eq!(resp.device_queues[0].number_of_jobs, Some(3));
+    assert_eq!(resp.device_queues[1].number_of_jobs, None);
+}
+
+#[tokio::test]
+async fn get_project_reads_queue_priority_from_account_api() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("GET", "/account/api/v1/projects/project-id")
+        .match_header("authorization", "Bearer opaque-token")
+        .with_status(200)
+        .with_body(
+            json!({"code":"200","status":"OK","message":"success",
+                   "data":{"id":"project-id","queue_priority":"MEDIUM","package":"explorer"}})
+            .to_string(),
+        )
+        .create_async()
+        .await;
+
+    let project = client_for(&server)
+        .get_project()
+        .await
+        .expect("get_project should succeed");
+
+    mock.assert_async().await;
+    assert_eq!(project.queue_priority, "MEDIUM");
+}
