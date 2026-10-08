@@ -61,13 +61,30 @@ typedef struct {
  * @return Always 2 (number of values pushed: nil, errmsg).
  */
 static int push_qrmi_error(lua_State *L, QrmiReturnCode rc) {
-    const char *err = qrmi_get_last_error();
+    char *err = qrmi_get_last_error();
     lua_pushnil(L);
     if (err) {
         lua_pushstring(L, err);
+        qrmi_string_free(err);
     } else {
         lua_pushfstring(L, "qrmi error (code=%d)", (int)rc);
     }
+    return 2;
+}
+
+/**
+ * @brief Push `nil, errmsg` for a QRMI C API call that returned NULL.
+ *
+ * Uses the qrmi_get_last_error() message when available, otherwise
+ * `fallback`.
+ *
+ * @return Always 2 (number of values pushed: nil, errmsg).
+ */
+static int push_last_error(lua_State *L, const char *fallback) {
+    char *err = qrmi_get_last_error();
+    lua_pushnil(L);
+    lua_pushstring(L, err ? err : fallback);
+    if (err) qrmi_string_free(err);
     return 2;
 }
 
@@ -171,10 +188,7 @@ static int l_qrmi_new(lua_State *L) {
 
     QrmiQuantumResource *handle = qrmi_resource_new(resource_id, type);
     if (!handle) {
-        const char *err = qrmi_get_last_error();
-        lua_pushnil(L);
-        lua_pushstring(L, err ? err : "qrmi_resource_new failed");
-        return 2;
+        return push_last_error(L, "qrmi_resource_new failed");
     }
 
     lua_qrmi_resource_t *ud = (lua_qrmi_resource_t *)lua_newuserdata(L, sizeof(lua_qrmi_resource_t));
@@ -312,10 +326,7 @@ static int l_qrmi_new_from_config(lua_State *L) {
     free_config_pairs(pairs, count);
 
     if (!handle) {
-        const char *err = qrmi_get_last_error();
-        lua_pushnil(L);
-        lua_pushstring(L, err ? err : "qrmi_resource_new_from_config failed");
-        return 2;
+        return push_last_error(L, "qrmi_resource_new_from_config failed");
     }
 
     lua_qrmi_resource_t *ud = (lua_qrmi_resource_t *)lua_newuserdata(L, sizeof(lua_qrmi_resource_t));
@@ -1346,10 +1357,7 @@ static int l_qrmi_load_config(lua_State *L) {
 
     QrmiConfig *handle = qrmi_config_load(filename);
     if (!handle) {
-        const char *err = qrmi_get_last_error();
-        lua_pushnil(L);
-        lua_pushstring(L, err ? err : "qrmi_config_load failed");
-        return 2;
+        return push_last_error(L, "qrmi_config_load failed");
     }
 
     lua_qrmi_config_t *ud = (lua_qrmi_config_t *)lua_newuserdata(L, sizeof(lua_qrmi_config_t));
@@ -1408,10 +1416,7 @@ static int l_config_resource_def(lua_State *L) {
 
     QrmiResourceDef *def = qrmi_config_resource_def_get(ud->handle, resource_id);
     if (!def) {
-        const char *err = qrmi_get_last_error();
-        lua_pushnil(L);
-        lua_pushstring(L, err ? err : "qrmi_config_resource_def_get failed");
-        return 2;
+        return push_last_error(L, "qrmi_config_resource_def_get failed");
     }
 
     lua_newtable(L);
