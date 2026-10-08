@@ -54,8 +54,10 @@ with open("pulser_seq.json", "w") as f:
 
 ```shell-session
 $ cargo clean
-$ cargo build --release --features=qrmi/munge
+$ cargo build --release
 ```
+
+Munge is loaded dynamically at runtime, so no feature flag is needed. To link `libmunge` at build time instead, add `--features=qrmi/munge` (requires the Munge development package).
 
 ## How to run this example
 ```shell-session

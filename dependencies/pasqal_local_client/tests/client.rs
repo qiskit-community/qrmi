@@ -58,17 +58,3 @@ async fn failed_request_reports_status_and_body() {
     assert!(message.contains("503"));
     assert!(message.contains("QPU unreachable"));
 }
-
-#[cfg(not(feature = "munge"))]
-#[tokio::test]
-async fn authenticated_requests_need_munge_feature() {
-    let server = mockito::Server::new_async().await;
-    let client = client_for(&server);
-
-    let err = client
-        .create_session(1000, "42")
-        .await
-        .expect_err("create_session should fail without munge");
-
-    assert!(err.to_string().contains("Munge support is disabled"));
-}

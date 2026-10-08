@@ -16,7 +16,6 @@
 
 mod client;
 mod models;
-#[cfg(feature = "munge")]
 mod munge;
 
 pub use client::{Client, ClientBuilder};

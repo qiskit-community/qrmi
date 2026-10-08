@@ -9,19 +9,15 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MungeError {
+    #[error("munge encode failed: {0}")]
     EncodeFailed(String),
-}
 
-impl fmt::Display for MungeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            MungeError::EncodeFailed(msg) => write!(f, "munge encode failed: {msg}"),
-        }
-    }
+    /// Munge support wasn't linked in at build time and `libmunge.so`
+    /// couldn't be loaded dynamically either.
+    #[error("munge unavailable: {0}")]
+    Unavailable(String),
 }
-
-impl std::error::Error for MungeError {}
