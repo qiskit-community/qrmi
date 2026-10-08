@@ -311,11 +311,15 @@ impl QuantumResource for IQMServer {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        Ok(QuantumResourceInfo::new(
+        let mut info = QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
             QubitType::Superconducting,
-        ))
+        );
+        if let Some(acquisition_token) = &self.acquisition_token {
+            info.extra = serde_json::json!({ "acquisition_token": acquisition_token });
+        }
+        Ok(info)
     }
 
     /// Starts a job task.
