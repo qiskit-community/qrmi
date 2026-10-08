@@ -255,7 +255,7 @@ impl QuantumResource for IBMQuantumSystem {
         // IAM permission. Accounts that lack this permission receive a 403, so
         // treat any failure here as "capacity info unavailable" rather than a
         // fatal error -- mirroring the approach taken for IQMServer in #287.
-        let mut capacity_error: Option<String> = None;
+        let mut capacity_error = None;
         let capacity = match tokio::join!(
             self.api_client
                 .get_backend_lanes_configuration::<BackendLanesConfiguration>(
