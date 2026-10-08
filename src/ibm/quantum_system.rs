@@ -245,20 +245,56 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn status(&mut self) -> Result<ResourceStatus> {
-        let (backend, lane_config, jobs) = tokio::try_join!(
-            self.api_client.get_backend::<Backend>(&self.backend_name),
-            self.api_client
-                .get_backend_lanes_configuration::<BackendLanesConfiguration>(&self.backend_name),
-            self.api_client.list_jobs::<Jobs>()
-        )?;
+        // get_backend is mandatory: without it we cannot determine Online/Offline.
+        let backend = self
+            .api_client
+            .get_backend::<Backend>(&self.backend_name)
+            .await?;
 
-        // `list_jobs` also returns finished jobs; only running ones occupy a lane.
-        let count = jobs
-            .jobs
-            .iter()
-            .filter(|job| job.backend == self.backend_name)
-            .filter(|job| matches!(job.status, JobStatus::Running))
-            .count() as u64;
+        // get_backend_lanes_configuration requires the `direct-access-lane-configuration.list`
+        // IAM permission. Accounts that lack this permission receive a 403, so
+        // treat any failure here as "capacity info unavailable" rather than a
+        // fatal error -- mirroring the approach taken for IQMServer in #287.
+        let mut capacity_error: Option<String> = None;
+        let capacity = match tokio::join!(
+            self.api_client
+                .get_backend_lanes_configuration::<BackendLanesConfiguration>(
+                    &self.backend_name
+                ),
+            self.api_client.list_jobs::<Jobs>()
+        ) {
+            (Ok(lane_config), Ok(jobs)) => {
+                // `list_jobs` also returns finished jobs; only running ones occupy a lane.
+                let count = jobs
+                    .jobs
+                    .iter()
+                    .filter(|job| job.backend == self.backend_name)
+                    .filter(|job| matches!(job.status, JobStatus::Running))
+                    .count() as u64;
+                Some(ResourceCapacity {
+                    available_slots: lane_config.hpc_workload_manager.lanes.saturating_sub(count),
+                    max_slots: lane_config.hpc_workload_manager.lanes,
+                })
+            }
+            (Err(e), _) => {
+                // The most common cause is the account missing the
+                // `direct-access-lane-configuration.list` IAM permission (HTTP 403).
+                capacity_error = Some(format!(
+                    "could not retrieve lane configuration ({}); \
+                     capacity info will not be available",
+                    e
+                ));
+                None
+            }
+            (_, Err(e)) => {
+                capacity_error = Some(format!(
+                    "could not retrieve job list ({}); \
+                     capacity info will not be available",
+                    e
+                ));
+                None
+            }
+        };
 
         let status = match backend.status {
             BackendStatus::Online => ResourceStatusCode::Online,
@@ -268,13 +304,10 @@ impl QuantumResource for IBMQuantumSystem {
 
         Ok(ResourceStatus {
             status,
-            status_reason: None,
+            status_reason: capacity_error,
             busy: backend.locked,
             healthy: None,
-            capacity: Some(ResourceCapacity {
-                available_slots: lane_config.hpc_workload_manager.lanes.saturating_sub(count),
-                max_slots: lane_config.hpc_workload_manager.lanes,
-            }),
+            capacity,
             pending_job_count: None,
         })
     }
