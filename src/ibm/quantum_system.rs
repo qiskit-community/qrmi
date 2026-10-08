@@ -245,25 +245,19 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn status(&mut self) -> Result<ResourceStatus> {
-        // get_backend is mandatory: without it we cannot determine Online/Offline.
-        let backend = self
-            .api_client
-            .get_backend::<Backend>(&self.backend_name)
-            .await?;
-
-        // get_backend_lanes_configuration requires the `direct-access-lane-configuration.list`
-        // IAM permission. Accounts that lack this permission receive a 403, so
-        // treat any failure here as "capacity info unavailable" rather than a
-        // fatal error -- mirroring the approach taken for IQMServer in #287.
-        let mut capacity_error = None;
-        let capacity = match tokio::join!(
+        // All three calls run concurrently. get_backend is mandatory; the other
+        // two require the `direct-access-lane-configuration.list` IAM permission
+        // and are treated as optional -- a 403 yields degraded status rather
+        // than a fatal error.
+        let (backend, capacity, capacity_error) = match tokio::join!(
+            self.api_client.get_backend::<Backend>(&self.backend_name),
             self.api_client
                 .get_backend_lanes_configuration::<BackendLanesConfiguration>(
                     &self.backend_name
                 ),
             self.api_client.list_jobs::<Jobs>()
         ) {
-            (Ok(lane_config), Ok(jobs)) => {
+            (Ok(backend), Ok(lane_config), Ok(jobs)) => {
                 // `list_jobs` also returns finished jobs; only running ones occupy a lane.
                 let count = jobs
                     .jobs
@@ -271,29 +265,39 @@ impl QuantumResource for IBMQuantumSystem {
                     .filter(|job| job.backend == self.backend_name)
                     .filter(|job| matches!(job.status, JobStatus::Running))
                     .count() as u64;
-                Some(ResourceCapacity {
-                    available_slots: lane_config.hpc_workload_manager.lanes.saturating_sub(count),
-                    max_slots: lane_config.hpc_workload_manager.lanes,
-                })
+                (
+                    backend,
+                    Some(ResourceCapacity {
+                        available_slots: lane_config
+                            .hpc_workload_manager
+                            .lanes
+                            .saturating_sub(count),
+                        max_slots: lane_config.hpc_workload_manager.lanes,
+                    }),
+                    None,
+                )
             }
-            (Err(e), _) => {
+            (Err(e), _, _) => return Err(e.into()),
+            (Ok(backend), Err(e), _) => (
+                backend,
+                None,
                 // The most common cause is the account missing the
                 // `direct-access-lane-configuration.list` IAM permission (HTTP 403).
-                capacity_error = Some(format!(
+                Some(format!(
                     "could not retrieve lane configuration ({}); \
                      capacity info will not be available",
                     e
-                ));
-                None
-            }
-            (_, Err(e)) => {
-                capacity_error = Some(format!(
+                )),
+            ),
+            (Ok(backend), _, Err(e)) => (
+                backend,
+                None,
+                Some(format!(
                     "could not retrieve job list ({}); \
                      capacity info will not be available",
                     e
-                ));
-                None
-            }
+                )),
+            ),
         };
 
         let status = match backend.status {
