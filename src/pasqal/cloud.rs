@@ -21,6 +21,7 @@ use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 
 use super::cloud_config::PasqalCloudConfig;
+use super::parse_device_specs;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -269,12 +270,37 @@ impl QuantumResource for PasqalCloud {
     }
 
     async fn describe(&mut self) -> Result<QuantumResourceInfo> {
-        Ok(QuantumResourceInfo::new(
+        let mut info = QuantumResourceInfo::new(
             self.resource_id().await?,
             &self.resource_type().await?,
             QubitType::NeutralAtom,
-        ))
+        );
+        // Cloud jobs are always queued, on QPUs and emulators alike.
+        info.has_queue = Some(true);
+        // For emulators, target() returns the public specs of every cloud
+        // device, which do not describe the emulator itself.
+        let is_simulator = self.backend_name.starts_with("EMU");
+        info.is_simulator = Some(is_simulator);
+        // Specs and status are best-effort: describe() must still answer
+        // when the cloud API is unreachable.
+        if !is_simulator {
+            if let Err(e) = self
+                .target()
+                .await
+                .and_then(|t| parse_device_specs(&mut info, &t.value))
+            {
+                warn!("{}: device specs unavailable: {e}", self.backend_name);
+            }
+        }
+        info.status = self
+            .status()
+            .await
+            .inspect_err(|e| warn!("{}: status unavailable: {e}", self.backend_name))
+            .ok()
+            .map(|s| s.status);
+        Ok(info)
     }
+
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
         debug!(
             "Starting task on PasqalCloud QRMI (backend '{}')",
