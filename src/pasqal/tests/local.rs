@@ -85,9 +85,9 @@ async fn describe_succeeds_when_warden_unreachable() {
         ("QRMI_JOB_UID".to_string(), "1000".to_string()),
         ("QRMI_JOB_ID".to_string(), "1".to_string()),
     ]);
-    let mut qrmi = PasqalLocal::from_config("fresnel", config).unwrap();
+    let mut qrmi = PasqalLocal::from_config("FRESNEL", config).unwrap();
     let info = qrmi.describe().await.unwrap();
-    assert_eq!(info.resource_id, "fresnel");
+    assert_eq!(info.resource_id, "FRESNEL");
     assert_eq!(info.num_qubits, None);
     assert_eq!(info.status, None);
 }

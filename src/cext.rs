@@ -257,6 +257,11 @@ thread_local! {
 /// Set last error message text
 fn _set_last_error(msg: String) {
     log::error!("{}", msg);
+    _store_last_error(msg);
+}
+
+/// Stores `msg` as the last error text without logging it.
+fn _store_last_error(msg: String) {
     LAST_ERROR.with(|cell| {
         *cell.borrow_mut() =
             Some(CString::new(msg).unwrap_or_else(|_| {
@@ -285,6 +290,17 @@ fn _record_error(err: QrmiError) {
     let kind = err.kind();
     LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
     _set_last_error(err.to_string());
+}
+
+/// Like `_fail(QrmiError::UnsupportedFunction(..))` for an optional
+/// QuantumResourceInfo field the vendor does not report, but logged at debug
+/// level: a missing optional field is expected, not an error.
+fn _not_reported(what: &str) -> ReturnCode {
+    let err = QrmiError::UnsupportedFunction(format!("this vendor does not report {what}"));
+    log::debug!("{err}");
+    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = err.kind());
+    _store_last_error(err.to_string());
+    ReturnCode::from(err.kind())
 }
 
 /// Converts a Rust string into a `CString` suitable for handing across the
@@ -2225,9 +2241,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
             *outp = v;
             ReturnCode::Success
         }
-        None => _fail(QrmiError::UnsupportedFunction(
-            "this vendor does not report a qubit count".to_string(),
-        )),
+        None => _not_reported("a qubit count"),
     }
 }
 
@@ -2395,9 +2409,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
             *outp = v;
             ReturnCode::Success
         }
-        None => _fail(QrmiError::UnsupportedFunction(
-            "this vendor does not report whether the resource is a simulator".to_string(),
-        )),
+        None => _not_reported("whether the resource is a simulator"),
     }
 }
 
@@ -2430,9 +2442,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
             *outp = v;
             ReturnCode::Success
         }
-        None => _fail(QrmiError::UnsupportedFunction(
-            "this vendor does not report whether the resource has its own queue".to_string(),
-        )),
+        None => _not_reported("whether the resource has its own queue"),
     }
 }
 
@@ -2465,9 +2475,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_max_shots(
             *outp = v;
             ReturnCode::Success
         }
-        None => _fail(QrmiError::UnsupportedFunction(
-            "this vendor does not report a maximum shot count".to_string(),
-        )),
+        None => _not_reported("a maximum shot count"),
     }
 }
 
@@ -2500,9 +2508,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_pending_job_count(
             *outp = v;
             ReturnCode::Success
         }
-        None => _fail(QrmiError::UnsupportedFunction(
-            "this vendor does not report a pending job count".to_string(),
-        )),
+        None => _not_reported("a pending job count"),
     }
 }
 
@@ -2536,9 +2542,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_status(
             *outp = v.clone();
             ReturnCode::Success
         }
-        None => _fail(QrmiError::UnsupportedFunction(
-            "this vendor does not report a status".to_string(),
-        )),
+        None => _not_reported("a status"),
     }
 }
 
