@@ -252,9 +252,7 @@ impl QuantumResource for IBMQuantumSystem {
         let (backend, capacity, capacity_error) = match tokio::join!(
             self.api_client.get_backend::<Backend>(&self.backend_name),
             self.api_client
-                .get_backend_lanes_configuration::<BackendLanesConfiguration>(
-                    &self.backend_name
-                ),
+                .get_backend_lanes_configuration::<BackendLanesConfiguration>(&self.backend_name),
             self.api_client.list_jobs::<Jobs>()
         ) {
             (Ok(backend), Ok(lane_config), Ok(jobs)) => {
