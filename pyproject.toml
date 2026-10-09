@@ -56,7 +56,7 @@ pasqal = [
   "pulser-core>=1.9.0",
 ]
 iqm = [
-  "iqm-client[qiskit]",
+  "iqm-client[qiskit]~=35.0.0",
 ]
 alice-bob = [
   "qiskit-alice-bob-provider",
