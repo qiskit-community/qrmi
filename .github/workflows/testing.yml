@@ -47,7 +47,7 @@ jobs:
 
           pip install \
             "qiskit_ibm_runtime>=0.30.0,<0.46.0" \
-            "iqm-client[qiskit-pin-iqm]>=35.0.1,<36.0.0"
+            "iqm-client[qiskit]~=35.0.0,<36.0"
 
       - name: Run compatibility tests
         run: |
