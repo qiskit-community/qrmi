@@ -33,7 +33,10 @@ from qiskit.result import Counts, Result
 
 from iqm.iqm_client import CircuitCompilationOptions, CircuitValidationError
 from iqm.iqm_client.util import to_json_dict
-from iqm.station_control.interface.models.observation_set import CalibrationSet, QualityMetricSet
+from iqm.station_control.interface.models.observation_set import (
+    CalibrationSet,
+    QualityMetricSet,
+)
 from iqm.pulse import Circuit
 from iqm.qiskit_iqm.iqm_backend import IQMBackendBase
 from iqm.qiskit_iqm.qiskit_to_iqm import MeasurementKey, serialize_instructions
