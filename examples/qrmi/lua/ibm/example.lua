@@ -73,7 +73,7 @@ if not token then
     print("acquire failed:", tok_err)
     os.exit(1)
 end
-print("acquired, token =", token)
+print("acquired")
 
 -- Read the task input payload from an external file, using its content as-is.
 local payload_file = io.open(arg[4], "r")
