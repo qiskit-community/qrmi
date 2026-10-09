@@ -2299,7 +2299,6 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "retry-policies",
- "rhexdump",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2330,7 +2329,6 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "retry-policies",
- "rhexdump",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2656,7 +2654,6 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "retry-policies",
- "rhexdump",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -3017,12 +3014,6 @@ dependencies = [
  "hmac 0.12.1",
  "subtle",
 ]
-
-[[package]]
-name = "rhexdump"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a92cbe1a3dd221e3777fef339115d3b85e17a538668e03a0f3ae9c6a98351c7"
 
 [[package]]
 name = "ring"
