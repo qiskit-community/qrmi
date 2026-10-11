@@ -50,6 +50,13 @@ pub struct AccessibleResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct QpuSlotsResponse {
+    pub qpu_slots_total: u64,
+    pub qpu_slots_used: u64,
+    pub qpu_slots_available: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct SessionResponse {
     pub id: String,
 }
@@ -78,7 +85,8 @@ pub struct DeviceSpecs {
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateSessionPayload {
     pub user_id: String,
-    pub slurm_job_id: String,
+    pub scheduler_job_id: String,
+    pub qpu_slots: i32,
 }
 
 impl Client {
@@ -146,15 +154,30 @@ impl Client {
         self.handle_request(resp).await
     }
 
+    /// Returns Warden's QPU slot usage, or `None` if Warden does not
+    /// manage QPU slots.
+    pub async fn get_qpu_slots(&self) -> Result<Option<QpuSlotsResponse>> {
+        let url = format!("{}/qpu-slots", self.base_url);
+
+        let resp = self.client.get(url).send().await?;
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        self.handle_request(resp).await.map(Some)
+    }
+
     pub async fn create_session(
         &self,
         user_id: i32,
-        slurm_job_id: &str,
+        scheduler_job_id: &str,
+        qpu_slots: i32,
     ) -> Result<SessionResponse> {
         let url = format!("{}/sessions", self.base_url);
         let session = CreateSessionPayload {
             user_id: user_id.to_string(),
-            slurm_job_id: slurm_job_id.to_string(),
+            scheduler_job_id: scheduler_job_id.to_string(),
+            qpu_slots,
         };
 
         let headers = self.create_headers().await?;
@@ -170,10 +193,16 @@ impl Client {
     }
 
     pub async fn revoke_session(&self, session_id: &str) -> Result<SessionResponse> {
-        let url = format!("{}/sessions/{}", self.base_url, session_id);
+        let url = format!("{}/sessions", self.base_url);
 
         let headers = self.create_headers().await?;
-        let resp = self.client.delete(url).headers(headers).send().await?;
+        let resp = self
+            .client
+            .delete(url)
+            .headers(headers)
+            .header("X-Warden-Session", session_id)
+            .send()
+            .await?;
 
         self.handle_request(resp).await
     }
@@ -214,9 +243,26 @@ impl Client {
         } else {
             let status = resp.status();
             let json_text = resp.text().await?;
-            bail!("Status: {}, Fail {}", status, json_text);
+            bail!("Status: {}, Fail {}", status, redact_error_body(&json_text));
         }
     }
+}
+
+/// Drops request values that Warden echoes in validation errors.
+///
+/// FastAPI 422 responses repeat the rejected `input`, which may be a
+/// session credential taken from a request header.
+fn redact_error_body(body: &str) -> String {
+    let Ok(mut value) = serde_json::from_str::<serde_json::Value>(body) else {
+        return body.to_string();
+    };
+    if let Some(details) = value.get_mut("detail").and_then(|d| d.as_array_mut()) {
+        for detail in details.iter_mut().filter_map(|d| d.as_object_mut()) {
+            detail.remove("input");
+            detail.remove("ctx");
+        }
+    }
+    value.to_string()
 }
 
 /// A [`ClientBuilder`] can be used to create a [`Client`] with custom configuration.
@@ -252,15 +298,73 @@ impl ClientBuilder {
     /// let _builder = ClientBuilder::new("http://localhost:4207").build();
     /// ```
     pub fn build(&mut self) -> Result<Client> {
-        let mut reqwest_client_builder = reqwest::Client::builder();
-        if cfg!(debug_assertions) {
-            reqwest_client_builder = reqwest_client_builder.connection_verbose(true);
-        }
-        let reqwest_builder = ReqwestClientBuilder::new(reqwest_client_builder.build()?);
+        // No connection_verbose: it logs raw requests, including the
+        // X-Warden-Session and X-Munge-Cred credentials.
+        let reqwest_builder = ReqwestClientBuilder::new(reqwest::Client::builder().build()?);
 
         Ok(Client {
             base_url: self.base_url.clone(),
             client: reqwest_builder.build(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ClientBuilder;
+
+    #[tokio::test]
+    async fn get_qpu_slots_reads_slot_usage() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/qpu-slots")
+            .with_status(200)
+            .with_body(r#"{"qpu_slots_total":10,"qpu_slots_used":4,"qpu_slots_available":6}"#)
+            .create_async()
+            .await;
+        let client = ClientBuilder::new(server.url()).build().unwrap();
+
+        let slots = client.get_qpu_slots().await.unwrap().unwrap();
+
+        mock.assert_async().await;
+        assert_eq!(slots.qpu_slots_total, 10);
+        assert_eq!(slots.qpu_slots_used, 4);
+        assert_eq!(slots.qpu_slots_available, 6);
+    }
+
+    #[tokio::test]
+    async fn get_qpu_slots_is_none_when_slots_are_not_configured() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", "/qpu-slots")
+            .with_status(404)
+            .with_body(r#"{"detail":"QPU slots are not configured."}"#)
+            .create_async()
+            .await;
+        let client = ClientBuilder::new(server.url()).build().unwrap();
+
+        assert!(client.get_qpu_slots().await.unwrap().is_none());
+    }
+
+    #[test]
+    fn error_bodies_do_not_repeat_request_input() {
+        let body = r#"{"detail":[{"type":"uuid_parsing","loc":["header","X-Warden-Session"],"msg":"Input should be a valid UUID","input":"secret-session"}]}"#;
+        let redacted = super::redact_error_body(body);
+        assert!(!redacted.contains("secret-session"));
+        assert!(redacted.contains("Input should be a valid UUID"));
+        assert_eq!(super::redact_error_body("not json"), "not json");
+    }
+
+    #[tokio::test]
+    async fn get_qpu_slots_reports_server_errors() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", "/qpu-slots")
+            .with_status(500)
+            .create_async()
+            .await;
+        let client = ClientBuilder::new(server.url()).build().unwrap();
+
+        assert!(client.get_qpu_slots().await.is_err());
     }
 }

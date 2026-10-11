@@ -105,8 +105,6 @@ int main(int argc, char *argv[]) {
     qrmi_string_free((char *)last_error);
     goto error;
   }
-  fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
-
   rc = qrmi_resource_release(qrmi, acquisition_token);
   fprintf(stdout, "qrmi_resource_release rc = %d\n", rc);
   qrmi_string_free((char *)acquisition_token);

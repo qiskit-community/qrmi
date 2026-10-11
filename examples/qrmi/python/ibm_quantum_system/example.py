@@ -36,7 +36,7 @@ print(f"Selected resource: id={qrmi.resource_id()} type={str(qrmi.resource_type(
 print(json.dumps(qrmi.status().to_dict(), indent=2))
 
 lock = qrmi.acquire()
-print(f"lock {lock}")
+print("lock acquired")
 
 target_json = json.loads(qrmi.target().value)
 print(json.dumps(target_json, indent=2))

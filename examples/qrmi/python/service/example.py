@@ -60,7 +60,7 @@ if resource is None:
 
 print(f"\nAcquiring '{args.resource}'...")
 lock = resource.acquire()
-print(f"acquisition token = {lock}")
+print("acquisition token received")
 
 print(resource.metadata())
 print(resource.target().value)

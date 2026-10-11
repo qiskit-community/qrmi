@@ -231,7 +231,7 @@ pub trait QuantumResource: Send + Sync {
     ///     use qrmi::{ibm::IBMQuantumComputeService, QuantumResource};
     ///     let mut qrmi = IBMQuantumComputeService::new("ibm_torino")?;
     ///     let token = qrmi.acquire().await?;
-    ///     println!("acquisition token = {}", token);
+    ///     qrmi.release(&token).await?;
     ///     Ok(())
     /// }
     /// ```

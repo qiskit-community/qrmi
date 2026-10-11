@@ -6,6 +6,7 @@ repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
 edition.workspace = true
+readme = "README.md"
 
 [dependencies]
 serde = { version = "^1.0", features = ["derive"] }

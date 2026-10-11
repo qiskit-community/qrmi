@@ -88,8 +88,6 @@ int main(int argc, char *argv[]) {
     qrmi_string_free((char *)last_error);
     goto error;
   }
-  fprintf(stdout, "acquisition_token = %s\n", acquisition_token);
-
   char *target = NULL;
   rc = qrmi_resource_target(qrmi, &target);
   if (rc == QRMI_RETURN_CODE_SUCCESS) {
