@@ -187,7 +187,7 @@ impl QuantumSystemError {
         url: &str,
         resource_kind: ResourceKind,
     ) -> Self {
-        let body = Self::extract_body(status, resp, url).await;
+        let body = Self::extract_body(status, resp, url, resource_kind).await;
         match status {
             StatusCode::UNAUTHORIZED => QuantumSystemError::AuthenticationFailed(body),
             StatusCode::FORBIDDEN => QuantumSystemError::AccessDenied(body),
@@ -211,22 +211,36 @@ impl QuantumSystemError {
     /// response body: a structured JSON error, a plain text message, or --
     /// if the body couldn't be parsed as either -- a fallback description
     /// naming the status and request URL.
-    async fn extract_body(status: StatusCode, resp: reqwest::Response, url: &str) -> String {
+    ///
+    /// The body is logged at error level, except for "job not found" (404 on a
+    /// job resource), which is logged at debug level. Callers may look up jobs
+    /// that have already been deleted as part of normal operation, and the
+    /// condition is still reported to them as [`QuantumSystemError::JobNotFound`].
+    async fn extract_body(
+        status: StatusCode,
+        resp: reqwest::Response,
+        url: &str,
+        resource_kind: ResourceKind,
+    ) -> String {
         use crate::models::errors::ExtendedErrorResponse;
+        let level = match (status, resource_kind) {
+            (StatusCode::NOT_FOUND, ResourceKind::Job) => log::Level::Debug,
+            _ => log::Level::Error,
+        };
         match resp.json::<ExtendedErrorResponse>().await {
             Ok(ExtendedErrorResponse::Json(error)) => {
                 let body = serde_json::to_value(&error)
                     .map(|v| v.to_string())
                     .unwrap_or_else(|_| format!("{error:?}"));
-                log::error!("{body}");
+                log::log!(level, "{body}");
                 body
             }
             Ok(ExtendedErrorResponse::Text(message)) => {
-                log::error!("{message}");
+                log::log!(level, "{message}");
                 message
             }
             Err(_) => {
-                log::error!("{status} {url}");
+                log::log!(level, "{status} {url}");
                 format!("(no error body available; request URL: {url})")
             }
         }

@@ -15,6 +15,7 @@ use crate::error::QuantumSystemError;
 use crate::Result;
 use aws_sdk_s3::presigning::PresigningConfig;
 use core::time::Duration;
+use std::collections::HashMap;
 
 /// A S3 client helper which provides minimum functionalities for operating S3 objects.
 #[derive(Debug, Clone)]
@@ -278,6 +279,182 @@ impl S3Client {
                 ))
             }
         };
+        Ok(())
+    }
+
+    /// Returns the tags set on an object as a map of key to value, or `None`
+    /// if the object does not exist (`NoSuchKey`).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quantum_system_api::utils::s3::S3Client;
+    ///
+    /// let client = S3Client::new(
+    ///     "http://localhost:9000",
+    ///     "your_access_key",
+    ///     "your_secret",
+    ///     "your_region"
+    /// );
+    ///
+    /// let tags = client.try_get_object_tags("your_bucket", "obj_key");
+    /// ```
+    pub async fn try_get_object_tags(
+        &self,
+        bucket_name: impl Into<String>,
+        key_name: impl Into<String>,
+    ) -> Result<Option<HashMap<String, String>>> {
+        use aws_sdk_s3::error::ProvideErrorMetadata;
+        match self
+            .s3_client
+            .get_object_tagging()
+            .bucket(bucket_name)
+            .key(key_name)
+            .send()
+            .await
+        {
+            Ok(resp) => Ok(Some(
+                resp.tag_set()
+                    .iter()
+                    .map(|t| (t.key().to_string(), t.value().to_string()))
+                    .collect(),
+            )),
+            Err(err) => {
+                let err = err.into_service_error();
+                if err.code() == Some("NoSuchKey") {
+                    Ok(None)
+                } else {
+                    Err(QuantumSystemError::other(
+                        "An error occurred while retrieving tags of an object in S3 bucket",
+                        err,
+                    ))
+                }
+            }
+        }
+    }
+
+    /// Returns the tags set on an object as a map of key to value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quantum_system_api::utils::s3::S3Client;
+    ///
+    /// let client = S3Client::new(
+    ///     "http://localhost:9000",
+    ///     "your_access_key",
+    ///     "your_secret",
+    ///     "your_region"
+    /// );
+    ///
+    /// let tags = client.get_object_tags("your_bucket", "obj_key");
+    /// ```
+    pub async fn get_object_tags(
+        &self,
+        bucket_name: impl Into<String>,
+        key_name: impl Into<String>,
+    ) -> Result<HashMap<String, String>> {
+        let resp = self
+            .s3_client
+            .get_object_tagging()
+            .bucket(bucket_name)
+            .key(key_name)
+            .send()
+            .await
+            .map_err(|err| {
+                QuantumSystemError::other(
+                    "An error occurred while retrieving tags of an object in S3 bucket",
+                    err.into_service_error(),
+                )
+            })?;
+        Ok(resp
+            .tag_set()
+            .iter()
+            .map(|t| (t.key().to_string(), t.value().to_string()))
+            .collect())
+    }
+
+    /// Adds tags to an existing object, keeping the tags already set on it.
+    /// If a tag with the same key already exists, its value is overwritten.
+    ///
+    /// S3 replaces the whole tag set on `PutObjectTagging`, so this function
+    /// reads the current tags first and writes back the merged set. It is not
+    /// atomic: concurrent updates to the same object may overwrite each other.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quantum_system_api::utils::s3::S3Client;
+    /// use std::collections::HashMap;
+    ///
+    /// let client = S3Client::new(
+    ///     "http://localhost:9000",
+    ///     "your_access_key",
+    ///     "your_secret",
+    ///     "your_region"
+    /// );
+    ///
+    /// let tags = HashMap::from([("status".to_string(), "Completed".to_string())]);
+    /// client.add_object_tags("your_bucket", "obj_key", &tags);
+    /// ```
+    pub async fn add_object_tags(
+        &self,
+        bucket_name: impl Into<String>,
+        key_name: impl Into<String>,
+        tags: &HashMap<String, String>,
+    ) -> Result<()> {
+        let bucket: String = bucket_name.into();
+        let key: String = key_name.into();
+
+        let current = self
+            .s3_client
+            .get_object_tagging()
+            .bucket(bucket.clone())
+            .key(key.clone())
+            .send()
+            .await
+            .map_err(|err| {
+                QuantumSystemError::other(
+                    "An error occurred while retrieving tags of an object in S3 bucket",
+                    err.into_service_error(),
+                )
+            })?;
+
+        let mut tag_set: Vec<aws_sdk_s3::types::Tag> = current
+            .tag_set()
+            .iter()
+            .filter(|t| !tags.contains_key(t.key()))
+            .cloned()
+            .collect();
+        let mut new_tags: Vec<(&String, &String)> = tags.iter().collect();
+        new_tags.sort();
+        for (k, v) in new_tags {
+            tag_set.push(
+                aws_sdk_s3::types::Tag::builder()
+                    .key(k)
+                    .value(v)
+                    .build()
+                    .map_err(|e| QuantumSystemError::other("invalid S3 object tag", e))?,
+            );
+        }
+        let tagging = aws_sdk_s3::types::Tagging::builder()
+            .set_tag_set(Some(tag_set))
+            .build()
+            .map_err(|e| QuantumSystemError::other("invalid S3 object tag set", e))?;
+
+        self.s3_client
+            .put_object_tagging()
+            .bucket(bucket)
+            .key(key)
+            .tagging(tagging)
+            .send()
+            .await
+            .map_err(|err| {
+                QuantumSystemError::other(
+                    "An error occurred while setting tags of an object in S3 bucket",
+                    err.into_service_error(),
+                )
+            })?;
         Ok(())
     }
 

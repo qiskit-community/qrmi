@@ -91,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             args.log_level.parse().unwrap(),
             &job,
             None,
+            None,
         )
         .await?;
     println!("Running a job: {}", primitive_job.job_id);

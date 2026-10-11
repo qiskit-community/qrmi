@@ -18,12 +18,12 @@ use crate::models::{
     TaskResult, TaskStatus,
 };
 use crate::{QuantumResource, Result};
-use log::info;
+use log::{debug, error, info, warn};
 use quantum_system_api::utils::s3::S3Client;
 use quantum_system_api::{
     models::Backend, models::BackendLanesConfiguration, models::BackendStatus, models::Job,
     models::JobStatus, models::Jobs, models::LogLevel, models::ProgramId, AuthMethod, Client,
-    ClientBuilder,
+    ClientBuilder, QuantumSystemError,
 };
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::Jitter;
@@ -226,6 +226,330 @@ struct S3Store {
     bucket: String,
 }
 
+impl IBMQuantumSystem {
+    /// Records the final state of finished jobs owned by this user on this
+    /// backend to S3 and deletes them from the Quantum System API service.
+    ///
+    /// A job is owned by this user if its input object (`input_<job_id>.json`)
+    /// exists in the S3 bucket of this resource and its `qrmi:uid` tag is the
+    /// real user ID of this process. For each owned job whose status is not
+    /// `Running`:
+    ///
+    /// 1. Adds the following tags to the input object in S3:
+    ///    * `qrmi:status`: job status (`Completed`, `Failed` or `Cancelled`)
+    ///    * `qrmi:status:created`: `metrics.timestamps.created` of the job
+    ///    * `qrmi:status:finished`: `metrics.timestamps.finished` of the job
+    ///      (omitted if not available)
+    ///    * `qrmi:status:circuits_execution_time_ns`:
+    ///      `metrics.circuits_execution_time_ns` of the job (omitted if not available)
+    /// 2. Deletes the job.
+    ///
+    /// Other jobs are skipped (neither tagged nor deleted), so that jobs of
+    /// other users or clients are not deleted without recording their status:
+    ///
+    /// * the input object does not exist in the bucket (logged at debug level)
+    /// * the `qrmi:uid` tag is missing or different (logged at debug level)
+    /// * the tags cannot be read (logged at error level)
+    ///
+    /// No job is deleted if S3 is not configured.
+    ///
+    /// Errors are written to the log with `log::error!` and do not stop the
+    /// processing of other jobs. A failure to tag the input object does not
+    /// prevent the job from being deleted.
+    ///
+    /// A job is regarded as finished based on [`effective_status`], i.e. a
+    /// `Completed` job is not deleted until `metrics.circuits_execution_time_ns`
+    /// becomes available.
+    async fn delete_completed_jobs(&self) {
+        self.delete_completed_jobs_impl(None).await
+    }
+
+    /// Same as [`Self::delete_completed_jobs`], except that the job `stopped_job_id`
+    /// is regarded as finished based on the status reported by the API, without
+    /// waiting for `metrics.circuits_execution_time_ns`. Used by `task_stop`.
+    async fn delete_completed_jobs_impl(&self, stopped_job_id: Option<&str>) {
+        let jobs = match self.api_client.list_jobs::<Jobs>().await {
+            Ok(jobs) => jobs,
+            Err(err) => {
+                error!("failed to list jobs: {err}");
+                return;
+            }
+        };
+
+        let s3 = match self.s3_store() {
+            Ok(s3) => s3,
+            Err(err) => {
+                error!("S3 is not configured. completed jobs are not deleted: {err}");
+                return;
+            }
+        };
+        let (s3_client, bucket) = (&s3.client, &s3.bucket);
+
+        // SAFETY: getuid() is always successful and has no side effects.
+        let my_uid = unsafe { libc::getuid() }.to_string();
+
+        for job in jobs
+            .jobs
+            .iter()
+            .filter(|job| job.backend == self.backend_name)
+        {
+            let status = if stopped_job_id == Some(job.id.as_str()) {
+                job.status.clone()
+            } else {
+                effective_status(job)
+            };
+            if matches!(status, JobStatus::Running) {
+                continue;
+            }
+
+            let key = format!("input_{}.json", job.id);
+            match s3_client.try_get_object_tags(bucket, &key).await {
+                Ok(Some(current)) => {
+                    if current.get("qrmi:uid") != Some(&my_uid) {
+                        debug!(
+                            "job {} is not owned by this user (qrmi:uid={:?}, uid={my_uid}). skipped.",
+                            job.id,
+                            current.get("qrmi:uid")
+                        );
+                        continue;
+                    }
+                }
+                Ok(None) => {
+                    debug!(
+                        "{key} is not found in bucket {bucket}. job {} is not owned by this user. skipped.",
+                        job.id
+                    );
+                    continue;
+                }
+                Err(err) => {
+                    error!(
+                        "failed to read tags of {key} (job {}). skipped: {err}",
+                        job.id
+                    );
+                    continue;
+                }
+            }
+
+            let mut tags = HashMap::from([("qrmi:status".to_string(), status.to_string())]);
+            if let Some(metrics) = &job.metrics {
+                if let Some(ns) = metrics.circuits_execution_time_ns {
+                    tags.insert(
+                        "qrmi:status:circuits_execution_time_ns".to_string(),
+                        ns.to_string(),
+                    );
+                }
+                tags.insert(
+                    "qrmi:status:created".to_string(),
+                    metrics.timestamps.created.clone(),
+                );
+                if let Some(finished) = &metrics.timestamps.finished {
+                    tags.insert("qrmi:status:finished".to_string(), finished.clone());
+                }
+            }
+            if let Err(err) = s3_client.add_object_tags(bucket, &key, &tags).await {
+                error!("failed to add tags to {key} (job {}): {err}", job.id);
+            }
+
+            if let Err(err) = self.api_client.delete_job(&job.id).await {
+                error!("failed to delete job {}: {err}", job.id);
+            }
+        }
+    }
+
+    /// Reads the final status of a job which has already been deleted by
+    /// [`Self::delete_completed_jobs`] from the `qrmi:status` tag of its input
+    /// object (`input_<job_id>.json`) in S3.
+    async fn job_status_from_s3(&self, task_id: &str) -> Result<JobStatus> {
+        let s3 = self.s3_store()?;
+        let key = format!("input_{task_id}.json");
+        let tags = s3.client.get_object_tags(&s3.bucket, &key).await?;
+        match tags.get("qrmi:status").map(String::as_str) {
+            Some("Running") => Ok(JobStatus::Running),
+            Some("Completed") => Ok(JobStatus::Completed),
+            Some("Failed") => Ok(JobStatus::Failed),
+            Some("Cancelled") => Ok(JobStatus::Cancelled),
+            Some(other) => Err(QrmiError::TaskNotReady {
+                task_id: task_id.to_string(),
+                reason: format!("unknown qrmi:status tag value on {key}: {other}"),
+            }),
+            None => Err(QrmiError::TaskNotReady {
+                task_id: task_id.to_string(),
+                reason: format!("qrmi:status tag is not found on {key}"),
+            }),
+        }
+    }
+
+    /// Returns the status of the job, based on [`effective_status`]. If the job is not found in the Quantum
+    /// System API service (i.e. it has been deleted by
+    /// [`Self::delete_completed_jobs`]), the status recorded in S3 is used
+    /// instead. If that also fails, the original "job not found" error is returned.
+    async fn job_status(&self, task_id: &str) -> Result<JobStatus> {
+        match self.api_client.get_job::<Job>(task_id).await {
+            Ok(job) => Ok(effective_status(&job)),
+            Err(err @ QuantumSystemError::JobNotFound(_)) => {
+                self.job_status_from_s3(task_id).await.map_err(|s3_err| {
+                    error!("failed to read status of job {task_id} from S3: {s3_err}");
+                    QrmiError::from(err)
+                })
+            }
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// Body of [`QuantumResource::task_result`], without cleanup.
+    async fn read_task_result(&self, task_id: &str) -> Result<TaskResult> {
+        let s3 = self.s3_store()?;
+
+        let (status, failure_reason) = match self.api_client.get_job::<Job>(task_id).await {
+            Ok(job) => {
+                let status = effective_status(&job);
+                let reason_code = job.reason_code.map_or("".to_string(), |v| v.to_string());
+                let reason_message = job.reason_message.unwrap_or("".to_string());
+                let reason_solution = job.reason_solution.unwrap_or("".to_string());
+                (
+                    status,
+                    format!(
+                        "task failed. code: {reason_code}, message: {reason_message}, solution: {reason_solution}"
+                    ),
+                )
+            }
+            // Deleted by delete_completed_jobs(). Use the status recorded in S3.
+            // The failure details are not available in this case.
+            Err(err @ QuantumSystemError::JobNotFound(_)) => (
+                self.job_status_from_s3(task_id).await.map_err(|s3_err| {
+                    error!("failed to read status of job {task_id} from S3: {s3_err}");
+                    QrmiError::from(err)
+                })?,
+                "task failed. (details are not available since the job has been deleted)"
+                    .to_string(),
+            ),
+            Err(err) => return Err(err.into()),
+        };
+        if matches!(status, JobStatus::Failed) {
+            return Err(QrmiError::TaskNotReady {
+                task_id: task_id.to_string(),
+                reason: failure_reason,
+            });
+        }
+        if matches!(status, JobStatus::Cancelled) {
+            return Err(QrmiError::TaskNotReady {
+                task_id: task_id.to_string(),
+                reason: "task was cancelled".to_string(),
+            });
+        }
+        if matches!(status, JobStatus::Running) {
+            return Err(QrmiError::TaskNotReady {
+                task_id: task_id.to_string(),
+                reason: "task is running".to_string(),
+            });
+        }
+        let s3_object_key = format!("results_{}.json", task_id);
+        let object = s3.client.get_object(&s3.bucket, &s3_object_key).await?;
+        let retrieved_txt = String::from_utf8(object)?;
+        Ok(TaskResult {
+            value: retrieved_txt,
+        })
+    }
+
+    /// Body of [`QuantumResource::task_logs`], without cleanup.
+    async fn read_task_logs(&self, task_id: &str) -> Result<String> {
+        let s3 = self.s3_store()?;
+
+        let s3_object_key = format!("logs_{}.json", task_id);
+        let object = s3.client.get_object(&s3.bucket, &s3_object_key).await?;
+        let retrieved_txt = String::from_utf8(object)?;
+        Ok(retrieved_txt)
+    }
+}
+
+/// How long to wait for `metrics.circuits_execution_time_ns` after a job is
+/// reported as `Completed`. See [`effective_status`].
+const CIRCUITS_EXECUTION_TIME_WAIT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
+
+/// Returns the status of the job as seen by QRMI.
+///
+/// The Quantum System API service reports `Completed` before the job has
+/// actually finished; the job has really finished only when
+/// `metrics.circuits_execution_time_ns` becomes available. Until then, a
+/// `Completed` job is treated as `Running`. Other statuses are returned as is.
+///
+/// If `metrics.circuits_execution_time_ns` is still not available after
+/// [`CIRCUITS_EXECUTION_TIME_WAIT_TIMEOUT`] since the job finished
+/// (`metrics.timestamps.finished`, or `metrics.timestamps.created` if not
+/// available), the job is regarded as `Completed` with a warning, so that it
+/// does not stay `Running` forever. The same applies if the timestamp cannot
+/// be parsed.
+fn effective_status(job: &Job) -> JobStatus {
+    if !matches!(job.status, JobStatus::Completed) {
+        return job.status.clone();
+    }
+    let Some(metrics) = &job.metrics else {
+        // No timestamps to measure the timeout from.
+        warn!(
+            "job {} is Completed but has no metrics. regarded as Completed.",
+            job.id
+        );
+        return JobStatus::Completed;
+    };
+    if metrics.circuits_execution_time_ns.is_some() {
+        return JobStatus::Completed;
+    }
+
+    let since = metrics
+        .timestamps
+        .finished
+        .as_deref()
+        .unwrap_or(&metrics.timestamps.created);
+    let elapsed = chrono::DateTime::parse_from_rfc3339(since)
+        .ok()
+        .and_then(|t| {
+            (chrono::Utc::now() - t.with_timezone(&chrono::Utc))
+                .to_std()
+                .ok()
+        });
+    match elapsed {
+        Some(elapsed) if elapsed < CIRCUITS_EXECUTION_TIME_WAIT_TIMEOUT => JobStatus::Running,
+        Some(_) => {
+            warn!(
+                "metrics.circuits_execution_time_ns of job {} is not available {} seconds after {since}. regarded as Completed.",
+                job.id,
+                CIRCUITS_EXECUTION_TIME_WAIT_TIMEOUT.as_secs()
+            );
+            JobStatus::Completed
+        }
+        None => {
+            warn!(
+                "failed to evaluate timestamp {since:?} of job {}. regarded as Completed.",
+                job.id
+            );
+            JobStatus::Completed
+        }
+    }
+}
+
+/// Builds the S3 object tags attached to the input object (`input_<id>.json`)
+/// uploaded by [`IBMQuantumSystem::task_start`].
+///
+/// * `qrmi:jid`: value of the `QRMI_JOB_ID` environment variable. Omitted if not set.
+/// * `qrmi:uid`: real user ID of this process (`getuid()`).
+/// * `qrmi:gid`: real group ID of this process (`getgid()`).
+/// * `qrmi:program_type`: program ID of the primitive (e.g. `sampler`, `estimator`).
+fn input_object_tags(program_id: &ProgramId) -> HashMap<String, String> {
+    let mut tags = HashMap::new();
+    match std::env::var("QRMI_JOB_ID") {
+        Ok(jid) => {
+            tags.insert("qrmi:jid".to_string(), jid);
+        }
+        Err(_) => debug!("QRMI_JOB_ID is not set. qrmi:jid tag is omitted."),
+    }
+    // SAFETY: getuid() and getgid() are always successful and have no side effects.
+    let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
+    tags.insert("qrmi:uid".to_string(), uid.to_string());
+    tags.insert("qrmi:gid".to_string(), gid.to_string());
+    tags.insert("qrmi:program_type".to_string(), program_id.to_string());
+    tags
+}
+
 #[async_trait]
 impl QuantumResource for IBMQuantumSystem {
     async fn resource_id(&mut self) -> Result<String> {
@@ -280,6 +604,8 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
+        self.delete_completed_jobs().await;
+
         let timeout = self.settings.require("QRMI_JOB_TIMEOUT_SECONDS")?;
         let timeout_secs = timeout
             .parse::<u64>()
@@ -297,6 +623,8 @@ impl QuantumResource for IBMQuantumSystem {
         let program_id_enum = ProgramId::from_str(&program_id)
             .map_err(|_| IbmError::UnknownProgramId(program_id.clone()))?;
 
+        let tags = input_object_tags(&program_id_enum);
+
         let job = self
             .api_client
             .run_primitive(
@@ -306,72 +634,59 @@ impl QuantumResource for IBMQuantumSystem {
                 LogLevel::Debug,
                 &job_input,
                 None,
+                Some(&tags),
             )
             .await?;
         Ok(job.job_id)
     }
 
     async fn task_stop(&mut self, task_id: &str) -> Result<()> {
-        let status = self.api_client.get_job_status(task_id).await?;
+        let status = match self.api_client.get_job_status(task_id).await {
+            Ok(status) => status,
+            // Already finished and deleted by delete_completed_jobs(). Nothing to stop.
+            Err(QuantumSystemError::JobNotFound(_))
+                if self.job_status_from_s3(task_id).await.is_ok() =>
+            {
+                return Ok(());
+            }
+            Err(err) => return Err(err.into()),
+        };
         if matches!(status, JobStatus::Running) {
             let _ = self.api_client.cancel_job(task_id, false).await;
         }
-        self.api_client.delete_job(task_id).await?;
+        // Cancellation is synchronous, so the job is no longer `Running` here.
+        // Record its final status to S3 and delete it (along with other
+        // finished jobs of this user) without waiting for
+        // `metrics.circuits_execution_time_ns`.
+        self.delete_completed_jobs_impl(Some(task_id)).await;
         Ok(())
     }
 
     async fn task_status(&mut self, task_id: &str) -> Result<TaskStatus> {
-        let status = self.api_client.get_job_status(task_id).await?;
-        match status {
-            JobStatus::Running => Ok(TaskStatus::Running),
-            JobStatus::Completed => Ok(TaskStatus::Completed),
-            JobStatus::Cancelled => Ok(TaskStatus::Cancelled),
-            JobStatus::Failed => Ok(TaskStatus::Failed),
-        }
+        let result = self.job_status(task_id).await.map(|status| match status {
+            JobStatus::Running => TaskStatus::Running,
+            JobStatus::Completed => TaskStatus::Completed,
+            JobStatus::Cancelled => TaskStatus::Cancelled,
+            JobStatus::Failed => TaskStatus::Failed,
+        });
+        // Clean up finished jobs after the status has been read, so that the
+        // final status of this job is returned (and recorded to S3) first.
+        self.delete_completed_jobs().await;
+        result
     }
 
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let s3 = self.s3_store()?;
-
-        let job = self.api_client.get_job::<Job>(task_id).await?;
-        if matches!(job.status, JobStatus::Failed) {
-            let reason_code = job.reason_code.map_or("".to_string(), |v| v.to_string());
-            let reason_message = job.reason_message.unwrap_or("".to_string());
-            let reason_solution = job.reason_solution.unwrap_or("".to_string());
-            return Err(QrmiError::TaskNotReady {
-                task_id: task_id.to_string(),
-                reason: format!(
-                    "task failed. code: {reason_code}, message: {reason_message}, solution: {reason_solution}"
-                ),
-            });
-        }
-        if matches!(job.status, JobStatus::Cancelled) {
-            return Err(QrmiError::TaskNotReady {
-                task_id: task_id.to_string(),
-                reason: "task was cancelled".to_string(),
-            });
-        }
-        if matches!(job.status, JobStatus::Running) {
-            return Err(QrmiError::TaskNotReady {
-                task_id: task_id.to_string(),
-                reason: "task is running".to_string(),
-            });
-        }
-        let s3_object_key = format!("results_{}.json", task_id);
-        let object = s3.client.get_object(&s3.bucket, &s3_object_key).await?;
-        let retrieved_txt = String::from_utf8(object)?;
-        Ok(TaskResult {
-            value: retrieved_txt,
-        })
+        let result = self.read_task_result(task_id).await;
+        // Clean up finished jobs after the result has been read.
+        self.delete_completed_jobs().await;
+        result
     }
 
     async fn task_logs(&mut self, task_id: &str) -> Result<String> {
-        let s3 = self.s3_store()?;
-
-        let s3_object_key = format!("logs_{}.json", task_id);
-        let object = s3.client.get_object(&s3.bucket, &s3_object_key).await?;
-        let retrieved_txt = String::from_utf8(object)?;
-        Ok(retrieved_txt)
+        let result = self.read_task_logs(task_id).await;
+        // Clean up finished jobs after the logs have been read.
+        self.delete_completed_jobs().await;
+        result
     }
 
     async fn target(&mut self) -> Result<Target> {
