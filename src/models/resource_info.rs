@@ -41,7 +41,7 @@ pub struct QuantumResourceInfo {
     pub qubit_type: QubitType,
     pub backend_display_name: Option<String>, // Human-readable name reported by the provider API; None if not reported
     pub num_qubits: Option<u32>,              // None if not reported
-    pub processor_name: Option<String>, // e.g. hardware generation name
+    pub processor_name: Option<String>,       // e.g. hardware generation name
     pub processor_revision: Option<String>,
     pub description: Option<String>,
     pub is_simulator: Option<bool>, // true: simulator/emulator, false: real QPU, None if not reported
