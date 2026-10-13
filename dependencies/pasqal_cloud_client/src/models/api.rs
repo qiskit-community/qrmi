@@ -43,7 +43,7 @@ pub struct GetDeviceSpecsResponseData {
     pub specs: String,
 }
 
-/// Subset of the Account API project fields used by QRMI; others are ignored.
+/// Subset of the Account API project fields used by QRMI.
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetProjectResponseData {
     pub queue_priority: String,

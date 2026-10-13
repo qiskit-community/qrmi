@@ -57,8 +57,8 @@ What's changed
        ``pasqal-local``.
    * - ``qubit_type``
      - ``QubitType``
-     - One of ``superconducting``, ``trapped_ion``, ``photonic``,
-       ``neutral_atom``, ``semiconductor`` or ``other``.
+     - One of ``Superconducting``, ``TrappedIon``, ``Photonic``,
+       ``NeutralAtom``, ``Semiconductor`` or ``Other``.
    * - ``backend_display_name``
      - string, optional
      - Human-readable backend name reported by the provider.
@@ -76,7 +76,8 @@ What's changed
      - A free-form description of the resource.
    * - ``is_simulator``
      - bool, optional
-     - Whether the resource is a simulator or emulator.
+     - ``true`` if the resource is a simulator or emulator, ``false`` if it
+       runs on real quantum hardware.
    * - ``has_queue``
      - bool, optional
      - Whether the resource has its own job queue.
@@ -144,7 +145,7 @@ How to migrate
 
    If you implement the ``QuantumResource`` trait yourself, implement
    ``describe()``. Its default implementation reports only ``resource_id``,
-   ``resource_type`` and a ``qubit_type`` of ``other``, so existing
+   ``resource_type`` and a ``qubit_type`` of ``QubitType::Other``, so existing
    implementations keep working until you do. Build the result with
    ``QuantumResourceInfo::new()`` and fill in the optional fields your
    resource knows about.

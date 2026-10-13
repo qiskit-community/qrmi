@@ -460,8 +460,8 @@ async fn get_queue_size_is_authenticated_and_parses_queues() {
         .with_status(200)
         .with_body(
             json!({"data":{"device_queues":[
-                {"queue":"default","number_of_jobs":3,"number_of_shots":300},
-                {"queue":"priority","number_of_jobs":null,"number_of_shots":null}
+                {"queue":"batches:FRESNEL:MEDIUM","number_of_jobs":3,"number_of_shots":300},
+                {"queue":"batches:FRESNEL:HIGH","number_of_jobs":null,"number_of_shots":null}
             ]}})
             .to_string(),
         )
