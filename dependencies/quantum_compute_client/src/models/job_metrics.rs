@@ -12,14 +12,33 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 /// JobMetrics : Various metrics about the execution of a job
+///
+/// NOTE: hand-patched (not regenerated from an updated openapi.yaml,
+/// which isn't vendored in this repo) to match the response format IBM
+/// switched to on 2026-03-15 / 2026-04-15 -- see the Qiskit Runtime
+/// REST API changelog. `bss` is gone (billing now lives under
+/// `usage`, via `JobMetricsUsage`); `circuits_execution_time_ns` moved
+/// from `usage.circuits_execution_time_ns` to this struct's root.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct JobMetrics {
+    /// Derived from the `x-qx-client-application` request header,
+    /// format `qiskit//` where present.
+    #[serde(rename = "caller", skip_serializing_if = "Option::is_none")]
+    pub caller: Option<String>,
     #[serde(rename = "timestamps", skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<Box<models::JobMetricsTimestamps>>,
     #[serde(rename = "bss", skip_serializing_if = "Option::is_none")]
     pub bss: Option<Box<models::JobMetricsBss>>,
     #[serde(rename = "usage", skip_serializing_if = "Option::is_none")]
     pub usage: Option<Box<models::JobMetricsUsage>>,
+    /// The amount of time, in nanoseconds, the job spent on the QPU.
+    /// Not itself a billing figure -- see `usage.qpu_charge_time_seconds`
+    /// for that -- but a useful technical measurement to keep for audit.
+    #[serde(
+        rename = "circuits_execution_time_ns",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub circuits_execution_time_ns: Option<f64>,
     /// Qiskit version used during execution of the job
     #[serde(rename = "qiskit_version", skip_serializing_if = "Option::is_none")]
     pub qiskit_version: Option<String>,
@@ -50,9 +69,11 @@ impl JobMetrics {
     /// Various metrics about the execution of a job
     pub fn new() -> JobMetrics {
         JobMetrics {
+            caller: None,
             timestamps: None,
             bss: None,
             usage: None,
+            circuits_execution_time_ns: None,
             qiskit_version: None,
             estimated_start_time: None,
             estimated_completion_time: None,
