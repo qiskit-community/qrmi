@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let lock = qrmi.acquire().await?;
 
-    println!("{:#?}", qrmi.metadata().await);
+    println!("{:#?}", qrmi.describe().await?);
 
     let target = qrmi.target().await;
     if let Ok(v) = target {

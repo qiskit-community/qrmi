@@ -14,7 +14,8 @@ use crate::common::{resolve_opt, resolve_opt_required};
 use crate::error::QrmiError;
 use crate::iqm::error::{classify, ResourceKind};
 use crate::models::{
-    Payload, ResourceStatus, ResourceStatusCode, ResourceType, Target, TaskResult, TaskStatus,
+    Payload, QuantumResourceInfo, QubitType, ResourceStatus, ResourceStatusCode, ResourceType,
+    Target, TaskResult, TaskStatus,
 };
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
@@ -307,6 +308,18 @@ impl QuantumResource for IQMServer {
     async fn status(&mut self) -> Result<ResourceStatus> {
         let body = self.fetch_qc_details().await?;
         Self::resource_status_from_qc_details(body)
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let mut info = QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::Superconducting,
+        );
+        if let Some(acquisition_token) = &self.acquisition_token {
+            info.extra = serde_json::json!({ "acquisition_token": acquisition_token });
+        }
+        Ok(info)
     }
 
     /// Starts a job task.

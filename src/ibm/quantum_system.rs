@@ -14,8 +14,8 @@ use crate::common::{resolve_opt, resolve_opt_required};
 use crate::error::QrmiError;
 use crate::ibm::error::IbmError;
 use crate::models::{
-    Payload, ResourceCapacity, ResourceStatus, ResourceStatusCode, ResourceType, Target,
-    TaskResult, TaskStatus,
+    Payload, QuantumResourceInfo, QubitType, ResourceCapacity, ResourceStatus, ResourceStatusCode,
+    ResourceType, Target, TaskResult, TaskStatus,
 };
 use crate::{QuantumResource, Result};
 use log::info;
@@ -277,6 +277,14 @@ impl QuantumResource for IBMQuantumSystem {
             }),
             pending_job_count: None,
         })
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        Ok(QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            QubitType::Superconducting,
+        ))
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {

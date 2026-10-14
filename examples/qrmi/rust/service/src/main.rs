@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lock = resource.acquire().await?;
     println!("acquisition token = {lock}");
 
-    println!("{:#?}", resource.metadata().await);
+    println!("{:#?}", resource.describe().await?);
     if let Ok(target) = resource.target().await {
         println!("{}", target.value);
     }

@@ -34,7 +34,7 @@ for res in resources:
 
 # Randomly select QR
 qrmi = resources[random.randrange(len(resources))]
-print(qrmi.metadata())
+print(qrmi.describe())
 
 # Generate transpiler target from backend configuration & properties
 target = get_target(qrmi)

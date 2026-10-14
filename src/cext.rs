@@ -235,6 +235,13 @@ pub struct ResourceMetadata {
     inner: std::collections::HashMap<String, String>,
 }
 
+/// Quantum resource configuration and attributes, as returned by
+/// qrmi_resource_describe().
+#[derive(Debug)]
+pub struct QuantumResourceInfo {
+    inner: crate::models::QuantumResourceInfo,
+}
+
 /// Quantum resource handle
 pub struct QuantumResource {
     inner: Box<dyn crate::QuantumResource + Send + Sync>,
@@ -250,6 +257,11 @@ thread_local! {
 /// Set last error message text
 fn _set_last_error(msg: String) {
     log::error!("{}", msg);
+    _store_last_error(msg);
+}
+
+/// Stores `msg` as the last error text without logging it.
+fn _store_last_error(msg: String) {
     LAST_ERROR.with(|cell| {
         *cell.borrow_mut() =
             Some(CString::new(msg).unwrap_or_else(|_| {
@@ -278,6 +290,17 @@ fn _record_error(err: QrmiError) {
     let kind = err.kind();
     LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = kind);
     _set_last_error(err.to_string());
+}
+
+/// Like `_fail(QrmiError::UnsupportedFunction(..))` for an optional
+/// QuantumResourceInfo field the vendor does not report, but logged at debug
+/// level: a missing optional field is expected, not an error.
+fn _not_reported(what: &str) -> ReturnCode {
+    let err = QrmiError::UnsupportedFunction(format!("this vendor does not report {what}"));
+    log::debug!("{err}");
+    LAST_ERROR_KIND.with(|cell| *cell.borrow_mut() = err.kind());
+    _store_last_error(err.to_string());
+    ReturnCode::from(err.kind())
 }
 
 /// Converts a Rust string into a `CString` suitable for handing across the
@@ -2039,7 +2062,552 @@ pub unsafe extern "C" fn qrmi_resource_target(
 }
 
 /// @ingroup QrmiQuantumResource
+/// Returns the configuration and attributes of this resource (qubit type, number of qubits, pending job count, vendor-specific `extra` data, etc.).
+///
+/// # Safety
+///
+/// * `qrmi` must have been returned by a previous call to qrmi_resource_new().
+///
+/// * `outp` must be non-null.
+///
+/// # Example
+///
+/// @code
+///   QrmiQuantumResourceInfo *info = NULL;
+///   QrmiReturnCode rc = qrmi_resource_describe(qrmi, &info);
+///   if (rc == QRMI_RETURN_CODE_SUCCESS) {
+///     qrmi_quantum_resource_info_free(info);
+///   }
+/// @endcode
+///
+/// @param (qrmi) [in] A QrmiQuantumResource handle
+/// @param (outp) [out] A QrmiQuantumResourceInfo handle if succeeded. Must call qrmi_quantum_resource_info_free() to free if no longer used.
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_resource_describe(
+    qrmi: *mut QuantumResource,
+    outp: *mut *mut QuantumResourceInfo,
+) -> ReturnCode {
+    crate::common::initialize();
+    if qrmi.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+
+    let result = (*qrmi)
+        .runtime
+        .block_on(async { (*qrmi).inner.describe().await });
+    match result {
+        Ok(v) => {
+            *outp = Box::into_raw(Box::new(QuantumResourceInfo { inner: v }));
+            ReturnCode::Success
+        }
+        Err(err) => _fail(err),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Frees the memory space pointed to by `ptr`, which must have been
+/// returned by a previous call to qrmi_resource_describe(). Otherwise, or
+/// if `ptr` has already been freed, segmentation fault occurs. If `ptr`
+/// is NULL, returns < 0.
+///
+/// # Safety
+///
+/// * `ptr` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (ptr) [in] A QrmiQuantumResourceInfo handle to be free
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_free(
+    ptr: *mut QuantumResourceInfo,
+) -> ReturnCode {
+    crate::common::initialize();
+    if ptr.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    unsafe {
+        let _ = Box::from_raw(ptr);
+    };
+    ReturnCode::Success
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the resource identifier (same value as qrmi_resource_id()).
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The resource identifier. Must call qrmi_string_free() to free
+///         if no longer used. Returns NULL if `info` is NULL.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_id(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match CString::new((*info).inner.resource_id.as_str()) {
+        Ok(cstr) => cstr.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the resource type (same value as qrmi_resource_type(), as a string).
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The resource type. Must call qrmi_string_free() to free if no
+///         longer used. Returns NULL if `info` is NULL.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match CString::new((*info).inner.resource_type.as_str()) {
+        Ok(cstr) => cstr.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the human-readable backend name reported by the provider API, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The backend's display name. Must call qrmi_string_free() to
+///         free if no longer used. Returns NULL if `info` is NULL or the
+///         vendor did not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match &(*info).inner.backend_display_name {
+        Some(v) => match CString::new(v.as_str()) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the number of qubits the resource exposes, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] The number of qubits
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
+    info: *mut QuantumResourceInfo,
+    outp: *mut u32,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match (*info).inner.num_qubits {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _not_reported("a qubit count"),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the resource's qubit technology (superconducting, trapped-ion, etc.).
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] The qubit type
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_qubit_type(
+    info: *mut QuantumResourceInfo,
+    outp: *mut crate::models::QubitType,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    *outp = (*info).inner.qubit_type.clone();
+    ReturnCode::Success
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Converts a QrmiQubitType value to a human-readable, lowercase string
+/// ("superconducting", "trapped_ion", "photonic", "neutral_atom",
+/// "semiconductor", "other"). Intended for logging and diagnostic output.
+///
+/// @param (qubit_type) [in] A QrmiQubitType value
+/// @return A statically-allocated, human-readable string. Must NOT be
+///         freed and remains valid for the lifetime of the program.
+/// @version 0.27.0
+#[no_mangle]
+pub extern "C" fn qrmi_qubit_type_to_string(qubit_type: crate::models::QubitType) -> *const c_char {
+    use crate::models::QubitType;
+    match qubit_type {
+        QubitType::Superconducting => c"superconducting".as_ptr(),
+        QubitType::TrappedIon => c"trapped_ion".as_ptr(),
+        QubitType::Photonic => c"photonic".as_ptr(),
+        QubitType::NeutralAtom => c"neutral_atom".as_ptr(),
+        QubitType::Semiconductor => c"semiconductor".as_ptr(),
+        QubitType::Other => c"other".as_ptr(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the hardware generation/processor name, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The processor name. Must call qrmi_string_free() to free if no
+///         longer used. Returns NULL if `info` is NULL or the vendor did
+///         not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_name(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match &(*info).inner.processor_name {
+        Some(v) => match CString::new(v.as_str()) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the processor revision, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The processor revision. Must call qrmi_string_free() to free
+///         if no longer used. Returns NULL if `info` is NULL or the
+///         vendor did not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_revision(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match &(*info).inner.processor_revision {
+        Some(v) => match CString::new(v.as_str()) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns a free-form description of the resource, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The description. Must call qrmi_string_free() to free if no
+///         longer used. Returns NULL if `info` is NULL or the vendor did
+///         not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match &(*info).inner.description {
+        Some(v) => match CString::new(v.as_str()) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns whether the resource is a simulator, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] Whether the resource is a simulator
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
+    info: *mut QuantumResourceInfo,
+    outp: *mut bool,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match (*info).inner.is_simulator {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _not_reported("whether the resource is a simulator"),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns whether the resource has its own (second-level) job queue, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] Whether the resource has its own queue
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
+    info: *mut QuantumResourceInfo,
+    outp: *mut bool,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match (*info).inner.has_queue {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _not_reported("whether the resource has its own queue"),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the maximum number of shots supported per job, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] The maximum number of shots
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_max_shots(
+    info: *mut QuantumResourceInfo,
+    outp: *mut u64,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match (*info).inner.max_shots {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _not_reported("a maximum shot count"),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the number of jobs currently queued on the backend, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] Number of pending jobs
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_pending_job_count(
+    info: *mut QuantumResourceInfo,
+    outp: *mut u64,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match (*info).inner.pending_job_count {
+        Some(v) => {
+            *outp = v;
+            ReturnCode::Success
+        }
+        None => _not_reported("a pending job count"),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the resource's status code (same value as
+/// qrmi_resource_status_code()), if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// * `outp` must be non-null.
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @param (outp) [out] The status code
+/// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_UNSUPPORTED_FUNCTION_ERROR
+///         if the vendor does not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_status(
+    info: *mut QuantumResourceInfo,
+    outp: *mut crate::models::ResourceStatusCode,
+) -> ReturnCode {
+    crate::common::initialize();
+    if info.is_null() || outp.is_null() {
+        return ReturnCode::NullPointerError;
+    }
+    match &(*info).inner.status {
+        Some(v) => {
+            *outp = v.clone();
+            ReturnCode::Success
+        }
+        None => _not_reported("a status"),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the RFC 3339 timestamp of when this information was last
+/// generated or refreshed on the vendor's side, if reported.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The timestamp. Must call qrmi_string_free() to free if no
+///         longer used. Returns NULL if `info` is NULL or the vendor did
+///         not report this field.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_last_updated(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() {
+        return std::ptr::null_mut();
+    }
+    match &(*info).inner.last_updated {
+        Some(v) => match CString::new(v.as_str()) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResourceInfo
+/// Returns the vendor-specific `extra` data as a JSON object string (e.g.
+/// basis gates, raw calibration data). The shape is vendor-defined.
+///
+/// # Safety
+///
+/// * `info` must have been returned by a previous call to qrmi_resource_describe().
+///
+/// @param (info) [in] A QrmiQuantumResourceInfo handle
+/// @return The extra data, serialized as JSON. Must call
+///         qrmi_string_free() to free if no longer used. Returns NULL if
+///         `info` is NULL or no extra data was reported.
+/// @version 0.27.0
+#[no_mangle]
+pub unsafe extern "C" fn qrmi_quantum_resource_info_extra(
+    info: *mut QuantumResourceInfo,
+) -> *mut c_char {
+    crate::common::initialize();
+    if info.is_null() || (*info).inner.extra.is_null() {
+        return std::ptr::null_mut();
+    }
+    match serde_json::to_string(&(*info).inner.extra).map(CString::new) {
+        Ok(Ok(cstr)) => cstr.into_raw(),
+        _ => std::ptr::null_mut(),
+    }
+}
+
+/// @ingroup QrmiQuantumResource
 /// Returns a resource metadata
+///
+/// @deprecated Use qrmi_resource_describe() instead. This function will be
+/// removed in a future release.
 ///
 /// # Safety
 ///
@@ -2068,6 +2636,7 @@ pub unsafe extern "C" fn qrmi_resource_metadata(
         return ReturnCode::NullPointerError;
     }
 
+    #[allow(deprecated)]
     let metadata = (*qrmi)
         .runtime
         .block_on(async { (*qrmi).inner.metadata().await });

@@ -246,7 +246,24 @@ Stops a running task.
 
 **Returns:** on success, `ok` (boolean, always true); on failure, `nil, err`
 
+### `resource:describe()`
+
+Fetches the resource's configuration and attributes as a Lua table:
+`resource_id`, `resource_type` (strings, always present), `qubit_type`
+(string, e.g. `"neutral_atom"`, always present), `backend_display_name`,
+`processor_name`, `processor_revision`, `description`, `last_updated`
+(strings or `nil`), `num_qubits`, `max_shots`, `pending_job_count`
+(integers or `nil`), `is_simulator`, `has_queue` (booleans or `nil`),
+`status` (string, e.g. `"online"`, or `nil`), and `extra` (a JSON object
+string with vendor-specific data, or `nil`). A field is `nil` when the
+vendor does not report it. Wraps `qrmi_resource_describe` and its
+`qrmi_quantum_resource_info_*` accessors.
+
+**Returns:** on success, `info` (table); on failure, `nil, err`
+
 ### `resource:metadata()`
+
+> **Deprecated:** use `resource:describe()` instead. Prints a warning to stderr.
 
 Fetches the resource's metadata as a Lua table (combines
 `qrmi_resource_metadata` + `qrmi_resource_metadata_keys` +

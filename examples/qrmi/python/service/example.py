@@ -62,7 +62,7 @@ print(f"\nAcquiring '{args.resource}'...")
 lock = resource.acquire()
 print(f"acquisition token = {lock}")
 
-print(resource.metadata())
+print(resource.describe())
 print(resource.target().value)
 
 resource.release(lock)
