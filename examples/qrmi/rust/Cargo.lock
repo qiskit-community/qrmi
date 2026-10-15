@@ -332,7 +332,7 @@ dependencies = [
  "hyper-util",
  "pin-project-lite",
  "rustls 0.21.12",
- "rustls 0.23.43",
+ "rustls 0.23.46",
  "rustls-native-certs",
  "rustls-pki-types",
  "tokio",
@@ -1469,7 +1469,7 @@ dependencies = [
  "http 1.5.0",
  "hyper 1.11.0",
  "hyper-util",
- "rustls 0.23.43",
+ "rustls 0.23.46",
  "rustls-native-certs",
  "tokio",
  "tokio-rustls 0.26.4",
@@ -1999,7 +1999,6 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "retry-policies",
- "rhexdump",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -2017,12 +2016,12 @@ dependencies = [
  "chrono",
  "env_logger",
  "http 1.5.0",
+ "libloading",
  "log",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
  "retry-policies",
- "rhexdump",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -2174,7 +2173,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.25.1"
+version = "0.26.1"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2343,7 +2342,6 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "retry-policies",
- "rhexdump",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
@@ -2375,7 +2373,7 @@ dependencies = [
  "quinn-proto",
  "quinn-udp",
  "rustc-hash",
- "rustls 0.23.43",
+ "rustls 0.23.46",
  "socket2 0.6.5",
  "thiserror 2.0.20",
  "tokio",
@@ -2396,7 +2394,7 @@ dependencies = [
  "rand_pcg",
  "ring",
  "rustc-hash",
- "rustls 0.23.43",
+ "rustls 0.23.46",
  "rustls-pki-types",
  "slab",
  "thiserror 2.0.20",
@@ -2585,7 +2583,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "quinn",
- "rustls 0.23.43",
+ "rustls 0.23.46",
  "rustls-native-certs",
  "rustls-pki-types",
  "serde",
@@ -2661,12 +2659,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rhexdump"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a92cbe1a3dd221e3777fef339115d3b85e17a538668e03a0f3ae9c6a98351c7"
-
-[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2722,9 +2714,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "aws-lc-rs",
  "once_cell",
@@ -3316,7 +3308,7 @@ version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1729aa945f29d91ba541258c8df89027d5792d85a8841fb65e8bf0f4ede4ef61"
 dependencies = [
- "rustls 0.23.43",
+ "rustls 0.23.46",
  "tokio",
 ]
 
