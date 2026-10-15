@@ -375,26 +375,20 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn target(&mut self) -> Result<Target> {
-        let mut resp = json!({});
-        if let Ok(config) = self
+        let config = self
             .api_client
             .get_backend_configuration::<serde_json::Value>(&self.backend_name)
-            .await
-        {
-            resp["configuration"] = config;
-        } else {
-            resp["configuration"] = json!(null);
-        }
+            .await?;
 
-        if let Ok(props) = self
+        let props = self
             .api_client
             .get_backend_properties::<serde_json::Value>(&self.backend_name)
-            .await
-        {
-            resp["properties"] = props;
-        } else {
-            resp["properties"] = json!(null);
-        }
+            .await?;
+
+        let resp = json!({
+            "configuration": config,
+            "properties": props,
+        });
 
         Ok(Target {
             value: resp.to_string(),
