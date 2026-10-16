@@ -7,7 +7,7 @@ The operator acquires an IBM resource and creates a Secret containing
 backend-scoped credentials and an acquisition token. The example Job
 checks their presence without displaying their values.
 
-No quantum circuit is submitted.
+The default probe submits no quantum circuit. An optional Bell circuit example is described below.
 
 ## Prerequisites
 
@@ -58,8 +58,7 @@ The image was built with Podman on RHEL x86_64.
 - Job deletion after claim binding: release and Secret cleanup passed.
 
 The deletion test did not conclusively establish workload startup before
-deletion. No quantum circuit was submitted; an optional circuit example
-is not included.
+deletion. The lifecycle probes submitted no quantum circuits. The optional Bell circuit was validated separately.
 
 ## Prototype limitations
 
@@ -69,8 +68,7 @@ Confirm release explicitly in operator logs.
 Deletion produced NotFound reconciliation warnings after successful release.
 The unavailable legacy direct-access backend returns an explicit error.
 
-These tests cover resource lifecycle management, not quantum execution
-or remote quantum-task cancellation.
+The lifecycle probes do not validate remote quantum-task cancellation.
 
 ## Cleanup
 
@@ -81,3 +79,41 @@ Secret available until their claims finish cleanup and release is confirmed.
     kubectl wait -n qrmi-example --for=delete quantumresourceclaim/job-ibm-qcs-example --timeout=90s
     kubectl delete quantumresource ibm-fez
     kubectl delete secret ibm-qcs-credentials -n qrmi-example
+
+## Optional Bell circuit
+
+This example submits a real two-qubit Bell circuit with 128 shots.
+It consumes QPU allocation and may wait in the backend queue.
+
+Build from the repository root:
+
+    podman build -f operator/docker/ibm-qcs-example/Dockerfile -t localhost/qrmi-ibm-bell:issue300 .
+
+Make this image available on the Kubernetes nodes. The supplied manifest
+uses imagePullPolicy: Never for locally imported images.
+
+Using the existing QuantumResource and credential Secret:
+
+    kubectl apply -n qrmi-example -f operator/deploy/resources/ibm-qcs-bell-job.yaml
+    kubectl logs -f -n qrmi-example job/ibm-qcs-bell --pod-running-timeout=180s
+
+The workload checks that QRMI loaded the operator-provided acquisition,
+transpiles the circuit for the backend, submits it and retrieves counts.
+It does not acquire or release the resource itself.
+
+The claim TTL is 7200 seconds and the Job deadline is 6900 seconds.
+Adjust these for expected queue waiting. Expiry can interrupt execution.
+Do not resubmit a Job merely because it is waiting for quantum results.
+
+Validated quantum job: db941kk24mrc7383e2mg on ibm_fez.
+Counts: 00=64, 11=58, 10=2, 01=4; total=128.
+These counts are an observed result, not a required distribution.
+
+The Kubernetes Job completed successfully. Operator logs confirmed release;
+the claim and generated Secret were removed afterward.
+Workload versions: QRMI 0.20.0 from source, Qiskit 2.5.2,
+qiskit-ibm-runtime 0.50.0.
+
+Delete the completed example when its logs have been saved:
+
+    kubectl delete job ibm-qcs-bell -n qrmi-example
