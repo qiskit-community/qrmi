@@ -68,3 +68,7 @@ View output:
 ```
 kubectl logs jobs/alice-bob-felis-example -n $QRMI_NAMESPACE
 ```
+
+## IBM Quantum Compute Service example
+
+See [the IBM example](README.IBM-QCS.md) for setup and validation results.

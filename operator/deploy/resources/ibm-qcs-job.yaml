@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ibm-qcs-example
+  annotations:
+    quantum.qrmi.io/resource: ibm-fez
+    quantum.qrmi.io/ttl: "300"
+spec:
+  suspend: true
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: probe
+          image: python:3.12-slim
+          env:
+            - name: QRMI_JOB_QPU_RESOURCES
+              value: ibm_fez
+            - name: QRMI_JOB_QPU_TYPES
+              value: qiskit-runtime-service
+          envFrom:
+            - secretRef:
+                name: qrc-job-ibm-qcs-example
+          command: ["python", "-c"]
+          args:
+            - |
+              import os
+              device = os.environ["QRMI_JOB_QPU_RESOURCES"]
+              required = [
+                  f"{device}_QRMI_IBM_QRS_IAM_APIKEY",
+                  f"{device}_QRMI_IBM_QRS_SERVICE_CRN",
+                  f"{device}_QRMI_JOB_ACQUISITION_TOKEN",
+              ]
+              missing = [name for name in required if not os.environ.get(name)]
+              if missing:
+                  raise SystemExit("Missing variables: " + ", ".join(missing))
+              print("IBM acquisition credentials and token are present.")
+              print("No quantum computation was submitted.")

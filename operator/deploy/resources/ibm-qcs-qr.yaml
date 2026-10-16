@@ -1,0 +1,19 @@
+apiVersion: quantum.qrmi.io/v1alpha1
+kind: QuantumResource
+metadata:
+  name: ibm-fez
+spec:
+  resourceId: ibm_fez
+  # This prototype uses the legacy QRMI backend identifier.
+  resourceType: qiskit-runtime-service
+  envVars:
+    QRMI_IBM_QRS_ENDPOINT: https://quantum.cloud.ibm.com/api/v1
+    QRMI_IBM_QRS_IAM_ENDPOINT: https://iam.cloud.ibm.com
+    QRMI_IBM_QRS_SESSION_MODE: batch
+  secretRefs:
+    - secretName: ibm-qcs-credentials
+      secretKey: api-key
+      envVarName: QRMI_IBM_QRS_IAM_APIKEY
+    - secretName: ibm-qcs-credentials
+      secretKey: service-crn
+      envVarName: QRMI_IBM_QRS_SERVICE_CRN
