@@ -1,0 +1,25 @@
+Migrating to v0.26.3: `get_target()` is deprecated
+===================================================================================
+
+`qrmi.primitives.ibm.get_target()` is deprecated as of v0.26.3 to simplify the API, and will be removed no earlier than January 16, 2027.
+Use `get_backend().target` instead, which returns the same `Target` object.
+
+How to migrate
+--------------
+
+Replace `get_target()` with `get_backend()` and access its `target` attribute:
+
+.. code-block:: python
+
+   # Before
+   from qrmi.primitives.ibm import get_target
+
+   target = get_target(qrmi)
+
+   # After
+   from qrmi.primitives.ibm import get_backend
+
+   target = get_backend(qrmi).target
+
+
+Calling `get_target()` now emits a `DeprecationWarning`. To find all remaining call sites, run your code with `python -W error::DeprecationWarning`.
