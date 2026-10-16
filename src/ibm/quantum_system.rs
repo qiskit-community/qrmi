@@ -375,15 +375,12 @@ impl QuantumResource for IBMQuantumSystem {
     }
 
     async fn target(&mut self) -> Result<Target> {
-        let config = self
-            .api_client
-            .get_backend_configuration::<serde_json::Value>(&self.backend_name)
-            .await?;
-
-        let props = self
-            .api_client
-            .get_backend_properties::<serde_json::Value>(&self.backend_name)
-            .await?;
+        let (config, props) = tokio::try_join!(
+            self.api_client
+                .get_backend_configuration::<serde_json::Value>(&self.backend_name),
+            self.api_client
+                .get_backend_properties::<serde_json::Value>(&self.backend_name),
+        )?;
 
         let resp = json!({
             "configuration": config,
