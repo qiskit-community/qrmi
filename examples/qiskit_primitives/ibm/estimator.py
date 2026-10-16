@@ -19,7 +19,7 @@ from qiskit.circuit.library import QAOAAnsatz
 from qiskit.transpiler import generate_preset_pass_manager
 from qiskit.quantum_info import SparsePauliOp
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import EstimatorV2, get_target
+from qrmi.primitives.ibm import EstimatorV2, get_backend
 
 # Create QRMI
 load_dotenv()
@@ -37,7 +37,7 @@ qrmi = resources[random.randrange(len(resources))]
 print(qrmi.metadata())
 
 # Generate transpiler target from backend configuration & properties
-target = get_target(qrmi)
+target = get_backend(qrmi).target
 
 # Create a circuit and an observable
 # You need at least one circuit and one observable as inputs to the Estimator primitive.

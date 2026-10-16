@@ -2,7 +2,7 @@
 
 # This code is part of Qiskit.
 #
-# (C) Copyright 2024, 2025 IBM. All Rights Reserved.
+# (C) Copyright 2024-2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -14,12 +14,11 @@
 
 """Qiskit Target creation"""
 
-# pylint: disable=invalid-name
-import json
+# pylint: disable=no-name-in-module
+import warnings
 from qiskit.transpiler.target import Target
-from qiskit_ibm_runtime.utils.backend_converter import convert_to_target
-from qiskit_ibm_runtime.models import BackendProperties, BackendConfiguration
 from qrmi import QuantumResource
+from .backend import get_backend
 
 
 def get_target(qrmi: QuantumResource) -> Target:
@@ -31,8 +30,11 @@ def get_target(qrmi: QuantumResource) -> Target:
     Returns:
         qiskit.transpiler.target.Target: Qiskit Transpiler target
     """
-    target = qrmi.target()
-    target = json.loads(target.value)
-    backend_config = BackendConfiguration.from_dict(target["configuration"])
-    backend_props = BackendProperties.from_dict(target["properties"])
-    return convert_to_target(backend_config, backend_props)
+    warnings.warn(
+        "`get_target` function is deprecated as of qrmi 0.26.3, use get_backend().target instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    backend = get_backend(qrmi)
+    return backend.target
