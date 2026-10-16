@@ -30,7 +30,7 @@ use tokio::time::{timeout, Duration};
 use tracing::instrument;
 
 use qrmi::alice_bob::AliceBobFelis;
-use qrmi::ibm::{IBMDirectAccess, IBMQiskitRuntimeService, IBMQuantumSystem};
+use qrmi::ibm::{IBMQiskitRuntimeService, IBMQuantumSystem};
 use qrmi::iqm::IQMServer;
 use qrmi::pasqal::{PasqalCloud, PasqalLocal};
 use qrmi::QuantumResource;
@@ -101,6 +101,7 @@ pub async fn acquire(
     env_vars: &HashMap<String, String>,
 ) -> Result<String> {
     let _guard = env_mutex().lock().await;
+    let env_vars = backend_env_vars(spec, env_vars);
 
     // Save current values of every variable we are about to mutate.
     let saved: HashMap<String, Option<String>> = env_vars
@@ -109,7 +110,7 @@ pub async fn acquire(
         .collect();
 
     // Apply
-    for (k, v) in env_vars {
+    for (k, v) in &env_vars {
         // SAFETY: we hold the env_mutex, no concurrent mutation is possible
         // within this process.
         unsafe { std::env::set_var(k, v) };
@@ -138,13 +139,14 @@ pub async fn release(
     token: &str,
 ) -> Result<()> {
     let _guard = env_mutex().lock().await;
+    let env_vars = backend_env_vars(spec, env_vars);
 
     let saved: HashMap<String, Option<String>> = env_vars
         .keys()
         .map(|k| (k.clone(), std::env::var(k).ok()))
         .collect();
 
-    for (k, v) in env_vars {
+    for (k, v) in &env_vars {
         unsafe { std::env::set_var(k, v) };
     }
 
@@ -196,9 +198,9 @@ fn build_backend(spec: &QuantumResourceSpec) -> Result<Box<dyn QuantumResource>>
     let id = &spec.resource_id;
     let backend: Box<dyn QuantumResource> = match spec.resource_type {
         QrmiResourceType::DirectAccess => {
-            Box::new(IBMDirectAccess::new(id).with_context(|| {
-                format!("constructing IBMDirectAccess for {id}")
-            })?)
+            anyhow::bail!(
+                "direct-access is unavailable in this QRMI build; configure a supported resource type"
+            )
         }
         QrmiResourceType::IbmQuantumSystem => {
             Box::new(IBMQuantumSystem::new(id).with_context(|| {
@@ -232,4 +234,53 @@ fn build_backend(spec: &QuantumResourceSpec) -> Result<Box<dyn QuantumResource>>
         }
     };
     Ok(backend)
+}
+
+// Modified to scope IBM Runtime credentials for operator acquisition and release.
+fn backend_env_vars(
+    spec: &QuantumResourceSpec,
+    env_vars: &HashMap<String, String>,
+) -> HashMap<String, String> {
+    env_vars
+        .iter()
+        .map(|(key, value)| {
+            let name = if spec.resource_type == QrmiResourceType::QiskitRuntimeService
+                && key.starts_with("QRMI_IBM_QRS_")
+            {
+                format!("{}_{}", spec.resource_id, key)
+            } else {
+                key.clone()
+            };
+            (name, value.clone())
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ibm_credentials_are_scoped_without_changing_other_variables() {
+        let spec = QuantumResourceSpec {
+            resource_id: "ibm_fez".into(),
+            resource_type: QrmiResourceType::QiskitRuntimeService,
+            env_vars: HashMap::new(),
+            secret_refs: vec![],
+        };
+        let vars = HashMap::from([
+            ("QRMI_IBM_QRS_IAM_APIKEY".into(), "test-value".into()),
+            ("QRMI_JOB_TIMEOUT_SECONDS".into(), "60".into()),
+        ]);
+        let scoped = backend_env_vars(&spec, &vars);
+        assert_eq!(scoped["ibm_fez_QRMI_IBM_QRS_IAM_APIKEY"], "test-value");
+        assert!(!scoped.contains_key("QRMI_IBM_QRS_IAM_APIKEY"));
+        assert_eq!(scoped["QRMI_JOB_TIMEOUT_SECONDS"], "60");
+
+        let other = QuantumResourceSpec {
+            resource_type: QrmiResourceType::AliceBobFelis,
+            ..spec
+        };
+        assert_eq!(backend_env_vars(&other, &vars), vars);
+    }
 }

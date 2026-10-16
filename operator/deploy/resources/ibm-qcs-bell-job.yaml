@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ibm-qcs-bell
+  annotations:
+    quantum.qrmi.io/resource: ibm-fez
+    quantum.qrmi.io/ttl: "7200"
+spec:
+  suspend: true
+  backoffLimit: 0
+  activeDeadlineSeconds: 6900
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: bell
+          image: localhost/qrmi-ibm-bell:issue300
+          imagePullPolicy: Never
+          env:
+            - name: QRMI_JOB_QPU_RESOURCES
+              value: ibm_fez
+            - name: QRMI_JOB_QPU_TYPES
+              value: qiskit-runtime-service
+          envFrom:
+            - secretRef:
+                name: qrc-job-ibm-qcs-bell
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
