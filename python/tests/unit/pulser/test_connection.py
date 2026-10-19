@@ -25,9 +25,12 @@ class _TaskResult:
 
 
 class _FakeQRMI:
-    def __init__(self, status: TaskStatus = TaskStatus.Completed):
+    def __init__(
+        self, status: TaskStatus = TaskStatus.Completed, resource_id: str = "FRESNEL"
+    ):
         """Create a minimal QRMI stub."""
         self._status = status
+        self._resource_id = resource_id
         self.started: list[str] = []
         self.stopped: list[str] = []
 
@@ -36,6 +39,10 @@ class _FakeQRMI:
         job_id = f"job-{len(self.started) + 1}"
         self.started.append(job_id)
         return job_id
+
+    def resource_id(self) -> str:
+        """Return the configured resource id."""
+        return self._resource_id
 
     def resource_type(self) -> ResourceType:
         """Return a Pasqal resource type"""
@@ -76,6 +83,16 @@ class _FakeQRMI:
 def _build_sequence() -> pulser.Sequence:
     register = pulser.Register.from_coordinates([(0.0, 0.0)], prefix="q")
     sequence = pulser.Sequence(register, pulser.MockDevice)
+    sequence.declare_channel("rydberg", "rydberg_global")
+    sequence.add(pulser.Pulse.ConstantPulse(100, 1.0, 0.0, 0.0), "rydberg")
+    sequence.measure("ground-rydberg")
+    return sequence
+
+
+def _build_device_sequence() -> pulser.Sequence:
+    register = pulser.Register.from_coordinates([(0.0, 0.0)], prefix="q")
+    device = pulser.DigitalAnalogDevice
+    sequence = pulser.Sequence(register.with_automatic_layout(device), device)
     sequence.declare_channel("rydberg", "rydberg_global")
     sequence.add(pulser.Pulse.ConstantPulse(100, 1.0, 0.0, 0.0), "rydberg")
     sequence.measure("ground-rydberg")
@@ -903,3 +920,34 @@ def test_batch_status_done_single_job_completed() -> None:
     result = connection._get_batch_status(batch_id)
 
     assert result == BatchStatus.DONE
+
+
+@pytest.mark.parametrize("resource_id", ["EMU_FREE", "EMU_MPS", "EMU_FRESNEL"])
+def test_qpu_backend_runs_cloud_emulator_sequence(resource_id) -> None:
+    """Run a Cloud emulator sequence without matching it to QPU specs."""
+    fake_qrmi = _FakeQRMI(resource_id=resource_id)
+    fake_qrmi.target = Mock(side_effect=AssertionError("target() was called"))
+    connection = PulserQRMIConnection(qrmi=fake_qrmi)
+
+    remote_results = pulser.QPUBackend(_build_device_sequence(), connection).run(
+        job_params=[{"runs": 3}], wait=True
+    )
+
+    assert remote_results.results[0].final_bitstrings == {"0": 3}
+    assert fake_qrmi.started == ["job-1"]
+
+
+@pytest.mark.parametrize(
+    "resource_type, resource_id",
+    [(ResourceType.PasqalCloud, "FRESNEL"), (ResourceType.PasqalLocal, "EMU_FREE")],
+)
+def test_qpu_backend_checks_sequence_device_for_qpu(resource_type, resource_id):
+    """Reject a sequence whose device is not among the QPU devices."""
+    fake_qrmi = _FakeQRMI(resource_id=resource_id)
+    fake_qrmi.resource_type = lambda: resource_type
+    connection = PulserQRMIConnection(qrmi=fake_qrmi)
+
+    with pytest.raises(ValueError, match="does not match any of the devices"):
+        pulser.QPUBackend(_build_device_sequence(), connection).run(
+            job_params=[{"runs": 3}]
+        )

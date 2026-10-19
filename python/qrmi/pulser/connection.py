@@ -81,6 +81,10 @@ class PulserQRMIConnection(RemoteConnection):
                 "or 'PasqalCloud' QRMI resources,"
                 f" got: '{_type}'"
             )
+        # Pasqal Cloud emulators run the sequence on its own device.
+        self._cloud_emulator = _type == ResourceType.PasqalCloud and (
+            self._qrmi.resource_id().startswith("EMU")
+        )
 
     @staticmethod
     def _resolve_single_resource() -> QuantumResource:
@@ -99,6 +103,19 @@ class PulserQRMIConnection(RemoteConnection):
             f"{resource_ids}. Specify one explicitly with "
             "PulserQRMIConnection(qrmi=...)."
         )
+
+    def update_sequence_device(self, sequence: pulser.Sequence) -> pulser.Sequence:
+        """Keep the device for Cloud emulators, else match it to the QPU.
+
+        Args:
+            sequence (pulser.Sequence): The sequence to submit.
+
+        Returns:
+            (pulser.Sequence): The sequence with the device it will run on.
+        """
+        if self._cloud_emulator:
+            return sequence
+        return super().update_sequence_device(sequence)
 
     def supports_open_batch(self) -> bool:
         """Flag to confirm this class doesn't support open batch creation."""
@@ -249,7 +266,9 @@ class PulserQRMIConnection(RemoteConnection):
         # Create a new batch by submitting to the targeted qpu.
         # If QRMI exposes device specs for the selected resource, enforce a
         # sequence-device match and validate runs against the target max_runs.
-        available_devices = self.fetch_available_devices()
+        available_devices = (
+            {} if self._cloud_emulator else self.fetch_available_devices()
+        )
 
         if available_devices:
             target_device = next(
