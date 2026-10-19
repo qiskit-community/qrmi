@@ -25,6 +25,7 @@ pub struct PasqalLocal {
     pub(crate) backend_name: String,
     pub(crate) job_uid: i32,
     pub(crate) job_id: String,
+    pub(crate) acquisition_token: Option<String>,
 }
 
 impl PasqalLocal {
@@ -39,6 +40,8 @@ impl PasqalLocal {
     /// * `QRMI_JOB_ID`: id of the slurm job
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
+    /// * `<backend_name>_QRMI_JOB_ACQUISITION_TOKEN`: Warden session used by
+    ///   `task_start()`, and by `release()` when called with an empty ID.
     ///
     pub fn new(backend_name: &str) -> Result<Self> {
         Self::from_opt(backend_name, None)
@@ -89,13 +92,24 @@ impl PasqalLocal {
             })?;
 
         let job_id = resolve_opt_required("QRMI_JOB_ID", config)?;
+        let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
 
         Ok(Self {
             api_client: ClientBuilder::new(url).build().unwrap(),
             backend_name: backend_name.to_string(),
             job_uid,
             job_id,
+            acquisition_token,
         })
+    }
+
+    /// Returns the Warden session given at construction, or else from
+    /// `<backend_name>_QRMI_JOB_ACQUISITION_TOKEN` (set after acquisition).
+    fn session_id(&self) -> Result<String> {
+        match &self.acquisition_token {
+            Some(token) => Ok(token.clone()),
+            None => required_env(format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name)),
+        }
     }
 }
 
@@ -122,16 +136,18 @@ impl QuantumResource for PasqalLocal {
         Ok(session.id)
     }
 
-    async fn release(&mut self, _id: &str) -> Result<()> {
-        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
-        let session_id = required_env(&token_var)?;
+    async fn release(&mut self, id: &str) -> Result<()> {
+        let session_id = if id.is_empty() {
+            self.session_id()?
+        } else {
+            id.to_string()
+        };
         self.api_client.revoke_session(&session_id).await?;
         Ok(())
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name);
-        let session_id = required_env(&token_var)?;
+        let session_id = self.session_id()?;
 
         let Payload::PasqalCloud { sequence, job_runs } = payload else {
             return Err(QrmiError::UnsupportedPayload(format!("{payload:?}")));
