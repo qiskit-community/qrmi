@@ -14,9 +14,6 @@ use std::process::Command;
 
 // For C API bindings
 fn main() {
-    for (key, value) in std::env::vars() {
-        eprintln!("{key}: {value}");
-    }
     // Pull the config from the cbindgen.toml file.
     let config = cbindgen::Config::from_file("cbindgen.toml").unwrap();
 
