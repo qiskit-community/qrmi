@@ -285,12 +285,16 @@ fn _record_error(err: QrmiError) {
 }
 
 /// Borrows a C string argument as UTF-8, recording which argument was
-/// invalid as the last error when it is not valid UTF-8.
+/// invalid as the last error when it is NULL or not valid UTF-8.
 ///
 /// # Safety
 ///
-/// `ptr` must be non-null and point to a nul-terminated string.
+/// `ptr` must be NULL or point to a nul-terminated string.
 unsafe fn _utf8_arg<'a>(ptr: *const c_char, name: &str) -> Option<&'a str> {
+    if ptr.is_null() {
+        _set_last_error_with_kind(format!("{} is NULL", name), QrmiErrorKind::InvalidInput);
+        return None;
+    }
     let value = CStr::from_ptr(ptr).to_str().ok();
     if value.is_none() {
         _set_last_error_with_kind(
@@ -299,6 +303,46 @@ unsafe fn _utf8_arg<'a>(ptr: *const c_char, name: &str) -> Option<&'a str> {
         );
     }
     value
+}
+
+/// Converts a string to be returned to C, recording `error` as the last
+/// error when the string contains a NUL byte. `error` never includes the
+/// value itself, which may be a token or a large payload.
+fn _c_string(value: String, error: &str) -> Option<CString> {
+    let value = CString::new(value).ok();
+    if value.is_none() {
+        _set_last_error(error.to_string());
+    }
+    value
+}
+
+/// Hands `values` to C as a string array to be freed with
+/// `qrmi_string_array_free()`. If any value contains a NUL byte, allocates
+/// nothing, records `error` as the last error and sets `*count` to 0 and
+/// `*array` to NULL.
+///
+/// # Safety
+///
+/// `count` and `array` must be non-null.
+unsafe fn _c_string_array<'a>(
+    values: impl Iterator<Item = &'a String>,
+    error: &str,
+    count: *mut usize,
+    array: *mut *mut *mut c_char,
+) -> ReturnCode {
+    let Ok(values) = values
+        .map(|v| CString::new(v.as_str()))
+        .collect::<Result<Vec<_>, _>>()
+    else {
+        *count = 0;
+        *array = std::ptr::null_mut();
+        _set_last_error(error.to_string());
+        return ReturnCode::Error;
+    };
+    let raw: Box<[*mut c_char]> = values.into_iter().map(CString::into_raw).collect();
+    *count = raw.len();
+    *array = Box::into_raw(raw) as *mut *mut c_char;
+    ReturnCode::Success
 }
 
 /// Returns `$ret` from the enclosing function if `$ptr` is NULL, recording
@@ -381,7 +425,10 @@ pub unsafe extern "C" fn qrmi_log_callback_set(callback: QrmiLogCallback) -> Ret
     crate::common::initialize();
     match result {
         Ok(()) => ReturnCode::Success,
-        Err(()) => ReturnCode::Error,
+        Err(()) => {
+            _set_last_error("failed to set the log callback".to_string());
+            ReturnCode::Error
+        }
     }
 }
 
@@ -464,7 +511,7 @@ pub unsafe extern "C" fn qrmi_string_array_free(
                 let _ = CString::from_raw(ptr);
             }
         }
-        let _ = Box::from_raw(array);
+        let _ = Box::from_raw(std::ptr::slice_from_raw_parts_mut(array, size));
     }
     ReturnCode::Success
 }
@@ -564,6 +611,7 @@ pub unsafe extern "C" fn qrmi_config_free(ptr: *mut Config) -> ReturnCode {
 /// @param (config) [in] a Config handle
 /// @param (resource_id) [in] resource identifier
 /// @return A QrmiResourceDef if succeeded, otherwise NULL. Must call qrmi_config_resource_def_free() to free if no longer used.
+///         Also NULL if the name or an environment variable of the resource contains a NUL byte.
 /// @version 0.6.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_config_resource_def_get(
@@ -576,25 +624,47 @@ pub unsafe extern "C" fn qrmi_config_resource_def_get(
 
     if let Some(id_str) = _utf8_arg(resource_id, "resource_id") {
         if let Some(resource) = (*config).resource_map.get(id_str) {
-            let mut c_envvars = Vec::new();
-            for (key, value) in resource.environment.clone().into_iter() {
-                c_envvars.push(KeyValue {
-                    key: CString::new(key.clone()).unwrap().into_raw(),
-                    value: CString::new(value.clone()).unwrap().into_raw(),
+            // Convert every string before handing any to C, so a failure leaks nothing.
+            let converted = CString::new(resource.name.as_str())
+                .map_err(|_| "name")
+                .and_then(|name| {
+                    let envvars = resource
+                        .environment
+                        .iter()
+                        .map(|(key, value)| {
+                            Ok((
+                                CString::new(key.as_str())
+                                    .map_err(|_| "environment variable name")?,
+                                CString::new(value.as_str())
+                                    .map_err(|_| "environment variable value")?,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>, &str>>()?;
+                    Ok((name, envvars))
                 });
-            }
-            let boxed_res = Box::new(ResourceDef {
-                name: CString::new(resource.name.clone()).unwrap().into_raw(),
+            let (name, envvars) = match converted {
+                Ok(v) => v,
+                Err(what) => {
+                    _set_last_error(format!("resource {id_str}: {what} contains a NUL byte"));
+                    return std::ptr::null_mut();
+                }
+            };
+            let c_envvars: Box<[KeyValue]> = envvars
+                .into_iter()
+                .map(|(key, value)| KeyValue {
+                    key: key.into_raw(),
+                    value: value.into_raw(),
+                })
+                .collect();
+            return Box::into_raw(Box::new(ResourceDef {
+                name: name.into_raw(),
                 r#type: resource.r#type.clone(),
                 is_dynamic: resource.is_dynamic,
                 environments: EnvironmentVariables {
-                    variables: c_envvars.as_mut_ptr(),
                     length: c_envvars.len(),
+                    variables: Box::into_raw(c_envvars) as *mut KeyValue,
                 },
-            });
-
-            std::mem::forget(c_envvars);
-            return Box::into_raw(boxed_res);
+            }));
         }
     }
     std::ptr::null_mut()
@@ -658,9 +728,8 @@ pub unsafe extern "C" fn qrmi_config_resource_type_from_str(
     outp: *mut ResourceType,
 ) -> ReturnCode {
     crate::common::initialize();
-    if type_str.is_null() || outp.is_null() {
-        return ReturnCode::NullPointerError;
-    }
+    null_pointer_check!(type_str, ReturnCode::NullPointerError);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
     let value = CStr::from_ptr(type_str).to_string_lossy();
     match ResourceType::from_qpu_type_str(&value) {
         Some(v) => {
@@ -753,6 +822,8 @@ pub unsafe extern "C" fn qrmi_config_resource_def_free(ptr: *mut ResourceDef) ->
 /// @param (num_names) [out] number of resource names in the list
 /// @param (names) [out] A list of the resource names if succeeded. Must call qrmi_string_array_free() to free if no longer used.
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_ERROR if a name contains a NUL byte;
+///         `*num_names` is then 0 and `*names` is NULL.
 /// @version 0.6.0
 #[no_mangle]
 /// cbindgen:ptrs-as-arrays=[[names;]]
@@ -763,37 +834,28 @@ pub unsafe extern "C" fn qrmi_config_resource_names_get(
 ) -> ReturnCode {
     crate::common::initialize();
     null_pointer_check!(config, ReturnCode::NullPointerError);
+    null_pointer_check!(num_names, ReturnCode::NullPointerError);
     null_pointer_check!(names, ReturnCode::NullPointerError);
 
-    let keys = (*config).resource_map.keys();
-    let count = keys.len();
-    let mut raw_ptrs: Vec<*mut c_char> = Vec::with_capacity(count);
-    for key in keys {
-        let str_c = CString::new(key.as_str()).unwrap();
-        raw_ptrs.push(str_c.into_raw());
-    }
-
-    let boxed_array = raw_ptrs.into_boxed_slice();
-    let raw = boxed_array.as_ptr() as *mut *mut c_char;
-    std::mem::forget(boxed_array);
-
-    unsafe {
-        *num_names = count;
-        *names = raw;
-    }
-    ReturnCode::Success
+    _c_string_array(
+        (*config).resource_map.keys(),
+        "a resource name contains a NUL byte",
+        num_names,
+        names,
+    )
 }
 
 /// @ingroup Qrmi
 /// Returns the last error message that occurred during an FFI call from C to Rust.
 /// This function is designed to be thread-safe by using thread-local storage, ensuring that
-/// each thread retrieves its own error message independently.etrieves the most recent error
-/// encountered during API call.
+/// each thread retrieves its own error message independently.
 ///
 /// # Behavior
-/// * If an error was previously set in the current thread via set_last_error(), this function returns a pointer to a null-terminated C string (const char*) containing the error message.
+/// * If an API call failed earlier in the current thread, this function returns a pointer to a null-terminated C string (const char*) containing the message of the most recent failure.
 /// * If no error was set, it returns a null pointer (NULL).
-/// * After returning the error message, the internal error state is cleared for the current thread. Subsequent calls will return NULL until a new error is set.
+/// * Reading the message clears it for the current thread. Subsequent calls return NULL until another call fails. qrmi_get_last_error_kind() is not cleared.
+/// * A successful call does not clear an unread message, so only read the message after a call has returned a failure code.
+/// * Freeing functions such as qrmi_string_free() do not record a message when given NULL, so cleanup does not replace the message being inspected.
 ///
 /// # Thread Safety
 /// This function uses Rust's thread_local! macro and RefCell to store error messages per thread.
@@ -832,7 +894,17 @@ pub unsafe extern "C" fn qrmi_get_last_error() -> *mut c_char {
 ///
 /// If no QRMI-specific error has been recorded (e.g. the failure came from
 /// an unrelated source, or no error has occurred yet), this returns
-/// `QRMI_RETURN_CODE_ERROR` -- the generic code -- as a safe default.
+/// `QRMI_RETURN_CODE_ERROR` -- the generic code -- as a safe default. A
+/// failure that records only a message (e.g. a NULL argument) also resets
+/// it to `QRMI_RETURN_CODE_ERROR` rather than keeping the classification
+/// of an earlier failure.
+///
+/// The return code of the failing call is authoritative, e.g. for whether
+/// qrmi_resource_task_start() created a task. This value is not always
+/// equal to it: a NULL argument returns `QRMI_RETURN_CODE_NULL_POINTER_ERROR`
+/// but is recorded as `QRMI_RETURN_CODE_ERROR`, and an argument that is not
+/// valid UTF-8 can return `QRMI_RETURN_CODE_ERROR` but is recorded as
+/// `QRMI_RETURN_CODE_INVALID_INPUT_ERROR`.
 ///
 /// @return A `ReturnCode` describing the kind of the most recent error.
 /// @version 0.16.0
@@ -1247,9 +1319,9 @@ pub unsafe extern "C" fn qrmi_resource_status_reason(status: *mut ResourceStatus
         return std::ptr::null_mut();
     }
     match &(*status).inner.status_reason {
-        Some(reason) => match CString::new(reason.as_str()) {
-            Ok(cstr) => cstr.into_raw(),
-            Err(_) => std::ptr::null_mut(),
+        Some(reason) => match _c_string(reason.clone(), "status reason contains a NUL byte") {
+            Some(cstr) => cstr.into_raw(),
+            None => std::ptr::null_mut(),
         },
         None => std::ptr::null_mut(),
     }
@@ -1509,14 +1581,13 @@ pub unsafe extern "C" fn qrmi_resource_id(
         .runtime
         .block_on(async { (*qrmi).inner.resource_id().await });
     match result {
-        Ok(v) => {
-            if let Ok(id_cstr) = CString::new(v) {
+        Ok(v) => match _c_string(v, "resource ID contains a NUL byte") {
+            Some(id_cstr) => {
                 *outp = id_cstr.into_raw();
                 ReturnCode::Success
-            } else {
-                ReturnCode::Error
             }
-        }
+            None => ReturnCode::Error,
+        },
         Err(err) => _fail(err),
     }
 }
@@ -1589,19 +1660,18 @@ pub unsafe extern "C" fn qrmi_resource_acquire(
         .runtime
         .block_on(async { (*qrmi).inner.acquire().await });
     match result {
-        Ok(token) => {
-            if let Ok(token_cstr) = CString::new(token) {
-                unsafe {
-                    *acquisition_token = token_cstr.into_raw();
-                }
-                return ReturnCode::Success;
+        Ok(token) => match _c_string(
+            token,
+            "resource was acquired, but the acquisition token contains a NUL byte",
+        ) {
+            Some(token_cstr) => {
+                *acquisition_token = token_cstr.into_raw();
+                ReturnCode::Success
             }
-        }
-        Err(err) => {
-            return _fail(err);
-        }
+            None => ReturnCode::Error,
+        },
+        Err(err) => _fail(err),
     }
-    ReturnCode::Error
 }
 
 /// @ingroup QrmiQuantumResource
@@ -1693,7 +1763,10 @@ pub unsafe extern "C" fn qrmi_resource_release(
 /// Any failure code other than @ref QrmiReturnCode::QRMI_RETURN_CODE_ERROR means
 /// that no task was created: QRMI or the vendor's API refused the request.
 /// @ref QrmiReturnCode::QRMI_RETURN_CODE_ERROR leaves that unknown (e.g. a lost
-/// response), so the task may exist.
+/// response), so the task may exist. A required payload string that is NULL
+/// or not valid UTF-8 is rejected with
+/// @ref QrmiReturnCode::QRMI_RETURN_CODE_INVALID_INPUT_ERROR before anything
+/// is sent. The optional IQM `tag` may be NULL.
 ///
 /// @param (qrmi) [in] A QrmiQuantumResource handle
 /// @param (payload) [in] payload
@@ -1750,15 +1823,16 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         use_timeslot,
     } = *payload
     {
-        if let (Some(json_str), Some(type_str)) = (
+        // A NULL tag means no tag.
+        if let (Some(json_str), Some(type_str), Some(tag_opt)) = (
             _utf8_arg(iqmjson, "iqmjson"),
             _utf8_arg(job_type, "job_type"),
-        ) {
-            let tag_opt = if tag.is_null() {
-                None
+            if tag.is_null() {
+                Some(None)
             } else {
-                CStr::from_ptr(tag).to_str().ok().map(|s| s.to_string())
-            };
+                _utf8_arg(tag, "tag").map(|s| Some(s.to_string()))
+            },
+        ) {
             let use_timeslot_opt = match use_timeslot {
                 1 => Some(true),
                 _ => Some(false),
@@ -1788,16 +1862,13 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         .runtime
         .block_on(async { (*qrmi).inner.task_start(qrmi_payload).await });
     match result {
-        Ok(job_id) => match CString::new(job_id) {
-            Ok(job_id_cstr) => {
+        // The task exists, but its identifier cannot be returned.
+        Ok(job_id) => match _c_string(job_id, "task was created, but its ID contains a NUL byte") {
+            Some(job_id_cstr) => {
                 *task_id = job_id_cstr.into_raw();
                 ReturnCode::Success
             }
-            // The task exists, but its identifier cannot be returned.
-            Err(_) => {
-                _set_last_error("task ID contains a NUL byte".to_string());
-                ReturnCode::Error
-            }
+            None => ReturnCode::Error,
         },
         Err(err) => _fail(err),
     }
@@ -1960,19 +2031,16 @@ pub unsafe extern "C" fn qrmi_resource_task_result(
         let result = (*qrmi)
             .runtime
             .block_on(async { (*qrmi).inner.task_result(task_id_str).await });
-        match result {
-            Ok(v) => {
-                if let Ok(result_cstr) = CString::new(v.value) {
-                    unsafe {
-                        *outp = result_cstr.into_raw();
-                    }
-                    return ReturnCode::Success;
+        return match result {
+            Ok(v) => match _c_string(v.value, "task result contains a NUL byte") {
+                Some(result_cstr) => {
+                    *outp = result_cstr.into_raw();
+                    ReturnCode::Success
                 }
-            }
-            Err(err) => {
-                return _fail(err);
-            }
-        }
+                None => ReturnCode::Error,
+            },
+            Err(err) => _fail(err),
+        };
     }
     ReturnCode::Error
 }
@@ -2023,19 +2091,16 @@ pub unsafe extern "C" fn qrmi_resource_task_logs(
         let result = (*qrmi)
             .runtime
             .block_on(async { (*qrmi).inner.task_logs(task_id_str).await });
-        match result {
-            Ok(v) => {
-                if let Ok(result_cstr) = CString::new(v) {
-                    unsafe {
-                        *outp = result_cstr.into_raw();
-                    }
-                    return ReturnCode::Success;
+        return match result {
+            Ok(v) => match _c_string(v, "task logs contain a NUL byte") {
+                Some(result_cstr) => {
+                    *outp = result_cstr.into_raw();
+                    ReturnCode::Success
                 }
-            }
-            Err(err) => {
-                return _fail(err);
-            }
-        }
+                None => ReturnCode::Error,
+            },
+            Err(err) => _fail(err),
+        };
     }
     ReturnCode::Error
 }
@@ -2072,24 +2137,21 @@ pub unsafe extern "C" fn qrmi_resource_target(
 ) -> ReturnCode {
     crate::common::initialize();
     null_pointer_check!(qrmi, ReturnCode::Error);
+    null_pointer_check!(outp, ReturnCode::NullPointerError);
 
     let result = (*qrmi)
         .runtime
         .block_on(async { (*qrmi).inner.target().await });
     match result {
-        Ok(v) => {
-            if let Ok(target_cstr) = CString::new(v.value) {
-                unsafe {
-                    *outp = target_cstr.into_raw();
-                }
-                return ReturnCode::Success;
+        Ok(v) => match _c_string(v.value, "target contains a NUL byte") {
+            Some(target_cstr) => {
+                *outp = target_cstr.into_raw();
+                ReturnCode::Success
             }
-        }
-        Err(err) => {
-            return _fail(err);
-        }
+            None => ReturnCode::Error,
+        },
+        Err(err) => _fail(err),
     }
-    ReturnCode::Error
 }
 
 /// @ingroup QrmiQuantumResource
@@ -2192,14 +2254,12 @@ pub unsafe extern "C" fn qrmi_resource_metadata_value(
     key: *const c_char,
 ) -> *mut c_char {
     crate::common::initialize();
-    if metadata.is_null() {
-        return std::ptr::null_mut();
-    }
+    null_pointer_check!(metadata, std::ptr::null_mut());
     null_pointer_check!(key, std::ptr::null_mut());
 
     if let Some(key_str) = _utf8_arg(key, "key") {
         if let Some(val) = (*metadata).inner.get(key_str) {
-            if let Ok(value_cstr) = CString::new(val.as_str()) {
+            if let Some(value_cstr) = _c_string(val.clone(), "metadata value contains a NUL byte") {
                 return value_cstr.into_raw();
             }
         }
@@ -2234,6 +2294,8 @@ pub unsafe extern "C" fn qrmi_resource_metadata_value(
 /// @param (num_keys) [out] number of keys available in the metadata
 /// @param (key_names) [out] A list of metadata key names if succeeded. Must call qrmi_string_array_free() to free if no longer used.
 /// @return @ref QrmiReturnCode::QRMI_RETURN_CODE_SUCCESS if succeeded.
+///         @ref QrmiReturnCode::QRMI_RETURN_CODE_ERROR if a key contains a NUL byte;
+///         `*num_keys` is then 0 and `*key_names` is NULL.
 /// cbindgen:ptrs-as-arrays=[[key_names;]]
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_resource_metadata_keys(
@@ -2243,24 +2305,15 @@ pub unsafe extern "C" fn qrmi_resource_metadata_keys(
 ) -> ReturnCode {
     crate::common::initialize();
     null_pointer_check!(metadata, ReturnCode::NullPointerError);
+    null_pointer_check!(num_keys, ReturnCode::NullPointerError);
+    null_pointer_check!(key_names, ReturnCode::NullPointerError);
 
-    let keys = (*metadata).inner.keys();
-    let count = keys.len();
-    let mut raw_ptrs: Vec<*mut c_char> = Vec::with_capacity(count);
-    for key in keys {
-        let str_c = CString::new(key.as_str()).unwrap();
-        raw_ptrs.push(str_c.into_raw());
-    }
-
-    let boxed_array = raw_ptrs.into_boxed_slice();
-    let raw = boxed_array.as_ptr() as *mut *mut c_char;
-    std::mem::forget(boxed_array);
-
-    unsafe {
-        *num_keys = count;
-        *key_names = raw;
-    }
-    ReturnCode::Success
+    _c_string_array(
+        (*metadata).inner.keys(),
+        "a metadata key contains a NUL byte",
+        num_keys,
+        key_names,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -2766,13 +2819,19 @@ mod tests {
     use super::*;
     use crate::models::ResourceType;
     use async_trait::async_trait;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
-    struct StubResource;
+    /// Returns `output` from every string-producing call and counts task
+    /// submissions.
+    struct StubResource {
+        output: String,
+        starts: Arc<AtomicUsize>,
+    }
 
     #[async_trait]
     impl crate::QuantumResource for StubResource {
         async fn resource_id(&mut self) -> crate::Result<String> {
-            Ok("stub".to_string())
+            Ok(self.output.clone())
         }
         async fn resource_type(&mut self) -> crate::Result<ResourceType> {
             Ok(ResourceType::PasqalCloud)
@@ -2780,13 +2839,47 @@ mod tests {
         async fn is_accessible(&mut self) -> crate::Result<bool> {
             Ok(true)
         }
+        async fn acquire(&mut self) -> crate::Result<String> {
+            Ok(self.output.clone())
+        }
+        async fn task_start(&mut self, _payload: crate::models::Payload) -> crate::Result<String> {
+            self.starts.fetch_add(1, Ordering::SeqCst);
+            Ok(self.output.clone())
+        }
+        async fn task_result(
+            &mut self,
+            _task_id: &str,
+        ) -> crate::Result<crate::models::TaskResult> {
+            Ok(crate::models::TaskResult {
+                value: self.output.clone(),
+            })
+        }
+        async fn task_logs(&mut self, _task_id: &str) -> crate::Result<String> {
+            Ok(self.output.clone())
+        }
+        async fn target(&mut self) -> crate::Result<crate::models::Target> {
+            Ok(crate::models::Target {
+                value: self.output.clone(),
+            })
+        }
     }
 
-    fn stub_qrmi() -> QuantumResource {
-        QuantumResource {
-            inner: Box::new(StubResource),
+    /// Returns a stub and the number of `task_start` calls it receives.
+    fn stub(output: &str) -> (QuantumResource, Arc<AtomicUsize>) {
+        let starts = Arc::new(AtomicUsize::new(0));
+        let qrmi = QuantumResource {
+            inner: Box::new(StubResource {
+                output: output.to_string(),
+                starts: starts.clone(),
+            }),
             runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
-        }
+        };
+        (qrmi, starts)
+    }
+
+    /// Records an unrelated error, so tests can tell a fresh one from it.
+    fn seed_error() {
+        _fail(QrmiError::TaskNotFound("seed".to_string()));
     }
 
     unsafe fn take_last_error() -> Option<String> {
@@ -2808,19 +2901,60 @@ mod tests {
                 std::ptr::null_mut(),
             );
             assert_eq!(rc, ReturnCode::NullPointerError);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
             assert_eq!(take_last_error().as_deref(), Some("qrmi is NULL"));
             assert_eq!(take_last_error(), None);
         }
     }
 
     #[test]
+    fn last_error_kind_is_not_cleared_after_read() {
+        unsafe {
+            seed_error();
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+            take_last_error();
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+        }
+    }
+
+    #[test]
+    fn successful_call_keeps_unread_error() {
+        unsafe {
+            let (mut qrmi, _) = stub("stub");
+            seed_error();
+            let mut id = std::ptr::null_mut();
+            assert_eq!(qrmi_resource_id(&mut qrmi, &mut id), ReturnCode::Success);
+            qrmi_string_free(id);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+            assert_eq!(take_last_error().as_deref(), Some("task not found: seed"));
+        }
+    }
+
+    #[test]
+    fn last_error_is_per_thread() {
+        seed_error();
+        std::thread::spawn(|| unsafe {
+            assert_eq!(take_last_error(), None);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+            qrmi_resource_task_start(std::ptr::null_mut(), std::ptr::null(), std::ptr::null_mut());
+            assert_eq!(take_last_error().as_deref(), Some("qrmi is NULL"));
+        })
+        .join()
+        .unwrap();
+        unsafe {
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+            assert_eq!(take_last_error().as_deref(), Some("task not found: seed"));
+        }
+    }
+
+    #[test]
     fn message_only_error_resets_kind() {
         unsafe {
-            let rc = _fail(QrmiError::TaskNotFound("t".to_string()));
-            assert_eq!(rc, ReturnCode::TaskNotFoundError);
+            seed_error();
             assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
 
-            let mut qrmi = stub_qrmi();
+            let (mut qrmi, _) = stub("stub");
             let rc = qrmi_resource_task_start(&mut qrmi, std::ptr::null(), std::ptr::null_mut());
             assert_eq!(rc, ReturnCode::NullPointerError);
             assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
@@ -2829,12 +2963,91 @@ mod tests {
     }
 
     #[test]
+    fn backend_error_keeps_its_kind_and_message() {
+        unsafe {
+            let (mut qrmi, _) = stub("stub");
+            seed_error();
+            let task = CString::new("t").unwrap();
+            let rc = qrmi_resource_task_stop(&mut qrmi, task.as_ptr());
+            assert_eq!(rc, ReturnCode::UnsupportedFunctionError);
+            assert_eq!(
+                qrmi_get_last_error_kind(),
+                ReturnCode::UnsupportedFunctionError
+            );
+            assert_eq!(
+                take_last_error().as_deref(),
+                Some("unsupported function: qrmi::QuantumResource::task_stop")
+            );
+        }
+    }
+
+    #[test]
+    fn resource_type_from_str_names_null_argument() {
+        unsafe {
+            let outp: *mut ResourceType = &mut ResourceType::PasqalCloud;
+            let type_str = CString::new("pasqal-local").unwrap();
+            let calls: [(&str, &dyn Fn() -> ReturnCode); 2] = [
+                ("type_str", &|| {
+                    qrmi_config_resource_type_from_str(std::ptr::null(), outp)
+                }),
+                ("outp", &|| {
+                    qrmi_config_resource_type_from_str(type_str.as_ptr(), std::ptr::null_mut())
+                }),
+            ];
+            for (name, call) in calls {
+                seed_error();
+                assert_eq!(call(), ReturnCode::NullPointerError);
+                assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+                assert_eq!(take_last_error(), Some(format!("{name} is NULL")));
+            }
+        }
+    }
+
+    #[test]
+    fn null_output_pointers_are_rejected() {
+        unsafe {
+            let (mut qrmi, _) = stub("stub");
+            let config: *mut Config = &mut Config {
+                resource_map: Default::default(),
+            };
+            let metadata: *mut ResourceMetadata = &mut ResourceMetadata {
+                inner: Default::default(),
+            };
+            let q: *mut QuantumResource = &mut qrmi;
+            let mut count = 0;
+            let mut strings = std::ptr::null_mut();
+            let (count_p, strings_p): (*mut usize, *mut *mut *mut c_char) =
+                (&mut count, &mut strings);
+            let calls: [(&str, &dyn Fn() -> ReturnCode); 4] = [
+                ("outp", &|| qrmi_resource_target(q, std::ptr::null_mut())),
+                ("num_names", &|| {
+                    qrmi_config_resource_names_get(config, std::ptr::null_mut(), strings_p)
+                }),
+                ("num_keys", &|| {
+                    qrmi_resource_metadata_keys(metadata, std::ptr::null_mut(), strings_p)
+                }),
+                ("key_names", &|| {
+                    qrmi_resource_metadata_keys(metadata, count_p, std::ptr::null_mut())
+                }),
+            ];
+            for (name, call) in calls {
+                seed_error();
+                assert_eq!(call(), ReturnCode::NullPointerError);
+                assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+                assert_eq!(take_last_error(), Some(format!("{name} is NULL")));
+            }
+            assert!(strings.is_null());
+        }
+    }
+
+    #[test]
     fn release_rejects_invalid_utf8_token() {
         unsafe {
-            let mut qrmi = stub_qrmi();
+            let (mut qrmi, _) = stub("stub");
             let token = CString::from_vec_unchecked(vec![0xff, 0xfe]);
             let rc = qrmi_resource_release(&mut qrmi, token.as_ptr());
             assert_eq!(rc, ReturnCode::Error);
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::InvalidInputError);
             assert_eq!(
                 take_last_error().as_deref(),
                 Some("acquisition_token is not a valid UTF-8 string")
@@ -2849,23 +3062,298 @@ mod tests {
     }
 
     #[test]
-    fn task_start_reports_invalid_utf8_payload() {
+    fn task_start_rejects_bad_payload_strings_before_submission() {
         unsafe {
-            let mut qrmi = stub_qrmi();
-            let sequence = CString::from_vec_unchecked(vec![0xff]);
+            let valid = CString::new("x").unwrap();
+            let invalid = CString::from_vec_unchecked(vec![0xff]);
+            let ok = valid.as_ptr() as *mut c_char;
+            for (bad, problem) in [
+                (
+                    invalid.as_ptr() as *mut c_char,
+                    "is not a valid UTF-8 string",
+                ),
+                (std::ptr::null_mut(), "is NULL"),
+            ] {
+                let iqm = |iqmjson, job_type| Payload::IQMServer {
+                    iqmjson,
+                    job_type,
+                    use_timeslot: 0,
+                    tag: ok,
+                };
+                for (field, payload) in [
+                    (
+                        "input",
+                        Payload::QiskitPrimitive {
+                            input: bad,
+                            program_id: ok,
+                        },
+                    ),
+                    (
+                        "program_id",
+                        Payload::QiskitPrimitive {
+                            input: ok,
+                            program_id: bad,
+                        },
+                    ),
+                    (
+                        "sequence",
+                        Payload::PasqalCloud {
+                            sequence: bad,
+                            job_runs: 1,
+                        },
+                    ),
+                    (
+                        "human_qir",
+                        Payload::AliceBobFelis {
+                            human_qir: bad,
+                            input_params: ok,
+                        },
+                    ),
+                    (
+                        "input_params",
+                        Payload::AliceBobFelis {
+                            human_qir: ok,
+                            input_params: bad,
+                        },
+                    ),
+                    ("iqmjson", iqm(bad, ok)),
+                    ("job_type", iqm(ok, bad)),
+                    ("job_spec", Payload::Oqtopus { job_spec: bad }),
+                ] {
+                    let (mut qrmi, starts) = stub("task");
+                    seed_error();
+                    let mut task_id = std::ptr::null_mut();
+                    let rc = qrmi_resource_task_start(&mut qrmi, &payload, &mut task_id);
+                    assert_eq!(rc, ReturnCode::InvalidInputError, "{field}");
+                    assert_eq!(qrmi_get_last_error_kind(), ReturnCode::InvalidInputError);
+                    assert_eq!(take_last_error(), Some(format!("{field} {problem}")));
+                    assert!(task_id.is_null());
+                    assert_eq!(starts.load(Ordering::SeqCst), 0, "{field}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn task_start_accepts_null_iqm_tag_and_rejects_invalid_one() {
+        unsafe {
+            let valid = CString::new("x").unwrap();
+            let invalid = CString::from_vec_unchecked(vec![0xff]);
+            let ok = valid.as_ptr() as *mut c_char;
+            for (tag, expected) in [
+                (std::ptr::null_mut(), ReturnCode::Success),
+                (ok, ReturnCode::Success),
+                (
+                    invalid.as_ptr() as *mut c_char,
+                    ReturnCode::InvalidInputError,
+                ),
+            ] {
+                let (mut qrmi, starts) = stub("task");
+                seed_error();
+                let payload = Payload::IQMServer {
+                    iqmjson: ok,
+                    job_type: ok,
+                    use_timeslot: 0,
+                    tag,
+                };
+                let mut task_id = std::ptr::null_mut();
+                let rc = qrmi_resource_task_start(&mut qrmi, &payload, &mut task_id);
+                assert_eq!(rc, expected);
+                if expected == ReturnCode::Success {
+                    assert_eq!(starts.load(Ordering::SeqCst), 1);
+                    qrmi_string_free(task_id);
+                } else {
+                    assert_eq!(starts.load(Ordering::SeqCst), 0);
+                    assert!(task_id.is_null());
+                    assert_eq!(
+                        take_last_error().as_deref(),
+                        Some("tag is not a valid UTF-8 string")
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn output_with_nul_byte_records_fresh_generic_error() {
+        unsafe {
+            let (mut qrmi, starts) = stub("s3cr3t\0v4lue");
+            let task = CString::new("t").unwrap();
+            let sequence = CString::new("x").unwrap();
             let payload = Payload::PasqalCloud {
                 sequence: sequence.as_ptr() as *mut c_char,
                 job_runs: 1,
             };
-            let mut task_id: *mut c_char = std::ptr::null_mut();
-            let rc = qrmi_resource_task_start(&mut qrmi, &payload, &mut task_id);
-            assert_eq!(rc, ReturnCode::InvalidInputError);
-            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::InvalidInputError);
-            assert!(task_id.is_null());
+            let q: *mut QuantumResource = &mut qrmi;
+            let calls: [(&str, &dyn Fn(*mut *mut c_char) -> ReturnCode); 6] = [
+                ("resource ID contains a NUL byte", &|out| {
+                    qrmi_resource_id(q, out)
+                }),
+                (
+                    "resource was acquired, but the acquisition token contains a NUL byte",
+                    &|out| qrmi_resource_acquire(q, out),
+                ),
+                ("task was created, but its ID contains a NUL byte", &|out| {
+                    qrmi_resource_task_start(q, &payload, out)
+                }),
+                ("task result contains a NUL byte", &|out| {
+                    qrmi_resource_task_result(q, task.as_ptr(), out)
+                }),
+                ("task logs contain a NUL byte", &|out| {
+                    qrmi_resource_task_logs(q, task.as_ptr(), out)
+                }),
+                ("target contains a NUL byte", &|out| {
+                    qrmi_resource_target(q, out)
+                }),
+            ];
+            for (message, call) in calls {
+                seed_error();
+                let mut out = std::ptr::null_mut();
+                assert_eq!(call(&mut out), ReturnCode::Error, "{message}");
+                assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+                let error = take_last_error().unwrap();
+                assert_eq!(error, message);
+                assert!(!error.contains("s3cr3t") && !error.contains("v4lue"));
+                assert!(out.is_null());
+            }
+            assert_eq!(starts.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[test]
+    fn null_free_keeps_last_error() {
+        unsafe {
+            seed_error();
             assert_eq!(
-                take_last_error().as_deref(),
-                Some("sequence is not a valid UTF-8 string")
+                qrmi_string_free(std::ptr::null_mut()),
+                ReturnCode::NullPointerError
             );
+            qrmi_string_array_free(0, std::ptr::null_mut());
+            qrmi_config_free(std::ptr::null_mut());
+            qrmi_config_resource_def_free(std::ptr::null_mut());
+            qrmi_resource_free(std::ptr::null_mut());
+            qrmi_resource_status_free(std::ptr::null_mut());
+            qrmi_resource_capacity_free(std::ptr::null_mut());
+            qrmi_resource_metadata_free(std::ptr::null_mut());
+            qrmi_provider_free(std::ptr::null_mut());
+            qrmi_provider_resources_free(std::ptr::null_mut());
+            qrmi_service_resources_free(std::ptr::null_mut());
+            assert_eq!(qrmi_get_last_error_kind(), ReturnCode::TaskNotFoundError);
+            assert_eq!(take_last_error().as_deref(), Some("task not found: seed"));
+        }
+    }
+
+    fn config_with(name: &str, key: &str, value: &str) -> Config {
+        let def = crate::models::ResourceDef {
+            name: name.to_string(),
+            r#type: ResourceType::PasqalCloud,
+            is_dynamic: false,
+            environment: [(key.to_string(), value.to_string())].into(),
+        };
+        Config {
+            resource_map: [("r".to_string(), def)].into(),
+        }
+    }
+
+    #[test]
+    fn resource_def_get_returns_definition() {
+        unsafe {
+            let mut config = config_with("r", "QRMI_KEY", "value");
+            let id = CString::new("r").unwrap();
+            let def = qrmi_config_resource_def_get(&mut config, id.as_ptr());
+            assert!(!def.is_null());
+            assert_eq!(CStr::from_ptr((*def).name).to_str(), Ok("r"));
+            assert_eq!((*def).environments.length, 1);
+            let kv = &*(*def).environments.variables;
+            assert_eq!(CStr::from_ptr(kv.key).to_str(), Ok("QRMI_KEY"));
+            assert_eq!(CStr::from_ptr(kv.value).to_str(), Ok("value"));
+            assert_eq!(qrmi_config_resource_def_free(def), ReturnCode::Success);
+        }
+    }
+
+    #[test]
+    fn resource_def_get_rejects_nul_byte() {
+        unsafe {
+            let id = CString::new("r").unwrap();
+            for (mut config, what) in [
+                (config_with("secret\0name", "QRMI_KEY", "v"), "name"),
+                (
+                    config_with("r", "secret\0key", "v"),
+                    "environment variable name",
+                ),
+                (
+                    config_with("r", "QRMI_KEY", "secret\0value"),
+                    "environment variable value",
+                ),
+            ] {
+                seed_error();
+                let def = qrmi_config_resource_def_get(&mut config, id.as_ptr());
+                assert!(def.is_null());
+                assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+                let error = take_last_error().unwrap();
+                assert_eq!(error, format!("resource r: {what} contains a NUL byte"));
+                assert!(!error.contains("secret"));
+            }
+        }
+    }
+
+    #[test]
+    fn string_arrays_round_trip() {
+        unsafe {
+            let mut config = config_with("r", "k", "v");
+            let mut metadata = ResourceMetadata {
+                inner: [("backend".to_string(), "v".to_string())].into(),
+            };
+            let mut count = 0;
+            let mut strings = std::ptr::null_mut();
+            let rc = qrmi_config_resource_names_get(&mut config, &mut count, &mut strings);
+            assert_eq!((rc, count), (ReturnCode::Success, 1));
+            assert_eq!(CStr::from_ptr(*strings).to_str(), Ok("r"));
+            assert_eq!(qrmi_string_array_free(count, strings), ReturnCode::Success);
+
+            let rc = qrmi_resource_metadata_keys(&mut metadata, &mut count, &mut strings);
+            assert_eq!((rc, count), (ReturnCode::Success, 1));
+            assert_eq!(CStr::from_ptr(*strings).to_str(), Ok("backend"));
+            assert_eq!(qrmi_string_array_free(count, strings), ReturnCode::Success);
+        }
+    }
+
+    #[test]
+    fn string_arrays_reject_nul_byte() {
+        unsafe {
+            let mut config = config_with("r", "k", "v");
+            let def = config.resource_map["r"].clone();
+            config.resource_map.insert("secret\0name".to_string(), def);
+            let mut metadata = ResourceMetadata {
+                inner: [
+                    ("ok".to_string(), "v".to_string()),
+                    ("secret\0key".to_string(), "v".to_string()),
+                ]
+                .into(),
+            };
+            let config: *mut Config = &mut config;
+            let metadata: *mut ResourceMetadata = &mut metadata;
+            type Call<'a> = &'a dyn Fn(*mut usize, *mut *mut *mut c_char) -> ReturnCode;
+            let calls: [(&str, Call); 2] = [
+                ("a resource name contains a NUL byte", &|count, strings| {
+                    qrmi_config_resource_names_get(config, count, strings)
+                }),
+                ("a metadata key contains a NUL byte", &|count, strings| {
+                    qrmi_resource_metadata_keys(metadata, count, strings)
+                }),
+            ];
+            for (message, call) in calls {
+                seed_error();
+                // Non-zero, non-NULL outputs show that failure resets them.
+                let mut count = 7;
+                let mut strings = std::ptr::NonNull::dangling().as_ptr();
+                assert_eq!(call(&mut count, &mut strings), ReturnCode::Error);
+                assert_eq!((count, strings), (0, std::ptr::null_mut()));
+                assert_eq!(qrmi_get_last_error_kind(), ReturnCode::Error);
+                let error = take_last_error().unwrap();
+                assert_eq!(error, message);
+                assert!(!error.contains("secret"));
+            }
         }
     }
 }
