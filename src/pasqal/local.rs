@@ -44,8 +44,9 @@ impl PasqalLocal {
     ///   Warden session
     /// * `QRMI_JOB_ID`: scheduler job or array-task ID, required to acquire a
     ///   Warden session
-    /// * `QRMI_JOB_QPU_SLOTS`: optional number of QPU slots to claim when
-    ///   acquiring a Warden session (default `1`)
+    /// * `<backend_name>_QRMI_JOB_QPU_SLOTS`: optional number of QPU slots to
+    ///   claim when acquiring a Warden session (default `1`). Falls back to
+    ///   `QRMI_JOB_QPU_SLOTS` if not set.
     /// * `<backend_name>_QRMI_WARDEN_URL`: URL of the pasqd middleware (warden).
     ///   Falls back to the deprecated `<backend_name>_QRMI_URL` if not set.
     /// * `<backend_name>_QRMI_JOB_ACQUISITION_TOKEN`: Warden session used by
@@ -104,7 +105,10 @@ impl PasqalLocal {
             })
             .transpose()?;
         let job_id = resolve_opt("QRMI_JOB_ID", config);
-        let qpu_slots = parse_qpu_slots(resolve_opt("QRMI_JOB_QPU_SLOTS", config))?;
+        let qpu_slots = parse_qpu_slots(
+            resolve_opt(&format!("{prefix}QRMI_JOB_QPU_SLOTS"), config)
+                .or_else(|| resolve_opt("QRMI_JOB_QPU_SLOTS", config)),
+        )?;
         let acquisition_token = resolve_opt(&format!("{prefix}QRMI_JOB_ACQUISITION_TOKEN"), config);
 
         Ok(Self {

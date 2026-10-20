@@ -142,6 +142,14 @@ fn qpu_slots_read_from_config() {
 }
 
 #[test]
+fn qpu_slots_read_from_backend_env() {
+    std::env::set_var("SLOTS_ENV_QRMI_WARDEN_URL", "http://localhost:8006");
+    std::env::set_var("SLOTS_ENV_QRMI_JOB_QPU_SLOTS", "4");
+    let qrmi = PasqalLocal::new("SLOTS_ENV").unwrap();
+    assert_eq!(qrmi.qpu_slots, 4);
+}
+
+#[test]
 fn qpu_slots_reject_zero() {
     let Err(err) = PasqalLocal::from_config("test_backend", slots_config(Some("0"))) else {
         panic!("expected QRMI_JOB_QPU_SLOTS=0 to be rejected");

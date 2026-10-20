@@ -46,9 +46,11 @@ that a ``.env`` file is available under the current directory.
 |                                               | the array-task ID for array jobs.  |
 |                                               | Needed only to acquire a session.  |
 +-----------------------------------------------+------------------------------------+
-| ``QRMI_JOB_QPU_SLOTS``                        | (optional) QPU slots to claim when |
+| ``<backend_name>_QRMI_JOB_QPU_SLOTS``         | (optional) QPU slots to claim when |
 |                                               | acquiring a Warden session.        |
 |                                               | Positive integer, default ``1``.   |
+|                                               | Falls back to                      |
+|                                               | ``QRMI_JOB_QPU_SLOTS``.            |
 +-----------------------------------------------+------------------------------------+
 | ``<backend_name>_QRMI_JOB_ACQUISITION_TOKEN`` | (optional) Warden session acquired |
 |                                               | by the scheduler for this job      |
