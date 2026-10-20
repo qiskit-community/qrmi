@@ -1,4 +1,4 @@
-Migrating to v0.26.0: Pasqal Local uses Warden sessions with QPU slots
+Migrating to v0.27.0: Pasqal Local uses Warden sessions with QPU slots
 ======================================================================
 
 Pasqal Local now uses the Warden session API that supports QPU slots:
