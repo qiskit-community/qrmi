@@ -115,14 +115,7 @@ fn session_id_falls_back_to_environment() {
 }
 
 fn slots_config(slots: Option<&str>) -> HashMap<String, String> {
-    let mut config = HashMap::from([
-        (
-            "QRMI_WARDEN_URL".to_string(),
-            "http://localhost:8006".to_string(),
-        ),
-        ("QRMI_JOB_UID".to_string(), "1000".to_string()),
-        ("QRMI_JOB_ID".to_string(), "1".to_string()),
-    ]);
+    let mut config = local_config();
     if let Some(slots) = slots {
         config.insert("QRMI_JOB_QPU_SLOTS".to_string(), slots.to_string());
     }
