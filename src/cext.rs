@@ -3261,10 +3261,10 @@ mod tests {
             let mut config = config_with("r", "QRMI_KEY", "value");
             let id = CString::new("r").unwrap();
             let def = qrmi_config_resource_def_get(&mut config, id.as_ptr());
-            assert!(!def.is_null());
-            assert_eq!(CStr::from_ptr((*def).name).to_str(), Ok("r"));
-            assert_eq!((*def).environments.length, 1);
-            let kv = &*(*def).environments.variables;
+            let def_ref = def.as_ref().unwrap();
+            assert_eq!(CStr::from_ptr(def_ref.name).to_str(), Ok("r"));
+            assert_eq!(def_ref.environments.length, 1);
+            let kv = def_ref.environments.variables.as_ref().unwrap();
             assert_eq!(CStr::from_ptr(kv.key).to_str(), Ok("QRMI_KEY"));
             assert_eq!(CStr::from_ptr(kv.value).to_str(), Ok("value"));
             assert_eq!(qrmi_config_resource_def_free(def), ReturnCode::Success);
@@ -3308,12 +3308,15 @@ mod tests {
             let mut strings = std::ptr::null_mut();
             let rc = qrmi_config_resource_names_get(&mut config, &mut count, &mut strings);
             assert_eq!((rc, count), (ReturnCode::Success, 1));
-            assert_eq!(CStr::from_ptr(*strings).to_str(), Ok("r"));
+            assert_eq!(CStr::from_ptr(*strings.as_ref().unwrap()).to_str(), Ok("r"));
             assert_eq!(qrmi_string_array_free(count, strings), ReturnCode::Success);
 
             let rc = qrmi_resource_metadata_keys(&mut metadata, &mut count, &mut strings);
             assert_eq!((rc, count), (ReturnCode::Success, 1));
-            assert_eq!(CStr::from_ptr(*strings).to_str(), Ok("backend"));
+            assert_eq!(
+                CStr::from_ptr(*strings.as_ref().unwrap()).to_str(),
+                Ok("backend")
+            );
             assert_eq!(qrmi_string_array_free(count, strings), ReturnCode::Success);
         }
     }
