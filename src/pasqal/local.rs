@@ -150,6 +150,7 @@ impl QuantumResource for PasqalLocal {
             .api_client
             .create_session(self.job_uid, &self.job_id, self.qpu_slots)
             .await?;
+        self.acquisition_token = Some(session.id.clone());
         Ok(session.id)
     }
 
