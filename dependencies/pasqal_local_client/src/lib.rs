@@ -18,5 +18,5 @@ mod client;
 mod models;
 mod munge;
 
-pub use client::{Client, ClientBuilder};
+pub use client::{AccessibleResponse, Client, ClientBuilder, QpuSlotsResponse};
 pub use models::JobStatus;

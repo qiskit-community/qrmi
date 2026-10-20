@@ -55,13 +55,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Pasqal local is not accessible"); // Checks for real QPU
     }
 
-    let lock = qrmi.acquire().await?;
-    println!("acquisition token = {}", lock);
-
-    // Set lock as env variable with name  <backend>_QRMI_JOB_ACQUISITION_TOKEN
+    // Inside a scheduler job the session was acquired for the job; reuse it
+    // and leave its release to the scheduler.
     let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", args.backend);
-    std::env::set_var(&token_var, &lock);
+    let owned_lock = match std::env::var(&token_var) {
+        Ok(token) if !token.is_empty() => None,
+        _ => Some(qrmi.acquire().await?),
+    };
 
+    let result = run(&mut qrmi, &args.input).await;
+
+    if let Some(lock) = owned_lock {
+        let _ = qrmi.release(&lock).await;
+    }
+    result
+}
+
+async fn run(qrmi: &mut PasqalLocal, input: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("{:#?}", qrmi.metadata().await);
 
     let target = qrmi.target().await;
@@ -69,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", v.value);
     }
 
-    let f = File::open(args.input).expect("file not found");
+    let f = File::open(input).expect("file not found");
     let mut buf_reader = BufReader::new(f);
     let mut contents = String::new();
     buf_reader.read_to_string(&mut contents)?;
@@ -97,7 +107,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::sleep(one_sec);
     }
     let _ = qrmi.task_stop(&job_id).await;
-
-    let _ = qrmi.release(&lock).await;
     Ok(())
 }
