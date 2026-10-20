@@ -117,7 +117,8 @@ pub enum QrmiError {
     /// to a caller -- the input was bad -- and in practice callers want to
     /// handle both the same way, so splitting them into separate variants
     /// only added a distinction to check for no corresponding difference in
-    /// what to do about it.
+    /// what to do about it. Both also mean that a rejected `task_start`
+    /// created no task (see [`crate::QuantumResource::task_start`]).
     #[error("invalid input: {0}")]
     InvalidInput(String),
 
@@ -183,6 +184,10 @@ impl QrmiError {
 /// vendor error types are expected to map their variants onto existing tags
 /// here (see [`crate::ibm::error::IbmError::kind`]) rather than adding new
 /// ones for every vendor-specific condition.
+///
+/// For `task_start`, every kind except [`QrmiErrorKind::Other`] also means
+/// that no task was created; `Other` leaves that unknown (see
+/// [`crate::QuantumResource::task_start`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub enum QrmiErrorKind {
@@ -213,6 +218,7 @@ pub enum QrmiErrorKind {
     /// locally or a vendor's API rejected the resulting request after
     /// receiving it.
     InvalidInput,
-    /// Everything else (vendor API failures, I/O, ...).
+    /// Everything else (vendor API failures, I/O, ...). After `task_start`,
+    /// the task may or may not have been created.
     Other,
 }

@@ -22,7 +22,7 @@ use {
 pub enum Payload {
     /// Payload that contains Qiskit Primitive input.
     QiskitPrimitive { input: String, program_id: String },
-    /// Payload for Pasqal Cloud
+    /// Payload for Pasqal Cloud and Pasqal Local resources
     PasqalCloud { sequence: String, job_runs: i32 },
     /// Payload for Alice and Bob's Cloud API AKA. Felis
     AliceBobFelis {
