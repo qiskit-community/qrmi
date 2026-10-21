@@ -68,33 +68,22 @@ fn job_uid_parsing_fail_raises_qrmi_error() {
 }
 
 #[test]
-fn session_id_prefers_the_given_id() {
-    let mut config = local_config();
-    config.insert(
-        "QRMI_JOB_ACQUISITION_TOKEN".to_string(),
-        "session-map".to_string(),
-    );
-    let qrmi = PasqalLocal::from_config("session_arg", config).unwrap();
-    assert_eq!(qrmi.session_id("session-arg").unwrap(), "session-arg");
-}
-
-#[test]
-fn session_id_uses_config_map_token() {
+fn acquisition_token_uses_config_map() {
     let mut config = local_config();
     config.insert(
         "QRMI_JOB_ACQUISITION_TOKEN".to_string(),
         "session-map".to_string(),
     );
     let qrmi = PasqalLocal::from_config("session_map", config).unwrap();
-    assert_eq!(qrmi.session_id("").unwrap(), "session-map");
+    assert_eq!(qrmi.acquisition_token().unwrap(), "session-map");
 }
 
 #[test]
-fn session_id_falls_back_to_environment() {
+fn acquisition_token_falls_back_to_environment() {
     let qrmi = PasqalLocal::from_config("session_env", local_config()).unwrap();
-    assert!(qrmi.session_id("").is_err());
+    assert!(qrmi.acquisition_token().is_err());
     std::env::set_var("session_env_QRMI_JOB_ACQUISITION_TOKEN", "session-env");
-    let session_id = qrmi.session_id("");
+    let token = qrmi.acquisition_token();
     std::env::remove_var("session_env_QRMI_JOB_ACQUISITION_TOKEN");
-    assert_eq!(session_id.unwrap(), "session-env");
+    assert_eq!(token.unwrap(), "session-env");
 }

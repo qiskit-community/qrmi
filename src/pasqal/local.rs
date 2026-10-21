@@ -103,12 +103,9 @@ impl PasqalLocal {
         })
     }
 
-    /// Returns `id` if not empty, else the Warden session given at construction,
-    /// else `<backend_name>_QRMI_JOB_ACQUISITION_TOKEN` (set after acquisition).
-    pub(crate) fn session_id(&self, id: &str) -> Result<String> {
-        if !id.is_empty() {
-            return Ok(id.to_string());
-        }
+    /// Returns the Warden session given at construction, else
+    /// `<backend_name>_QRMI_JOB_ACQUISITION_TOKEN` (set after acquisition).
+    pub(crate) fn acquisition_token(&self) -> Result<String> {
         match &self.acquisition_token {
             Some(token) => Ok(token.clone()),
             None => required_env(format!("{}_QRMI_JOB_ACQUISITION_TOKEN", self.backend_name)),
@@ -140,13 +137,17 @@ impl QuantumResource for PasqalLocal {
     }
 
     async fn release(&mut self, id: &str) -> Result<()> {
-        let session_id = self.session_id(id)?;
+        let session_id = if id.is_empty() {
+            self.acquisition_token()?
+        } else {
+            id.to_string()
+        };
         self.api_client.revoke_session(&session_id).await?;
         Ok(())
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
-        let session_id = self.session_id("")?;
+        let session_id = self.acquisition_token()?;
 
         let Payload::PasqalCloud { sequence, job_runs } = payload else {
             return Err(QrmiError::UnsupportedPayload(format!("{payload:?}")));
