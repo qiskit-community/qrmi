@@ -3,6 +3,17 @@ use crate::QrmiErrorKind;
 use super::PasqalLocal;
 use std::collections::HashMap;
 
+fn local_config() -> HashMap<String, String> {
+    HashMap::from([
+        (
+            "QRMI_WARDEN_URL".to_string(),
+            "http://localhost:8006".to_string(),
+        ),
+        ("QRMI_JOB_UID".to_string(), "1000".to_string()),
+        ("QRMI_JOB_ID".to_string(), "1".to_string()),
+    ])
+}
+
 #[test]
 fn from_config_accepts_env_style_keys_without_backend_prefix() {
     let config = HashMap::from([
@@ -54,4 +65,25 @@ fn job_uid_parsing_fail_raises_qrmi_error() {
         panic!("expected an error passing 'abcd' to QRMI_JOB_UID, but got OK");
     };
     assert_eq!(expected, err.kind())
+}
+
+#[test]
+fn acquisition_token_uses_config_map() {
+    let mut config = local_config();
+    config.insert(
+        "QRMI_JOB_ACQUISITION_TOKEN".to_string(),
+        "session-map".to_string(),
+    );
+    let qrmi = PasqalLocal::from_config("session_map", config).unwrap();
+    assert_eq!(qrmi.acquisition_token().unwrap(), "session-map");
+}
+
+#[test]
+fn acquisition_token_falls_back_to_environment() {
+    let qrmi = PasqalLocal::from_config("session_env", local_config()).unwrap();
+    assert!(qrmi.acquisition_token().is_err());
+    std::env::set_var("session_env_QRMI_JOB_ACQUISITION_TOKEN", "session-env");
+    let token = qrmi.acquisition_token();
+    std::env::remove_var("session_env_QRMI_JOB_ACQUISITION_TOKEN");
+    assert_eq!(token.unwrap(), "session-env");
 }
