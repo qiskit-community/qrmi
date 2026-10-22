@@ -33,7 +33,7 @@
  */
 typedef struct {
     QrmiQuantumResource *handle;      /**< NULL once freed. */
-    char *acquisition_token;          /**< Non-NULL once acquired; kept so __gc can auto-release. */
+    char *acquisition_token;          /**< Non-NULL once acquired; kept so __gc can auto-release. Cleared by detach(). */
 } lua_qrmi_resource_t;
 
 /**
@@ -434,8 +434,9 @@ static int l_resource_type(lua_State *L) {
  * @brief `resource:acquire()` - Acquire exclusive access to the quantum resource.
  *
  * Wraps qrmi_resource_acquire(). The returned token is also cached on the
- * userdata so that a later `resource:release()` call (with no arguments)
- * and the `__gc` finalizer can release it automatically.
+ * userdata so that a later `resource:release()` call (with no arguments),
+ * `resource:free()` and the `__gc` finalizer can release it automatically.
+ * Call `resource:detach()` to keep the token beyond this handle instead.
  *
  * Lua usage:
  * @code
@@ -506,6 +507,48 @@ static int l_release(lua_State *L) {
     return 1;
 }
 
+/**
+ * @brief `resource:detach()` - Forget the cached acquisition token without
+ * releasing it.
+ *
+ * Unlike the other methods, this does not wrap a QRMI C API call. It only
+ * clears the token cached by a prior `resource:acquire()` call and returns
+ * it, without calling qrmi_resource_release(). After this call,
+ * `resource:release()` with no argument, `resource:free()` and the `__gc`
+ * finalizer no longer release that token; the caller owns its release,
+ * e.g. with `resource:release(token)` on this or another handle.
+ *
+ * Use this to keep an acquired resource beyond the lifetime of this handle,
+ * for example when the Lua state is closed before the resource is released,
+ * or when the token is handed to another process.
+ *
+ * Lua usage:
+ * @code
+ *   local token = resource:acquire()
+ *   resource:detach()     -- token is no longer released automatically
+ *   resource:free()       -- frees the handle only
+ *   -- later, possibly from another handle:
+ *   local ok, err = other:release(token)
+ * @endcode
+ *
+ * @param L Lua state. Stack arguments:
+ *   - [1] resource (qrmi.resource userdata)
+ * @return Number of values pushed onto the Lua stack.
+ *         Always 1: the detached token (string), or nil if no token was
+ *         cached. Raises a Lua error if the resource was already freed.
+ */
+static int l_detach(lua_State *L) {
+    lua_qrmi_resource_t *ud = check_resource(L, 1);
+
+    if (!ud->acquisition_token) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushstring(L, ud->acquisition_token);
+    free(ud->acquisition_token);
+    ud->acquisition_token = NULL;
+    return 1;
+}
 
 /**
  * @brief Build and submit a QRMI_PAYLOAD_QISKIT_PRIMITIVE payload from a Lua sub-table.
@@ -1092,10 +1135,10 @@ static int l_target(lua_State *L) {
 /**
  * @brief Release the underlying QRMI resource, if not already released.
  *
- * If a token is currently held (from `resource:acquire()`), it is released
- * first via qrmi_resource_release(), then the handle itself is freed via
- * qrmi_resource_free(). Safe to call multiple times; a no-op once the
- * handle is NULL.
+ * If a token is currently held (from `resource:acquire()` and not detached
+ * with `resource:detach()`), it is released first via qrmi_resource_release(),
+ * then the handle itself is freed via qrmi_resource_free(). Safe to call
+ * multiple times; a no-op once the handle is NULL.
  *
  * @param ud The resource's userdata payload.
  */
@@ -1155,6 +1198,7 @@ static const luaL_Reg resource_methods[] = {
     {"type",          l_resource_type},
     {"acquire",       l_acquire},
     {"release",       l_release},
+    {"detach",        l_detach},
     {"task_start",    l_task_start},
     {"task_status",   l_task_status},
     {"task_result",   l_task_result},

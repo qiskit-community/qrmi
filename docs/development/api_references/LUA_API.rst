@@ -46,7 +46,8 @@ Design Notes
 3. **Resource lifecycle and GC** ``QrmiQuantumResource*`` is an opaque
    pointer. The userdata holds exactly one, and the ``__gc`` metamethod
    ensures it's automatically ``release``\ d and ``free``\ d even if the
-   caller forgets to do so explicitly.
+   caller forgets to do so explicitly. ``resource:detach()`` opts a token
+   out of this automatic release, so it can outlive the handle.
 
 
 --------------
@@ -234,8 +235,10 @@ e.g. ``"ibm-quantum-system"``); on failure, ``nil, err``
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Acquires exclusive access to the resource. The returned token is also
-cached internally, so a later ``release()`` call with no arguments, or
-the ``__gc`` finalizer, can release it automatically.
+cached internally, so a later ``release()`` call with no arguments,
+``free()``, or the ``__gc`` finalizer, can release it automatically.
+Call :ref:`resource:detach() <resource-detach>` to keep the token beyond
+this handle instead.
 
 If a token from an earlier, unreleased ``acquire()`` is still held, it
 is properly released via ``qrmi_resource_release()`` before acquiring a
@@ -260,6 +263,34 @@ token cached from the last ``acquire()`` call is used automatically.
 
    resource:release()          -- uses the cached token automatically
    resource:release(token)     -- explicit token
+
+.. _resource-detach:
+
+``resource:detach()``
+~~~~~~~~~~~~~~~~~~~~~
+
+Forgets the cached token without releasing it. After this call,
+``release()`` with no arguments, ``free()`` and the ``__gc`` finalizer no
+longer release that token; the caller owns its release, e.g. with
+``release(token)`` on this or another handle.
+
+Use this to keep an acquired resource beyond the lifetime of this handle,
+for example when the Lua state is closed before the resource is
+released, or when the token is handed to another process.
+
+Unlike the other methods, ``detach()`` does not call the QRMI C API and
+never returns ``nil, err``.
+
+**Returns:** the detached ``token`` (string), or ``nil`` if no token was
+cached. Raises a Lua error if the resource was already ``free()``\ d.
+
+.. code:: lua
+
+   local token = resource:acquire()
+   resource:detach()     -- token is no longer released automatically
+   resource:free()       -- frees the handle only
+   -- later, possibly from another handle:
+   local ok, err = other:release(token)
 
 ``resource:task_start(payload)``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -388,8 +419,9 @@ Fetches the device’s target information.
 ~~~~~~~~~~~~~~~~~~~
 
 Explicitly releases and frees the resource (auto-releases first if still
-acquired). Also happens automatically via ``__gc`` if not called
-explicitly, but calling it explicitly is recommended.
+acquired and not ``detach()``\ ed). Also happens automatically via
+``__gc`` if not called explicitly, but calling it explicitly is
+recommended.
 
 **Returns:** nothing
 

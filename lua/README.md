@@ -95,7 +95,8 @@ artifact's RUNPATH, so there's no need to set `LD_LIBRARY_PATH` at runtime
 3. **Resource lifecycle and GC**
    `QrmiQuantumResource*` is an opaque pointer. The userdata holds exactly one,
    and the `__gc` metamethod ensures it's automatically `release`d and `free`d
-   even if the caller forgets to do so explicitly.
+   even if the caller forgets to do so explicitly. `resource:detach()` opts a
+   token out of this automatic release, so it can outlive the handle.
 
 
 ## Not yet implemented (room for extension)
