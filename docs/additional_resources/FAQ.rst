@@ -52,6 +52,35 @@ resources alongside traditional HPC resources such as CPUs, GPUs,
 and storage systems. This simplifies the deployment and management
 of hybrid quantum-classical workflows.
 
+Which network destinations must be reachable?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every node that calls QRMI (the job's nodes, and the nodes where a
+workload manager integration acquires and releases resources) needs
+outbound access to the endpoints of the vendors it uses. This list is
+being filled in per vendor.
+
+Pasqal Cloud (``pasqal-cloud``):
+
+- ``https://apis.pasqal.cloud`` (TCP 443) for devices, device specs,
+  batches, jobs and results, including CUDA-Q jobs. Override it with
+  ``<backend_name>_QRMI_PASQAL_CLOUD_BASE_URL``.
+- ``https://authenticate.pasqal.cloud/oauth/token`` (TCP 443) to request
+  tokens when username/password or service account credentials are
+  configured. It is not contacted when an auth token is given. Override
+  it with ``<backend_name>_QRMI_PASQAL_CLOUD_AUTH_ENDPOINT``.
+
+Pasqal Local (``pasqal-local``):
+
+- The Warden URL set in ``<backend_name>_QRMI_WARDEN_URL`` (plain HTTP
+  on the port Warden listens on, for example ``http://warden-host:4207``).
+  Warden runs on premises next to the QPU; the QPU itself is only
+  reached by Warden.
+- The local ``munged`` socket on each node. Munge credentials are
+  created locally and checked by Warden, so no extra network destination
+  is needed for authentication, but all nodes and the Warden host must
+  share the same Munge key.
+
 Which workload managers are supported?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
