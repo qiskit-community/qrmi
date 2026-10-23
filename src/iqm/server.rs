@@ -25,7 +25,9 @@ use iqm_server_api::apis::configuration;
 use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
 use iqm_server_api::apis::quantum_computers_api::{qc_get_artifacts, GetQcV1Error};
 use iqm_server_api::apis::ResponseContent;
-use iqm_server_api::models::{IqmServerJobStatus, IqmServerQuantumComputerDetails, QcHealthDetail};
+use iqm_server_api::models::{
+    IqmServerJob, IqmServerJobStatus, IqmServerQuantumComputerDetails, QcHealthDetail,
+};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -121,6 +123,19 @@ impl IQMServer {
     /// Any other failure -- network, auth, a non-404 error status, or a
     /// response that isn't valid JSON -- is returned as `Err` rather than
     /// being folded into the same `null`.
+    /// The part of a job's record worth returning with its result: the
+    /// server's own account of the job, without the artifacts and messages.
+    fn job_metadata(job: &IqmServerJob) -> Value {
+        json!({
+            "id": job.id,
+            "status": job.status,
+            "queue_position": job.queue_position,
+            "runtime_ms": job.runtime_ms,
+            "timeline": job.timeline,
+            "compilation": job.compilation,
+        })
+    }
+
     fn parse_optional_artifact<B, E>(
         result: std::result::Result<B, iqm_server_api::apis::Error<E>>,
         resource_kind: ResourceKind,
@@ -392,6 +407,12 @@ impl QuantumResource for IQMServer {
     /// non-404 error status, or a response that isn't valid JSON --
     /// propagates as `Err` instead of being silently swallowed into the
     /// same `null`.
+    /// Returns the task's measurements and, under `job`, what the server
+    /// recorded about the job: its id and status, the queue position and
+    /// runtime, the timeline (one timestamped event per phase, from
+    /// `created` to `completed`) and the compilation record. The job part is
+    /// best effort: when that lookup fails the measurements still come back
+    /// and `job` is null.
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
         let measurements = Self::parse_optional_artifact(
             job_get_artifacts(&self.config, task_id, "measurements").await,
@@ -401,10 +422,18 @@ impl QuantumResource for IQMServer {
             job_get_artifacts(&self.config, task_id, "measurement_counts").await,
             ResourceKind::Job,
         )?;
+        let job = match get_job_v1(&self.config, task_id, Some(false), None).await {
+            Ok(job) => Self::job_metadata(&job),
+            Err(e) => {
+                log::debug!("IQM job {task_id}: metadata not returned with the result: {e:?}");
+                Value::Null
+            }
+        };
 
         let result = json!({
             "measurements": measurements,
             "measurement_counts": measurement_counts,
+            "job": job,
         });
 
         let result_str = serde_json::to_string_pretty(&result)?;
