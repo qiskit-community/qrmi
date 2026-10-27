@@ -1943,28 +1943,12 @@ dependencies = [
 
 [[package]]
 name = "quantum-system-api"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "aws-credential-types",
- "aws-runtime",
  "aws-sdk-s3",
- "aws-sigv4",
- "aws-smithy-async",
- "aws-smithy-checksums",
- "aws-smithy-eventstream",
- "aws-smithy-http",
- "aws-smithy-http-client",
- "aws-smithy-json",
- "aws-smithy-observability",
- "aws-smithy-runtime",
- "aws-smithy-runtime-api",
- "aws-smithy-runtime-api-macros",
- "aws-smithy-schema",
- "aws-smithy-types",
- "aws-smithy-xml",
- "aws-types",
  "base64",
  "chrono",
  "env_logger",
@@ -1973,7 +1957,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "rhexdump",
+ "retry-policies",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
@@ -2254,12 +2238,6 @@ dependencies = [
  "hmac 0.12.1",
  "subtle",
 ]
-
-[[package]]
-name = "rhexdump"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a92cbe1a3dd221e3777fef339115d3b85e17a538668e03a0f3ae9c6a98351c7"
 
 [[package]]
 name = "ring"
