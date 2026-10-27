@@ -50,9 +50,18 @@ password=<your password>
 
 ## Using this backend from CUDA-Q (`pasqal`)
 
-When CUDA-Q is configured with target `pasqal` and  `machine` in `cudaq.set_target(..., machine=...)` should be
-match `qrmi`. This way it picks up the machine target from QRMI, as populated by e.g. the Spank plugin's
-`--qpu` argument, or manually set by `QRMI_JOB_QPU_RESOURCES`.
+When CUDA-Q is configured with target `pasqal`, `machine` in `cudaq.set_target(..., machine=...)` should be
+`qrmi`. This way it picks up the machine target from QRMI, as populated by the scheduler integration (e.g. the
+Spank plugin's `--qpu` argument), or set manually, e.g. for Pasqal Cloud:
+
+```shell-session
+$ export QRMI_JOB_QPU_RESOURCES=EMU_FREE
+$ export QRMI_JOB_QPU_TYPES=pasqal-cloud
+```
+
+CUDA-Q reads `QRMI_JOB_QPU_RESOURCES` and `QRMI_JOB_QPU_TYPES` from the version that includes
+[NVIDIA/cuda-quantum#4296](https://github.com/NVIDIA/cuda-quantum/pull/4296). CUDA-Q 0.16 and earlier read only
+`SLURM_JOB_QPU_RESOURCES` (Pasqal Cloud only); the Spank plugin sets both names.
 
 ```python
 import cudaq
