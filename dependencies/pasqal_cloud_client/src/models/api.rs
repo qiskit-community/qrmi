@@ -19,6 +19,19 @@ use thiserror::Error;
 pub enum AuthError {
     #[error("auth token is missing or expired and refresh credentials are not configured")]
     MissingCredentialsForRefresh,
+    #[error("Token request failed: {status} {body}")]
+    TokenRequestFailed {
+        status: reqwest::StatusCode,
+        body: String,
+    },
+}
+
+/// A Pasqal Cloud API request that returned an unsuccessful HTTP status.
+#[derive(Debug, Error)]
+#[error("Status: {status}, Fail {body}")]
+pub struct ApiError {
+    pub status: reqwest::StatusCode,
+    pub body: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
