@@ -414,15 +414,18 @@ impl QuantumResource for IQMServer {
     /// best effort: when that lookup fails the measurements still come back
     /// and `job` is null.
     async fn task_result(&mut self, task_id: &str) -> Result<TaskResult> {
-        let measurements = Self::parse_optional_artifact(
-            job_get_artifacts(&self.config, task_id, "measurements").await,
-            ResourceKind::Job,
-        )?;
-        let measurement_counts = Self::parse_optional_artifact(
-            job_get_artifacts(&self.config, task_id, "measurement_counts").await,
-            ResourceKind::Job,
-        )?;
-        let job = match get_job_v1(&self.config, task_id, Some(false), None).await {
+        // The three requests are independent, so they go out together and
+        // the call takes one round trip rather than three.
+        let config = &self.config;
+        let (measurements, measurement_counts, job) = tokio::join!(
+            job_get_artifacts(config, task_id, "measurements"),
+            job_get_artifacts(config, task_id, "measurement_counts"),
+            get_job_v1(config, task_id, Some(false), None),
+        );
+        let measurements = Self::parse_optional_artifact(measurements, ResourceKind::Job)?;
+        let measurement_counts =
+            Self::parse_optional_artifact(measurement_counts, ResourceKind::Job)?;
+        let job = match job {
             Ok(job) => Self::job_metadata(&job),
             Err(e) => {
                 log::debug!("IQM job {task_id}: metadata not returned with the result: {e:?}");
