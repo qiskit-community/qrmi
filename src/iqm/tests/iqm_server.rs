@@ -640,3 +640,47 @@ async fn payload_status_and_is_accessible_over_http() {
         assert_eq!(got, *accessible, "{name}: is_accessible");
     }
 }
+
+#[test]
+fn job_metadata_carries_the_servers_account_of_the_job() {
+    // A job as the server reports it, minus the artifacts' contents.
+    let job: iqm_server_api::models::IqmServerJob = serde_json::from_value(json!({
+        "artifacts": [],
+        "id": "4eaaa9e2-ad53-4c5c-8ef1-c1a3f219c427",
+        "messages": [],
+        "qc": {"id": "0f0d3a6f-5a1b-4e7c-9c2d-7b6a1d2e3f40"},
+        "status": "completed",
+        "queue_position": null,
+        "runtime_ms": 3535,
+        "timeline": [
+            {"source": "server", "status": "created", "timestamp": "2026-10-12T18:39:20.000Z"},
+            {"source": "station", "status": "execution_started", "timestamp": "2026-10-12T18:39:22.000Z"},
+            {"source": "station", "status": "execution_ended", "timestamp": "2026-10-12T18:39:24.500Z"},
+            {"source": "server", "status": "completed", "timestamp": "2026-10-12T18:39:25.000Z"}
+        ],
+        "compilation": {"calibration_set_id": "46d0ca7b-ca24-4c8e-9f63-de5195a83b10"},
+        "type": "circuit"
+    }))
+    .expect("a job the client deserializes");
+
+    let metadata = IQMServer::job_metadata(&job);
+
+    assert_eq!(metadata["id"], "4eaaa9e2-ad53-4c5c-8ef1-c1a3f219c427");
+    assert_eq!(metadata["status"], "completed");
+    assert_eq!(metadata["runtime_ms"], 3535);
+    assert!(metadata["queue_position"].is_null());
+    let timeline = metadata["timeline"].as_array().expect("the timeline");
+    assert_eq!(timeline.len(), 4);
+    assert_eq!(timeline[1]["status"], "execution_started");
+    assert!(timeline[1]["timestamp"]
+        .as_str()
+        .unwrap()
+        .starts_with("2026-10-12T18:39:22"));
+    assert_eq!(
+        metadata["compilation"]["calibration_set_id"],
+        "46d0ca7b-ca24-4c8e-9f63-de5195a83b10"
+    );
+    // Nothing of the artifacts or messages: the measurements have their own keys.
+    assert!(metadata.get("artifacts").is_none());
+    assert!(metadata.get("messages").is_none());
+}
