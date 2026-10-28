@@ -303,7 +303,12 @@ impl QuantumResource for PasqalCloud {
 
     async fn status(&mut self) -> Result<ResourceStatus> {
         #[allow(deprecated)]
-        let accessible = self.is_accessible().await?;
+        let device_type = self.parse_device_type()?;
+        let device = self
+            .api_client
+            .get_device(device_type)
+            .await
+            .context("failed to get device")?;
         // Best-effort: unlike the availability check, the queue-size
         // endpoint requires authentication.
         let pending_job_count = self
@@ -313,12 +318,15 @@ impl QuantumResource for PasqalCloud {
             .ok()
             .flatten();
         Ok(ResourceStatus {
-            status: if accessible {
+            status: if device.availability == "ACTIVE" {
                 ResourceStatusCode::Online
             } else {
                 ResourceStatusCode::Offline
             },
-            status_reason: None,
+            status_reason: Some(format!(
+                "device status {}, availability {}",
+                device.status, device.availability
+            )),
             healthy: None,
             busy: None,
             capacity: None,
