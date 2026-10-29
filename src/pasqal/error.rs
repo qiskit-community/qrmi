@@ -15,7 +15,9 @@
 //! generic across every vendor. Values of this type reach callers wrapped in
 //! `QrmiError::Pasqal(_)` via `?` (see the `#[from]` on that variant).
 
-use crate::error::QrmiErrorKind;
+use crate::error::{QrmiError, QrmiErrorKind};
+use http::StatusCode;
+use pasqal_cloud_api::{ApiError, AuthError};
 use thiserror::Error;
 
 /// Errors that only make sense in the context of Pasqal's backends: they
@@ -40,5 +42,38 @@ impl PasqalError {
             PasqalError::InvalidDeviceType(_) => QrmiErrorKind::InvalidInput,
             PasqalError::InvalidCudaqSequence(_) => QrmiErrorKind::InvalidInput,
         }
+    }
+}
+
+/// What a Pasqal Cloud request was about, to tell a missing device from a
+/// missing task when the API answers 404.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum ResourceKind {
+    Device,
+    Task,
+}
+
+/// Converts an error from the Pasqal Cloud client into the `QrmiError`
+/// variant matching its HTTP status, so callers get a specific error kind
+/// instead of `Other`. Errors without a status keep their full chain in
+/// `QrmiError::Other`.
+pub(crate) fn classify(err: anyhow::Error, resource_kind: ResourceKind) -> QrmiError {
+    if err.downcast_ref::<AuthError>().is_some() {
+        return QrmiError::AuthenticationFailed(err.to_string());
+    }
+    let Some(api_err) = err.downcast_ref::<ApiError>() else {
+        return QrmiError::Other(err);
+    };
+    let body = api_err.body.clone();
+    match (api_err.status, resource_kind) {
+        (StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY, _) => {
+            QrmiError::InvalidInput(body)
+        }
+        (StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN, _) => {
+            QrmiError::AuthenticationFailed(body)
+        }
+        (StatusCode::NOT_FOUND, ResourceKind::Device) => QrmiError::ResourceNotFound(body),
+        (StatusCode::NOT_FOUND, ResourceKind::Task) => QrmiError::TaskNotFound(body),
+        _ => QrmiError::Other(err),
     }
 }

@@ -21,6 +21,6 @@ mod models;
 
 pub use auth::AccessTokenRequest;
 pub use client::{Client, ClientBuilder};
-pub use models::AuthError;
 pub use models::DeviceType;
 pub use models::JobStatus;
+pub use models::{ApiError, AuthError};

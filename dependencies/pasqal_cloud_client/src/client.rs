@@ -242,8 +242,8 @@ impl Client {
             Ok(val)
         } else {
             let status = resp.status();
-            let json_text = resp.text().await?;
-            bail!("Status: {}, Fail {}", status, json_text);
+            let body = resp.text().await?;
+            Err(models::ApiError { status, body }.into())
         }
     }
 }
