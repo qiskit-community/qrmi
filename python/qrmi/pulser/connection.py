@@ -47,6 +47,12 @@ _QRMI_TASK_STATUS_MAP: dict[TaskStatus, JobStatus] = {
 
 JOB_EXECUTION_POLLING_INTERVAL_S = 1
 
+_TERMINAL_TASK_STATUSES = (
+    TaskStatus.Completed,
+    TaskStatus.Failed,
+    TaskStatus.Cancelled,
+)
+
 _COMPATIBLE_RESOURCE_TYPES: tuple[ResourceType] = (
     ResourceType.PasqalLocal,
     ResourceType.PasqalCloud,
@@ -67,11 +73,25 @@ def _normalize_json_payload(payload: Any) -> dict[str, Any]:
 
 
 class PulserQRMIConnection(RemoteConnection):
-    """A connection to Pasqal QRMI resources, to submit Sequences to QPUs."""
+    """A connection to Pasqal QRMI resources, to submit Sequences to QPUs.
 
-    def __init__(self, qrmi: QuantumResource | None = None) -> None:
+    Args:
+        qrmi: The QRMI resource to use. Defaults to the only resource
+            accessible in the current job context.
+        polling_interval: Minimum time in seconds between two status queries
+            of the same unfinished task. Queries made sooner wait for the
+            remainder of the interval.
+    """
+
+    def __init__(
+        self,
+        qrmi: QuantumResource | None = None,
+        polling_interval: float = JOB_EXECUTION_POLLING_INTERVAL_S,
+    ) -> None:
         self._qrmi = qrmi or self._resolve_single_resource()
+        self.polling_interval = polling_interval
         self._task_sequences: dict[str, pulser.Sequence] = {}
+        self._last_task_status: dict[str, tuple[float, TaskStatus]] = {}
         self._current_batch_id = None
 
         _type: ResourceType = self._qrmi.resource_type()
@@ -182,7 +202,7 @@ class PulserQRMIConnection(RemoteConnection):
     def _get_batch_status(self, batch_id: str) -> BatchStatus:
         """Gets the status of a batch from its ID."""
         statuses = [
-            self._to_job_status(self._qrmi.task_status(job_id))
+            self._to_job_status(self._task_status(job_id))
             for job_id in self._get_job_ids(batch_id)
         ]
         if not statuses:
@@ -211,7 +231,7 @@ class PulserQRMIConnection(RemoteConnection):
         """
         progress: dict[str, tuple[JobStatus, Results | None]] = {}
         for job_id in self._get_job_ids(batch_id):
-            status = self._to_job_status(self._qrmi.task_status(job_id))
+            status = self._to_job_status(self._task_status(job_id))
             result = None
             if status == JobStatus.DONE:
                 try:
@@ -303,15 +323,28 @@ class PulserQRMIConnection(RemoteConnection):
 
     def _wait_job_execution(self, job_id: str):
         """Waits until job execution is complete"""
-        while True:
-            status = self._qrmi.task_status(job_id)
-            if status in (
-                TaskStatus.Completed,
-                TaskStatus.Failed,
-                TaskStatus.Cancelled,
-            ):
-                return
-            time.sleep(JOB_EXECUTION_POLLING_INTERVAL_S)
+        while self._task_status(job_id) not in _TERMINAL_TASK_STATUSES:
+            pass  # _task_status paces the polling
+
+    def _task_status(self, job_id: str) -> TaskStatus:
+        """Query a task status, at most once per polling interval.
+
+        Callers such as qoolqit's ``Job.results()`` poll ``_query_job_progress``
+        in a tight loop and expect the connection to pace requests, so a query
+        made too early sleeps until the interval has elapsed. Terminal statuses
+        are cached and returned without querying or sleeping.
+        """
+        last = self._last_task_status.get(job_id)
+        if last is not None:
+            queried_at, status = last
+            if status in _TERMINAL_TASK_STATUSES:
+                return status
+            remaining = queried_at + self.polling_interval - time.monotonic()
+            if remaining > 0:
+                time.sleep(remaining)
+        status = self._qrmi.task_status(job_id)
+        self._last_task_status[job_id] = (time.monotonic(), status)
+        return status
 
     def _get_job_ids(self, batch_id: str) -> list[str]:
         """Retrieve the list of Job IDs from the Batch ID"""
