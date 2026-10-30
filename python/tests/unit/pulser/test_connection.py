@@ -903,3 +903,37 @@ def test_batch_status_done_single_job_completed() -> None:
     result = connection._get_batch_status(batch_id)
 
     assert result == BatchStatus.DONE
+
+
+def test_task_status_paces_queries_until_terminal(monkeypatch) -> None:
+    """Throttle status queries of unfinished tasks, cache terminal statuses."""
+    clock = [0.0]
+    sleeps: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock[0] += seconds
+
+    monkeypatch.setattr(connection_module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(connection_module.time, "sleep", fake_sleep)
+
+    statuses = [TaskStatus.Running, TaskStatus.Running, TaskStatus.Completed]
+
+    class _ProgressingQRMI(_FakeQRMI):
+        queries = 0
+
+        def task_status(self, _job_id):
+            self.queries += 1
+            return statuses[self.queries - 1]
+
+    qrmi = _ProgressingQRMI()
+    connection = PulserQRMIConnection(qrmi=qrmi, polling_interval=2)  # type: ignore[arg-type]
+    remote_results = connection.submit(
+        _build_sequence(), wait=False, job_params=[{"runs": 5}]
+    )
+
+    for _ in range(5):
+        remote_results.get_batch_status()
+
+    assert qrmi.queries == 3
+    assert sleeps == [2, 2]
