@@ -32,6 +32,24 @@ Add the following to `Cargo.toml` under `[dependencies]`:
 alice-bob-felis = { path = "dependencies/alice_bob_felis_client" }
 ```
 
+## Regenerating the client
+
+`src/apis/`, `src/models/` and `docs/` are generated. Do not edit them by hand. To regenerate them
+from the Felis OpenAPI spec (requires docker or podman):
+
+```
+./regenerate.sh <path-or-url-to-felis-openapi-spec>
+```
+
+Hand-written files kept across regeneration:
+
+- `Cargo.toml`, `README.md`, `src/lib.rs` (listed in `.openapi-generator-ignore`)
+- `src/helpers.rs`: API key decoding
+- `src/jobs.rs`: `upload_input`, which sends the QIR input as a multipart file part. The generated
+  `apis::jobs_service::upload_input` doesn't send the file (openapi-generator limitation), so use
+  `jobs::upload_input` instead.
+- `tests/`
+
 ## Documentation for API Endpoints
 
 All URIs are relative to */external*

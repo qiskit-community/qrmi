@@ -1,6 +1,6 @@
 //! Hand-written job endpoints that openapi-generator cannot produce correctly.
 //!
-//! This file is not generated.
+//! This file is not generated and is not touched by `regenerate.sh`.
 
 use crate::apis::jobs_service::UploadInputError;
 use crate::apis::ResponseContent;
