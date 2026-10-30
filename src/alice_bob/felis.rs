@@ -160,7 +160,7 @@ impl QuantumResource for AliceBobFelis {
                 .map_err(|e| classify(e, ResourceKind::Backend))?;
             // The job exists from here on, so an upload failure must not look
             // like a refused request (see `QuantumResource::task_start`).
-            jobs_service::upload_input(&self.config, &external_job.id, human_qir, None)
+            alice_bob_felis::jobs::upload_input(&self.config, &external_job.id, human_qir, None)
                 .await
                 .map_err(|e| {
                     QrmiError::Other(anyhow::Error::new(classify(e, ResourceKind::Job)).context(

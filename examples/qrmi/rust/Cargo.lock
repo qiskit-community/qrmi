@@ -17,7 +17,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
- "felis-generated",
  "reqwest",
  "serde",
  "serde_json",
@@ -1016,19 +1015,6 @@ name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
-
-[[package]]
-name = "felis-generated"
-version = "0.1.0"
-dependencies = [
- "reqwest",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "url",
- "uuid",
-]
 
 [[package]]
 name = "ff"
