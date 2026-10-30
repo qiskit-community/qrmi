@@ -373,7 +373,7 @@ missing Munge to be detected as soon as QRMI is loaded:
    CARGO_TARGET_DIR=./target/release/maturin maturin build --release --features munge,pyo3/abi3,qrmi/pyo3
 
 Each request carries a fresh Munge credential whose payload is the request's
-method and URL, for example ``POST http://warden:4207/sessions``. Warden can
+method and URL, for example ``POST <QRMI_WARDEN_URL>/sessions``. Warden can
 require this with its ``api.munge_audience`` setting, so that a credential sent
 to another server, for instance through a wrong ``QRMI_WARDEN_URL``, cannot be
 relayed to Warden.
