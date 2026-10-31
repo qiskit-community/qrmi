@@ -18,4 +18,4 @@ version = "0.2.0"
 edition = "2021"
 
 [workspace.dependencies]
-quantum-system-api = { path = "..", features = ["skip_tls_cert_verify"] }
+qrmi-ibm-quantum-system-client = { path = "..", features = ["skip_tls_cert_verify"] }

@@ -18,14 +18,16 @@ use crate::models::{
 };
 use crate::{QuantumResource, Result};
 use async_trait::async_trait;
-use iqm_server_api::apis::calibration_sets_api::{
+use qrmi_iqm_server_client::apis::calibration_sets_api::{
     get_calibration_set_v1, get_dynamic_quantum_architecture_v1, get_quality_metrics_v1,
 };
-use iqm_server_api::apis::configuration;
-use iqm_server_api::apis::jobs_api::{cancel_job_v1, get_job_v1, job_get_artifacts, job_submit};
-use iqm_server_api::apis::quantum_computers_api::{qc_get_artifacts, GetQcV1Error};
-use iqm_server_api::apis::ResponseContent;
-use iqm_server_api::models::{
+use qrmi_iqm_server_client::apis::configuration;
+use qrmi_iqm_server_client::apis::jobs_api::{
+    cancel_job_v1, get_job_v1, job_get_artifacts, job_submit,
+};
+use qrmi_iqm_server_client::apis::quantum_computers_api::{qc_get_artifacts, GetQcV1Error};
+use qrmi_iqm_server_client::apis::ResponseContent;
+use qrmi_iqm_server_client::models::{
     IqmServerJob, IqmServerJobStatus, IqmServerQuantumComputerDetails, QcHealthDetail,
 };
 use serde_json::{json, Value};
@@ -137,7 +139,7 @@ impl IQMServer {
     }
 
     fn parse_optional_artifact<B, E>(
-        result: std::result::Result<B, iqm_server_api::apis::Error<E>>,
+        result: std::result::Result<B, qrmi_iqm_server_client::apis::Error<E>>,
         resource_kind: ResourceKind,
     ) -> Result<Value>
     where
@@ -146,7 +148,7 @@ impl IQMServer {
     {
         match result {
             Ok(bytes) => Ok(serde_json::from_slice::<Value>(bytes.as_ref())?),
-            Err(iqm_server_api::apis::Error::ResponseError(resp))
+            Err(qrmi_iqm_server_client::apis::Error::ResponseError(resp))
                 if resp.status.as_u16() == 404 =>
             {
                 Ok(Value::Null)
@@ -182,7 +184,7 @@ impl IQMServer {
             let content = resp.text().await?;
             if status.is_client_error() || status.is_server_error() {
                 let entity: Option<GetQcV1Error> = serde_json::from_str(&content).ok();
-                return Err(iqm_server_api::apis::Error::ResponseError(
+                return Err(qrmi_iqm_server_client::apis::Error::ResponseError(
                     ResponseContent {
                         status,
                         content,
@@ -194,7 +196,7 @@ impl IQMServer {
         };
         fetch
             .await
-            .map_err(|e: iqm_server_api::apis::Error<GetQcV1Error>| {
+            .map_err(|e: qrmi_iqm_server_client::apis::Error<GetQcV1Error>| {
                 classify(e, ResourceKind::Backend)
             })
     }

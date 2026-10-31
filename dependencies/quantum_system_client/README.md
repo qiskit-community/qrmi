@@ -65,7 +65,7 @@ RUST_LOG=trace ./bin/list_jobs
 
 ## Feature flags
 
-The quantum_system_api crate defines some [Cargo features](https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section) to enable using Quantum System Client for Rust in a variety of freestanding environments.
+The qrmi_ibm_quantum_system_client crate defines some [Cargo features](https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section) to enable using Quantum System Client for Rust in a variety of freestanding environments.
 
 ### features = ["ibmcloud_appid_auth"]
 

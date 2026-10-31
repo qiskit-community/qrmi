@@ -12,23 +12,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alice-bob-felis"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "mockito",
- "reqwest",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "tokio",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1701,21 +1684,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2"
 
 [[package]]
-name = "iqm-server-api"
-version = "1.0.0"
-dependencies = [
- "bytes",
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "is-macro"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2202,65 +2170,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pasqal-cloud-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert-json-diff",
- "async-trait",
- "base64 0.22.1",
- "chrono",
- "crypto-common 0.1.7",
- "digest 0.10.7",
- "env_logger",
- "hmac 0.12.1",
- "http 1.4.0",
- "jwt",
- "log",
- "mockito",
- "reqwest",
- "reqwest-middleware",
- "reqwest-retry",
- "retry-policies",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "pasqal-local-api"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "assert-json-diff",
- "async-trait",
- "base64 0.22.1",
- "chrono",
- "crypto-common 0.1.7",
- "digest 0.10.7",
- "env_logger",
- "hmac 0.12.1",
- "http 1.4.0",
- "jwt",
- "libloading",
- "log",
- "mockito",
- "reqwest",
- "reqwest-middleware",
- "reqwest-retry",
- "retry-policies",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "pem-rfc7468"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2520,7 +2429,6 @@ dependencies = [
 name = "qrmi"
 version = "0.26.6"
 dependencies = [
- "alice-bob-felis",
  "anyhow",
  "async-trait",
  "cbindgen",
@@ -2532,17 +2440,18 @@ dependencies = [
  "futures",
  "glob",
  "http 1.4.0",
- "iqm-server-api",
  "libc",
  "libloading",
  "log",
- "pasqal-cloud-api",
- "pasqal-local-api",
  "pyo3",
  "pyo3-stub-gen",
  "pythonize",
- "quantum-system-api",
- "quantum_compute_client",
+ "qrmi-alice-bob-felis-client",
+ "qrmi-ibm-quantum-compute-client",
+ "qrmi-ibm-quantum-system-client",
+ "qrmi-iqm-server-client",
+ "qrmi-pasqal-cloud-client",
+ "qrmi-pasqal-local-client",
  "reqwest-retry",
  "serde",
  "serde_json",
@@ -2554,7 +2463,36 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum-system-api"
+name = "qrmi-alice-bob-felis-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "tokio",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "qrmi-ibm-quantum-compute-client"
+version = "0.31.10"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "url",
+]
+
+[[package]]
+name = "qrmi-ibm-quantum-system-client"
 version = "0.15.0"
 dependencies = [
  "anyhow",
@@ -2586,15 +2524,77 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum_compute_client"
-version = "0.31.10"
+name = "qrmi-iqm-server-client"
+version = "1.0.0"
 dependencies = [
+ "bytes",
+ "chrono",
  "reqwest",
  "serde",
  "serde_json",
  "serde_repr",
  "serde_with",
  "url",
+ "uuid",
+]
+
+[[package]]
+name = "qrmi-pasqal-cloud-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert-json-diff",
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "crypto-common 0.1.7",
+ "digest 0.10.7",
+ "env_logger",
+ "hmac 0.12.1",
+ "http 1.4.0",
+ "jwt",
+ "log",
+ "mockito",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "retry-policies",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "qrmi-pasqal-local-client"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "assert-json-diff",
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "crypto-common 0.1.7",
+ "digest 0.10.7",
+ "env_logger",
+ "hmac 0.12.1",
+ "http 1.4.0",
+ "jwt",
+ "libloading",
+ "log",
+ "mockito",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "retry-policies",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

@@ -12,21 +12,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alice-bob-felis"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "reqwest",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1591,21 +1576,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
 
 [[package]]
-name = "iqm-server-api"
-version = "1.0.0"
-dependencies = [
- "bytes",
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1901,51 +1871,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pasqal-cloud-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64",
- "chrono",
- "env_logger",
- "http 1.5.0",
- "log",
- "reqwest",
- "reqwest-middleware",
- "reqwest-retry",
- "retry-policies",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "pasqal-local-api"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64",
- "chrono",
- "env_logger",
- "http 1.5.0",
- "libloading",
- "log",
- "reqwest",
- "reqwest-middleware",
- "reqwest-retry",
- "retry-policies",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "pem-rfc7468"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2049,7 +1974,6 @@ dependencies = [
 name = "qrmi"
 version = "0.26.5"
 dependencies = [
- "alice-bob-felis",
  "anyhow",
  "async-trait",
  "cbindgen",
@@ -2060,19 +1984,35 @@ dependencies = [
  "futures",
  "glob",
  "http 1.5.0",
- "iqm-server-api",
  "libc",
  "libloading",
  "log",
- "pasqal-cloud-api",
- "pasqal-local-api",
- "quantum-system-api",
- "quantum_compute_client",
+ "qrmi-alice-bob-felis-client",
+ "qrmi-ibm-quantum-compute-client",
+ "qrmi-ibm-quantum-system-client",
+ "qrmi-iqm-server-client",
+ "qrmi-pasqal-cloud-client",
+ "qrmi-pasqal-local-client",
  "reqwest-retry",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
  "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "qrmi-alice-bob-felis-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "url",
  "uuid",
 ]
 
@@ -2160,8 +2100,8 @@ dependencies = [
  "clap",
  "dotenv",
  "env_logger",
- "pasqal-local-api",
  "qrmi",
+ "qrmi-pasqal-local-client",
  "tokio",
 ]
 
@@ -2199,7 +2139,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum-system-api"
+name = "qrmi-ibm-quantum-compute-client"
+version = "0.31.10"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "url",
+]
+
+[[package]]
+name = "qrmi-ibm-quantum-system-client"
 version = "0.15.0"
 dependencies = [
  "anyhow",
@@ -2223,15 +2175,63 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum_compute_client"
-version = "0.31.10"
+name = "qrmi-iqm-server-client"
+version = "1.0.0"
 dependencies = [
+ "bytes",
+ "chrono",
  "reqwest",
  "serde",
  "serde_json",
  "serde_repr",
  "serde_with",
  "url",
+ "uuid",
+]
+
+[[package]]
+name = "qrmi-pasqal-cloud-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64",
+ "chrono",
+ "env_logger",
+ "http 1.5.0",
+ "log",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "retry-policies",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "qrmi-pasqal-local-client"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64",
+ "chrono",
+ "env_logger",
+ "http 1.5.0",
+ "libloading",
+ "log",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "retry-policies",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

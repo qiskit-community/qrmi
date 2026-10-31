@@ -18,7 +18,7 @@ use uuid::Uuid;
 /// # Example
 ///
 /// ```rust
-/// use quantum_system_api::utils::uuid;
+/// use qrmi_ibm_quantum_system_client::utils::uuid;
 ///
 /// let _uuid = uuid::new_v4();
 /// ```

@@ -45,9 +45,9 @@ rm -rf "$CRATE_DIR/src/apis" "$CRATE_DIR/src/models" "$CRATE_DIR/docs"
     -g rust \
     -i "$SPEC_ARG" \
     -o /local \
-    --package-name alice-bob-felis \
+    --package-name qrmi-alice-bob-felis-client \
     --additional-properties=supportMiddleware=false,library=reqwest
 
 cargo fmt --manifest-path "$CRATE_DIR/Cargo.toml"
 
-echo "Done. Review the diff, then run: cargo test -p alice-bob-felis"
+echo "Done. Review the diff, then run: cargo test -p qrmi-alice-bob-felis-client"

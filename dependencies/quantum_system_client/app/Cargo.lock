@@ -87,7 +87,7 @@ name = "api_versions"
 version = "0.2.0"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "serde_json",
  "tokio",
 ]
@@ -470,7 +470,7 @@ name = "backend"
 version = "0.2.1"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -562,7 +562,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -819,7 +819,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -1555,7 +1555,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -1594,7 +1594,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -1872,7 +1872,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum-system-api"
+name = "qrmi-ibm-quantum-system-client"
 version = "0.15.0"
 dependencies = [
  "anyhow",
@@ -2189,7 +2189,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -2201,7 +2201,7 @@ version = "0.2.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -2830,7 +2830,7 @@ name = "utility"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "tokio",
 ]
 
@@ -2851,7 +2851,7 @@ name = "version"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "serde_json",
  "tokio",
 ]

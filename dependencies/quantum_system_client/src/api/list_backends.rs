@@ -21,7 +21,7 @@ impl Client {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use quantum_system_api::{AuthMethod, ClientBuilder, models::Backends};
+    ///     use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder, models::Backends};
     ///
     ///     let client = ClientBuilder::new("http://localhost:8080")
     ///         .with_auth(AuthMethod::IbmCloudIam {

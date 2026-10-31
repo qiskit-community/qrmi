@@ -22,7 +22,7 @@ impl Client {
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use serde_json::json;
-    ///     use quantum_system_api::{AuthMethod, ClientBuilder};
+    ///     use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
     ///
     ///     let payload = json!({
     ///         "id": "bb2861da-d2c9-4de0-8f0b-4e399c4b02ac",

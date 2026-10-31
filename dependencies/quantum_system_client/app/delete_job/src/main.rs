@@ -14,7 +14,7 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::Jitter;
 use std::time::Duration;
 
-use quantum_system_api::{AuthMethod, ClientBuilder};
+use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0")]

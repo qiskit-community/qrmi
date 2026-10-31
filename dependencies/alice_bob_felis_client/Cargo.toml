@@ -1,5 +1,5 @@
 [package]
-name = "alice-bob-felis"
+name = "qrmi-alice-bob-felis-client"
 version = "0.1.0"
 repository.workspace = true
 license.workspace = true

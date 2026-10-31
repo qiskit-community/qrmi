@@ -1,5 +1,5 @@
 [package]
-name = "quantum_compute_client"
+name = "qrmi-ibm-quantum-compute-client"
 version = "0.31.10"
 description = "The Quantum Compute Service (Qiskit Runtime) API library for Rust"
 repository.workspace = true

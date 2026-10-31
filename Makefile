@@ -94,10 +94,10 @@ test-doc:
 	cargo test --doc --locked $(CARGO_PROFILE_FLAG)
 
 test-deps:
-	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum-system-api
-	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-cloud-api
-	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-local-api
-	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum_compute_client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p qrmi-ibm-quantum-system-client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p qrmi-pasqal-cloud-client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p qrmi-pasqal-local-client
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p qrmi-ibm-quantum-compute-client
 
 test-rust-examples:
 	cargo test --examples --locked $(CARGO_PROFILE_FLAG)

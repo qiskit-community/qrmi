@@ -1,5 +1,5 @@
 [package]
-name = "iqm-server-api"
+name = "qrmi-iqm-server-client"
 keywords = ["rest-api", "http-client", "api-bindings"]
 repository.workspace = true
 license.workspace = true

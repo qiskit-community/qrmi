@@ -27,7 +27,7 @@
 use crate::ibm::models::BackendConfiguration;
 use crate::{QrmiError, Result};
 use glob::Pattern;
-use quantum_system_api::models::{Backend, BackendStatus};
+use qrmi_ibm_quantum_system_client::models::{Backend, BackendStatus};
 
 /// Whether to filter by online status.
 #[derive(Debug, Default, PartialEq)]
@@ -183,7 +183,7 @@ impl BackendFilter {
 mod tests {
     use super::*;
     use crate::ibm::models::BackendConfiguration;
-    use quantum_system_api::models::{Backend, BackendStatus};
+    use qrmi_ibm_quantum_system_client::models::{Backend, BackendStatus};
 
     fn make_backend(name: &str, status: BackendStatus) -> Backend {
         Backend {

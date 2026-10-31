@@ -13,7 +13,7 @@
 use super::super::IBMQiskitRuntimeService;
 use crate::models::ResourceType;
 use crate::QuantumResource;
-use quantum_compute_client::apis::configuration;
+use qrmi_ibm_quantum_compute_client::apis::configuration;
 use std::collections::HashMap;
 
 #[tokio::test]

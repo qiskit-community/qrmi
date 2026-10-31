@@ -10,7 +10,7 @@
 // that they have been altered from the originals.
 
 mod common;
-use quantum_system_api::ClientBuilder;
+use qrmi_ibm_quantum_system_client::ClientBuilder;
 use serde_json::json;
 use uuid::Uuid;
 

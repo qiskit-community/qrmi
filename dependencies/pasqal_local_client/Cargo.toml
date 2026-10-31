@@ -1,5 +1,5 @@
 [package]
-name = "pasqal-local-api"
+name = "qrmi-pasqal-local-client"
 keywords = ["rest-api", "http-client", "api-bindings"]
 description = "Pasqal Local API client library for Rust"
 repository.workspace = true

@@ -23,7 +23,7 @@ use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
 use provider_filter::BackendFilter;
-use quantum_compute_client::apis::{auth, backends_api, configuration};
+use qrmi_ibm_quantum_compute_client::apis::{auth, backends_api, configuration};
 use std::collections::HashMap;
 use std::env;
 

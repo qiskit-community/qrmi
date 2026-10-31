@@ -9,7 +9,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use pasqal_local_api::{Client, ClientBuilder};
+use qrmi_pasqal_local_client::{Client, ClientBuilder};
 use serde_json::json;
 
 fn client_for(server: &mockito::Server) -> Client {

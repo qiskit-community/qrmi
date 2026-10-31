@@ -4,7 +4,7 @@ use crate::pasqal::cloud_config::{
     expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalCloudConfig,
 };
 use crate::QuantumResource;
-use pasqal_cloud_api::ClientBuilder;
+use qrmi_pasqal_cloud_client::ClientBuilder;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};

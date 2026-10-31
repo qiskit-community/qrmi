@@ -13,7 +13,7 @@
 use super::AliceBobFelis;
 use crate::models::Payload;
 use crate::{QrmiErrorKind, QuantumResource};
-use alice_bob_felis::apis::configuration;
+use qrmi_alice_bob_felis_client::apis::configuration;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpListener;
