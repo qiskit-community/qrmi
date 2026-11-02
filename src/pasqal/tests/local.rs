@@ -90,7 +90,7 @@ fn acquisition_token_falls_back_to_environment() {
 }
 
 #[test]
-fn apply_device_specs_maps_pulser_device() {
+fn parse_device_specs_maps_pulser_device() {
     let specs = r#"{"name": "FRESNEL", "max_atom_num": 100, "max_runs": 1000, "channels": []}"#;
     let target = serde_json::json!([{"device_type": "FRESNEL", "specs": specs}]).to_string();
     let mut info = QuantumResourceInfo::new(
