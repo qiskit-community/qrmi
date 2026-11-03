@@ -13,6 +13,10 @@ on:
   schedule:
   - cron: '0 0 * * 0'
 
+permissions:
+  contents: read
+  packages: read
+
 concurrency:
   group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
   cancel-in-progress: true
