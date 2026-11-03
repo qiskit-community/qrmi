@@ -8,6 +8,10 @@
 
 name: Schedule (ppc64le)
 
+permissions:
+  contents: read
+  packages: read
+
 on:
   # Runs at 00:00 UTC every Sunday
   schedule:
