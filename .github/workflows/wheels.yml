@@ -123,6 +123,9 @@ on:
         default: 'manual'
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   info:
     runs-on: ubuntu-24.04
