@@ -261,7 +261,7 @@ Once installed, the Lua binding can be built using either gcc or cmake:
 
          gcc -shared -fPIC -O2 $(pkg-config --cflags lua5.4) \
             -I/path/to/qrmi \
-            -o qrmi.so lua_qrmi.c maestro_local.c \
+            -o qrmi.so lua_qrmi.c \
             -L/path/to/qrmi -lqrmi \
             $(pkg-config --libs lua5.4) \
             -Wl,-rpath,/path/to/qrmi

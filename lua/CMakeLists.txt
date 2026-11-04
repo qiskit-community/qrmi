@@ -81,7 +81,6 @@ message(STATUS "QRMI library:     ${QRMI_LIBRARY}")
 # The Lua module itself (the .so loaded by require("qrmi"))
 # -----------------------------------------------------------------------------
 add_library(qrmi_module MODULE lua_qrmi.c)
-target_sources(qrmi_module PRIVATE maestro_local.c)
 
 set_target_properties(qrmi_module PROPERTIES
     OUTPUT_NAME "qrmi"   # produces qrmi.so (no "lib" prefix)

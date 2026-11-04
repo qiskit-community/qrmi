@@ -19,9 +19,10 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include <stdint.h>
 #include <string.h>
+#include <strings.h>
 #include "qrmi.h"
-#include "maestro_local.h"
 
 /** @brief Metatable name used to identify `qrmi.resource` userdata. */
 #define QRMI_RESOURCE_MT "qrmi.resource"
@@ -62,11 +63,10 @@ typedef struct {
  * @return Always 2 (number of values pushed: nil, errmsg).
  */
 static int push_qrmi_error(lua_State *L, QrmiReturnCode rc) {
-    char *err = qrmi_get_last_error();
+    const char *err = qrmi_get_last_error();
     lua_pushnil(L);
     if (err) {
         lua_pushstring(L, err);
-        qrmi_string_free(err);
     } else {
         lua_pushfstring(L, "qrmi error (code=%d)", (int)rc);
     }
@@ -155,8 +155,7 @@ static const char *status_code_to_string(QrmiResourceStatusCode s) {
  *   - [2] resource_type (string) canonical hyphenated name as returned by
  *         qrmi_config_resource_type_to_str(), e.g. "ibm-quantum-system",
  *         "ibm-quantum-compute-service", "qiskit-runtime-service"(deprecated),
- *         "pasqal-cloud", "pasqal-local", "alice-bob-felis", "iqm-server",
- *         "maestro-local"
+ *         "pasqal-cloud", "pasqal-local", "alice-bob-felis", "iqm-server"
  * @return Number of values pushed onto the Lua stack.
  *         On success: 1 (resource: qrmi.resource userdata)
  *         On failure: 2 (nil, err: string)
@@ -175,11 +174,9 @@ static int l_qrmi_new(lua_State *L) {
 
     QrmiQuantumResource *handle = qrmi_resource_new(resource_id, type);
     if (!handle) {
-        char *err = qrmi_get_last_error();
+        const char *err = qrmi_get_last_error();
         lua_pushnil(L);
         lua_pushstring(L, err ? err : "qrmi_resource_new failed");
-        if (err)
-            qrmi_string_free(err);
         return 2;
     }
 
@@ -571,24 +568,24 @@ static int submit_qiskit_primitive_payload(lua_State *L, lua_qrmi_resource_t *ud
     const char *input = luaL_checkstring(L, -1);
     lua_getfield(L, variant_idx, "program_id");
     const char *program_id = luaL_checkstring(L, -1);
-
+ 
     QrmiPayload payload;
     payload.tag = QRMI_PAYLOAD_QISKIT_PRIMITIVE;
     payload.QISKIT_PRIMITIVE.input = (char *)input;
     payload.QISKIT_PRIMITIVE.program_id = (char *)program_id;
-
+ 
     char *task_id = NULL;
     QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
-
+ 
     lua_settop(L, variant_idx - 1); /* drop variant table, input, program_id */
-
+ 
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-
+ 
     lua_pushstring(L, task_id);
     qrmi_string_free(task_id);
     return 1;
 }
-
+ 
 /**
  * @brief Build and submit a QRMI_PAYLOAD_IQM_SERVER payload from a Lua sub-table.
  *
@@ -611,21 +608,21 @@ static int submit_iqm_server_payload(lua_State *L, lua_qrmi_resource_t *ud, int 
     int use_timeslot = lua_toboolean(L, -1); /* absent/false -> 0 */
     lua_getfield(L, variant_idx, "tag");
     const char *tag = lua_isnil(L, -1) ? NULL : luaL_checkstring(L, -1); /* optional */
-
+ 
     QrmiPayload payload;
     payload.tag = QRMI_PAYLOAD_IQM_SERVER;
     payload.IQM_SERVER.iqmjson = (char *)iqmjson;
     payload.IQM_SERVER.job_type = (char *)job_type;
     payload.IQM_SERVER.use_timeslot = use_timeslot;
     payload.IQM_SERVER.tag = (char *)tag;
-
+ 
     char *task_id = NULL;
     QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
-
+ 
     lua_settop(L, variant_idx - 1); /* drop variant table, iqmjson, job_type, use_timeslot, tag */
-
+ 
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-
+ 
     lua_pushstring(L, task_id);
     qrmi_string_free(task_id);
     return 1;
@@ -685,19 +682,19 @@ static int submit_pasqal_payload(lua_State *L, lua_qrmi_resource_t *ud, int vari
     const char *sequence = luaL_checkstring(L, -1);
     lua_getfield(L, variant_idx, "job_runs");
     lua_Integer job_runs = luaL_checkinteger(L, -1);
-
+ 
     QrmiPayload payload;
     payload.tag = QRMI_PAYLOAD_PASQAL_CLOUD;
     payload.PASQAL_CLOUD.sequence = (char *)sequence;
     payload.PASQAL_CLOUD.job_runs = (int32_t)job_runs;
-
+ 
     char *task_id = NULL;
     QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
-
+ 
     lua_settop(L, variant_idx - 1); /* drop variant table, sequence, job_runs */
-
+ 
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-
+ 
     lua_pushstring(L, task_id);
     qrmi_string_free(task_id);
     return 1;
@@ -718,16 +715,70 @@ static int submit_alice_bob_felis_payload(lua_State *L, lua_qrmi_resource_t *ud,
     const char *human_qir = luaL_checkstring(L, -1);
     lua_getfield(L, variant_idx, "input_params");
     const char *input_params = luaL_checkstring(L, -1);
-
+ 
     QrmiPayload payload;
     payload.tag = QRMI_PAYLOAD_ALICE_BOB_FELIS;
     payload.ALICE_BOB_FELIS.human_qir = (char *)human_qir;
     payload.ALICE_BOB_FELIS.input_params = (char *)input_params;
+ 
+    char *task_id = NULL;
+    QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
+ 
+    lua_settop(L, variant_idx - 1); /* drop variant table, human_qir, input_params */
+ 
+    if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
+ 
+    lua_pushstring(L, task_id);
+    qrmi_string_free(task_id);
+    return 1;
+}
+
+static uint32_t maestro_u32(lua_State *L, lua_Integer value, const char *field) {
+    if (value < 0 || (lua_Unsigned)value > UINT32_MAX) {
+        luaL_error(L, "Maestro %s must be an integer in 0..4294967295", field);
+    }
+    return (uint32_t)value;
+}
+
+/**
+ * @brief Build and submit a QRMI_PAYLOAD_MAESTRO_LOCAL payload from a Lua sub-table.
+ */
+static int submit_maestro_local_payload(lua_State *L, lua_qrmi_resource_t *ud, int variant_idx) {
+    lua_getfield(L, variant_idx, "input");
+    const char *input = luaL_checkstring(L, -1);
+    lua_getfield(L, variant_idx, "job_type");
+    const char *job_type = luaL_optstring(L, -1, "execute");
+    lua_getfield(L, variant_idx, "qubits");
+    lua_Integer qubits = luaL_optinteger(L, -1, 0);
+    lua_getfield(L, variant_idx, "simulator_type");
+    lua_Integer simulator_type = luaL_optinteger(L, -1, 0);
+    lua_getfield(L, variant_idx, "simulation_method");
+    lua_Integer simulation_method = luaL_optinteger(L, -1, 0);
+    lua_getfield(L, variant_idx, "observables");
+    const char *observables = luaL_optstring(L, -1, "");
+    lua_getfield(L, variant_idx, "config");
+    const char *config = luaL_optstring(L, -1, "{}");
+
+    QrmiPayload payload;
+    payload.tag = QRMI_PAYLOAD_MAESTRO_LOCAL;
+    payload.MAESTRO_LOCAL.input = (char *)input;
+    payload.MAESTRO_LOCAL.job_type = (char *)job_type;
+    if (strcasecmp(job_type, "request") == 0) {
+        payload.MAESTRO_LOCAL.qubits = (uint32_t)qubits;
+        payload.MAESTRO_LOCAL.simulator_type = (uint32_t)simulator_type;
+        payload.MAESTRO_LOCAL.simulation_method = (uint32_t)simulation_method;
+    } else {
+        payload.MAESTRO_LOCAL.qubits = maestro_u32(L, qubits, "qubits");
+        payload.MAESTRO_LOCAL.simulator_type = maestro_u32(L, simulator_type, "simulator_type");
+        payload.MAESTRO_LOCAL.simulation_method = maestro_u32(L, simulation_method, "simulation_method");
+    }
+    payload.MAESTRO_LOCAL.observables = (char *)observables;
+    payload.MAESTRO_LOCAL.config = (char *)config;
 
     char *task_id = NULL;
     QrmiReturnCode rc = qrmi_resource_task_start(ud->handle, &payload, &task_id);
 
-    lua_settop(L, variant_idx - 1); /* drop variant table, human_qir, input_params */
+    lua_settop(L, variant_idx - 1);
 
     if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
 
@@ -735,14 +786,14 @@ static int submit_alice_bob_felis_payload(lua_State *L, lua_qrmi_resource_t *ud,
     qrmi_string_free(task_id);
     return 1;
 }
-
+ 
 /**
  * @brief `resource:task_start(payload)` - Start a task.
  *
  * Wraps qrmi_resource_task_start(). Mirrors the C API's QrmiPayload tagged
  * union as a Lua table: the table's single key names the payload variant,
  * and its value is a sub-table holding that variant's fields. Currently
- * supported variants (see examples/qrmi/lua/maestro for Maestro payloads):
+ * supported variants:
  *
  * @code
  *   -- Qiskit Primitive (IBM)
@@ -794,23 +845,23 @@ static int submit_alice_bob_felis_payload(lua_State *L, lua_qrmi_resource_t *ud,
 static int l_task_start(lua_State *L) {
     lua_qrmi_resource_t *ud = check_resource(L, 1);
     luaL_checktype(L, 2, LUA_TTABLE);
-
+ 
     int variant_idx; /* stack index of the variant sub-table, set by whichever branch matches */
-
+ 
     lua_getfield(L, 2, "qiskit_primitive");
     if (lua_istable(L, -1)) {
         variant_idx = lua_gettop(L);
         return submit_qiskit_primitive_payload(L, ud, variant_idx);
     }
     lua_pop(L, 1);
-
+ 
     lua_getfield(L, 2, "iqm_server");
     if (lua_istable(L, -1)) {
         variant_idx = lua_gettop(L);
         return submit_iqm_server_payload(L, ud, variant_idx);
     }
     lua_pop(L, 1);
-
+ 
     lua_getfield(L, 2, "pasqal_cloud");
     if (lua_istable(L, -1)) {
         variant_idx = lua_gettop(L);
@@ -824,18 +875,7 @@ static int l_task_start(lua_State *L) {
         return submit_alice_bob_felis_payload(L, ud, variant_idx);
     }
     lua_pop(L, 1);
-
-    lua_getfield(L, 2, "maestro_local");
-    if (lua_istable(L, -1)) {
-        char *task_id = NULL;
-        QrmiReturnCode rc = qrmi_lua_submit_maestro_payload(L, ud->handle, lua_gettop(L), &task_id);
-        if (rc != QRMI_RETURN_CODE_SUCCESS) return push_qrmi_error(L, rc);
-        lua_pushstring(L, task_id);
-        qrmi_string_free(task_id);
-        return 1;
-    }
-    lua_pop(L, 1);
-
+ 
     lua_getfield(L, 2, "oqtopus");
     if (lua_istable(L, -1)) {
         variant_idx = lua_gettop(L);
@@ -843,11 +883,18 @@ static int l_task_start(lua_State *L) {
     }
     lua_pop(L, 1);
 
+    lua_getfield(L, 2, "maestro_local");
+    if (lua_istable(L, -1)) {
+        variant_idx = lua_gettop(L);
+        return submit_maestro_local_payload(L, ud, variant_idx);
+    }
+    lua_pop(L, 1);
+ 
     lua_pushnil(L);
     lua_pushstring(L,
         "task_start: payload table must contain one of 'qiskit_primitive', "
         "'iqm_server', 'pasqal_cloud' (used for both Pasqal Cloud and "
-        "Pasqal Local resources), 'alice_bob_felis', 'oqtopus', or 'maestro_local'");
+        "Pasqal Local resources), 'alice_bob_felis', 'oqtopus' or 'maestro_local'");
     return 2;
 }
 
@@ -1255,11 +1302,9 @@ static int l_qrmi_load_config(lua_State *L) {
 
     QrmiConfig *handle = qrmi_config_load(filename);
     if (!handle) {
-        char *err = qrmi_get_last_error();
+        const char *err = qrmi_get_last_error();
         lua_pushnil(L);
         lua_pushstring(L, err ? err : "qrmi_config_load failed");
-        if (err)
-            qrmi_string_free(err);
         return 2;
     }
 
@@ -1319,11 +1364,9 @@ static int l_config_resource_def(lua_State *L) {
 
     QrmiResourceDef *def = qrmi_config_resource_def_get(ud->handle, resource_id);
     if (!def) {
-        char *err = qrmi_get_last_error();
+        const char *err = qrmi_get_last_error();
         lua_pushnil(L);
         lua_pushstring(L, err ? err : "qrmi_config_resource_def_get failed");
-        if (err)
-            qrmi_string_free(err);
         return 2;
     }
 
@@ -1438,3 +1481,4 @@ int luaopen_qrmi(lua_State *L) {
     luaL_newlib(L, qrmi_functions);
     return 1;
 }
+

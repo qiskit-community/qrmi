@@ -98,7 +98,7 @@ def linkcode_resolve(domain, info):
     module_name = info.get("module")
     fullname = info.get("fullname")
 
-    if not module_name or not fullname:
+    if not module_name:
         return None
 
     try:
@@ -123,12 +123,7 @@ def linkcode_resolve(domain, info):
     if filename is None:
         return None
 
-    try:
-        rel_path = Path(filename).resolve().relative_to(REPO_ROOT)
-    except ValueError:
-        # Installed wheels and inherited third-party objects can live outside
-        # this checkout. They have no reliable source line link in this tree.
-        return None
+    rel_path = Path(filename).resolve().relative_to(REPO_ROOT)
     end_lineno = lineno + len(source) - 1
 
     return f"{GITHUB_REPO}/blob/main/" f"{rel_path}#L{lineno}-L{end_lineno}"

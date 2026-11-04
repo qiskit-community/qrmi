@@ -26,6 +26,7 @@ from qrmi import (
     UnsupportedFunctionError,
     UnsupportedPayloadError,
 )
+from qrmi.maestro import payload_from_input, request_payload
 
 
 @pytest.fixture(name="server")
@@ -194,9 +195,42 @@ def test_lua_maestro_payload_dispatch(server, monkeypatch, mode):
             ("SESSION 8 DELETE", "OK YES"),
         ]
     )
-    script = (
-        Path(__file__).resolve().parents[4] / "lua/tests/maestro_local.lua"
-    ).read_text(encoding="utf-8")
+    script = """
+local loader = assert(package.loadlib(os.getenv("QRMI_TEST_LUA_MODULE"), "luaopen_qrmi"))
+local qrmi = loader()
+local resource = assert(qrmi.new("py_maestro", "maestro-local"))
+assert(resource:acquire() == "8")
+local payload = { input = "OPENQASM 2.0; qreg q[1];", qubits = 1 }
+if arg[1] == "estimate" then
+    payload.job_type = "estimate"
+    payload.observables = "Z"
+    payload.simulator_type = 2
+    payload.simulation_method = 3
+    payload.config = '{"shots":8}'
+end
+local task, err = resource:task_start({ maestro_local = payload })
+assert(task == "1", err)
+local rejected, reason = resource:task_start({
+    qiskit_primitive = { input = "{}", program_id = "sampler" }
+})
+assert(rejected == nil and reason:find("payload type is not supported", 1, true))
+for field, value in pairs({ qubits = 4294967297, simulator_type = -1, simulation_method = 4294967296 }) do
+    local saved = payload[field]
+    payload[field] = value
+    local ok, message = pcall(resource.task_start, resource, { maestro_local = payload })
+    assert(not ok and message:find(field .. " must be an integer in 0..4294967295", 1, true), message)
+    payload[field] = saved
+end
+payload.input = string.char(255)
+rejected, reason = resource:task_start({ maestro_local = payload })
+assert(rejected == nil and reason:find("UTF-8", 1, true))
+assert(resource:detach() == "8")
+assert(resource:detach() == nil)
+resource:free()
+local other = assert(qrmi.new("py_maestro", "maestro-local"))
+assert(other:release("8"))
+other:free()
+"""
     result = subprocess.run(
         [executable, "-", mode],
         input=script,
@@ -541,3 +575,174 @@ def test_c_submit_codes_follow_task_start_contract(c_api, server, monkeypatch):
             assert code == expected, reply
     finally:
         c_api.qrmi_resource_free(resource)
+
+
+EXAMPLES = Path(__file__).resolve().parents[4] / "examples/task_runner/maestro_local"
+
+
+def test_request_payload_preserves_native_fields():
+    """Keep noise, distribution, and multiline source intact in each envelope."""
+    request = {
+        "schema_version": 2,
+        "operation": "execute",
+        "circuit": {
+            "source": "OPENQASM 2.0;\n// line comment\nqreg q[2];",
+            "num_qubits": 2,
+        },
+        "simulator": {
+            "backend": "distributed_gpu",
+            "distribution": {"devices": [0, 1]},
+        },
+        "noise": {
+            "channels": [{"kind": "bit_flip", "targets": [0], "probability": 0.1}]
+        },
+    }
+    for task_input in (
+        request,
+        {"request": request},
+        {"job_type": "request", "input": request},
+    ):
+        payload = payload_from_input(task_input)
+        assert payload.job_type == "request"
+        assert payload.qubits == 0
+        assert json.loads(payload.input) == request
+
+
+def test_legacy_runner_accepts_config_object_or_string():
+    """Serialize object configurations without double-encoding JSON strings."""
+    task = {
+        "input": "OPENQASM 2.0; qreg q[1];",
+        "job_type": "execute",
+        "qubits": 1,
+        "simulator_type": 0,
+        "simulation_method": 0,
+    }
+    for config in ({"shots": 4}, '{"shots":4}'):
+        payload = payload_from_input({**task, "config": config})
+        assert json.loads(payload.config) == {"shots": 4}
+        assert payload.input == task["input"]
+
+
+@pytest.mark.parametrize(
+    "document", [[], {}, {"schema_version": 1}, '{"schema_version":1}']
+)
+def test_request_payload_rejects_wrong_schema(document):
+    """Reject missing and unsupported schema versions before submission."""
+    with pytest.raises(ValueError):
+        request_payload(document)
+
+
+def test_request_payload_rejects_nonfinite_options():
+    """Reject nonfinite values instead of emitting invalid JSON numbers."""
+    with pytest.raises(ValueError):
+        request_payload(
+            {"schema_version": 2, "simulator": {"options": {"threshold": float("nan")}}}
+        )
+
+
+@pytest.mark.parametrize(
+    "path", sorted(EXAMPLES.glob("native-*.json")), ids=lambda p: p.stem
+)
+def test_native_examples_match_schema_and_helper(path):
+    """Accept every native example in the payload helper (and schema if jsonschema is installed)."""
+    document = json.loads(path.read_text())
+    assert json.loads(payload_from_input(document).input) == document
+    try:
+        import jsonschema  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return
+    schema = json.loads(
+        (EXAMPLES.parents[2] / "qrmi_payload_v1_schema.json").read_text()
+    )
+    jsonschema.Draft202012Validator(schema).validate(document)
+
+
+def test_native_and_legacy_schema_matches_helper():
+    """Keep schema validation consistent with native and legacy parsing."""
+    root = Path(__file__).resolve().parents[4]
+    native = {"schema_version": 2, "operation": "execute"}
+    legacy = {
+        "job_type": "execute",
+        "input": "qasm",
+        "qubits": 1,
+        "simulator_type": 0,
+        "simulation_method": 0,
+    }
+    valid_values = [
+        native,
+        {"request": native},
+        {"request": json.dumps(native)},
+        {"job_type": "request", "input": native},
+        {"job_type": "request", "input": json.dumps(native)},
+        {**legacy, "job_type": "request", "input": native},
+        legacy,
+        {**legacy, "config": {"shots": 4}},
+        {**legacy, "config": '{"shots":4}'},
+    ]
+    invalid_values = [
+        {"job_type": "execute", "input": "qasm"},
+        {**legacy, "qubits": 0},
+        {**legacy, "input": {}},
+        {"job_type": "request", "input": {"schema_version": 1}},
+        {"job_type": "request"},
+    ]
+    for value in valid_values:
+        payload_from_input(value)
+    for value in invalid_values:
+        with pytest.raises(ValueError):
+            payload_from_input(value)
+    try:
+        import jsonschema  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return
+    schema = json.loads((root / "qrmi_payload_v1_schema.json").read_text())
+    validator = jsonschema.Draft202012Validator(schema)
+    validator.check_schema(schema)
+    for value in valid_values:
+        validator.validate(value)
+    for value in invalid_values:
+        assert not validator.is_valid(value), value
+
+
+def test_shared_payload_contract_cases():
+    """Apply the shared Rust, Python, and JSON-schema payload cases."""
+    root = Path(__file__).resolve().parents[4]
+    cases = json.loads((root / "tests/fixtures/maestro_payloads.json").read_text())
+    for case in cases:
+        if case["valid"]:
+            payload = payload_from_input(case["input"])
+            assert json.loads(payload.config) == json.loads(case["config"]), case[
+                "name"
+            ]
+        else:
+            with pytest.raises(ValueError):
+                payload_from_input(case["input"])
+
+
+@pytest.mark.parametrize("kind", ["execute", "estimate"])
+@pytest.mark.parametrize(
+    "field", ["input", "qubits", "simulator_type", "simulation_method"]
+)
+def test_missing_legacy_fields_have_descriptive_errors(kind, field):
+    """Name the missing legacy field for each supported legacy operation."""
+    document = {
+        "job_type": kind,
+        "input": "qasm",
+        "qubits": 1,
+        "simulator_type": 0,
+        "simulation_method": 0,
+    }
+    del document[field]
+    with pytest.raises(ValueError, match=f"^Missing legacy Maestro fields: {field}$"):
+        payload_from_input(document)
+
+
+def test_missing_native_and_legacy_fields():
+    """Describe absent native input and all missing legacy fields."""
+    with pytest.raises(ValueError, match="^Missing Maestro request field: input$"):
+        payload_from_input({"job_type": "REQUEST"})
+    with pytest.raises(
+        ValueError,
+        match="^Missing legacy Maestro fields: input, qubits, simulator_type, simulation_method$",
+    ):
+        payload_from_input({"job_type": "execute"})

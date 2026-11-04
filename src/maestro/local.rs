@@ -377,6 +377,155 @@ impl MaestroLocal {
             Err(error) => Err(anyhow!("Failed to {operation}: {error}").into()),
         }
     }
+
+    /// Parses a task runner input JSON document into a `Payload::MaestroLocal`.
+    pub fn payload_from_json(payload: &str) -> Result<Option<Payload>> {
+        let value: serde_json::Value = serde_json::from_str(payload)
+            .map_err(|e| QrmiError::InvalidInput(format!("Invalid Maestro JSON payload: {e}")))?;
+        Self::payload_from_value(value).map(Some)
+    }
+
+    /// Parses a JSON value into a `Payload::MaestroLocal`.
+    pub fn payload_from_value(value: serde_json::Value) -> Result<Payload> {
+        const LEGACY: &[&str] = &[
+            "input",
+            "job_type",
+            "qubits",
+            "simulator_type",
+            "simulation_method",
+            "observables",
+            "config",
+        ];
+        const FOREIGN: &[&str] = &[
+            "job_spec",
+            "program_id",
+            "parameters",
+            "job_runs",
+            "sequence",
+            "human_qir",
+            "input_params",
+            "iqmjson",
+            "use_timeslot",
+            "tag",
+        ];
+        let object = value
+            .as_object()
+            .ok_or_else(|| QrmiError::InvalidInput("Maestro payload must be an object".into()))?;
+        if object.keys().any(|key| FOREIGN.contains(&key.as_str())) {
+            return Err(QrmiError::InvalidInput(
+                "Maestro payload cannot contain another backend's fields".into(),
+            ));
+        }
+        if object.contains_key("request") && object.len() != 1 {
+            return Err(QrmiError::InvalidInput(
+                "Wrapped Maestro requests accept only the request field".into(),
+            ));
+        }
+        if !object.contains_key("request")
+            && !object.contains_key("schema_version")
+            && object.keys().any(|key| !LEGACY.contains(&key.as_str()))
+        {
+            return Err(QrmiError::InvalidInput(
+                "Unknown Maestro payload field".into(),
+            ));
+        }
+        let native = if let Some(request) = value.get("request") {
+            Some(request.clone())
+        } else if value.get("schema_version").is_some() {
+            Some(value.clone())
+        } else if value
+            .get("job_type")
+            .and_then(|v| v.as_str())
+            .is_some_and(|kind| kind.eq_ignore_ascii_case("request"))
+        {
+            Some(
+                value
+                    .get("input")
+                    .ok_or_else(|| QrmiError::InvalidInput("Missing request input".into()))?
+                    .clone(),
+            )
+        } else {
+            None
+        };
+        if let Some(mut request) = native {
+            if let Some(serialized) = request.as_str() {
+                request = serde_json::from_str(serialized)
+                    .map_err(|e| QrmiError::InvalidInput(e.to_string()))?;
+            }
+            if !request.is_object() || request["schema_version"].as_u64() != Some(2) {
+                return Err(QrmiError::InvalidInput(
+                    "Maestro request requires schema_version=2".into(),
+                ));
+            }
+            if request.as_object().unwrap().keys().any(|key| {
+                FOREIGN.contains(&key.as_str())
+                    || key == "request"
+                    || (key != "observables" && LEGACY.contains(&key.as_str()))
+            }) {
+                return Err(QrmiError::InvalidInput(
+                    "Native Maestro request cannot mix payload envelopes".into(),
+                ));
+            }
+            return Ok(Payload::MaestroLocal {
+                input: request.to_string(),
+                job_type: "request".into(),
+                qubits: 0,
+                simulator_type: 0,
+                simulation_method: 0,
+                observables: String::new(),
+                config: "{}".into(),
+            });
+        }
+        #[derive(serde::Deserialize)]
+        struct Input {
+            input: serde_json::Value,
+            job_type: String,
+            qubits: u32,
+            simulator_type: u32,
+            simulation_method: u32,
+            #[serde(default)]
+            observables: String,
+            #[serde(default)]
+            config: serde_json::Value,
+        }
+        let parsed: Input =
+            serde_json::from_value(value).map_err(|e| QrmiError::InvalidInput(e.to_string()))?;
+        if !["execute", "estimate"]
+            .iter()
+            .any(|kind| parsed.job_type.eq_ignore_ascii_case(kind))
+        {
+            return Err(QrmiError::InvalidInput("Unknown Maestro job_type".into()));
+        }
+        if !parsed.config.is_null() && !parsed.config.is_object() && !parsed.config.is_string() {
+            return Err(QrmiError::InvalidInput(
+                "Maestro config must be an object or serialized object".into(),
+            ));
+        }
+        if parsed.qubits == 0 || !parsed.input.is_string() {
+            return Err(QrmiError::InvalidInput(
+                "Legacy Maestro jobs require positive qubits and string input".into(),
+            ));
+        }
+        let serialize = |value: serde_json::Value| {
+            value
+                .as_str()
+                .map(str::to_owned)
+                .unwrap_or_else(|| value.to_string())
+        };
+        Ok(Payload::MaestroLocal {
+            input: serialize(parsed.input),
+            job_type: parsed.job_type,
+            qubits: parsed.qubits,
+            simulator_type: parsed.simulator_type,
+            simulation_method: parsed.simulation_method,
+            observables: parsed.observables,
+            config: if parsed.config.is_null() {
+                "{}".into()
+            } else {
+                serialize(parsed.config)
+            },
+        })
+    }
 }
 
 #[async_trait]

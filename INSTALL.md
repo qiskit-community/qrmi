@@ -226,7 +226,7 @@ Assuming the `qrmi.h` and `libqrmi.so` live in the same directory
 ``` bash
 gcc -shared -fPIC -O2 $(pkg-config --cflags lua5.4) \
    -I/path/to/qrmi \
-   -o qrmi.so lua_qrmi.c maestro_local.c \
+   -o qrmi.so lua_qrmi.c \
    -L/path/to/qrmi -lqrmi \
    $(pkg-config --libs lua5.4) \
    -Wl,-rpath,/path/to/qrmi

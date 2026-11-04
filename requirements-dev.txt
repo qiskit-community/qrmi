@@ -3,4 +3,3 @@ pylint==4.0.9
 black[jupyter]==26.10.1
 pytest==9.0.3
 cibuildwheel==3.4.1
-jsonschema>=4.10.3,<5

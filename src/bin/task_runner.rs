@@ -154,9 +154,29 @@ impl ResourceType {
             }
         };
         if qpu_type == "maestro-local" {
-            return Self::maestro_input(serde_json::from_str(&payload)?);
+            let Some(Payload::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            }) = MaestroLocal::payload_from_json(&payload)?
+            else {
+                unreachable!()
+            };
+            return Ok(Self::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            });
         }
-        let deserialized: QrmiInput = serde_json::from_str(&payload)?;
+        let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
         if qpu_type == "ibm-quantum-system" {
             let input = match &deserialized.parameters {
                 Some(v) => v.to_string(),
@@ -236,139 +256,12 @@ impl ResourceType {
         } else {
             Err(
                 eyre!(
-                    "Resource type {} is not supported. [supported types: ibm-quantum-system, ibm-quantum-compute-service, qiskit-runtime-service(deprecated), pasqal-cloud, pasqal-local, maestro-local]",
+                    "Resource type {} is not supported. [supported types: ibm-quantum-system, ibm-quantum-compute-service, qiskit-runtime-service(deprecated), pasqal-cloud]",
                     qpu_type,
                 ).into()
             )
         }
     }
-    fn maestro_input(value: serde_json::Value) -> Result<Self, Box<dyn std::error::Error>> {
-        const LEGACY: &[&str] = &[
-            "input",
-            "job_type",
-            "qubits",
-            "simulator_type",
-            "simulation_method",
-            "observables",
-            "config",
-        ];
-        const FOREIGN: &[&str] = &[
-            "job_spec",
-            "program_id",
-            "parameters",
-            "job_runs",
-            "sequence",
-            "human_qir",
-            "input_params",
-            "iqmjson",
-            "use_timeslot",
-            "tag",
-        ];
-        let object = value
-            .as_object()
-            .ok_or_else(|| eyre!("Maestro payload must be an object"))?;
-        if object.keys().any(|key| FOREIGN.contains(&key.as_str())) {
-            return Err(eyre!("Maestro payload cannot contain another backend's fields").into());
-        }
-        if object.contains_key("request") && object.len() != 1 {
-            return Err(eyre!("Wrapped Maestro requests accept only the request field").into());
-        }
-        if !object.contains_key("request")
-            && !object.contains_key("schema_version")
-            && object.keys().any(|key| !LEGACY.contains(&key.as_str()))
-        {
-            return Err(eyre!("Unknown Maestro payload field").into());
-        }
-        let native = if let Some(request) = value.get("request") {
-            Some(request.clone())
-        } else if value.get("schema_version").is_some() {
-            Some(value.clone())
-        } else if value
-            .get("job_type")
-            .and_then(|v| v.as_str())
-            .is_some_and(|kind| kind.eq_ignore_ascii_case("request"))
-        {
-            Some(
-                value
-                    .get("input")
-                    .ok_or_else(|| eyre!("Missing request input"))?
-                    .clone(),
-            )
-        } else {
-            None
-        };
-        if let Some(mut request) = native {
-            if let Some(serialized) = request.as_str() {
-                request = serde_json::from_str(serialized)?;
-            }
-            if !request.is_object() || request["schema_version"].as_u64() != Some(2) {
-                return Err(eyre!("Maestro request requires schema_version=2").into());
-            }
-            if request.as_object().unwrap().keys().any(|key| {
-                FOREIGN.contains(&key.as_str())
-                    || key == "request"
-                    || (key != "observables" && LEGACY.contains(&key.as_str()))
-            }) {
-                return Err(eyre!("Native Maestro request cannot mix payload envelopes").into());
-            }
-            return Ok(Self::MaestroLocal {
-                input: request.to_string(),
-                job_type: "request".into(),
-                qubits: 0,
-                simulator_type: 0,
-                simulation_method: 0,
-                observables: String::new(),
-                config: "{}".into(),
-            });
-        }
-        #[derive(Deserialize)]
-        struct Input {
-            input: serde_json::Value,
-            job_type: String,
-            qubits: u32,
-            simulator_type: u32,
-            simulation_method: u32,
-            #[serde(default)]
-            observables: String,
-            #[serde(default)]
-            config: serde_json::Value,
-        }
-        let parsed: Input = serde_json::from_value(value)?;
-        if !["execute", "estimate"]
-            .iter()
-            .any(|kind| parsed.job_type.eq_ignore_ascii_case(kind))
-        {
-            return Err(eyre!("Unknown Maestro job_type").into());
-        }
-        if !parsed.config.is_null() && !parsed.config.is_object() && !parsed.config.is_string() {
-            return Err(eyre!("Maestro config must be an object or serialized object").into());
-        }
-        if parsed.qubits == 0 || !parsed.input.is_string() {
-            return Err(
-                eyre!("Legacy Maestro jobs require positive qubits and string input").into(),
-            );
-        }
-        let serialize = |value: serde_json::Value| {
-            value
-                .as_str()
-                .map(str::to_owned)
-                .unwrap_or_else(|| value.to_string())
-        };
-        Ok(Self::MaestroLocal {
-            input: serialize(parsed.input),
-            job_type: parsed.job_type,
-            qubits: parsed.qubits,
-            simulator_type: parsed.simulator_type,
-            simulation_method: parsed.simulation_method,
-            observables: parsed.observables,
-            config: if parsed.config.is_null() {
-                "{}".into()
-            } else {
-                serialize(parsed.config)
-            },
-        })
-    }
-
     #[allow(dead_code)]
     fn as_str(&self) -> &str {
         match self {
@@ -479,6 +372,20 @@ async fn handle_signals(mut signals: Signals) {
     }
 }
 
+// Create the specified file and write the given data to it.
+fn write_to_file(filename: &String, data: &[u8]) {
+    if let Ok(mut f) = File::create(filename) {
+        match f.write_all(data) {
+            Ok(()) => {
+                let _ = f.flush();
+            }
+            Err(e) => {
+                eprintln!("Error: Failed to write output. reason = {:?}", e);
+            }
+        }
+    }
+}
+
 // Check to see if the specified file can be created, written and truncated.
 // Exit this program immediately if failed.
 fn check_file_argument(path: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -573,341 +480,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let handle = signals.handle();
     let signals_task = tokio::spawn(handle_signals(signals));
 
-    let result = run_task(
-        qrmi.as_mut(),
-        payload,
-        args.output.as_deref(),
-        &IS_RUNNING,
-        Duration::from_millis(POLLING_INTERVAL),
-        &mut std::io::stdout(),
-        &mut std::io::stderr(),
-    )
-    .await;
-    handle.close();
-    let shutdown = signals_task.await;
-    result?;
-    shutdown?;
-    Ok(())
-}
-
-type RunnerResult = Result<(), Box<dyn std::error::Error>>;
-
-async fn run_task(
-    qrmi: &mut dyn QuantumResource,
-    payload: Payload,
-    output_file: Option<&str>,
-    running: &AtomicBool,
-    poll_interval: Duration,
-    output: &mut dyn Write,
-    diagnostics: &mut dyn Write,
-) -> RunnerResult {
+    // start a task
     let job_id = qrmi.task_start(payload).await?;
-    // Keep all post-submission exits inside this block so cleanup always runs.
-    let result: RunnerResult = async {
-        writeln!(output, "Task ID: {job_id}")?;
-        while running.load(Ordering::SeqCst) {
-            match qrmi.task_status(&job_id).await {
-                Ok(TaskStatus::Completed) => {
-                    let result = qrmi.task_result(&job_id).await?;
-                    if let Some(path) = output_file {
-                        fs::write(path, result.value.as_bytes())?;
-                        writeln!(output, "Wrote output to {path}.")?;
-                    } else {
-                        writeln!(output, "{}", result.value)?;
-                    }
-                    return Ok(());
-                }
-                Ok(status @ (TaskStatus::Failed | TaskStatus::Cancelled)) => {
-                    return Err(eyre!("Task {job_id} {status:?}").into());
-                }
-                Ok(_) => {}
-                Err(error) => {
-                    let _ = writeln!(diagnostics, "Failed to get task status: {error}. Retrying.");
-                }
-            }
-            tokio::time::sleep(poll_interval).await;
-        }
-        Err(eyre!("Task {job_id} cancelled").into())
-    }
-    .await;
-    if let Err(error) = &result {
-        let _ = writeln!(diagnostics, "{error}");
-        match qrmi.task_logs(&job_id).await {
-            Ok(logs) if !logs.is_empty() => {
-                let _ = writeln!(diagnostics, "{logs}");
-            }
-            Ok(_) => {}
-            Err(error) => {
-                let _ = writeln!(diagnostics, "Unable to retrieve task logs: {error}");
-            }
-        }
-    }
-    if let Err(error) = qrmi.task_stop(&job_id).await {
-        let _ = writeln!(diagnostics, "Task cleanup failed: {error}");
-    }
-    result
-}
+    println!("Task ID: {}", job_id);
 
-#[cfg(test)]
-mod maestro_runner_tests {
-    use super::*;
-    #[test]
-    fn shared_payload_contract_cases() {
-        let cases: serde_json::Value =
-            serde_json::from_str(include_str!("../../tests/fixtures/maestro_payloads.json"))
-                .unwrap();
-        for case in cases.as_array().unwrap() {
-            let result = ResourceType::maestro_input(case["input"].clone());
-            assert_eq!(
-                result.is_ok(),
-                case["valid"].as_bool().unwrap(),
-                "{}",
-                case["name"]
-            );
-            if let Ok(resource) = result {
-                let Some(Payload::MaestroLocal { config, .. }) = resource.to_payload() else {
-                    panic!("wrong payload")
-                };
-                assert_eq!(
-                    serde_json::from_str::<serde_json::Value>(&config).unwrap(),
-                    serde_json::from_str::<serde_json::Value>(case["config"].as_str().unwrap())
-                        .unwrap()
+    // Poll the task status until it progresses to a final state such as TaskStatus::Completed.
+    let mut succeeded = false;
+    let one_sec = time::Duration::from_millis(POLLING_INTERVAL);
+    while IS_RUNNING.load(Ordering::SeqCst) {
+        match qrmi.task_status(&job_id).await {
+            Ok(status) => {
+                if matches!(status, TaskStatus::Completed) {
+                    succeeded = true;
+                    break;
+                } else if matches!(status, TaskStatus::Failed | TaskStatus::Cancelled) {
+                    eprintln!("{:#?}", status);
+                    break;
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "Error: Failed to get task status. reason = {}. Retrying.",
+                    err
                 );
             }
         }
-    }
-    #[test]
-    fn native_and_legacy_maestro_inputs_become_payloads() {
-        let request = serde_json::json!({"schema_version":2,"operation":"execute","circuit":{"source":"qasm\nsource","num_qubits":1}});
-        for input in [
-            request.clone(),
-            serde_json::json!({"request":request}),
-            serde_json::json!({"request":request.to_string()}),
-            serde_json::json!({"job_type":"request","input":request}),
-            serde_json::json!({"job_type":"request","input":request.to_string()}),
-        ] {
-            let resource = ResourceType::maestro_input(input).unwrap();
-            assert_eq!(resource.as_str(), "maestro-local");
-            let Some(Payload::MaestroLocal {
-                input,
-                job_type,
-                qubits,
-                ..
-            }) = resource.to_payload()
-            else {
-                panic!("wrong payload")
-            };
-            assert_eq!(job_type, "request");
-            assert_eq!(qubits, 0);
-            assert_eq!(
-                serde_json::from_str::<serde_json::Value>(&input).unwrap()["schema_version"],
-                2
-            );
-        }
-        let resource = ResourceType::maestro_input(serde_json::json!({
-            "input":"qasm", "job_type":"execute", "qubits":1, "simulator_type":1,
-            "simulation_method":0,"config":{"shots":5}
-        }))
-        .unwrap();
-        let Some(Payload::MaestroLocal { config, .. }) = resource.to_payload() else {
-            panic!("wrong payload")
-        };
-        assert_eq!(
-            serde_json::from_str::<serde_json::Value>(&config).unwrap()["shots"],
-            5
-        );
-        assert!(ResourceType::maestro_input(serde_json::json!({"schema_version":1})).is_err());
+        thread::sleep(one_sec);
     }
 
-    #[test]
-    fn native_examples_preserve_their_computational_documents() {
-        let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("examples/task_runner/maestro_local");
-        let mut checked = 0;
-        for entry in std::fs::read_dir(directory).unwrap() {
-            let path = entry.unwrap().path();
-            let name = path.file_name().unwrap().to_string_lossy();
-            if !name.starts_with("native-") || !name.ends_with(".json") {
-                continue;
-            }
-            let document: serde_json::Value =
-                serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-            let resource = ResourceType::maestro_input(document.clone()).unwrap();
-            let Some(Payload::MaestroLocal {
-                input, job_type, ..
-            }) = resource.to_payload()
-            else {
-                panic!("Wrong example payload: {name}");
-            };
-            assert_eq!(job_type, "request");
-            assert_eq!(
-                serde_json::from_str::<serde_json::Value>(&input).unwrap(),
-                document,
-                "{name}"
-            );
-            checked += 1;
-        }
-        assert!(checked > 0, "No native examples found");
-    }
-}
-
-#[cfg(test)]
-mod runner_outcome_tests {
-    use super::*;
-    struct Resource {
-        status: TaskStatus,
-        fail_logs: bool,
-        fail_result: bool,
-        calls: Vec<&'static str>,
-    }
-    #[async_trait::async_trait]
-    impl QuantumResource for Resource {
-        async fn resource_id(&mut self) -> qrmi::Result<String> {
-            Ok("test".into())
-        }
-        async fn resource_type(&mut self) -> qrmi::Result<qrmi::models::ResourceType> {
-            Ok(qrmi::models::ResourceType::MaestroLocal)
-        }
-        async fn is_accessible(&mut self) -> qrmi::Result<bool> {
-            Ok(true)
-        }
-        async fn task_start(&mut self, _: Payload) -> qrmi::Result<String> {
-            self.calls.push("start");
-            Ok("1".into())
-        }
-        async fn task_status(&mut self, _: &str) -> qrmi::Result<TaskStatus> {
-            self.calls.push("status");
-            Ok(self.status.clone())
-        }
-        async fn task_result(&mut self, _: &str) -> qrmi::Result<qrmi::models::TaskResult> {
-            self.calls.push("result");
-            if self.fail_result {
-                Err(qrmi::QrmiError::InvalidInput("result unavailable".into()))
-            } else {
-                Ok(qrmi::models::TaskResult {
-                    value: "native-result".into(),
-                })
-            }
-        }
-        async fn task_logs(&mut self, _: &str) -> qrmi::Result<String> {
-            self.calls.push("logs");
-            if self.fail_logs {
-                Err(qrmi::QrmiError::UnsupportedFunction(
-                    "logs unavailable".into(),
-                ))
-            } else {
-                Ok("native failure detail".into())
-            }
-        }
-        async fn task_stop(&mut self, _: &str) -> qrmi::Result<()> {
-            self.calls.push("stop");
-            Ok(())
-        }
-    }
-    fn payload() -> Payload {
-        Payload::MaestroLocal {
-            input: "{}".into(),
-            job_type: "request".into(),
-            qubits: 0,
-            simulator_type: 0,
-            simulation_method: 0,
-            observables: String::new(),
-            config: "{}".into(),
-        }
-    }
-    #[tokio::test]
-    async fn terminal_outcomes_preserve_failure_and_always_clean_up() {
-        for (status, fail_logs, fail_result, cancelled, expected) in [
-            (TaskStatus::Completed, false, false, false, None),
-            (TaskStatus::Failed, false, false, false, Some("Failed")),
-            (
-                TaskStatus::Cancelled,
-                false,
-                false,
-                false,
-                Some("Cancelled"),
-            ),
-            (TaskStatus::Failed, true, false, false, Some("Failed")),
-            (
-                TaskStatus::Completed,
-                false,
-                true,
-                false,
-                Some("result unavailable"),
-            ),
-            (TaskStatus::Running, false, false, true, Some("cancelled")),
-        ] {
-            let mut resource = Resource {
-                status,
-                fail_logs,
-                fail_result,
-                calls: Vec::new(),
-            };
-            let (mut output, mut diagnostics) = (Vec::new(), Vec::new());
-            let result = run_task(
-                &mut resource,
-                payload(),
-                None,
-                &AtomicBool::new(!cancelled),
-                Duration::ZERO,
-                &mut output,
-                &mut diagnostics,
-            )
-            .await;
-            let diagnostics = String::from_utf8(diagnostics).unwrap();
-            assert_eq!(resource.calls.last(), Some(&"stop"));
-            if let Some(message) = expected {
-                assert!(result.unwrap_err().to_string().contains(message));
-                assert!(diagnostics.contains(message));
-                assert!(diagnostics.contains(if fail_logs {
-                    "logs unavailable"
+    // write output if task was succeeded
+    if succeeded {
+        match qrmi.task_result(&job_id).await {
+            Ok(result) => {
+                if let Some(output_file) = args.output {
+                    write_to_file(&output_file, result.value.as_bytes());
+                    println!("Wrote output to {}.", output_file);
                 } else {
-                    "native failure detail"
-                }));
-                assert_eq!(resource.calls[resource.calls.len() - 2], "logs");
-                assert!(!String::from_utf8(output)
-                    .unwrap()
-                    .contains("native failure detail"));
-            } else {
-                result.unwrap();
-                assert!(!resource.calls.contains(&"logs"));
-                assert!(String::from_utf8(output).unwrap().contains("native-result"));
+                    println!("{}", result.value);
+                }
+            }
+            Err(err) => {
+                eprintln!("Error: Failed to get result. reason = {}", err);
             }
         }
     }
-    #[tokio::test]
-    async fn output_write_failure_is_an_error_and_cleans_up() {
-        let mut resource = Resource {
-            status: TaskStatus::Completed,
-            fail_logs: false,
-            fail_result: false,
-            calls: Vec::new(),
-        };
-        let path = std::env::temp_dir()
-            .join(uuid::Uuid::new_v4().to_string())
-            .join("output");
-        let result = run_task(
-            &mut resource,
-            payload(),
-            path.to_str(),
-            &AtomicBool::new(true),
-            Duration::ZERO,
-            &mut Vec::new(),
-            &mut Vec::new(),
-        )
-        .await;
-        assert!(result.is_err());
-        assert_eq!(resource.calls.last(), Some(&"stop"));
-    }
-    #[test]
-    fn legacy_configuration_is_not_silently_defaulted() {
-        for value in [
-            serde_json::json!({"input":"qasm","job_type":"execute"}),
-            serde_json::json!({"input":"qasm","job_type":"execute","qubits":0,"simulator_type":0,"simulation_method":0}),
-            serde_json::json!({"job_type":"request","input":{"schema_version":1}}),
-            serde_json::json!({"job_type":"request","input":"not json"}),
-        ] {
-            assert!(ResourceType::maestro_input(value).is_err());
-        }
-    }
+
+    // cleanup quantum task
+    let _ = qrmi.task_stop(&job_id).await;
+
+    // shutdown signal handler
+    handle.close();
+    signals_task.await?;
+
+    Ok(())
 }

@@ -1111,3 +1111,179 @@ fn resource_status_reports_queue_without_acquiring_and_keeps_failures_visible() 
     })
     .is_err());
 }
+
+#[test]
+fn shared_payload_contract_cases() {
+    let cases: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/maestro_payloads.json"
+    ))
+    .unwrap();
+    for case in cases.as_array().unwrap() {
+        let result = MaestroLocal::payload_from_value(case["input"].clone());
+        assert_eq!(
+            result.is_ok(),
+            case["valid"].as_bool().unwrap(),
+            "{}",
+            case["name"]
+        );
+        if let Ok(Payload::MaestroLocal { config, .. }) = result {
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&config).unwrap(),
+                serde_json::from_str::<serde_json::Value>(case["config"].as_str().unwrap())
+                    .unwrap()
+            );
+        }
+    }
+}
+
+#[test]
+fn native_and_legacy_maestro_inputs_become_payloads() {
+    let request = serde_json::json!({"schema_version":2,"operation":"execute","circuit":{"source":"qasm\nsource","num_qubits":1}});
+    for input in [
+        request.clone(),
+        serde_json::json!({"request":request}),
+        serde_json::json!({"request":request.to_string()}),
+        serde_json::json!({"job_type":"request","input":request}),
+        serde_json::json!({"job_type":"request","input":request.to_string()}),
+    ] {
+        let Ok(Payload::MaestroLocal {
+            input,
+            job_type,
+            qubits,
+            ..
+        }) = MaestroLocal::payload_from_value(input)
+        else {
+            panic!("wrong payload")
+        };
+        assert_eq!(job_type, "request");
+        assert_eq!(qubits, 0);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&input).unwrap()["schema_version"],
+            2
+        );
+    }
+    let Ok(Payload::MaestroLocal { config, .. }) =
+        MaestroLocal::payload_from_value(serde_json::json!({
+            "input":"qasm", "job_type":"execute", "qubits":1, "simulator_type":1,
+            "simulation_method":0,"config":{"shots":5}
+        }))
+    else {
+        panic!("wrong payload")
+    };
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&config).unwrap()["shots"],
+        5
+    );
+    assert!(MaestroLocal::payload_from_value(serde_json::json!({"schema_version":1})).is_err());
+    for value in [
+        serde_json::json!({"input":"qasm","job_type":"execute"}),
+        serde_json::json!({"input":"qasm","job_type":"execute","qubits":0,"simulator_type":0,"simulation_method":0}),
+        serde_json::json!({"job_type":"request","input":{"schema_version":1}}),
+        serde_json::json!({"job_type":"request","input":"not json"}),
+    ] {
+        assert!(MaestroLocal::payload_from_value(value).is_err());
+    }
+}
+
+#[test]
+fn native_examples_preserve_their_computational_documents() {
+    let directory =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/task_runner/maestro_local");
+    let mut checked = 0;
+    for entry in std::fs::read_dir(directory).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy();
+        if !name.starts_with("native-") || !name.ends_with(".json") {
+            continue;
+        }
+        let raw = std::fs::read_to_string(&path).unwrap();
+        let document: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        let Some(Payload::MaestroLocal {
+            input, job_type, ..
+        }) = MaestroLocal::payload_from_json(&raw).unwrap()
+        else {
+            panic!("Wrong example payload: {name}");
+        };
+        assert_eq!(job_type, "request");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&input).unwrap(),
+            document,
+            "{name}"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "No native examples found");
+}
+
+#[test]
+fn cext_maestro_payload_validation() {
+    use crate::cext::{
+        qrmi_config_resource_type_from_str, qrmi_get_last_error, qrmi_resource_free,
+        qrmi_resource_new, qrmi_resource_task_start, qrmi_string_free, Payload as CPayload,
+        ReturnCode,
+    };
+    use std::ffi::{CStr, CString};
+
+    let _lock = ENV_LOCK.lock().unwrap();
+    let _token = EnvGuard::set("c_maestro_QRMI_JOB_ACQUISITION_TOKEN", None);
+    let resource = unsafe { qrmi_resource_new(c"c_maestro".as_ptr(), ResourceType::MaestroLocal) };
+    assert!(!resource.is_null());
+    let invalid = CString::new(vec![0xff]).unwrap();
+    for field in 0..4 {
+        let mut strings = [c"OPENQASM 2.0; qreg q[1];", c"execute", c"", c"{}"];
+        strings[field] = invalid.as_c_str();
+        let payload = CPayload::MaestroLocal {
+            input: strings[0].as_ptr().cast_mut(),
+            job_type: strings[1].as_ptr().cast_mut(),
+            qubits: 1,
+            simulator_type: 0,
+            simulation_method: 0,
+            observables: strings[2].as_ptr().cast_mut(),
+            config: strings[3].as_ptr().cast_mut(),
+        };
+        let mut task_id = std::ptr::null_mut();
+        unsafe {
+            assert!(matches!(
+                qrmi_resource_task_start(resource, &payload, &mut task_id),
+                ReturnCode::InvalidInputError
+            ));
+            let message = qrmi_get_last_error();
+            assert!(!message.is_null());
+            assert!(CStr::from_ptr(message).to_str().unwrap().contains("UTF-8"));
+            qrmi_string_free(message);
+        }
+        assert!(task_id.is_null());
+    }
+    let zeroed = CPayload::MaestroLocal {
+        input: std::ptr::null_mut(),
+        job_type: std::ptr::null_mut(),
+        qubits: 0,
+        simulator_type: 0,
+        simulation_method: 0,
+        observables: std::ptr::null_mut(),
+        config: std::ptr::null_mut(),
+    };
+    unsafe {
+        let mut task_id = std::ptr::null_mut();
+        assert!(matches!(
+            qrmi_resource_task_start(resource, &zeroed, &mut task_id),
+            ReturnCode::InvalidInputError
+        ));
+        qrmi_string_free(qrmi_get_last_error());
+        qrmi_resource_free(resource);
+    }
+    for (name, expected) in [
+        (c"maestro-local", ResourceType::MaestroLocal),
+        (c"oqtopus", ResourceType::OQTOPUS),
+        (c"pasqal-local", ResourceType::PasqalLocal),
+    ] {
+        let mut actual = ResourceType::IBMQuantumSystem;
+        unsafe {
+            assert!(matches!(
+                qrmi_config_resource_type_from_str(name.as_ptr(), &mut actual),
+                ReturnCode::Success
+            ));
+        }
+        assert_eq!(actual, expected);
+    }
+}

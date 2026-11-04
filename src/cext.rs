@@ -21,11 +21,6 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::sync::Arc;
 
-mod maestro;
-
-#[cfg(test)]
-mod tests;
-
 /// Integer return codes returned to C.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -1720,7 +1715,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         return ReturnCode::NullPointerError;
     }
 
-    let mut qrmi_payload: Option<crate::models::Payload> = maestro::payload_from_c(&*payload);
+    let mut qrmi_payload: Option<crate::models::Payload> = None;
     if let Payload::QiskitPrimitive { input, program_id } = *payload {
         if let (Ok(program_id_str), Ok(input_str)) = (
             CStr::from_ptr(program_id).to_str(),
@@ -1784,6 +1779,39 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         if let Ok(job_spec_str) = CStr::from_ptr(job_spec).to_str() {
             qrmi_payload = Some(crate::models::Payload::Oqtopus {
                 job_spec: job_spec_str.to_string(),
+            });
+        }
+    } else if let Payload::MaestroLocal {
+        input,
+        job_type,
+        qubits,
+        simulator_type,
+        simulation_method,
+        observables,
+        config,
+    } = *payload
+    {
+        let cstr_opt = |ptr: *const c_char, default: Option<&str>| -> Option<String> {
+            if ptr.is_null() {
+                default.map(str::to_owned)
+            } else {
+                CStr::from_ptr(ptr).to_str().ok().map(str::to_owned)
+            }
+        };
+        if let (Some(input), Some(job_type), Some(observables), Some(config)) = (
+            cstr_opt(input, None),
+            cstr_opt(job_type, None),
+            cstr_opt(observables, Some("")),
+            cstr_opt(config, Some("{}")),
+        ) {
+            qrmi_payload = Some(crate::models::Payload::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
             });
         }
     }
