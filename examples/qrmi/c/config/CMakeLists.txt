@@ -33,10 +33,26 @@ function(add_example TARGET_NAME C_FILE)
   add_executable(${TARGET_NAME} ${SRC_FILE})
 
   # add libraries
-  target_link_libraries(${TARGET_NAME}
-          PUBLIC
-          "-L${PROJECT_ROOT}/target/${LIB_PATH} -Wl,-rpath ${PROJECT_ROOT}/target/${LIB_PATH}" qrmi
-  )
+  if (MSVC)
+    # MSVC: link against the import library of qrmi.dll and copy the DLL
+    # next to the executable. POSIX bits used by the examples (sleep,
+    # setenv, strtok_r, <unistd.h>) come from compat/windows/unistd.h.
+    # Override QRMI_LIB_DIR for e.g. target/x86_64-pc-windows-msvc/release.
+    if (NOT QRMI_LIB_DIR)
+      set(QRMI_LIB_DIR ${PROJECT_ROOT}/target/${LIB_PATH})
+    endif()
+    target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../compat/windows)
+    target_compile_options(${TARGET_NAME} PRIVATE /FIunistd.h)
+    target_compile_definitions(${TARGET_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_link_libraries(${TARGET_NAME} PUBLIC "${QRMI_LIB_DIR}/qrmi.dll.lib")
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${QRMI_LIB_DIR}/qrmi.dll" $<TARGET_FILE_DIR:${TARGET_NAME}>)
+  else()
+    target_link_libraries(${TARGET_NAME}
+            PUBLIC
+            "-L${PROJECT_ROOT}/target/${LIB_PATH} -Wl,-rpath ${PROJECT_ROOT}/target/${LIB_PATH}" qrmi
+    )
+  endif()
 
   if (APPLE)
     target_link_libraries(${TARGET_NAME} PUBLIC "-framework Security")
