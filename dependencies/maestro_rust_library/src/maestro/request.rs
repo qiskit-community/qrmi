@@ -3,8 +3,8 @@
 use crate::maestro_lib;
 use std::path::PathBuf;
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 pub const VERSION: u32 = 2;

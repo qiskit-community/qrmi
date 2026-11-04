@@ -1,10 +1,13 @@
 [package]
 name = "maestro-local-api"
+description = "Maestro Local API client library for Rust"
+authors = ["Qoro Quantum <team@qoroquantum.de>"]
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
 version = "0.1.0"
-edition = "2024"
-description = "Maestro rust library"
-authors = ["Qoro Quantum <team@qoroquantum.de"]
+edition.workspace = true
 
 [dependencies]
-json = "*"
-futures = "*"
+json = "0.12"
+futures = "0.3"
