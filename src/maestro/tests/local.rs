@@ -492,6 +492,7 @@ fn acquire_replaces_stale_token_reuses_session_and_release_clears_it() {
         ("SESSION CREATE", "OK 8"),
         ("SESSION 8 EXISTS", "OK YES"),
         ("SESSION 8 TASK 1 EXISTS", "OK NO"),
+        (&logs_command(8, 1), TASK_NOT_FOUND),
         ("SESSION 8 DELETE", "OK YES"),
     ]);
     let _token = EnvGuard::set(
@@ -717,14 +718,21 @@ fn cancellation_race_with_completion_is_benign() {
 #[test]
 fn failed_and_missing_tasks_are_not_reported_as_cancelled() {
     let _lock = ENV_LOCK.lock().unwrap();
+    // A missing task is reported as cancelled only when the server's retained
+    // diagnostics end with a confirmed cancellation; none of these do.
+    let (logs2, logs3) = (logs_command(8, 2), logs_command(8, 3));
+    let (completed, unconfirmed) = (history("completed"), history("cancellation_failed"));
     let server = Server::new(&[
         ("SESSION 8 TASK 1 EXISTS", "OK YES"),
         ("SESSION 8 TASK 1 FAILED", "OK YES"),
         ("SESSION 8 TASK 2 EXISTS", "OK NO"),
+        (&logs2, TASK_NOT_FOUND),
         ("SESSION 8 TASK 2 EXISTS", "OK NO"),
+        (&logs2, &completed),
         ("SESSION 8 TASK 3 EXISTS", "OK YES"),
         ("SESSION 8 TASK 3 FAILED", "ERROR removed"),
         ("SESSION 8 TASK 3 EXISTS", "OK NO"),
+        (&logs3, &unconfirmed),
     ]);
     block_on(async {
         let mut qrmi = resource(Some(8));
@@ -750,6 +758,99 @@ fn failed_and_missing_tasks_are_not_reported_as_cancelled() {
         );
     });
     server.assert_done();
+}
+
+// The native reply for a task without retained diagnostics.
+const TASK_NOT_FOUND: &str = r#"OK {"version":2,"ok":false,"error":{"code":"task_not_found","message":"Task does not exist"}}"#;
+
+fn logs_command(session: u32, task: u32) -> String {
+    format!(r#"API {{"version":2,"command":"logs","session_id":{session},"task_id":{task}}}"#)
+}
+
+// A server diagnostics document whose most recent transition is `last`.
+fn history(last: &str) -> String {
+    format!(
+        r#"OK {{"version":2,"ok":true,"events":[{{"timestamp_unix_ms":1,"state":"queued"}},{{"timestamp_unix_ms":2,"state":"started"}},{{"timestamp_unix_ms":3,"state":"{last}"}}]}}"#
+    )
+}
+
+#[test]
+fn recorded_cancellation_of_a_missing_task_is_a_terminal_status() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let cancelled = history("cancelled");
+    let (logs1, logs2) = (logs_command(8, 1), logs_command(8, 2));
+    let active = [
+        ("SESSION 8 TASK 2 EXISTS", "OK YES"),
+        ("SESSION 8 TASK 2 FAILED", "OK NO"),
+        ("SESSION 8 TASK 2 FINISHED", "OK NO"),
+        ("SESSION 8 TASK 2 RUNNING", "OK YES"),
+    ];
+    let mut replies = vec![
+        // Cancelled by another client: the task is gone, its history remains.
+        ("SESSION 8 TASK 1 EXISTS", "OK NO"),
+        (logs1.as_str(), cancelled.as_str()),
+    ];
+    // Cancelled by this client, but the acknowledgement was lost.
+    replies.extend(active);
+    replies.push(("SESSION 8 TASK 2 CANCEL", "ERROR connection reset"));
+    replies.push(("SESSION 8 TASK 2 EXISTS", "OK NO"));
+    replies.push((logs2.as_str(), cancelled.as_str()));
+    let server = Server::new(&replies);
+    block_on(async {
+        let mut qrmi = resource(Some(8));
+        assert_eq!(qrmi.task_status("1").await.unwrap(), TaskStatus::Cancelled);
+        // Remembered: neither status nor cleanup contacts the server again.
+        assert_eq!(qrmi.task_status("1").await.unwrap(), TaskStatus::Cancelled);
+        qrmi.task_stop("1").await.unwrap();
+        assert_eq!(
+            qrmi.task_result("1").await.unwrap_err().kind(),
+            QrmiErrorKind::TaskNotReady
+        );
+        qrmi.task_stop("2").await.unwrap();
+        assert_eq!(qrmi.task_status("2").await.unwrap(), TaskStatus::Cancelled);
+    });
+    server.assert_done();
+}
+
+#[test]
+fn slow_socket_exchanges_do_not_stall_the_executor() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let path = std::env::temp_dir().join(format!("qrmi-{}.sock", uuid::Uuid::new_v4()));
+    let listener = UnixListener::bind(&path).unwrap();
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut command = String::new();
+        BufReader::new(&mut stream).read_line(&mut command).unwrap();
+        assert_eq!(command, "SESSION 8 EXISTS\n");
+        thread::sleep(Duration::from_millis(500));
+        writeln!(stream, "OK YES").unwrap();
+    });
+    let _env = EnvGuard::set("QRMI_MAESTRO_SOCKET", Some(path.as_os_str()));
+    // One executor thread: a blocking exchange on it would stop the ticker.
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .unwrap();
+    let ticks = runtime.block_on(async {
+        let mut qrmi = resource(Some(8));
+        let ticks = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = ticks.clone();
+        let ticker = tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                counter.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+        assert_eq!(qrmi.acquire().await.unwrap(), "8");
+        ticker.abort();
+        ticks.load(Ordering::SeqCst)
+    });
+    server.join().unwrap();
+    std::fs::remove_file(&path).unwrap();
+    assert!(
+        ticks >= 10,
+        "The executor ran only {ticks} ticks during a 500 ms exchange"
+    );
 }
 
 #[test]

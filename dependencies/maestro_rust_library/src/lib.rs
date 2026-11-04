@@ -50,10 +50,25 @@ pub mod maestro_lib {
     /// A reply line wraps a result in `OK ` and a newline; the rest is spare.
     pub const MAX_RESPONSE_BYTES: u64 = MAX_RESULT_BYTES + 4096;
 
+    // Unit tests shorten both timeouts so delayed replies can be exercised quickly.
+    const REPLY_TIMEOUT: Duration = Duration::from_secs(if cfg!(test) { 1 } else { 15 });
+    // The server answers CANCEL and session DELETE once the active worker has
+    // stopped. An MPI launcher gets 20 s to clean up remote ranks and 5 s more
+    // before it is reaped; this allows that budget plus transport headroom.
+    const CLEANUP_REPLY_TIMEOUT: Duration = Duration::from_secs(if cfg!(test) { 3 } else { 60 });
+
+    /// How long to wait for the reply to `command`.
+    fn reply_timeout(command: &str) -> Duration {
+        match command.split_whitespace().collect::<Vec<_>>().as_slice() {
+            ["SESSION", _, "DELETE"] | ["SESSION", _, "TASK", _, "CANCEL"] => CLEANUP_REPLY_TIMEOUT,
+            _ => REPLY_TIMEOUT,
+        }
+    }
+
     pub(crate) fn exchange(socket_path: &Path, command: &str) -> std::io::Result<String> {
         let mut stream = UnixStream::connect(socket_path)?;
-        stream.set_read_timeout(Some(Duration::from_secs(15)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(15)))?;
+        stream.set_read_timeout(Some(reply_timeout(command)))?;
+        stream.set_write_timeout(Some(REPLY_TIMEOUT))?;
         stream.write_all(command.as_bytes())?;
         stream.shutdown(std::net::Shutdown::Write)?;
         let mut response = String::new();
@@ -99,8 +114,14 @@ pub mod maestro_lib {
         use super::*;
         use std::os::unix::net::UnixListener;
 
-        // Replies once with `reply` and returns what the client received.
-        fn exchange_reply(name: &str, reply: Vec<u8>) -> std::io::Result<String> {
+        // Replies once to `command` with `reply` after `delay`, and returns what
+        // the client received.
+        fn delayed_reply(
+            name: &str,
+            command: &str,
+            delay: Duration,
+            reply: Vec<u8>,
+        ) -> std::io::Result<String> {
             let path = std::env::temp_dir().join(format!(
                 "maestro-response-{}-{name}.sock",
                 std::process::id()
@@ -113,13 +134,72 @@ pub mod maestro_lib {
                 BufReader::new(socket.try_clone().unwrap())
                     .read_line(&mut command)
                     .unwrap();
-                // The client stops reading at its limit; a closed socket is fine.
+                std::thread::sleep(delay);
+                // The client stops reading at its limit or timeout; a closed socket is fine.
                 let _ = socket.write_all(&reply);
             });
-            let response = exchange(&path, "SESSION 1 TASK 1 GET_RESULTS\n");
+            let response = exchange(&path, command);
             server.join().unwrap();
             std::fs::remove_file(path)?;
             response
+        }
+
+        fn exchange_reply(name: &str, reply: Vec<u8>) -> std::io::Result<String> {
+            delayed_reply(
+                name,
+                "SESSION 1 TASK 1 GET_RESULTS\n",
+                Duration::ZERO,
+                reply,
+            )
+        }
+
+        #[test]
+        fn cleanup_replies_get_the_server_cleanup_budget() {
+            assert_eq!(
+                reply_timeout("SESSION 3 TASK 4 CANCEL\n"),
+                CLEANUP_REPLY_TIMEOUT
+            );
+            assert_eq!(reply_timeout("SESSION 3 DELETE\n"), CLEANUP_REPLY_TIMEOUT);
+            assert_eq!(reply_timeout("SESSION 3 TASK 4 EXISTS\n"), REPLY_TIMEOUT);
+            assert_eq!(reply_timeout("PING\n"), REPLY_TIMEOUT);
+            assert!(CLEANUP_REPLY_TIMEOUT > REPLY_TIMEOUT);
+
+            // A cancellation or deletion acknowledged after the ordinary reply
+            // timeout, while the server still cleans up, is not lost.
+            let late = REPLY_TIMEOUT + Duration::from_millis(500);
+            for (name, command) in [
+                ("late-cancel", "SESSION 3 TASK 4 CANCEL\n"),
+                ("late-delete", "SESSION 3 DELETE\n"),
+            ] {
+                let response = delayed_reply(name, command, late, b"OK YES\n".to_vec()).unwrap();
+                assert!(matches!(parse_response(&response), Response::OK(true)));
+            }
+            // A genuine cleanup failure is reported, not mistaken for success.
+            let response = delayed_reply(
+                "failed-cancel",
+                "SESSION 3 TASK 4 CANCEL\n",
+                late,
+                b"ERROR Could not cancel task: cleanup_unconfirmed\n".to_vec(),
+            )
+            .unwrap();
+            assert!(
+                matches!(parse_response(&response), Response::ERROR(message) if message.contains("cleanup_unconfirmed"))
+            );
+            // Other commands keep the short timeout.
+            let error = delayed_reply(
+                "late-exists",
+                "SESSION 3 TASK 4 EXISTS\n",
+                late,
+                b"OK YES\n".to_vec(),
+            )
+            .unwrap_err();
+            assert!(
+                matches!(
+                    error.kind(),
+                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                ),
+                "{error}"
+            );
         }
 
         #[test]

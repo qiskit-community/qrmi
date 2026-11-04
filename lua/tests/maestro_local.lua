@@ -18,6 +18,14 @@ local rejected, reason = resource:task_start({
     qiskit_primitive = { input = "{}", program_id = "sampler" }
 })
 assert(rejected == nil and reason:find("payload type is not supported", 1, true))
+-- Legacy 32-bit fields are range-checked, never wrapped (4294967297 is not 1).
+for field, value in pairs({ qubits = 4294967297, simulator_type = -1, simulation_method = 4294967296 }) do
+    local saved = payload[field]
+    payload[field] = value
+    local ok, message = pcall(resource.task_start, resource, { maestro_local = payload })
+    assert(not ok and message:find(field .. " must be an integer in 0..4294967295", 1, true), message)
+    payload[field] = saved
+end
 payload.input = string.char(255)
 rejected, reason = resource:task_start({ maestro_local = payload })
 assert(rejected == nil and reason:find("UTF-8", 1, true))

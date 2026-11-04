@@ -244,6 +244,12 @@ def test_missing_and_failed_tasks_raise_distinct_errors(server, monkeypatch):
     server.extend(
         [
             ("SESSION 8 TASK 1 EXISTS", "OK NO"),
+            # Without a recorded cancellation, a missing task stays not found.
+            (
+                'API {"version":2,"command":"logs","session_id":8,"task_id":1}',
+                'OK {"version":2,"ok":false,"error":'
+                '{"code":"task_not_found","message":"Task does not exist"}}',
+            ),
             ("SESSION 8 TASK 2 EXISTS", "OK YES"),
             ("SESSION 8 TASK 2 FAILED", "OK YES"),
         ]
@@ -352,6 +358,11 @@ def test_c_error_codes_and_maestro_enum(c_api, server, monkeypatch):
         [
             ('API {"version":2,"command":"capabilities"}', "ERROR Unknown command"),
             ("SESSION 8 TASK 1 EXISTS", "OK NO"),
+            # An old server has no retained diagnostics to consult.
+            (
+                'API {"version":2,"command":"logs","session_id":8,"task_id":1}',
+                "ERROR Unknown command",
+            ),
         ]
     )
     resource = c_api.qrmi_resource_new(b"py_maestro", int(ResourceType.MaestroLocal))

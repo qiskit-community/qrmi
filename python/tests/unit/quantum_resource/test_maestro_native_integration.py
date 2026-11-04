@@ -1154,6 +1154,21 @@ def test_readout_refusal_and_mixed_state_mirror_through_qrmi(native_resource):
             "observables": ["Z"],
         }
     )
+    # A checkpoint prefix's terminal measurements are removed as well.
+    refused.append(
+        {
+            **base,
+            "operation": "checkpoint_batch",
+            "circuit": annotated,
+            "suffixes": [
+                {
+                    "num_qubits": 1,
+                    "source": "OPENQASM 2.0; qreg q[1]; creg c[1]; measure q[0] -> c[0];",
+                }
+            ],
+            "execution": {"seed": 123, "shots": 8},
+        }
+    )
     for document in refused:
         with pytest.raises(UnsupportedFunctionError, match="readout_error"):
             native_resource.task_start(request_payload(document))
@@ -1169,3 +1184,35 @@ def test_readout_refusal_and_mixed_state_mirror_through_qrmi(native_resource):
         }
         with pytest.raises(UnsupportedFunctionError, match="mixed state"):
             native_resource.task_start(request_payload(fidelity))
+
+
+def test_mixed_state_queries_through_qrmi(native_resource):
+    """Mixed-state overlap and statevector fidelity use the request payload."""
+    caps = json.loads(native_resource.target().value)
+    operations = {"density_matrix_overlap", "fidelity_with_statevector"}
+    assert operations <= set(caps["native"]["operations"])
+    queries = caps["native"]["mixed_state_queries"]
+    assert set(queries["operations"]) == operations
+    assert queries["max_target_statevector_qubits"] == 20
+
+    document = json.loads((EXAMPLES / "native-mixed-state.json").read_text())
+    _, result = run_native(native_resource, document)
+    fidelity, overlap = result["results"]
+    assert fidelity["fidelity"] == pytest.approx(0.7624)
+    assert overlap["overlap"] == pytest.approx([0.5, 0])
+
+    # Without noise both mixed-state methods reproduce the Bell state exactly.
+    query = document["requests"][0]
+    del query["noise"]
+    for method in ("density_matrix", "matrix_product_operator"):
+        query["simulator"]["method"] = method
+        _, result = run_native(native_resource, query)
+        assert result["fidelity"] == pytest.approx(1)
+    query["target_statevector"] = [[1, 0], [1, 0], [0, 0], [0, 0]]
+    with pytest.raises(InvalidInputError, match="normalized"):
+        native_resource.task_start(request_payload(query))
+    # Pure states use inner_product and the statevector queries instead.
+    query["target_statevector"] = [[1, 0], [0, 0], [0, 0], [0, 0]]
+    query["simulator"]["method"] = "statevector"
+    with pytest.raises(UnsupportedFunctionError, match="density_matrix"):
+        native_resource.task_start(request_payload(query))

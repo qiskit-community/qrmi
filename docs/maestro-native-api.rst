@@ -97,6 +97,18 @@ prefix or with another API version, or any other unrecognized reply is the
 generic error, whose message says that the task may have been created. Do not
 resubmit blindly in the same session after such an error: releasing the
 acquisition token deletes the session and cancels any task it still runs.
+
+Cancelling a task and deleting a session are acknowledged only after the server
+has stopped the task's worker; an MPI launcher gets 20 seconds to clean up its
+remote ranks and 5 more before it is reaped. QRMI therefore waits up to 60
+seconds for these two replies, and 15 seconds for others. Cancellation removes
+the task. When a missing task's retained diagnostics end with a ``cancelled``
+event, because another client cancelled it or a cancellation acknowledgement was
+lost, ``task_status`` reports ``Cancelled`` and ``task_stop`` succeeds, so task
+runners stop polling. Any other missing task remains ``TaskNotFound``: a missing
+task alone proves neither cancellation nor failure, and diagnostics disappear
+with the session or a daemon restart. Socket exchanges, including these waits,
+run off the asynchronous executor.
 Unsupported-API errors come only from capability negotiation, before any
 submission is sent.
 
@@ -149,7 +161,12 @@ The existing payload fields and C ABI layout are unchanged:
 
 C and Lua use the same existing Maestro payload construction with ``job_type`` set to
 ``request``, ``input`` set to serialized JSON, and unused legacy fields set to the
-values above. Backend/method selection is inside the document and uses symbolic names,
+values above. In C, NULL ``observables`` and ``config`` select ``""`` and ``{}``, so
+a zero-initialized payload needs only ``input`` and ``job_type``; NULL ``input`` or
+``job_type`` is refused with ``QRMI_RETURN_CODE_INVALID_INPUT_ERROR`` before any
+request is sent. Lua raises an error for a legacy ``qubits``, ``simulator_type`` or
+``simulation_method`` outside ``0..4294967295`` rather than truncating it; request
+mode ignores these fields. Backend/method selection is inside the document and uses symbolic names,
 avoiding build-dependent legacy enum numbers. There is no new payload enum or Slurm
 plugin ABI requirement for this feature. Rebuild QRMI itself; existing consumers must
 still match the repository's existing QRMI ABI version.
@@ -455,6 +472,8 @@ requests suitable for either task runner or ``request_payload``:
   ``mirror_fidelity``; lowering ``max_bond_dimension`` to 1 makes values drop below 1.
 * ``native-instructions.json`` uses instruction-array ``rzz``, ``noiseless``
   basis changes, a ``pauli_channel`` and per-measurement ``readout_error``.
+* ``native-mixed-state.json`` batches ``fidelity_with_statevector`` of a noisy
+  Bell state and ``density_matrix_overlap`` of two MPO preparations.
 
 Adjoint differentiation, observable mirror fidelity and these instruction fields
 need a Maestro library listing them in ``native.operations``, ``native.adjoint``
@@ -476,11 +495,23 @@ They use the existing ``request`` payload unchanged:
 - Instruction arrays accept ``rxx``/``rzz``, ``"noiseless": true`` on gates,
   ``readout_error`` on ``measure`` (a probability or ``{p_meas1_prep0,
   p_meas0_prep1}``; counts only, so operations that remove terminal measurements,
-  including the adjoint operations and nested ``other_circuit``/``step_circuit``,
-  refuse it with ``UnsupportedFunctionError``), and ``pauli_channel`` with ``4**len(qubits)``
+  including the adjoint operations, nested ``other_circuit``/``step_circuit`` and
+  the ``checkpoint_batch`` prefix, refuse it with ``UnsupportedFunctionError``;
+  checkpoint suffix measurements apply it), and ``pauli_channel`` with ``4**len(qubits)``
   ``probabilities``. Mixed-state methods apply the channel exactly; pure-state
   methods sample it per noise realization and need a trajectory ``noise`` block,
   whose ``channels`` may be omitted.
+- ``density_matrix_overlap`` returns ``overlap``, the complex ``Tr(rho sigma)`` of
+  ``circuit`` and ``other_circuit`` prepared separately, and
+  ``fidelity_with_statevector`` returns ``fidelity``, ``<psi|rho|psi> / Tr(rho)``
+  for ``target_statevector``: ``2**num_qubits`` ``[real, imaginary]`` amplitudes in
+  basis-integer order, normalized to within ``1e-6``, for at most 20 qubits. They
+  are the mixed-state counterparts of ``inner_product`` and ``noisy_fidelity`` and
+  run only with fixed ``qcsim`` or ``gpu`` selection on ``density_matrix`` or
+  ``matrix_product_operator``; other methods refuse them with
+  ``UnsupportedFunctionError``. Circuits may contain resets and channels; a ``noise``
+  model must use exact evaluation with one realization. The catalog lists them in
+  ``native.mixed_state_queries``.
 
 Pauli strings put qubit zero first; Qiskit Pauli labels require reversal when
 constructing these native observables. Basis integers put qubit zero in the least

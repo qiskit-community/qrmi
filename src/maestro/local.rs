@@ -21,6 +21,8 @@ use maestro_local_api::maestro::request::{Client as RequestClient, Error as Requ
 use maestro_local_api::maestro::session::{Session, Task, TaskType};
 use std::collections::HashMap;
 use std::env;
+use std::future::Future;
+use std::path::PathBuf;
 
 /// QRMI implementation for Maestro Local.
 ///
@@ -36,28 +38,76 @@ pub struct MaestroLocal {
     terminal_tasks: HashMap<(u32, u32), TaskStatus>,
 }
 
+/// The fields of a legacy execute/estimate submission, moved to a blocking thread.
+struct LegacySubmission {
+    session_id: u32,
+    task_type: TaskType,
+    input: String,
+    observables: String,
+    config: String,
+    qubits: u32,
+    simulator_type: u32,
+    simulation_method: u32,
+}
+
 impl MaestroLocal {
-    // The socket client is synchronous. Keep its potentially blocking work off
-    // async executor threads, including callers using a non-Tokio executor.
+    // The socket client is synchronous, and a cleanup reply may take a minute.
+    // Keep that blocking work off async executor threads, including for callers
+    // using a non-Tokio executor.
+    async fn blocking<T: Send + 'static>(
+        &self,
+        operation: impl FnOnce(PathBuf) -> T + Send + 'static,
+    ) -> Result<T> {
+        let socket = self.request_client.socket_path().to_path_buf();
+        if let Ok(runtime) = tokio::runtime::Handle::try_current() {
+            runtime
+                .spawn_blocking(move || operation(socket))
+                .await
+                .map_err(|error| anyhow!("Maestro socket worker failed: {error}").into())
+        } else {
+            let (sender, receiver) = futures::channel::oneshot::channel();
+            std::thread::spawn(move || {
+                let _ = sender.send(operation(socket));
+            });
+            receiver
+                .await
+                .map_err(|error| anyhow!("Maestro socket worker failed: {error}").into())
+        }
+    }
+
+    /// Runs one legacy task exchange on a blocking thread. These client calls
+    /// are async in signature only: they perform synchronous socket I/O.
+    async fn task_call<T, F>(
+        &self,
+        task: &Task,
+        call: impl FnOnce(Task, PathBuf) -> F + Send + 'static,
+    ) -> Result<T>
+    where
+        T: Send + 'static,
+        F: Future<Output = T>,
+    {
+        let task = Task {
+            id: task.id,
+            session_id: task.session_id,
+        };
+        self.blocking(move |socket| futures::executor::block_on(call(task, socket)))
+            .await
+    }
+
+    async fn task_exists(&self, task: &Task) -> Result<std::result::Result<bool, String>> {
+        self.task_call(
+            task,
+            |task, socket| async move { task.exists_at(&socket).await },
+        )
+        .await
+    }
+
     async fn native_api<T: Send + 'static>(
         &self,
         operation: impl FnOnce(RequestClient) -> std::result::Result<T, RequestError> + Send + 'static,
     ) -> Result<T> {
         let client = self.request_client.clone();
-        let value = if let Ok(runtime) = tokio::runtime::Handle::try_current() {
-            runtime
-                .spawn_blocking(move || operation(client))
-                .await
-                .map_err(|error| anyhow!("Maestro API worker failed: {error}"))?
-        } else {
-            let (sender, receiver) = futures::channel::oneshot::channel();
-            std::thread::spawn(move || {
-                let _ = sender.send(operation(client));
-            });
-            receiver
-                .await
-                .map_err(|error| anyhow!("Maestro API worker failed: {error}"))?
-        };
+        let value = self.blocking(move |_| operation(client)).await?;
         value.map_err(|error| match error.code.as_str() {
             "invalid_input" => QrmiError::InvalidInput(error.message),
             "unsupported_api"
@@ -149,9 +199,9 @@ impl MaestroLocal {
     }
 
     async fn ensure_task_exists(&self, task: &Task) -> Result<()> {
-        if task
-            .exists_at(self.request_client.socket_path())
-            .await
+        if self
+            .task_exists(task)
+            .await?
             .map_err(|e| anyhow!("Failed to check task {}: {e}", task.id))?
         {
             Ok(())
@@ -171,15 +221,151 @@ impl MaestroLocal {
         match response {
             Ok(value) => Ok(value),
             Err(error) => {
-                if matches!(
-                    task.exists_at(self.request_client.socket_path()).await,
-                    Ok(false)
-                ) {
+                if matches!(self.task_exists(task).await, Ok(Ok(false))) {
                     return Err(QrmiError::TaskNotFound(task.id.to_string()));
                 }
                 Err(anyhow!("{operation} for task {}: {error}", task.id).into())
             }
         }
+    }
+
+    /// Whether the server's retained diagnostics end with a confirmed
+    /// cancellation of this task. They outlive the task until its session ends.
+    /// Older servers without diagnostics, unreachable servers and any other
+    /// history all answer false.
+    async fn cancellation_recorded(&self, task: &Task) -> bool {
+        let (session_id, id) = (task.session_id, task.id);
+        let Ok(logs) = self
+            .native_api(move |client| client.logs(session_id, id))
+            .await
+        else {
+            return false;
+        };
+        serde_json::from_str::<serde_json::Value>(&logs)
+            .ok()
+            .and_then(|value| {
+                let last = value["events"].as_array()?.last()?.clone();
+                Some(last["state"] == "cancelled")
+            })
+            .unwrap_or(false)
+    }
+
+    /// The server's view of a task that this instance has not seen finish.
+    async fn server_task_status(&self, task: &Task) -> Result<TaskStatus> {
+        self.ensure_task_exists(task).await?;
+        let failed = self
+            .task_call(
+                task,
+                |task, socket| async move { task.failed_at(&socket).await },
+            )
+            .await?;
+        if self
+            .task_response(task, "Failed to get failure status", failed)
+            .await?
+        {
+            return Ok(TaskStatus::Failed);
+        }
+        let finished = self
+            .task_call(task, |task, socket| async move {
+                task.finished_at(&socket).await
+            })
+            .await?;
+        if self
+            .task_response(task, "Failed to get completion status", finished)
+            .await?
+        {
+            // Failure can become visible between FAILED and FINISHED.
+            // Once FINISHED is true, re-read failure before caching status.
+            let failed = self
+                .task_call(
+                    task,
+                    |task, socket| async move { task.failed_at(&socket).await },
+                )
+                .await?;
+            return Ok(
+                if self
+                    .task_response(task, "Failed to get final failure status", failed)
+                    .await?
+                {
+                    TaskStatus::Failed
+                } else {
+                    TaskStatus::Completed
+                },
+            );
+        }
+        let running = self
+            .task_call(task, |task, socket| async move {
+                task.running_at(&socket).await
+            })
+            .await?;
+        Ok(
+            if self
+                .task_response(task, "Failed to get running status", running)
+                .await?
+            {
+                TaskStatus::Running
+            } else {
+                TaskStatus::Queued
+            },
+        )
+    }
+
+    /// Creates, configures and executes a legacy task. Runs on a blocking thread.
+    async fn submit_legacy(job: LegacySubmission, socket: PathBuf) -> Result<Task> {
+        let socket = socket.as_path();
+        let session = Session { id: job.session_id };
+        let task = session
+            .create_task_at(socket)
+            .await
+            .map_err(|e| anyhow!("Failed to create task: {e}"))?;
+        let estimate = matches!(job.task_type, TaskType::ESTIMATE);
+        let configured = async {
+            Self::accepted(
+                "set task type",
+                task.set_type_at(job.task_type, socket).await,
+            )?;
+            if estimate {
+                Self::accepted(
+                    "set observables",
+                    task.set_observables_as_string_at(job.observables, socket)
+                        .await,
+                )?;
+            }
+            Self::accepted("set qubits", task.set_qubits_at(job.qubits, socket).await)?;
+            Self::accepted(
+                "set simulator type",
+                task.set_simulator_type_at(job.simulator_type, socket).await,
+            )?;
+            Self::accepted(
+                "set simulation method",
+                task.set_simulation_method_at(job.simulation_method, socket)
+                    .await,
+            )?;
+            Self::accepted("set QASM", task.set_qasm_at(job.input, socket).await)?;
+            Self::accepted(
+                "set options JSON",
+                task.set_options_json_at(job.config, socket).await,
+            )?;
+            Self::accepted("execute task", task.execute_at(socket).await)
+        }
+        .await;
+        if let Err(error) = configured {
+            // A failed submission otherwise loses the only handle to the task.
+            if !matches!(task.cancel_at(socket).await, Ok(true)) {
+                log::warn!(
+                    "Failed to clean up Maestro task {} after rejected submission",
+                    task.id
+                );
+            }
+            // task_start errors other than Other promise that no task was
+            // created. Cancellation does not undo creation, and may itself fail.
+            return Err(anyhow!(
+                "Maestro task {} was created but submission failed: {error}",
+                task.id
+            )
+            .into());
+        }
+        Ok(task)
     }
 
     fn accepted(operation: &str, response: std::result::Result<bool, String>) -> Result<()> {
@@ -221,10 +407,10 @@ impl QuantumResource for MaestroLocal {
 
     async fn is_accessible(&mut self) -> Result<bool> {
         use maestro_local_api::maestro_lib::Response;
-        match maestro_local_api::maestro_lib::send_command_at(
-            self.request_client.socket_path(),
-            "PING\n",
-        ) {
+        match self
+            .blocking(|socket| maestro_local_api::maestro_lib::send_command_at(&socket, "PING\n"))
+            .await?
+        {
             Response::OK(accessible) => Ok(accessible),
             Response::ERROR(error) => Err(anyhow!("Error pinging Maestro Local: {error}").into()),
             response => Err(anyhow!("Unexpected Maestro Local ping response: {response:?}").into()),
@@ -233,8 +419,11 @@ impl QuantumResource for MaestroLocal {
 
     async fn acquire(&mut self) -> Result<String> {
         if let Some(id) = self.session_id {
-            if Session::session_exists_at(id, self.request_client.socket_path())
-                .await
+            if self
+                .blocking(move |socket| {
+                    futures::executor::block_on(Session::session_exists_at(id, &socket))
+                })
+                .await?
                 .map_err(|e| anyhow!("Failed to check session {id}: {e}"))?
             {
                 return Ok(id.to_string());
@@ -242,7 +431,9 @@ impl QuantumResource for MaestroLocal {
             self.session_id = None;
             self.terminal_tasks.clear();
         }
-        let session = Session::new_at(self.request_client.socket_path())
+        let session = self
+            .blocking(|socket| Session::new_at(&socket))
+            .await?
             .map_err(|e| anyhow!("Failed to acquire a new session: {e}"))?;
         self.session_id = Some(session.get_id());
         Ok(session.get_id().to_string())
@@ -254,8 +445,13 @@ impl QuantumResource for MaestroLocal {
         let session_id = id
             .parse::<u32>()
             .map_err(|_| QrmiError::InvalidInput(format!("Invalid session ID: {id}")))?;
-        let session = Session { id: session_id };
-        match session.delete_at(self.request_client.socket_path()).await {
+        // Deletion waits for the server to stop the session's active worker.
+        let deleted = self
+            .blocking(move |socket| {
+                futures::executor::block_on(Session { id: session_id }.delete_at(&socket))
+            })
+            .await?;
+        match deleted {
             Ok(true) => {
                 if self.session_id == Some(session_id) {
                     self.session_id = None;
@@ -327,80 +523,19 @@ impl QuantumResource for MaestroLocal {
             ));
         }
 
-        let session = Session {
-            id: self.get_session_id()?,
+        let job = LegacySubmission {
+            session_id: self.get_session_id()?,
+            task_type,
+            input,
+            observables,
+            config,
+            qubits,
+            simulator_type,
+            simulation_method,
         };
-        let task = session
-            .create_task_at(self.request_client.socket_path())
-            .await
-            .map_err(|e| anyhow!("Failed to create task: {e}"))?;
-        let estimate = matches!(task_type, TaskType::ESTIMATE);
-        let configured = async {
-            Self::accepted(
-                "set task type",
-                task.set_type_at(task_type, self.request_client.socket_path())
-                    .await,
-            )?;
-            if estimate {
-                Self::accepted(
-                    "set observables",
-                    task.set_observables_as_string_at(
-                        observables,
-                        self.request_client.socket_path(),
-                    )
-                    .await,
-                )?;
-            }
-            Self::accepted(
-                "set qubits",
-                task.set_qubits_at(qubits, self.request_client.socket_path())
-                    .await,
-            )?;
-            Self::accepted(
-                "set simulator type",
-                task.set_simulator_type_at(simulator_type, self.request_client.socket_path())
-                    .await,
-            )?;
-            Self::accepted(
-                "set simulation method",
-                task.set_simulation_method_at(simulation_method, self.request_client.socket_path())
-                    .await,
-            )?;
-            Self::accepted(
-                "set QASM",
-                task.set_qasm_at(input, self.request_client.socket_path())
-                    .await,
-            )?;
-            Self::accepted(
-                "set options JSON",
-                task.set_options_json_at(config, self.request_client.socket_path())
-                    .await,
-            )?;
-            Self::accepted(
-                "execute task",
-                task.execute_at(self.request_client.socket_path()).await,
-            )
-        }
-        .await;
-        if let Err(error) = configured {
-            // A failed submission otherwise loses the only handle to the task.
-            if !matches!(
-                task.cancel_at(self.request_client.socket_path()).await,
-                Ok(true)
-            ) {
-                log::warn!(
-                    "Failed to clean up Maestro task {} after rejected submission",
-                    task.id
-                );
-            }
-            // task_start errors other than Other promise that no task was
-            // created. Cancellation does not undo creation, and may itself fail.
-            return Err(anyhow!(
-                "Maestro task {} was created but submission failed: {error}",
-                task.id
-            )
-            .into());
-        }
+        let task = self
+            .blocking(move |socket| futures::executor::block_on(Self::submit_legacy(job, socket)))
+            .await??;
         self.terminal_tasks.remove(&(task.session_id, task.id));
         Ok(task.id.to_string())
     }
@@ -413,7 +548,13 @@ impl QuantumResource for MaestroLocal {
         ) {
             return Ok(());
         }
-        let response = task.cancel_at(self.request_client.socket_path()).await;
+        // The server replies after the worker has stopped; the client allows
+        // for its whole cleanup budget, so a slow success is not lost.
+        let response = self
+            .task_call(&task, |task, socket| async move {
+                task.cancel_at(&socket).await
+            })
+            .await?;
         if matches!(response, Ok(true)) {
             self.terminal_tasks
                 .insert((task.session_id, task.id), TaskStatus::Cancelled);
@@ -438,51 +579,23 @@ impl QuantumResource for MaestroLocal {
         if let Some(status) = self.terminal_tasks.get(&key) {
             return Ok(status.clone());
         }
-        self.ensure_task_exists(&task).await?;
-        let status = if self
-            .task_response(
-                &task,
-                "Failed to get failure status",
-                task.failed_at(self.request_client.socket_path()).await,
-            )
-            .await?
-        {
-            TaskStatus::Failed
-        } else if self
-            .task_response(
-                &task,
-                "Failed to get completion status",
-                task.finished_at(self.request_client.socket_path()).await,
-            )
-            .await?
-        {
-            // Failure can become visible between FAILED and FINISHED.
-            // Once FINISHED is true, re-read failure before caching status.
-            if self
-                .task_response(
-                    &task,
-                    "Failed to get final failure status",
-                    task.failed_at(self.request_client.socket_path()).await,
-                )
-                .await?
-            {
-                TaskStatus::Failed
-            } else {
-                TaskStatus::Completed
+        let status = match self.server_task_status(&task).await {
+            // Cancellation removes the task. Retained diagnostics still confirm a
+            // cancellation made by another client, or one whose acknowledgement
+            // was lost, so runners see a terminal state. A missing task alone
+            // proves neither cancellation nor failure and stays TaskNotFound.
+            Err(QrmiError::TaskNotFound(id)) => {
+                if !self.cancellation_recorded(&task).await {
+                    return Err(QrmiError::TaskNotFound(id));
+                }
+                TaskStatus::Cancelled
             }
-        } else if self
-            .task_response(
-                &task,
-                "Failed to get running status",
-                task.running_at(self.request_client.socket_path()).await,
-            )
-            .await?
-        {
-            TaskStatus::Running
-        } else {
-            TaskStatus::Queued
+            status => status?,
         };
-        if matches!(status, TaskStatus::Completed | TaskStatus::Failed) {
+        if matches!(
+            status,
+            TaskStatus::Completed | TaskStatus::Failed | TaskStatus::Cancelled
+        ) {
             self.terminal_tasks.insert(key, status.clone());
         }
         Ok(status)
@@ -500,13 +613,13 @@ impl QuantumResource for MaestroLocal {
         // GET_RESULTS consumes the server-side task. Repeated result retrieval
         // reports TaskNotFound, while the known Completed status stays available.
         self.ensure_task_exists(&task).await?;
+        let results = self
+            .task_call(&task, |task, socket| async move {
+                task.get_results_as_string_at(&socket).await
+            })
+            .await?;
         let value = self
-            .task_response(
-                &task,
-                "Failed to get results",
-                task.get_results_as_string_at(self.request_client.socket_path())
-                    .await,
-            )
+            .task_response(&task, "Failed to get results", results)
             .await?;
         Ok(TaskResult { value })
     }

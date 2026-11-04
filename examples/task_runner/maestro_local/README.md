@@ -152,14 +152,16 @@ and either task runner, using symbolic backend/method names:
 ## Differentiation, mirror and instruction examples
 
 These need a Maestro library that lists `adjoint_jacobian` in
-`native.operations` and an `instructions` catalog; older libraries reject them
-before allocating a task.
+`native.operations` and an `instructions` catalog, and for the mixed-state
+queries a `mixed_state_queries` catalog; older libraries reject them before
+allocating a task.
 
 | File | Purpose | Expected result |
 | --- | --- | --- |
 | [native-adjoint.json](native-adjoint.json) | Adjoint Jacobian for two parameter rows, with Pauli, weighted-sum and probability readouts | Four values and a 4×2 Jacobian per row; the all-zero row gives values `[1, 0.5, 1, 0]`. |
 | [native-mirror-observables.json](native-mirror-observables.json) | Per-observable mirror fidelity of a GHZ-like MPS | `[1, 1, 1, 1]`; set `max_bond_dimension` to 1 to see truncation. |
 | [native-instructions.json](native-instructions.json) | Instruction-array `rzz`, `noiseless` basis changes, a `pauli_channel` and `readout_error` on a density matrix | Counts `{"01": 32}`. On `statevector`, add `"noise": {"realizations": 32}` to sample the channel. |
+| [native-mixed-state.json](native-mixed-state.json) | `fidelity_with_statevector` of a noisy Bell state on a density matrix, and `density_matrix_overlap` of two MPO preparations | Fidelity `0.7624` against the ideal Bell state; overlap `[0.5, 0]` for `|+>` and `|1>`. |
 
 These use QCSim by default. GPU support depends on matching Maestro/plugin builds
 and runtime availability. Consult `target()` after upgrades: schema version 2

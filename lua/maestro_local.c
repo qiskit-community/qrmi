@@ -14,6 +14,17 @@
 
 #include "maestro_local.h"
 #include <lauxlib.h>
+#include <stdint.h>
+#include <strings.h>
+
+/* Legacy positional fields are 32-bit. A plain cast would silently change a
+ * value, e.g. 4294967297 to 1 or -1 to 4294967295, so reject them instead. */
+static uint32_t maestro_u32(lua_State *L, lua_Integer value, const char *field) {
+    if (value < 0 || (lua_Unsigned)value > UINT32_MAX) {
+        luaL_error(L, "Maestro %s must be an integer in 0..4294967295", field);
+    }
+    return (uint32_t)value;
+}
 
 QrmiReturnCode qrmi_lua_submit_maestro_payload(lua_State *L,
                                                QrmiQuantumResource *resource,
@@ -38,9 +49,16 @@ QrmiReturnCode qrmi_lua_submit_maestro_payload(lua_State *L,
     payload.tag = QRMI_PAYLOAD_MAESTRO_LOCAL;
     payload.MAESTRO_LOCAL.input = (char *)input;
     payload.MAESTRO_LOCAL.job_type = (char *)job_type;
-    payload.MAESTRO_LOCAL.qubits = (uint32_t)qubits;
-    payload.MAESTRO_LOCAL.simulator_type = (uint32_t)simulator_type;
-    payload.MAESTRO_LOCAL.simulation_method = (uint32_t)simulation_method;
+    if (strcasecmp(job_type, "request") == 0) {
+        /* Native requests carry everything in input; QRMI ignores these. */
+        payload.MAESTRO_LOCAL.qubits = (uint32_t)qubits;
+        payload.MAESTRO_LOCAL.simulator_type = (uint32_t)simulator_type;
+        payload.MAESTRO_LOCAL.simulation_method = (uint32_t)simulation_method;
+    } else {
+        payload.MAESTRO_LOCAL.qubits = maestro_u32(L, qubits, "qubits");
+        payload.MAESTRO_LOCAL.simulator_type = maestro_u32(L, simulator_type, "simulator_type");
+        payload.MAESTRO_LOCAL.simulation_method = maestro_u32(L, simulation_method, "simulation_method");
+    }
     payload.MAESTRO_LOCAL.observables = (char *)observables;
     payload.MAESTRO_LOCAL.config = (char *)config;
 
