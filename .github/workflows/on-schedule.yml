@@ -5,6 +5,9 @@
 
 name: Schedule
 
+permissions:
+  contents: read
+
 on:
   # Runs at 00:00 UTC every Saturday
   schedule:
