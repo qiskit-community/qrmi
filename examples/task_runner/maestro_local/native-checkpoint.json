@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "operation": "checkpoint_batch",
+  "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1]; x q[0];"},
+  "suffixes": [
+    {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1]; creg c[1]; measure q->c;"},
+    {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1]; creg c[1]; x q[0]; measure q->c;"}
+  ],
+  "simulator": {"backend": "qcsim", "method": "density_matrix"},
+  "execution": {"shots": 32, "seed": 123},
+  "noise": {
+    "evaluation": "exact",
+    "channels": [{"kind": "bit_flip", "targets": [0], "probability": 1}]
+  }
+}

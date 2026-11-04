@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "operation": "statevector",
+  "circuit": {
+    "num_qubits": 2,
+    "source": "OPENQASM 2.0; qreg q[2]; x q[0];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_state",
+    "options": {
+      "gate_fusion": true,
+      "mps_sampling": "probabilities"
+    }
+  },
+  "execution": {
+    "seed": 123
+  }
+}

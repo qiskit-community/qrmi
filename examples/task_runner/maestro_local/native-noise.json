@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "operation": "estimate",
+  "circuit": {
+    "format": "openqasm",
+    "num_qubits": 1,
+    "source": "OPENQASM 2.0;\nqreg q[1]; h q[0];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "density_matrix"
+  },
+  "observables": [
+    "X",
+    "Z"
+  ],
+  "execution": {
+    "seed": 123
+  },
+  "noise": {
+    "evaluation": "exact",
+    "channels": [
+      {
+        "kind": "t1",
+        "targets": [
+          0
+        ],
+        "gamma": 0.36
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "operation": "diagnostics",
+  "circuit": {
+    "num_qubits": 2,
+    "source": "OPENQASM 2.0; qreg q[2]; x q[1];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_operator",
+    "options": {
+      "max_bond_dimension": 0
+    }
+  },
+  "execution": {
+    "seed": 123
+  },
+  "operators": [
+    {
+      "qubits": [
+        0
+      ],
+      "matrix": [
+        2,
+        0,
+        0,
+        1
+      ],
+      "normalize": false
+    }
+  ],
+  "move_qubits": [
+    1
+  ],
+  "diagnostics": [
+    "trace",
+    "element",
+    "density_matrix",
+    "unnormalized_density_matrix",
+    "expectations_complex",
+    "unnormalized_expectations"
+  ],
+  "row_state": "01",
+  "col_state": "01",
+  "observables": [
+    "IZ",
+    "ZI",
+    "IZ"
+  ]
+}

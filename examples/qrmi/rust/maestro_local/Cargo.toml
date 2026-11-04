@@ -1,0 +1,15 @@
+[package]
+name = "qrmi-example-maestro-local"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/qiskit-community/qrmi"
+
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+dotenv = "0.15.0"
+env_logger = "0.11.7"
+qrmi = { workspace = true }
+maestro-local-api = { path = "../../../../dependencies/maestro_rust_library" }
+tokio = { version = "1.40.0", features = ["full"] }

@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "operation": "execute",
+  "circuit": {
+    "num_qubits": 3,
+    "source": "OPENQASM 2.0; qreg q[3]; creg c[3]; h q[0]; cx q[0],q[2]; measure q->c;"
+  },
+  "simulator": {
+    "backend": "distributed_mpi_gpu",
+    "method": "statevector",
+    "options": {
+      "precision": "double"
+    },
+    "distribution": {
+      "global_qubits": [
+        2
+      ],
+      "backend": "ex",
+      "mpi_p2p_bits": 0
+    }
+  },
+  "execution": {
+    "shots": 1024,
+    "seed": 123
+  },
+  "noise": {
+    "mode": "pauli",
+    "evaluation": "trajectories",
+    "realizations": 64,
+    "seed": 123,
+    "channels": [
+      {
+        "kind": "dephasing",
+        "targets": [
+          0,
+          2
+        ],
+        "probability": 0.01
+      }
+    ]
+  },
+  "launch": {
+    "profile": "allocation",
+    "ranks": 2
+  }
+}

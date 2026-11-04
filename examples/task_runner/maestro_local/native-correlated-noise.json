@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "operation": "estimate",
+  "circuit": {
+    "format": "instructions",
+    "num_qubits": 1,
+    "source": [
+      {"name": "h", "qubits": [0]},
+      {"name": "id", "qubits": [0]},
+      {"name": "id", "qubits": [0]},
+      {"name": "id", "qubits": [0]}
+    ]
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_state",
+    "options": {"max_bond_dimension": 2, "optimize_circuit": false}
+  },
+  "observables": ["X", "Z"],
+  "execution": {"seed": 123},
+  "noise": {
+    "mode": "combined",
+    "evaluation": "trajectories",
+    "seed": 23,
+    "realizations": 128,
+    "channels": [
+      {"kind": "correlated_ou", "targets": [0], "sigma": 0.4, "alpha": 2,
+       "gate_time": 0.1, "after_1q": true, "after_2q": false, "stationary_init": true}
+    ]
+  }
+}

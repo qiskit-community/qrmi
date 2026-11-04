@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "operation": "adjoint_jacobian",
+  "circuit": {
+    "num_qubits": 2,
+    "source": "OPENQASM 2.0; qreg q[2]; ry(0.4) q[0]; cx q[0],q[1]; rx(0.9) q[1];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "statevector"
+  },
+  "observables": [
+    "ZI",
+    {
+      "terms": [
+        [0.5, "ZZ"],
+        [2, "XI"]
+      ]
+    },
+    {
+      "probabilities": [1]
+    }
+  ],
+  "parameter_rows": [
+    [0.4, 0.9],
+    [0, 0]
+  ]
+}

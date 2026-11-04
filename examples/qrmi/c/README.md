@@ -6,4 +6,5 @@
 * [OQTOPUS](./oqtopus)
 * [Pasqal Cloud](./pasqal_cloud)
 * [Pasqal Local](./pasqal_local)
+* [Maestro Local QRMI](./maestro_local)
 * [QRMI Service](./service)

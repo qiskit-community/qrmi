@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "operation": "batch",
+  "requests": [
+    {
+      "schema_version": 2,
+      "operation": "amplitudes",
+      "circuit": {
+        "num_qubits": 2,
+        "source": "OPENQASM 2.0; qreg q[2]; x q[0];"
+      },
+      "basis_states": [
+        1,
+        2
+      ]
+    },
+    {
+      "schema_version": 2,
+      "operation": "diagnostics",
+      "circuit": {
+        "format": "openqasm",
+        "num_qubits": 1,
+        "source": "OPENQASM 2.0;\nqreg q[1]; h q[0];"
+      },
+      "simulator": {
+        "backend": "qcsim",
+        "method": "density_matrix"
+      },
+      "execution": {
+        "seed": 123
+      },
+      "noise": {
+        "evaluation": "exact",
+        "channels": [
+          {
+            "kind": "t1",
+            "targets": [
+              0
+            ],
+            "gamma": 0.36
+          }
+        ]
+      },
+      "diagnostics": [
+        "trace",
+        "purity",
+        "partial_trace"
+      ],
+      "keep_qubits": [
+        0
+      ]
+    }
+  ]
+}

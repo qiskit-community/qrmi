@@ -1706,6 +1706,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "json"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
+
+[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1762,6 +1768,14 @@ name = "lru-slab"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
+
+[[package]]
+name = "maestro-local-api"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "json",
+]
 
 [[package]]
 name = "md-5"
@@ -2078,6 +2092,7 @@ dependencies = [
  "libc",
  "libloading",
  "log",
+ "maestro-local-api",
  "pasqal-cloud-api",
  "pasqal-local-api",
  "quantum-system-api",
@@ -2140,6 +2155,18 @@ dependencies = [
  "clap",
  "dotenv",
  "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
+name = "qrmi-example-maestro-local"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "maestro-local-api",
  "qrmi",
  "tokio",
 ]

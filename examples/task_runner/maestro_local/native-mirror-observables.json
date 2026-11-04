@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "operation": "mirror_fidelity",
+  "circuit": {
+    "num_qubits": 3,
+    "source": "OPENQASM 2.0; qreg q[3]; h q[0]; cx q[0],q[1]; cx q[1],q[2]; ry(0.3) q[2];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_state",
+    "options": {
+      "max_bond_dimension": 2
+    }
+  },
+  "observables": [
+    "ZII",
+    "IZI",
+    "IIZ",
+    "ZZZ"
+  ],
+  "execution": {
+    "seed": 123
+  }
+}

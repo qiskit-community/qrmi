@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "operation": "estimate",
+  "circuit": {
+    "num_qubits": 2,
+    "source": "OPENQASM 2.0; qreg q[2]; x q[0];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_state"
+  },
+  "execution": {
+    "seed": 123
+  },
+  "observables": [
+    "ZI",
+    "IZ",
+    "ZI"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "operation": "estimate",
+  "circuit": {
+    "format": "instructions",
+    "num_qubits": 1,
+    "source": [
+      {"name": "h", "qubits": [0]},
+      {"name": "delay", "qubits": [0], "duration": 0.0000003}
+    ]
+  },
+  "simulator": {"backend": "qcsim", "method": "density_matrix"},
+  "observables": ["X", "Z"],
+  "execution": {"seed": 123},
+  "noise": {
+    "evaluation": "exact",
+    "channels": [
+      {"kind": "thermal_relaxation", "targets": [0], "duration": 0.0000001,
+       "t1": 0.000001, "t2": 0.0000006, "excited_population": 0.1},
+      {"kind": "idle", "targets": [0], "t1": 0.000001, "t2": 0.0000006,
+       "excited_population": 0.1, "detuning_hz": 250000}
+    ]
+  }
+}

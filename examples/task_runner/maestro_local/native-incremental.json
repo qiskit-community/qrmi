@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "operation": "incremental_evolve",
+  "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1]; x q[0];"},
+  "step_circuit": {
+    "format": "instructions",
+    "num_qubits": 1,
+    "source": [
+      {"name": "kraus", "qubits": [0],
+       "operators": [[1, 0, 0, 0.8660254037844386], [0, 0.5, 0, 0]]}
+    ]
+  },
+  "steps": [0, 1, 2, 4],
+  "observables": ["Z"],
+  "simulator": {"backend": "qcsim", "method": "density_matrix"},
+  "execution": {"seed": 123}
+}

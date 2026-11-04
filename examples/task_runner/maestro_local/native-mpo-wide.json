@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "operation": "state_probability",
+  "circuit": {
+    "num_qubits": 65,
+    "source": "OPENQASM 2.0; qreg q[65]; x q[0]; x q[64];"
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_operator"
+  },
+  "execution": {
+    "seed": 123
+  },
+  "target_state": "10000000000000000000000000000000000000000000000000000000000000001"
+}

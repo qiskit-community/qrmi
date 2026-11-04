@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "operation": "diagnostics",
+  "circuit": {
+    "num_qubits": 2,
+    "source": "OPENQASM 2.0; qreg q[2]; "
+  },
+  "simulator": {
+    "backend": "qcsim",
+    "method": "matrix_product_state"
+  },
+  "execution": {
+    "seed": 123
+  },
+  "diagnostics": [
+    "operator_expectation"
+  ],
+  "expectation_operators": [
+    {
+      "qubit": 0,
+      "matrix": [
+        0,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "qubit": 0,
+      "matrix": [
+        0,
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ],
+        0
+      ]
+    }
+  ],
+  "move_qubits": [
+    1
+  ],
+  "maintenance": [
+    "trim",
+    "recanonicalize"
+  ]
+}
