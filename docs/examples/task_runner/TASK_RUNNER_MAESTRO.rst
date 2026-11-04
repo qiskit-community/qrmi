@@ -12,8 +12,9 @@ results, diagnostics and supported operations.
 Setup and execution
 -------------------
 
-Build and install QRMI, Maestro with its native request API, and
-maestro-local-server linked to the matching Maestro library. QRMI needs no
+Build and install QRMI. Install `maestro-local-server <https://github.com/QoroQuantum/maestro-local-server>`__ and the Maestro
+library it uses by following the server's `installation guide <https://github.com/QoroQuantum/maestro-local-server/blob/main/docs/installation.md>`__, which uses a
+prebuilt Maestro release. QRMI needs no
 optional Python extra for native requests. Python is an optional client; the
 server and workers use Rust/C/C++.
 

@@ -6,7 +6,7 @@ Maestro native requests through QRMI
 Maestro Local now supports a versioned native request through the existing
 ``Payload.MaestroLocal`` layout. Set ``job_type="request"`` and put the complete
 schema-2 document in ``input``. Legacy execute/estimate payloads still work. Rebuild
-Maestro, maestro-local-server, and QRMI together to use the new path. Older servers
+Maestro, `maestro-local-server <https://github.com/QoroQuantum/maestro-local-server>`__, and QRMI together to use the new path. Older servers
 produce an explicit unsupported-API error during capability negotiation.
 
 The server uses only Rust/C/C++; Python is an optional client interface.
@@ -313,8 +313,8 @@ orchestration, decoder/Sinter execution, general pure-state Kraus trajectories, 
 distributed mixed-state engines, and artifact storage remain outside this change.
 
 Authoritative native field/option/channel details are in Maestro's
-``docs/native-request-api.md``; server framing, leases and MPI profile configuration are
-in maestro-local-server's ``docs/native-api-v2.md``.
+`docs/native-request-api.md <https://github.com/QoroQuantum/maestro/blob/main/docs/native-request-api.md>`__; server framing, leases and MPI profile
+configuration are in maestro-local-server's `docs/native-api-v2.md <https://github.com/QoroQuantum/maestro-local-server/blob/main/docs/native-api-v2.md>`__.
 
 Tests
 -----

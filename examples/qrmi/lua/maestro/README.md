@@ -4,7 +4,7 @@
 
 * [QRMI C library(libqrmi.so)](../../../../README.md#standalone-c-library)
 * [QRMI Lua Module(qrmi.so)](../../../../lua/README.md)
-* A running Maestro Local server, reachable at the Unix domain socket `/run/maestro.sock`
+* A running [Maestro Local server](https://github.com/QoroQuantum/maestro-local-server) ([installation guide](https://github.com/QoroQuantum/maestro-local-server/blob/main/docs/installation.md)), reachable at the Unix domain socket `/run/maestro.sock`
 
 ## Setup
 
