@@ -261,7 +261,7 @@ Once installed, the Lua binding can be built using either gcc or cmake:
 
          gcc -shared -fPIC -O2 $(pkg-config --cflags lua5.4) \
             -I/path/to/qrmi \
-            -o qrmi.so lua_qrmi.c \
+            -o qrmi.so lua_qrmi.c maestro_local.c \
             -L/path/to/qrmi -lqrmi \
             $(pkg-config --libs lua5.4) \
             -Wl,-rpath,/path/to/qrmi
@@ -375,6 +375,16 @@ missing Munge to be detected as soon as QRMI is loaded:
 
 Further Resources
 -----------------
+
+Maestro Local
+~~~~~~~~~~~~~
+
+Maestro Local requires no optional Python extra. Run the matching native Maestro
+local server and select its Unix socket with ``QRMI_MAESTRO_SOCKET`` when it is
+not ``/run/maestro.sock``. The server and its workers use Rust/C/C++.
+
+See :doc:`../maestro-native-api` for native requests, noise simulation and
+distribution, and :doc:`../examples/task_runner/TASK_RUNNER_MAESTRO` for examples.
 
 Examples
 ~~~~~~~~

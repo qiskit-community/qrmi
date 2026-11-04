@@ -226,7 +226,7 @@ Assuming the `qrmi.h` and `libqrmi.so` live in the same directory
 ``` bash
 gcc -shared -fPIC -O2 $(pkg-config --cflags lua5.4) \
    -I/path/to/qrmi \
-   -o qrmi.so lua_qrmi.c \
+   -o qrmi.so lua_qrmi.c maestro_local.c \
    -L/path/to/qrmi -lqrmi \
    $(pkg-config --libs lua5.4) \
    -Wl,-rpath,/path/to/qrmi
@@ -317,6 +317,9 @@ A [range of example code](examples) is available within this knowledge base. Eac
 - [`python_examples`](examples/qrmi/python)
 - [`c_examples`](examples/qrmi/c)
 - [`lua_examples`](examples/qrmi/lua)
+
+Additional examples cover [Pulser](examples/pulser), [Qiskit primitives](examples/qiskit_primitives), and the [task runner](examples/task_runner).
+For Maestro Local, see the [native request guide](docs/maestro-native-api.rst) and [noise, query and distributed GPU examples](examples/task_runner/maestro_local).
 
 QRMI is **workload manager agnostic** and supports a range of workload managers via plugins. One example of QRMI usage in a compute
 infrastructure project is the Slurm plugin for quantum resources. QRMI is used in these Slurm plugins to control quantum resources during the lifecycle of a Slurm job. You can find full details on implementing the Quantum SPANK plugins for Slurm [here](https://github.com/qiskit-community/spank-plugins).
