@@ -29,8 +29,11 @@ fn main() {
         println!("cargo:rustc-link-lib=munge");
     }
 
-    println!("cargo:rerun-if-changed=/src/*");
-    println!("cargo:rerun-if-changed=/build.rs");
+    println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=cbindgen.toml");
+    println!("cargo:rerun-if-changed=.git/HEAD");
+    println!("cargo:rerun-if-changed=.git/refs");
 
     let git_hash = Command::new("git")
         .args(["rev-parse", "--short=12", "HEAD"])

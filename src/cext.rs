@@ -21,6 +21,11 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::sync::Arc;
 
+mod maestro;
+
+#[cfg(test)]
+mod tests;
+
 /// Integer return codes returned to C.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -137,6 +142,23 @@ pub enum Payload {
         /// fails), `name`, `description`, `transpiler_info`,
         /// `simulator_info`, `mitigation_info`, and `operator`.
         job_spec: *mut c_char,
+    },
+    /// Payload for Maestro Local Server
+    MaestroLocal {
+        /// request (usually qasm string)
+        input: *mut c_char,
+        /// Job type (execute, estimate)
+        job_type: *mut c_char,
+        /// qubits count
+        qubits: u32,
+        /// simulator type
+        simulator_type: u32,
+        /// simulation method
+        simulation_method: u32,
+        /// observables, if needed, pauli strings separated by ";"
+        observables: *mut c_char,
+        /// Configuration in json format
+        config: *mut c_char,
     },
 }
 
@@ -1698,7 +1720,7 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         return ReturnCode::NullPointerError;
     }
 
-    let mut qrmi_payload: Option<crate::models::Payload> = None;
+    let mut qrmi_payload: Option<crate::models::Payload> = maestro::payload_from_c(&*payload);
     if let Payload::QiskitPrimitive { input, program_id } = *payload {
         if let (Ok(program_id_str), Ok(input_str)) = (
             CStr::from_ptr(program_id).to_str(),

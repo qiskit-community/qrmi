@@ -373,7 +373,8 @@ int-import-graph=
 known-standard-library=
 
 # Force import order to recognize a module as part of a third party library.
-known-third-party=enchant
+# IQM is a Python dependency; src/iqm contains Rust code, not a Python package.
+known-third-party=enchant,iqm
 
 # Analyse import fallback blocks. This can be used to support both Python 2 and
 # 3 compatible code, which means that the block might have code that exists

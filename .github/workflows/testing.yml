@@ -1,5 +1,5 @@
 ---
-# workflow that runs a major set of tests on a defined schedule 
+# Run unit and compatibility tests with combined coverage.
 
 name: Testing
 
@@ -29,7 +29,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e ".[all]"
-          pip install pytest-cov coverage
+          pip install pytest-cov coverage "jsonschema>=4.10.3,<5"
 
       - name: Run standard tests
         run: |

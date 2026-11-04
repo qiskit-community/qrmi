@@ -16,7 +16,6 @@
 """qrmi_task_runner - Command to run a QRMI task"""
 
 import argparse
-import atexit
 import json
 import logging
 import os
@@ -63,7 +62,7 @@ def _get_loglevel() -> int:
 
 
 logging.basicConfig(
-    stream=sys.stdout,
+    stream=sys.stderr,
     level=_get_loglevel(),
     format="%(asctime)s %(levelname)s %(message)s",
 )
@@ -82,6 +81,7 @@ class App:
         "pasqal-cloud": ResourceType.PasqalCloud,
         "iqm-server": ResourceType.IQMServer,
         "alice-bob-felis": ResourceType.AliceBobFelis,
+        "maestro-local": ResourceType.MaestroLocal,
     }
 
     def __init__(self, name: str, input_filename: str, output_filename: str):
@@ -106,8 +106,6 @@ class App:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGCONT, self._signal_handler)
 
-        atexit.register(self._exit_callback)
-
     def _signal_handler(self, _signal_number, _frame):
         """A signal handler to cancel this task"""
         self._is_running = False
@@ -127,25 +125,22 @@ class App:
                 return self.RESOURCE_TYPE_MAP[qpu_types[index]]
         raise ValueError(f"{qpu_name} is not available")
 
-    def _exit_callback(self):
-        """A callback called when program is finished.
-        Outputs the task result if suceeded and close QRMI task
-        """
-        if self._qrmi is None:
-            return
+    def _cleanup(self):
+        """Always release the task after result handling and diagnostic retrieval."""
+        if self._qrmi is not None and self._task_id is not None:
+            try:
+                self._qrmi.task_stop(self._task_id)
+            except Exception as error:  # pylint: disable=broad-except
+                logger.error("Task cleanup failed: %s", error)
 
-        if self._succeeded and self._task_id is not None:
-            # write output if task was succeeded
-            result = self._qrmi.task_result(self._task_id).value
-            if self._output_filename:
-                with open(self._output_filename, "w", encoding="utf-8") as output_file:
-                    output_file.write(result)
-            else:
-                print(result)
-
-        # cleanup quantum task
-        if self._task_id is not None:
-            self._qrmi.task_stop(self._task_id)
+    def _report_failure(self):
+        if self._qrmi is not None and self._task_id is not None:
+            try:
+                logs = self._qrmi.task_logs(self._task_id)
+                if logs:
+                    logger.error("%s", logs)
+            except Exception as error:  # pylint: disable=broad-except
+                logger.error("Unable to retrieve task logs: %s", error)
 
     @property
     def is_running(self) -> bool:
@@ -157,7 +152,21 @@ class App:
         """Return a task identifier if available, otherwise None"""
         return self._task_id
 
-    def run(self) -> None:
+    def run(self) -> int:
+        """Run the task and return a shell-compatible exit status."""
+        try:
+            self._run()
+            return 0
+        except Exception as error:  # pylint: disable=broad-except
+            self._succeeded = False
+            logger.error("%s", error)
+            self._report_failure()
+            return 1
+        finally:
+            self._is_running = False
+            self._cleanup()
+
+    def _run(self) -> None:
         """app main()"""
         # Before executing a quantum job, check to see if the specified
         # file can be created, and inform to user if it cannot be written. This is
@@ -198,6 +207,12 @@ class App:
                     human_qir=json.dumps(task_input["human_qir"]),
                     input_params=json.dumps(task_input["input_params"]),
                 )
+            elif res_type in [
+                ResourceType.MaestroLocal,
+            ]:
+                from qrmi.maestro import payload_from_input
+
+                payload = payload_from_input(task_input)
             else:
                 payload = Payload.PasqalCloud(
                     sequence=json.dumps(task_input["sequence"]),
@@ -213,22 +228,27 @@ class App:
             while self._is_running:
                 try:
                     status = self._qrmi.task_status(self._task_id)
-                    if status == TaskStatus.Completed:
-                        self._succeeded = True
-                        break
-                    if status in [TaskStatus.Failed, TaskStatus.Cancelled]:
-                        logger.error(status)
-                        break
-                except Exception as err:  # pylint: disable=broad-except
-                    logger.error(
-                        "Failed to get task status. reason = %s. Retrying.", err
-                    )
+                except Exception as error:  # pylint: disable=broad-except
+                    logger.error("Failed to get task status: %s. Retrying.", error)
+                    time.sleep(self.POLLING_INTERVAL_SECONDS)
+                    continue
+                if status == TaskStatus.Completed:
+                    self._succeeded = True
+                    break
+                if status in [TaskStatus.Failed, TaskStatus.Cancelled]:
+                    raise RuntimeError(f"Task {self._task_id} {status}")
                 time.sleep(self.POLLING_INTERVAL_SECONDS)
 
-            self._is_running = False
+            if not self._succeeded:
+                raise RuntimeError(f"Task {self._task_id} cancelled")
+            result = self._qrmi.task_result(self._task_id).value
+            if self._output_filename:
+                Path(self._output_filename).write_text(result, encoding="utf-8")
+            else:
+                print(result)
 
 
-def run() -> None:
+def run() -> int:
     """Entrypoint to run a task"""
     parser = argparse.ArgumentParser(
         description="qrmi_task_runner - Command to run a QRMI task"
@@ -240,8 +260,8 @@ def run() -> None:
     )
     args = parser.parse_args()
 
-    App(args.name, args.input, args.output).run()
+    return App(args.name, args.input, args.output).run()
 
 
 if __name__ == "__main__":
-    run()
+    raise SystemExit(run())
