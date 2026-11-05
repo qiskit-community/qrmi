@@ -143,10 +143,14 @@ def test_config_preserves_socket_session_and_status(server, monkeypatch):
     )
     server.extend(
         [
-            ('API {"version":2,"command":"status"}', "ERROR Unknown command"),
-            ("PING", "OK YES"),
-            ('API {"version":2,"command":"status"}', "ERROR Unknown command"),
-            ("PING", "OK NO"),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,"healthy":true,"busy":false,"pending_job_count":0,"status_reason":null}}',
+            ),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,"healthy":false,"busy":false,"pending_job_count":0,"status_reason":null}}',
+            ),
             ("SESSION 42 EXISTS", "OK YES"),
             ("SESSION 42 DELETE", "OK YES"),
         ]
@@ -154,10 +158,10 @@ def test_config_preserves_socket_session_and_status(server, monkeypatch):
     assert resource.status().to_dict() == {
         "status": "online",
         "status_reason": None,
-        "healthy": None,
-        "busy": None,
+        "healthy": True,
+        "busy": False,
         "capacity": None,
-        "pending_job_count": None,
+        "pending_job_count": 0,
     }
     assert resource.status().status == ResourceStatusCode.Offline
     assert resource.acquire() == "42"
@@ -261,10 +265,14 @@ def test_service_preserves_maestro_session(server, monkeypatch):
     monkeypatch.setenv("QRMI_JOB_QPU_TYPES", "maestro-local,maestro-local")
     server.extend(
         [
-            ('API {"version":2,"command":"status"}', "ERROR Unknown command"),
-            ("PING", "OK YES"),
-            ('API {"version":2,"command":"status"}', "ERROR Unknown command"),
-            ("PING", "OK NO"),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,"healthy":true,"busy":false,"pending_job_count":0,"status_reason":null}}',
+            ),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,"healthy":false,"busy":false,"pending_job_count":0,"status_reason":null}}',
+            ),
             ("SESSION CREATE", "OK 42"),
             ("SESSION 42 EXISTS", "OK YES"),
             ("SESSION 42 DELETE", "OK YES"),
@@ -438,10 +446,14 @@ def test_c_service_discovers_maestro(c_api, server, monkeypatch):
     monkeypatch.setenv("QRMI_JOB_QPU_TYPES", "maestro-local,maestro-local")
     server.extend(
         [
-            ('API {"version":2,"command":"status"}', "ERROR Unknown command"),
-            ("PING", "OK YES"),
-            ('API {"version":2,"command":"status"}', "ERROR Unknown command"),
-            ("PING", "OK NO"),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,"healthy":true,"busy":false,"pending_job_count":0,"status_reason":null}}',
+            ),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,"healthy":false,"busy":false,"pending_job_count":0,"status_reason":null}}',
+            ),
         ]
     )
     resources = _Resources()

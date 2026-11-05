@@ -47,9 +47,9 @@ impl std::error::Error for Error {}
 #[derive(Debug, Clone)]
 pub struct Status {
     pub accepting_jobs: bool,
-    pub healthy: Option<bool>,
-    pub busy: Option<bool>,
-    pub pending_job_count: Option<u64>,
+    pub healthy: bool,
+    pub busy: bool,
+    pub pending_job_count: u64,
     pub reason: Option<String>,
 }
 
@@ -180,46 +180,9 @@ impl Client {
             .map(|value| value.to_string())
     }
 
-    /// Queries status without creating or renewing a session. Only an explicitly
-    /// unsupported command falls back to legacy PING; failures stay visible.
+    /// Queries status without creating or renewing a session.
     pub fn status(&self) -> Result<Status, Error> {
-        let response = maestro_lib::exchange(
-            &self.socket,
-            &format!(
-                "API {}\n",
-                json!({ "version": VERSION, "command": "status" })
-            ),
-        )
-        .map_err(|error| Error::new("transport", error.to_string()))?;
-        let parsed = parse_response(&response);
-        // All legacy maestro-local-server releases emit the fixed string
-        // `ERROR Unknown command\n` when `API` is unrecognized (`src/main.rs`).
-        if response.trim() == "ERROR Unknown command"
-            || parsed
-                .as_ref()
-                .is_err_and(|error| error.code == "unsupported_operation")
-        {
-            let ping = maestro_lib::exchange(&self.socket, "PING\n")
-                .map_err(|error| Error::new("transport", error.to_string()))?;
-            let accepting_jobs = match ping.trim() {
-                "OK" | "OK YES" => true,
-                "OK NO" => false,
-                _ => {
-                    return Err(Error::new(
-                        "protocol",
-                        format!("Invalid legacy PING response: {}", ping.trim()),
-                    ));
-                }
-            };
-            return Ok(Status {
-                accepting_jobs,
-                healthy: None,
-                busy: None,
-                pending_job_count: None,
-                reason: None,
-            });
-        }
-        let value = parsed?;
+        let value = self.call(json!({ "version": VERSION, "command": "status" }))?;
         let status = &value["status"];
         let malformed = || Error::new("protocol", "Invalid server status response");
         let reason = match &status["status_reason"] {
@@ -228,9 +191,9 @@ impl Client {
         };
         Ok(Status {
             accepting_jobs: status["accepting_jobs"].as_bool().ok_or_else(malformed)?,
-            healthy: Some(status["healthy"].as_bool().ok_or_else(malformed)?),
-            busy: Some(status["busy"].as_bool().ok_or_else(malformed)?),
-            pending_job_count: Some(status["pending_job_count"].as_u64().ok_or_else(malformed)?),
+            healthy: status["healthy"].as_bool().ok_or_else(malformed)?,
+            busy: status["busy"].as_bool().ok_or_else(malformed)?,
+            pending_job_count: status["pending_job_count"].as_u64().ok_or_else(malformed)?,
             reason,
         })
     }

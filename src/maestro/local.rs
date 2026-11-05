@@ -520,9 +520,9 @@ impl QuantumResource for MaestroLocal {
                 ResourceStatusCode::Offline
             },
             status_reason: status.reason,
-            healthy: status.healthy,
-            busy: status.busy,
-            pending_job_count: status.pending_job_count,
+            healthy: Some(status.healthy),
+            busy: Some(status.busy),
+            pending_job_count: Some(status.pending_job_count),
             capacity: None,
         })
     }
