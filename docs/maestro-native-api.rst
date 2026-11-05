@@ -109,8 +109,8 @@ runners stop polling. Any other missing task remains ``TaskNotFound``: a missing
 task alone proves neither cancellation nor failure, and diagnostics disappear
 with the session or a daemon restart. Socket exchanges, including these waits,
 run off the asynchronous executor.
-Unsupported-API errors come only from capability negotiation, before any
-submission is sent.
+For native submissions, unsupported-API errors come only from capability
+negotiation, before any submission is sent.
 
 Updated servers add ``session_id``, ``task_id``, ``context`` and ``events`` to the
 same diagnostic JSON. Each event has ``timestamp_unix_ms`` and ``state``; submitted
@@ -172,9 +172,11 @@ plugin ABI requirement for this feature. Rebuild QRMI itself; existing consumers
 still match the repository's existing QRMI ABI version.
 
 The bundled Rust socket client exposes ``maestro_local_api::maestro::request::Client``
-with ``capabilities``, ``submit``, ``logs``, and ``keepalive``. QRMI uses
-capabilities/submit/logs and moves their blocking exchanges off its asynchronous
-executor; applications using the socket client directly can also call
+with ``capabilities``, ``submit``, ``logs``, ``status``, and ``keepalive``.
+``submit_value`` and ``logs_value`` accept and return parsed ``serde_json::Value``
+documents. Both the native client and the legacy ``Session`` / ``Task`` API are
+synchronous. QRMI moves their blocking exchanges off its asynchronous executor;
+applications using the socket client directly should do the same and can also call
 ``keepalive(session_id)``. Successful schema negotiation is shared across client clones
 and retained by the QRMI resource. Transport, malformed-response and
 incompatible-version failures invalidate it; failed submissions are never automatically
@@ -210,6 +212,10 @@ validation entry point rather than changing it to ``validate``.
 Legacy ``execute`` and ``estimate`` also accept ``config.seed`` as a nonnegative
 JSON integer up to ``2**64 - 1``. Repeating the seed reproduces sampling on the
 same backend/runtime, including when each task runs in a fresh worker.
+
+Legacy QASM containing ``//`` is rejected with ``InvalidInputError`` before a task
+is created: flattening its newlines would turn subsequent gates into a comment.
+Use ``job_type="request"`` with a schema-2 document to preserve commented QASM.
 
 Both runners retrieve available diagnostics before cleanup on failure/cancellation,
 write those diagnostics to stderr, and exit nonzero. Result retrieval and output writing
@@ -532,9 +538,10 @@ waiting jobs, excluding the active job. These snapshots can change immediately.
 
 Capacity remains unspecified: an execution worker is not an exclusive acquisition
 slot. Runner health does not certify GPU availability, licensing or plugin
-compatibility. Older servers with an unsupported status command fall back to
-``PING`` with health, occupancy and queue length unknown. Transport errors,
-malformed replies and other server failures remain errors.
+compatibility. The server must support the API v2 ``status`` command. Older servers
+without it produce ``UnsupportedFunction`` / Python ``UnsupportedFunctionError``;
+upgrade the server to query resource status. Transport errors, malformed replies
+and other server failures remain errors.
 
 New catalogs include ``server.build`` and ``native.build`` with version and source
 revision, plus ``native.diagnostics`` with supported backend/method pairs.
