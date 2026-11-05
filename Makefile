@@ -341,8 +341,11 @@ Packaging targets:
 Other targets:
     [./run_in_container.sh] check-new-qrmi-version-valid   - Check if the qrmi version returned by "get-qrmi-version"
                                                              has already been released in github.
+                            check-published-crates - Check that PUBLISHED_CLIENT_CRATES matches the path dependencies of qrmi
+                            package-crates        - Package and verify the crates published to crates.io, without uploading
     [./run_in_container.sh] check-python-version-installed - Check if the RHEL 8 required python packages are installed
                             get-qrmi-version      - Read the qrmi version from Cargo.toml and print it
+                            get-published-crates  - Print the client crates published to crates.io before qrmi
                             get-python-version    - Read the python version from pyproject.toml and print it
                             get-manylinux-version - Read the manylinux version from pyproject.toml and print it
                             get-venv-activate     - Print the path for the venv activate binary. Tip: 'source $$(make get-venv-activate)'

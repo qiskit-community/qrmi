@@ -3,12 +3,24 @@
 
 ifndef MAKEFILE_COMMON_MK_INCLUDED
 
-.PHONY: get-qrmi-version check-new-qrmi-version-valid check-python-version-installed check-venv-exists check-python-devel-installed
+.PHONY: get-qrmi-version get-published-crates check-published-crates package-crates check-new-qrmi-version-valid check-python-version-installed check-venv-exists check-python-devel-installed
 
 ARCH := $(shell uname -m)
 # Get QRMI version from Cargo.toml ([workspace.package], shared by qrmi and
 # the client crates in dependencies/)
 QRMI_VERSION := $(shell grep -m1 '^version = ' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+
+# Client crates published to crates.io by the Release workflow, before qrmi.
+# A crate name on crates.io is permanent, so publishing a new crate must be
+# a deliberate change to this list. check-published-crates makes sure it
+# matches the path dependencies of qrmi.
+PUBLISHED_CLIENT_CRATES := \
+	qrmi-alice-bob-felis-client \
+	qrmi-ibm-quantum-compute-client \
+	qrmi-ibm-quantum-system-client \
+	qrmi-iqm-server-client \
+	qrmi-pasqal-cloud-client \
+	qrmi-pasqal-local-client
 
 MANYLINUX_VERSION ?= $(shell grep "manylinux-$(ARCH)-image" pyproject.toml | sed -E 's/.*=[[:space:]]*"(.*)"/\1/')
 
@@ -65,6 +77,42 @@ get-python-version:
 
 get-manylinux-version:
 	@echo "$(MANYLINUX_VERSION)"
+
+get-published-crates:
+	@echo "$(PUBLISHED_CLIENT_CRATES)"
+
+# qrmi can only be published once all its path dependencies are on crates.io,
+# and nothing else should be published along with it.
+check-published-crates:
+	@EXPECTED=$$(cargo metadata --no-deps --format-version 1 --locked \
+		| jq -r '.packages[] | select(.name == "qrmi") | .dependencies[] | select(.path != null) | .name' \
+		| sort -u); \
+	if [ -z "$${EXPECTED}" ]; then \
+		echo "Error: Failed to get the path dependencies of qrmi from cargo metadata"; \
+		exit 1; \
+	fi; \
+	LISTED=$$(printf '%s\n' $(PUBLISHED_CLIENT_CRATES) | sort -u); \
+	MISSING=$$(comm -23 <(echo "$${EXPECTED}") <(echo "$${LISTED}")); \
+	EXTRA=$$(comm -13 <(echo "$${EXPECTED}") <(echo "$${LISTED}")); \
+	if [ -n "$${MISSING}" ]; then \
+		echo "Error: qrmi depends on crates missing from PUBLISHED_CLIENT_CRATES in Makefile_common.mk:"; \
+		echo "$${MISSING}" | sed 's/^/  /'; \
+	fi; \
+	if [ -n "$${EXTRA}" ]; then \
+		echo "Error: PUBLISHED_CLIENT_CRATES in Makefile_common.mk lists crates qrmi doesn't depend on:"; \
+		echo "$${EXTRA}" | sed 's/^/  /'; \
+	fi; \
+	if [ -n "$${MISSING}$${EXTRA}" ]; then \
+		exit 1; \
+	fi; \
+	echo "PUBLISHED_CLIENT_CRATES matches the path dependencies of qrmi"
+
+# Package the crates published to crates.io and build each one from its
+# package, as cargo publish does before uploading, without uploading
+# anything. qrmi is built against the packaged clients, so this works
+# before they are on crates.io.
+package-crates:
+	cargo package --locked $(addprefix -p ,$(PUBLISHED_CLIENT_CRATES) qrmi)
 
 # Before releasing a new qrmi version, we check if the current version
 # was not released yet in github and pypi.

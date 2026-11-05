@@ -54,6 +54,36 @@ files must be updated:
      #define QRMI_VERSION_MINOR 14
      #define QRMI_VERSION_PATCH 1
 
+Publishing to crates.io
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``publish-crates`` job of the ``Release`` workflow
+(``.github/workflows/release.yml``) publishes the client crates and then
+``qrmi`` to crates.io, using crates.io trusted publishing from the
+``crates-io`` GitHub environment. Versions already on crates.io are
+skipped, so a failed run can be re-run.
+
+The client crates it publishes are listed in ``PUBLISHED_CLIENT_CRATES``
+in ``Makefile_common.mk``. A crate name on crates.io is permanent, so a
+new client is only published once it is added there. ``make
+check-published-crates`` fails if that list doesn't match the path
+dependencies of ``qrmi``; it runs on every pull request and before
+anything is released.
+
+crates.io only allows trusted publishing on a crate that already exists,
+so the first version of each crate must be published by hand, clients
+first, with an API token:
+
+.. code-block:: bash
+
+     cargo publish -p qrmi-ibm-quantum-system-client
+     ...
+     cargo publish -p qrmi
+
+Then, for each crate, add a trusted publisher on crates.io for the
+``qiskit-community/qrmi`` repository, the ``release.yml`` workflow and
+the ``crates-io`` environment.
+
 
 How can I check which version of QRMI is linked into a binary?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
