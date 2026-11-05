@@ -49,7 +49,7 @@ these gracefully.
 Data Sent by the Server
 
 * JSON objects: new properties may be added to existing schemas. Clients must ignore unknown properties
-  (implicit `\"additionalProperties\": true`).
+  (implicit `"additionalProperties": true`).
 * Protobuf messages: new fields may be added. Clients must ignore unknown fields, as described in the
   [Protobuf language guide](https://protobuf.dev/programming-guides/proto3/#updating).
 * Schema narrowing: for example, if a schema was `error_code: int | string`, it may later be restricted
@@ -92,7 +92,7 @@ All requests to the IQM Server API require an API Token. The token must be passe
 the `Authorization` header:
 
 ```
-curl -H \"Authorization: Bearer <token>\" https://<server-url>/api/<version>/<resource>
+curl -H "Authorization: Bearer <token>" https://<server-url>/api/<version>/<resource>
 ```
 
 API tokens are available from the server web dashboard under the profile menu. They are personal and scoped
