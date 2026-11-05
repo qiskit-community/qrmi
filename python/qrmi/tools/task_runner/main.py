@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This code is part of Qiskit.
 #
 # (C) Copyright IBM 2025, 2026
@@ -16,7 +14,6 @@
 """qrmi_task_runner - Command to run a QRMI task"""
 
 import argparse
-import atexit
 import json
 import logging
 import os
@@ -82,6 +79,7 @@ class App:
         "pasqal-cloud": ResourceType.PasqalCloud,
         "iqm-server": ResourceType.IQMServer,
         "alice-bob-felis": ResourceType.AliceBobFelis,
+        "oqtopus": ResourceType.OQTOPUS,
     }
 
     def __init__(self, name: str, input_filename: str, output_filename: str):
@@ -96,7 +94,9 @@ class App:
         self._is_running = True
         self._task_id = None
         self._succeeded = False
+        self._task_terminal = False
         self._qrmi = None
+        self._finalized = False
 
         self._name = name
         self._input_filename = input_filename
@@ -106,10 +106,52 @@ class App:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGCONT, self._signal_handler)
 
-        atexit.register(self._exit_callback)
+    def _signal_handler(self, signal_number, _frame):
+        """A signal handler to cancel this task.
 
-    def _signal_handler(self, _signal_number, _frame):
-        """A signal handler to cancel this task"""
+        This must only ever flip `_is_running` and return -- it must
+        NOT call into `self._qrmi` (e.g. via `_finalize()`) directly,
+        even though SIGTERM/SIGCONT handlers run during ordinary
+        execution (unlike `atexit`, see `_finalize()`'s docstring).
+
+        The reason is specific to how the QRMI bindings for backends
+        such as OQTOPUS implement `&mut self` methods like
+        `task_status()`/`task_stop()`/`task_result()`: each one
+        releases the GIL (`py.detach(...)`) to block on a Tokio runtime,
+        and then *reacquires* the GIL from inside that block to call
+        back into Python (`oqtopus_client`'s `asyncio` event loop). That
+        reacquired, nested Python execution is a point where a pending
+        signal legitimately CAN be delivered and this handler invoked
+        -- while the *outer* `self._qrmi` call (e.g. `task_status()`)
+        is still on the stack, still holding PyO3's runtime-checked
+        exclusive (`&mut self`) borrow on that object. Calling another
+        `self._qrmi` method (e.g. `task_stop()`) from here, in that
+        window, hits that same borrow and fails immediately with
+        `RuntimeError: Already borrowed` -- confirmed by reproducing
+        this exact pattern in isolation. It isn't a crash (PyO3's
+        runtime borrow check catches it cleanly), but the call never
+        happens, silently defeating the whole point of handling the
+        signal.
+
+        `_is_running = False` here is just a plain attribute write, so
+        it's always safe regardless of what `self._qrmi` is doing. The
+        polling loop in `run()` picks it up on its next iteration --
+        by construction, at that point no other call into `self._qrmi`
+        is in flight (the previous one, if any, has already fully
+        returned) -- and `_finalize()` runs from there instead, in its
+        `finally` block, where it's actually safe to touch `self._qrmi`.
+
+        Note this can't help with SIGKILL (or SIGSTOP) regardless:
+        those can't be intercepted by any process, in any language --
+        the kernel terminates the process before any handler, `atexit`
+        callback, or `finally` block gets a chance to run. If jobs need
+        to be cleaned up after a hard kill (e.g. Slurm's wall-time
+        SIGKILL), that has to happen from outside this process (e.g. an
+        earlier `sbatch --signal=TERM@<seconds>` warning, or an
+        external reaper/epilog script that cancels orphaned jobs by
+        ID).
+        """
+        logger.info("received signal %s, stopping task", signal_number)
         self._is_running = False
 
     def _find_qpu_type(self, qpu_name: str) -> ResourceType:
@@ -127,25 +169,75 @@ class App:
                 return self.RESOURCE_TYPE_MAP[qpu_types[index]]
         raise ValueError(f"{qpu_name} is not available")
 
-    def _exit_callback(self):
-        """A callback called when program is finished.
-        Outputs the task result if suceeded and close QRMI task
+    def _finalize(self):
+        """Writes the task result (if succeeded) and stops/cleans up the
+        quantum task. Safe to call more than once; only does the work
+        once.
+
+        Only ever called from `run()`'s own `finally` block (for the
+        normal/successful completion path, and as a catch-all if
+        anything in `run()` raised, including the loop exiting early
+        because `_signal_handler` set `_is_running = False`) -- never
+        from `_signal_handler` itself, and never deferred to `atexit`.
+        Both of those would be unsafe, for different reasons:
+
+        - `atexit`: backends such as OQTOPUS call into `oqtopus_client`,
+          whose synchronous wrapper methods spin up a fresh `asyncio`
+          event loop per call, and `aiohttp` occasionally offloads part
+          of the request (e.g. proxy/auth resolution) to the default
+          `ThreadPoolExecutor` via `loop.run_in_executor(...)`. CPython
+          always runs `threading._shutdown()` -- which tears down that
+          default executor -- *before* it runs plain
+          `atexit`-registered callbacks, so any such network call made
+          from an `atexit` callback is liable to fail with
+          `RuntimeError: cannot schedule new futures after interpreter
+          shutdown`, even though the task itself already succeeded.
+
+        - directly from `_signal_handler`: QRMI's `&mut self` bindings
+          for `task_status()`/`task_stop()`/`task_result()` release the
+          GIL to block on a Tokio runtime and then reacquire it to call
+          back into Python from inside that same call. A signal can be
+          delivered (and this handler invoked) during that reacquired,
+          nested Python execution -- i.e. while an outer call such as
+          `task_status()` is still on the stack, still holding PyO3's
+          exclusive borrow on `self._qrmi`. Calling another method on
+          the same object from there (e.g. `task_stop()`) hits that
+          same borrow and fails immediately with `RuntimeError: Already
+          borrowed` (confirmed by reproducing this exact pattern in
+          isolation). Calling `_finalize()` only from `run()`'s
+          `finally` block sidesteps this entirely: by the time control
+          reaches it, any previous `self._qrmi` call has already fully
+          returned, so there's nothing left to conflict with.
         """
-        if self._qrmi is None:
+        if self._finalized or self._qrmi is None:
             return
+        self._finalized = True
 
         if self._succeeded and self._task_id is not None:
-            # write output if task was succeeded
-            result = self._qrmi.task_result(self._task_id).value
-            if self._output_filename:
-                with open(self._output_filename, "w", encoding="utf-8") as output_file:
-                    output_file.write(result)
-            else:
-                print(result)
+            try:
+                # write output if task was succeeded
+                result = self._qrmi.task_result(self._task_id).value
+                if self._output_filename:
+                    with open(
+                        self._output_filename, "w", encoding="utf-8"
+                    ) as output_file:
+                        output_file.write(result)
+                else:
+                    print(result)
+            except Exception as err:  # pylint: disable=broad-except
+                logger.error("Failed to fetch task result. reason = %s", err)
 
-        # cleanup quantum task
-        if self._task_id is not None:
-            self._qrmi.task_stop(self._task_id)
+        # cleanup quantum task -- only actually cancel it if it's still
+        # running/queued. If it already reached a terminal state
+        # (Completed/Failed/Cancelled; `_task_terminal` is set in that
+        # case), calling task_stop() on it is pointless and some
+        # backends reject cancelling an already-finished job as an
+        # error, which would just add noise to the log for no reason.
+        if self._task_id is not None and not self._task_terminal:
+            try:
+                self._qrmi.task_stop(self._task_id)
+            except Exception as err:  # pylint: disable=broad-except
+                logger.error("Failed to stop task. reason = %s", err)
 
     @property
     def is_running(self) -> bool:
@@ -171,61 +263,82 @@ class App:
         res_type = self._find_qpu_type(self._name)
         self._qrmi = QuantumResource(self._name, res_type)
 
-        with open(self._input_filename, encoding="utf-8") as input_file:
-            task_input = json.load(input_file)
-            if res_type in [
-                ResourceType.IBMQuantumSystem,
-                ResourceType.IBMQuantumComputeService,
-                ResourceType.IBMQiskitRuntimeService,
-            ]:
-                payload = Payload.QiskitPrimitive(
-                    input=json.dumps(task_input["parameters"]),
-                    program_id=task_input["program_id"],
-                )
-            elif res_type in [
-                ResourceType.IQMServer,
-            ]:
-                payload = Payload.IQMServer(
-                    iqmjson=json.dumps(task_input["iqmjson"]),
-                    use_timeslot=task_input["use_timeslot"],
-                    tag=task_input["tag"],
-                    job_type=task_input["job_type"],
-                )
-            elif res_type in [
-                ResourceType.AliceBobFelis,
-            ]:
-                payload = Payload.AliceBobFelis(
-                    human_qir=json.dumps(task_input["human_qir"]),
-                    input_params=json.dumps(task_input["input_params"]),
-                )
-            else:
-                payload = Payload.PasqalCloud(
-                    sequence=json.dumps(task_input["sequence"]),
-                    job_runs=task_input["job_runs"],
-                )
-
-            # start a task
-            self._task_id = self._qrmi.task_start(payload)
-            logger.info("Task ID: %s", self._task_id)
-
-            # Poll the task status until it progresses to a final state such as
-            # TaskStatus::Completed.
-            while self._is_running:
-                try:
-                    status = self._qrmi.task_status(self._task_id)
-                    if status == TaskStatus.Completed:
-                        self._succeeded = True
-                        break
-                    if status in [TaskStatus.Failed, TaskStatus.Cancelled]:
-                        logger.error(status)
-                        break
-                except Exception as err:  # pylint: disable=broad-except
-                    logger.error(
-                        "Failed to get task status. reason = %s. Retrying.", err
+        # Wrapped in try/finally (ordinary control flow -- the
+        # interpreter is still fully alive here, unlike `atexit`) so
+        # `_finalize()` always runs exactly once no matter how this
+        # block exits: the task completed normally, a signal handler
+        # already finalized and this is just unwinding, or something
+        # here raised an exception. `_finalize()` itself is idempotent,
+        # so whichever path gets there first (this `finally`, or
+        # `_signal_handler`) does the real work and the other is a
+        # no-op.
+        try:
+            with open(self._input_filename, encoding="utf-8") as input_file:
+                task_input = json.load(input_file)
+                if res_type in [
+                    ResourceType.IBMQuantumSystem,
+                    ResourceType.IBMQuantumComputeService,
+                    ResourceType.IBMQiskitRuntimeService,
+                ]:
+                    payload = Payload.QiskitPrimitive(
+                        input=json.dumps(task_input["parameters"]),
+                        program_id=task_input["program_id"],
                     )
-                time.sleep(self.POLLING_INTERVAL_SECONDS)
+                elif res_type in [
+                    ResourceType.IQMServer,
+                ]:
+                    payload = Payload.IQMServer(
+                        iqmjson=json.dumps(task_input["iqmjson"]),
+                        use_timeslot=task_input["use_timeslot"],
+                        tag=task_input["tag"],
+                        job_type=task_input["job_type"],
+                    )
+                elif res_type in [
+                    ResourceType.AliceBobFelis,
+                ]:
+                    payload = Payload.AliceBobFelis(
+                        human_qir=json.dumps(task_input["human_qir"]),
+                        input_params=json.dumps(task_input["input_params"]),
+                    )
+                elif res_type in [
+                    ResourceType.OQTOPUS,
+                ]:
+                    payload = Payload.Oqtopus(
+                        job_spec=json.dumps(task_input),
+                    )
+                else:
+                    payload = Payload.PasqalCloud(
+                        sequence=json.dumps(task_input["sequence"]),
+                        job_runs=task_input["job_runs"],
+                    )
 
-            self._is_running = False
+                # start a task
+                self._task_id = self._qrmi.task_start(payload)
+                logger.info("Task ID: %s", self._task_id)
+
+                # Poll the task status until it progresses to a final state
+                # such as TaskStatus::Completed.
+                while self._is_running:
+                    try:
+                        status = self._qrmi.task_status(self._task_id)
+                        if status == TaskStatus.Completed:
+                            self._succeeded = True
+                            self._task_terminal = True
+                            break
+                        if status in [TaskStatus.Failed, TaskStatus.Cancelled]:
+                            logger.error(status)
+                            self._task_terminal = True
+                            break
+                    except Exception as err:  # pylint: disable=broad-except
+                        logger.error(
+                            "Failed to get task status. reason = %s. Retrying.",
+                            err,
+                        )
+                    time.sleep(self.POLLING_INTERVAL_SECONDS)
+
+                self._is_running = False
+        finally:
+            self._finalize()
 
 
 def run() -> None:
