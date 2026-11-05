@@ -1,6 +1,6 @@
 [package]
 name = "qrmi-alice-bob-felis-client"
-version = "0.1.0"
+version.workspace = true
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true

@@ -18,17 +18,27 @@ Release & Deployment
 Creating a new release
 ----------------------
 
-To create a new release, the following files must be updated:
+QRMI and the vendor client crates in ``dependencies/`` are released
+together, with the same version. To create a new release, the following
+files must be updated:
 
--  ``Cargo.toml``
+-  ``Cargo.toml``: the version in ``[workspace.package]``, which ``qrmi``
+   and the client crates inherit, and the matching ``=`` requirement on
+   each client in ``[workspace.dependencies]``
 
 .. code-block:: toml
 
-     [package]
-     name = "qrmi"
+     [workspace.package]
      version = "0.14.1"
 
--  ``Cargo.lock``
+     [workspace.dependencies]
+     qrmi-ibm-quantum-system-client = { version = "=0.14.1", path = "dependencies/quantum_system_client" }
+     ...
+
+-  ``Cargo.lock``, ``examples/qrmi/rust/Cargo.lock`` and
+   ``dependencies/quantum_system_client/app/Cargo.lock``: run
+   ``cargo update --workspace`` in each directory to update the ``qrmi``
+   and client entries
 
 .. code-block:: toml
 

@@ -6,8 +6,9 @@ ifndef MAKEFILE_COMMON_MK_INCLUDED
 .PHONY: get-qrmi-version check-new-qrmi-version-valid check-python-version-installed check-venv-exists check-python-devel-installed
 
 ARCH := $(shell uname -m)
-# Get QRMI version from Cargo.toml
-QRMI_VERSION := $(shell grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+# Get QRMI version from Cargo.toml ([workspace.package], shared by qrmi and
+# the client crates in dependencies/)
+QRMI_VERSION := $(shell grep -m1 '^version = ' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
 
 MANYLINUX_VERSION ?= $(shell grep "manylinux-$(ARCH)-image" pyproject.toml | sed -E 's/.*=[[:space:]]*"(.*)"/\1/')
 

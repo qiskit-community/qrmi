@@ -1873,7 +1873,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-ibm-quantum-system-client"
-version = "0.15.0"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "async-trait",

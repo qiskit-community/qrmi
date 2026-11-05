@@ -1972,7 +1972,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.26.5"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2003,7 +2003,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-alice-bob-felis-client"
-version = "0.1.0"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "base64",
@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-ibm-quantum-compute-client"
-version = "0.31.10"
+version = "0.26.6"
 dependencies = [
  "reqwest",
  "serde",
@@ -2152,7 +2152,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-ibm-quantum-system-client"
-version = "0.15.0"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2176,7 +2176,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-iqm-server-client"
-version = "1.0.0"
+version = "0.26.6"
 dependencies = [
  "bytes",
  "chrono",
@@ -2191,7 +2191,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-pasqal-cloud-client"
-version = "0.1.0"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2213,7 +2213,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi-pasqal-local-client"
-version = "0.0.1"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "async-trait",

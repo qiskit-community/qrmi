@@ -1,6 +1,6 @@
 [package]
 name = "qrmi"
-version = "0.26.6"
+version.workspace = true
 
 edition = "2021"
 license = "Apache-2.0"
@@ -38,12 +38,12 @@ futures = "0.3.31"
 clap = { version = "4.5.29", features = ["derive"] }
 uuid = "1.16.0"
 log = "0.4.26"
-qrmi-ibm-quantum-system-client = { path = "dependencies/quantum_system_client" }
-qrmi-ibm-quantum-compute-client = { path = "dependencies/quantum_compute_client" }
-qrmi-pasqal-cloud-client = { path = "dependencies/pasqal_cloud_client" }
-qrmi-pasqal-local-client = { path = "dependencies/pasqal_local_client" }
-qrmi-alice-bob-felis-client = { path = "dependencies/alice_bob_felis_client" }
-qrmi-iqm-server-client = { path = "dependencies/iqm_client" }
+qrmi-ibm-quantum-system-client = { workspace = true }
+qrmi-ibm-quantum-compute-client = { workspace = true }
+qrmi-pasqal-cloud-client = { workspace = true }
+qrmi-pasqal-local-client = { workspace = true }
+qrmi-alice-bob-felis-client = { workspace = true }
+qrmi-iqm-server-client = { workspace = true }
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 thiserror = "2.0"
 glob = "0.3"
@@ -80,18 +80,21 @@ default-members = [
 resolver = "2"
 
 [workspace.package]
+# The version of qrmi and of the client crates in dependencies/, released in
+# lockstep (see docs/development/RELEASE_DEPLOYMENT.rst).
+version = "0.26.6"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/qiskit-community/qrmi"
 rust-version = "1.91.1" # Keep in sync with docs/client/*.md and rust-toolchain.toml.
 
 [workspace.dependencies]
-qrmi-ibm-quantum-system-client = { path = "dependencies/quantum_system_client" }
-qrmi-ibm-quantum-compute-client = { path = "dependencies/quantum_compute_client" }
-qrmi-pasqal-cloud-client = { path = "dependencies/pasqal_cloud_client" }
-qrmi-pasqal-local-client = { path = "dependencies/pasqal_local_client" }
-qrmi-alice-bob-felis-client = { path = "dependencies/alice_bob_felis_client" }
-qrmi-iqm-server-client = { path = "dependencies/iqm_client" }
+qrmi-ibm-quantum-system-client = { version = "=0.26.6", path = "dependencies/quantum_system_client" }
+qrmi-ibm-quantum-compute-client = { version = "=0.26.6", path = "dependencies/quantum_compute_client" }
+qrmi-pasqal-cloud-client = { version = "=0.26.6", path = "dependencies/pasqal_cloud_client" }
+qrmi-pasqal-local-client = { version = "=0.26.6", path = "dependencies/pasqal_local_client" }
+qrmi-alice-bob-felis-client = { version = "=0.26.6", path = "dependencies/alice_bob_felis_client" }
+qrmi-iqm-server-client = { version = "=0.26.6", path = "dependencies/iqm_client" }
 
 [package.metadata.maturin]
 python-source = "python"
