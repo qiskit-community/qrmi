@@ -17,6 +17,8 @@ pub mod error;
 pub use error::{QrmiError, QrmiErrorKind};
 pub mod ibm;
 pub mod iqm;
+// OQTOPUS loads libpython via dlopen (Unix-only); see src/oqtopus/lib.rs.
+#[cfg(unix)]
 pub mod oqtopus;
 pub mod pasqal;
 pub mod resource_provider;
