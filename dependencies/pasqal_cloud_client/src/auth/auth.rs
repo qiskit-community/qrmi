@@ -165,7 +165,7 @@ impl Client {
         } else {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            bail!("Token request failed: {} {}", status, body);
+            Err(AuthError::TokenRequestFailed { status, body }.into())
         }
     }
 

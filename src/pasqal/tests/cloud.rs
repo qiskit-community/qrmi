@@ -1,10 +1,11 @@
 use super::PasqalCloud;
-use crate::models::{ResourceStatusCode, ResourceType};
+use crate::error::QrmiErrorKind;
+use crate::models::{Payload, ResourceStatusCode, ResourceType, TaskStatus};
 use crate::pasqal::cloud_config::{
     expand_env_vars, pasqal_config_path_from_root, read_pasqal_config, PasqalCloudConfig,
 };
 use crate::QuantumResource;
-use pasqal_cloud_api::ClientBuilder;
+use pasqal_cloud_api::{ClientBuilder, JobStatus};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
@@ -546,4 +547,84 @@ fn normalize_cudaq_result_normalizes_all_supported_counter_shapes() {
             .expect("counter['000'] should be an integer");
         assert_eq!(count_000, 47);
     }
+}
+
+fn pasqal_cloud_at(base_url: String, token: &str) -> PasqalCloud {
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_base_url(base_url);
+    builder.with_token(token.to_string());
+    PasqalCloud {
+        api_client: builder.build().expect("client build should succeed"),
+        backend_name: "EMU_FREE".to_string(),
+        task_kinds: std::collections::HashMap::new(),
+    }
+}
+
+#[test]
+fn canceling_job_is_not_terminal() {
+    assert_eq!(
+        PasqalCloud::map_job_status(&JobStatus::Canceling),
+        TaskStatus::Running
+    );
+    assert_eq!(
+        PasqalCloud::map_job_status(&JobStatus::Canceled),
+        TaskStatus::Cancelled
+    );
+}
+
+#[tokio::test]
+async fn missing_batch_is_task_not_found() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("GET", "/core-fast/api/v2/batches/missing-batch")
+        .with_status(404)
+        .with_body(r#"{"message":"batch not found"}"#)
+        .create_async()
+        .await;
+    let mut qrmi = pasqal_cloud_at(server.url(), "opaque_token");
+
+    let err = qrmi
+        .task_status("missing-batch")
+        .await
+        .expect_err("task_status should fail");
+
+    mock.assert_async().await;
+    assert_eq!(err.kind(), QrmiErrorKind::TaskNotFound);
+    assert!(err.to_string().contains("batch not found"));
+}
+
+#[tokio::test]
+async fn rejected_sequence_is_invalid_input() {
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("POST", "/core-fast/api/v1/batches")
+        .with_status(422)
+        .with_body(r#"{"message":"Invalid sequence builder."}"#)
+        .create_async()
+        .await;
+    let mut qrmi = pasqal_cloud_at(server.url(), "opaque_token");
+
+    let err = qrmi
+        .task_start(Payload::PasqalCloud {
+            sequence: r#"{"name":"pulser-sequence"}"#.to_string(),
+            job_runs: 10,
+        })
+        .await
+        .expect_err("task_start should fail");
+
+    mock.assert_async().await;
+    assert_eq!(err.kind(), QrmiErrorKind::InvalidInput);
+    assert!(err.to_string().contains("Invalid sequence builder."));
+}
+
+#[tokio::test]
+async fn missing_credentials_is_authentication_failed() {
+    let mut qrmi = pasqal_cloud_at("http://127.0.0.1:9".to_string(), "");
+
+    let err = qrmi
+        .task_status("any-batch")
+        .await
+        .expect_err("task_status should fail without credentials");
+
+    assert_eq!(err.kind(), QrmiErrorKind::AuthenticationFailed);
 }
