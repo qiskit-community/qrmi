@@ -440,6 +440,32 @@ fn read_pasqal_config_prefers_pasqal_config_root_env() {
 }
 
 #[test]
+fn read_pasqal_config_map_falls_back_to_home_env() {
+    let _guard = env_lock().lock().expect("env lock should not be poisoned");
+    let home = std::env::temp_dir().join(format!("qrmi_pasqal_map_{}_home", std::process::id()));
+    let map_home =
+        std::env::temp_dir().join(format!("qrmi_pasqal_map_{}_map_home", std::process::id()));
+    let _ = fs::remove_dir_all(&home);
+    let _ = fs::remove_dir_all(&map_home);
+    write_pasqal_config(&home, "token=from-env-home\n");
+    write_pasqal_config(&map_home, "token=from-map-home\n");
+    std::env::set_var("HOME", &home);
+
+    let cfg = read_pasqal_config("EMU_FREE", Some(&HashMap::new()))
+        .expect("read_pasqal_config should not fail");
+    assert_eq!(cfg.token.as_deref(), Some("from-env-home"));
+
+    let config = HashMap::from([("HOME".to_string(), map_home.display().to_string())]);
+    let cfg =
+        read_pasqal_config("EMU_FREE", Some(&config)).expect("read_pasqal_config should not fail");
+    assert_eq!(cfg.token.as_deref(), Some("from-map-home"));
+
+    std::env::remove_var("HOME");
+    let _ = fs::remove_dir_all(&home);
+    let _ = fs::remove_dir_all(&map_home);
+}
+
+#[test]
 fn read_pasqal_config_returns_default_when_config_root_file_missing() {
     let _guard = env_lock().lock().expect("env lock should not be poisoned");
     let tmp_dir = std::env::temp_dir();

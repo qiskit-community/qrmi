@@ -248,7 +248,9 @@ pub(crate) fn read_pasqal_config(
             None => None,
         };
     }
-    let home_config_path = match resolve_opt("HOME", hashmap_config) {
+    // A config map may set `HOME`; otherwise use the process `HOME`, as `new()` does.
+    let home = resolve_opt("HOME", hashmap_config).or_else(|| env::var("HOME").ok());
+    let home_config_path = match home {
         Some(home) => pasqal_config_path_from_root(&home)?,
         None => None,
     };
