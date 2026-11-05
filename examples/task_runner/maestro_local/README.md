@@ -91,23 +91,23 @@ for more details.
 
 ## Native request API
 
-The `native-*.json` examples use the new schema-2 native API. They require the
-updated Maestro library, native server, and QRMI. Both task runners accept these
+The `gen_native_input.py` tool generates schema-2 native API requests (`python gen_native_input.py --example <name>`). They require the
+updated Maestro library, native server, and QRMI. Both task runners accept the generated
 files directly. See [the native API guide](../../../docs/maestro-native-api.rst)
 for noise semantics, query batches, GPU prerequisites, and MPI profile setup.
 Legacy integer simulator IDs above depend on the Maestro build; query `target()`
 for the actual mapping, or use symbolic names in native requests.
 
-| Example | What it demonstrates | Expected result / prerequisites |
+| Example (`--example`) | What it demonstrates | Expected result / prerequisites |
 |---|---|---|
-| [native-noise.json](native-noise.json) | Exact T1 damping and estimation | Expectations `[0.8, 0.36]` on CPU. |
-| [native-query.json](native-query.json) | Independent amplitude and mixed-state diagnostic queries | Selected amplitudes `[1, 0]`, purity `0.8848`. |
-| [native-thermal-idle.json](native-thermal-idle.json) | Thermal gate relaxation plus delay relaxation and detuning | Exact density-matrix expectations; durations are seconds, detuning is Hz. |
-| [native-correlated-noise.json](native-correlated-noise.json) | Correlated OU phase noise with 128 seeded realizations, MPS options | Repeatable estimates within the same runtime; reported standard errors describe realization variation. |
-| [native-checkpoint.json](native-checkpoint.json) | Save an ideal prefix and run two noisy suffixes | Both suffixes return `{"1":32}`; the prefix receives no noise. |
-| [native-incremental.json](native-incremental.json) | Prepare once and apply an exact amplitude-damping Kraus step repeatedly | Z expectations `[-1, -0.5, -0.125, 0.3671875]` at steps `[0,1,2,4]`. |
-| [native-distributed-gpu.json](native-distributed-gpu.json) | Local statevector distribution | Two physical GPU ordinals plus the plugin, runtime and license. |
-| [native-mpi-gpu.json](native-mpi-gpu.json) | MPI GPU statevector distribution | Configure the named server profile, rank-local GPU binding, MPI plugin/license and CUDA-aware MPI. |
+| `noise` | Exact T1 damping and estimation | Expectations `[0.8, 0.36]` on CPU. |
+| `query` | Independent amplitude and mixed-state diagnostic queries | Selected amplitudes `[1, 0]`, purity `0.8848`. |
+| `thermal-idle` | Thermal gate relaxation plus delay relaxation and detuning | Exact density-matrix expectations; durations are seconds, detuning is Hz. |
+| `correlated-noise` | Correlated OU phase noise with 128 seeded realizations, MPS options | Repeatable estimates within the same runtime; reported standard errors describe realization variation. |
+| `checkpoint` | Save an ideal prefix and run two noisy suffixes | Both suffixes return `{"1":32}`; the prefix receives no noise. |
+| `incremental` | Prepare once and apply an exact amplitude-damping Kraus step repeatedly | Z expectations `[-1, -0.5, -0.125, 0.3671875]` at steps `[0,1,2,4]`. |
+| `distributed-gpu` | Local statevector distribution | Two physical GPU ordinals plus the plugin, runtime and license. |
+| `mpi-gpu` | MPI GPU statevector distribution | Configure the named server profile, rank-local GPU binding, MPI plugin/license and CUDA-aware MPI. |
 
 Native estimators and queries omit `execution.shots`; only `execute` and
 `checkpoint_batch` accept it. Checkpoint suffixes are circuit objects and cannot
@@ -116,17 +116,18 @@ complete ordered checkpoint request, so reordering suffixes can change samples.
 The incremental example uses a Kraus channel with damping probability 0.25 per
 step, including the skipped intermediate step when advancing from step 2 to 4.
 
-With the existing session environment shown above, run a CPU example using either
+With the existing session environment shown above, generate and run a CPU example using either
 task runner:
 
 ```sh
+python gen_native_input.py --example thermal-idle -o native-thermal-idle.json
 task_runner MAESTRO_LOCAL native-thermal-idle.json
-task_runner MAESTRO_LOCAL native-incremental.json
 ```
 
 From this directory, standalone native validation is also available for CPU files:
 
 ```sh
+python gen_native_input.py --example checkpoint -o native-checkpoint.json
 maestro-request --validate < native-checkpoint.json
 ```
 
@@ -137,17 +138,17 @@ validation does not establish device, allocation or license availability.
 
 ## Current tensor examples
 
-The following native schema 2 documents work through `request_payload(document)`
+The following native schema 2 templates in `gen_native_input.py` work through `request_payload(document)`
 and either task runner, using symbolic backend/method names:
 
-| File | Purpose |
+| Template (`--example`) | Purpose |
 | --- | --- |
-| `native-mps-operators.json` | Ordered MPS operator expectation, routing and maintenance |
-| `native-mpo-operators.json` | MPO state updates and normalized/raw complex results |
-| `native-tensor-expectations.json` | Batched estimates with repeated asymmetric observables |
-| `native-tensor-batch.json` | Repeated observables at successive evolution steps |
-| `native-tensor-bulk.json` | Bulk amplitudes and gate-fusion metadata |
-| `native-mpo-wide.json` | A 65-qubit MPO probability using a bitstring |
+| `mps-operators` | Ordered MPS operator expectation, routing and maintenance |
+| `mpo-operators` | MPO state updates and normalized/raw complex results |
+| `tensor-expectations` | Batched estimates with repeated asymmetric observables |
+| `tensor-batch` | Repeated observables at successive evolution steps |
+| `tensor-bulk` | Bulk amplitudes and gate-fusion metadata |
+| `mpo-wide` | A 65-qubit MPO probability using a bitstring |
 
 ## Differentiation, mirror and instruction examples
 
@@ -156,12 +157,12 @@ These need a Maestro library that lists `adjoint_jacobian` in
 queries a `mixed_state_queries` catalog; older libraries reject them before
 allocating a task.
 
-| File | Purpose | Expected result |
+| Template (`--example`) | Purpose | Expected result |
 | --- | --- | --- |
-| [native-adjoint.json](native-adjoint.json) | Adjoint Jacobian for two parameter rows, with Pauli, weighted-sum and probability readouts | Four values and a 4×2 Jacobian per row; the all-zero row gives values `[1, 0.5, 1, 0]`. |
-| [native-mirror-observables.json](native-mirror-observables.json) | Per-observable mirror fidelity of a GHZ-like MPS | `[1, 1, 1, 1]`; set `max_bond_dimension` to 1 to see truncation. |
-| [native-instructions.json](native-instructions.json) | Instruction-array `rzz`, `noiseless` basis changes, a `pauli_channel` and `readout_error` on a density matrix | Counts `{"01": 32}`. On `statevector`, add `"noise": {"realizations": 32}` to sample the channel. |
-| [native-mixed-state.json](native-mixed-state.json) | `fidelity_with_statevector` of a noisy Bell state on a density matrix, and `density_matrix_overlap` of two MPO preparations | Fidelity `0.7624` against the ideal Bell state; overlap `[0.5, 0]` for `|+>` and `|1>`. |
+| `adjoint` | Adjoint Jacobian for two parameter rows, with Pauli, weighted-sum and probability readouts | Four values and a 4×2 Jacobian per row; the all-zero row gives values `[1, 0.5, 1, 0]`. |
+| `mirror-observables` | Per-observable mirror fidelity of a GHZ-like MPS | `[1, 1, 1, 1]`; set `max_bond_dimension` to 1 to see truncation. |
+| `instructions` | Instruction-array `rzz`, `noiseless` basis changes, a `pauli_channel` and `readout_error` on a density matrix | Counts `{"01": 32}`. On `statevector`, add `"noise": {"realizations": 32}` to sample the channel. |
+| `mixed-state` | `fidelity_with_statevector` of a noisy Bell state on a density matrix, and `density_matrix_overlap` of two MPO preparations | Fidelity `0.7624` against the ideal Bell state; overlap `[0.5, 0]` for `|+>` and `|1>`. |
 
 These use QCSim by default. GPU support depends on matching Maestro/plugin builds
 and runtime availability. Consult `target()` after upgrades: schema version 2

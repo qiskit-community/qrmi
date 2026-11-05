@@ -1114,10 +1114,7 @@ fn resource_status_reports_queue_without_acquiring_and_keeps_failures_visible() 
 
 #[test]
 fn shared_payload_contract_cases() {
-    let cases: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../tests/fixtures/maestro_payloads.json"
-    ))
-    .unwrap();
+    let cases: serde_json::Value = serde_json::from_str(r#"[{"name": "bare", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "valid": true, "config": "{}"}, {"name": "wrapped", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, "config": "{}"}, {"name": "wrapped_string", "input": {"request": "{\"schema_version\": 2, \"operation\": \"execute\", \"circuit\": {\"num_qubits\": 1, \"source\": \"OPENQASM 2.0; qreg q[1];\"}}"}, "valid": true, "config": "{}"}, {"name": "envelope", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, "config": "{}"}, {"name": "envelope_string", "input": {"job_type": "request", "input": "{\"schema_version\": 2, \"operation\": \"execute\", \"circuit\": {\"num_qubits\": 1, \"source\": \"OPENQASM 2.0; qreg q[1];\"}}"}, "valid": true, "config": "{}"}, {"name": "uppercase_request", "input": {"job_type": "REQUEST", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, "config": "{}"}, {"name": "legacy_config_omitted", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": true, "config": "{}"}, {"name": "legacy_config_null", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": null}, "valid": true, "config": "{}"}, {"name": "legacy_config_object", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": {}}, "valid": true, "config": "{}"}, {"name": "legacy_config_string", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": "{}"}, "valid": true, "config": "{}"}, {"name": "legacy_uppercase", "input": {"job_type": "EXECUTE", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": true, "config": "{}"}, {"name": "native_envelope_legacy_fields", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": null}, "valid": true, "config": "{}"}, {"name": "wrapper_extra", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "extra": 1}, "valid": false}, {"name": "wrapper_plus_envelope", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": false}, {"name": "bare_plus_legacy", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "ibm_plus_native", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "program_id": "sampler", "parameters": {}}, "valid": false}, {"name": "legacy_extra", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "extra": 1}, "valid": false}, {"name": "legacy_bad_config", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": 3}, "valid": false}, {"name": "legacy_bad_kind", "input": {"job_type": "missing", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "legacy_no_qubits", "input": {"job_type": "execute", "input": "qasm"}, "valid": false}, {"name": "legacy_zero_qubits", "input": {"job_type": "execute", "input": "qasm", "qubits": 0, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "legacy_bool_qubits", "input": {"job_type": "execute", "input": "qasm", "qubits": true, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "oqtopus_field_bare", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}, "valid": false}, {"name": "oqtopus_field_wrapped", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, "valid": false}, {"name": "oqtopus_field_wrapped_string", "input": {"request": "{\"schema_version\": 2, \"operation\": \"execute\", \"circuit\": {\"num_qubits\": 1, \"source\": \"OPENQASM 2.0; qreg q[1];\"}, \"job_spec\": \"{}\"}"}, "valid": false, "schema_valid": true}, {"name": "oqtopus_field_envelope", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, "valid": false}, {"name": "oqtopus_field_envelope_string", "input": {"job_type": "request", "input": "{\"schema_version\": 2, \"operation\": \"execute\", \"circuit\": {\"num_qubits\": 1, \"source\": \"OPENQASM 2.0; qreg q[1];\"}, \"job_spec\": \"{}\"}"}, "valid": false, "schema_valid": true}]"#).unwrap();
     for case in cases.as_array().unwrap() {
         let result = MaestroLocal::payload_from_value(case["input"].clone());
         assert_eq!(
@@ -1183,36 +1180,6 @@ fn native_and_legacy_maestro_inputs_become_payloads() {
     ] {
         assert!(MaestroLocal::payload_from_value(value).is_err());
     }
-}
-
-#[test]
-fn native_examples_preserve_their_computational_documents() {
-    let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/task_runner/maestro_local");
-    let mut checked = 0;
-    for entry in std::fs::read_dir(directory).unwrap() {
-        let path = entry.unwrap().path();
-        let name = path.file_name().unwrap().to_string_lossy();
-        if !name.starts_with("native-") || !name.ends_with(".json") {
-            continue;
-        }
-        let raw = std::fs::read_to_string(&path).unwrap();
-        let document: serde_json::Value = serde_json::from_str(&raw).unwrap();
-        let Some(Payload::MaestroLocal {
-            input, job_type, ..
-        }) = MaestroLocal::payload_from_json(&raw).unwrap()
-        else {
-            panic!("Wrong example payload: {name}");
-        };
-        assert_eq!(job_type, "request");
-        assert_eq!(
-            serde_json::from_str::<serde_json::Value>(&input).unwrap(),
-            document,
-            "{name}"
-        );
-        checked += 1;
-    }
-    assert!(checked > 0, "No native examples found");
 }
 
 #[test]

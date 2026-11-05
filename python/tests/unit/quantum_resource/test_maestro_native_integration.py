@@ -6,6 +6,8 @@ QRMI_TEST_MAESTRO_REQUEST names the native maestro-request executable. With
 QRMI_REQUIRE_MAESTRO_NATIVE=1, as in CI, a missing binary fails instead of skipping.
 """
 
+import copy
+import importlib.util
 import json
 import math
 import os
@@ -30,6 +32,23 @@ from qrmi.maestro import payload_from_input, request_payload
 EXAMPLES = Path(__file__).resolve().parents[4] / "examples/task_runner/maestro_local"
 
 
+def _load_native_examples():
+    spec = importlib.util.spec_from_file_location(
+        "gen_native_input", EXAMPLES / "gen_native_input.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.NATIVE_EXAMPLES
+
+
+NATIVE_EXAMPLES = _load_native_examples()
+
+
+def example_doc(name: str):
+    """Return a fresh copy of a named native request example."""
+    return copy.deepcopy(NATIVE_EXAMPLES[name])
+
+
 def required_binary(variable, reason):
     """A configured native binary; required runs fail rather than skip without it."""
     path = os.environ.get(variable)
@@ -40,16 +59,14 @@ def required_binary(variable, reason):
     return path
 
 
-@pytest.mark.parametrize(
-    "path", sorted(EXAMPLES.glob("native-*.json")), ids=lambda p: p.stem
-)
-def test_example_native_validation(path):
+@pytest.mark.parametrize("name", sorted(NATIVE_EXAMPLES))
+def test_example_native_validation(name):
     """Validate every example's computational document with the native CLI."""
     worker = required_binary(
         "QRMI_TEST_MAESTRO_REQUEST",
         "set QRMI_TEST_MAESTRO_REQUEST to the native maestro-request executable",
     )
-    document = json.loads(path.read_text())
+    document = example_doc(name)
     # Server profile selection is tested separately; the C ABI accepts only the
     # computational document, including for hardware-dependent examples.
     document.pop("launch", None)
@@ -77,7 +94,7 @@ def test_example_native_validation(path):
 )
 def test_cpu_examples_through_qrmi(native_resource, name):
     """Check numerical results from the CPU examples through the full stack."""
-    document = json.loads((EXAMPLES / f"native-{name}.json").read_text())
+    document = example_doc(name)
     task = native_resource.task_start(request_payload(document))
     assert await_task(native_resource, task) == TaskStatus.Completed
     result = json.loads(native_resource.task_result(task).value)
@@ -894,7 +911,7 @@ def test_current_tensor_examples_through_qrmi(native_resource, name, backend):
     """Preserve ordered operators, complex scale, bit order and fusion metadata."""
     if backend == "gpu" and os.environ.get("QRMI_TEST_GPU") != "1":
         pytest.skip("set QRMI_TEST_GPU=1 with an available GPU plugin")
-    document = json.loads((EXAMPLES / f"native-{name}.json").read_text())
+    document = example_doc(name)
     document["simulator"]["backend"] = backend
     task = native_resource.task_start(request_payload(document))
     assert await_task(native_resource, task) == TaskStatus.Completed
@@ -969,7 +986,7 @@ def test_status_and_current_capabilities_through_qrmi(native_resource):
     assert options["precision"]["enum"] == ["single", "double"]
     assert options["pp_workers"]["maximum"] == 1024
     assert "use_double_precision" not in options
-    document = json.loads((EXAMPLES / "native-tensor-bulk.json").read_text())
+    document = example_doc("tensor-bulk")
     document["simulator"]["options"] = {"mps_measure_no_collapse": True}
     with pytest.raises(InvalidInputError, match="Unknown simulator option"):
         native_resource.task_start(request_payload(document))
@@ -1066,7 +1083,7 @@ def test_new_native_examples_through_qrmi(native_resource):
     assert {"adjoint_jacobian", "adjoint_vjp"} <= set(caps["native"]["operations"])
     assert caps["native"]["instructions"]["fields"]["noiseless"] == ["gates"]
 
-    document = json.loads((EXAMPLES / "native-adjoint.json").read_text())
+    document = example_doc("adjoint")
     task, result = run_native(native_resource, document)
     assert result["num_parameters"] == 2
     assert result["num_values"] == 4
@@ -1086,7 +1103,7 @@ def test_new_native_examples_through_qrmi(native_resource):
     with pytest.raises(InvalidInputError, match="cotangents"):
         native_resource.task_start(request_payload(document))
 
-    document = json.loads((EXAMPLES / "native-mirror-observables.json").read_text())
+    document = example_doc("mirror-observables")
     _, result = run_native(native_resource, document)
     assert result["expectation_values"] == pytest.approx([1, 1, 1, 1])
     # A bond cap of one truncates the GHZ entanglement the mirror must undo.
@@ -1094,7 +1111,7 @@ def test_new_native_examples_through_qrmi(native_resource):
     _, result = run_native(native_resource, document)
     assert min(result["expectation_values"]) < 0.5
 
-    document = json.loads((EXAMPLES / "native-instructions.json").read_text())
+    document = example_doc("instructions")
     _, result = run_native(native_resource, document)
     assert result["counts"] == {"01": 32}
     # Pure states sample the channel and need a trajectory noise block.
@@ -1174,7 +1191,7 @@ def test_readout_refusal_and_mixed_state_mirror_through_qrmi(native_resource):
             native_resource.task_start(request_payload(document))
 
     # Mirror expectations need no pure-state overlap; plain mirror fidelity does.
-    document = json.loads((EXAMPLES / "native-mirror-observables.json").read_text())
+    document = example_doc("mirror-observables")
     for method in ("density_matrix", "matrix_product_operator"):
         document["simulator"] = {"backend": "qcsim", "method": method}
         _, result = run_native(native_resource, document)
@@ -1195,7 +1212,7 @@ def test_mixed_state_queries_through_qrmi(native_resource):
     assert set(queries["operations"]) == operations
     assert queries["max_target_statevector_qubits"] == 20
 
-    document = json.loads((EXAMPLES / "native-mixed-state.json").read_text())
+    document = example_doc("mixed-state")
     _, result = run_native(native_resource, document)
     fidelity, overlap = result["results"]
     assert fidelity["fidelity"] == pytest.approx(0.7624)

@@ -26,7 +26,8 @@ From the QRMI checkout, with an already acquired Maestro session:
    export QRMI_JOB_QPU_TYPES=maestro-local
    export MAESTRO_LOCAL_QRMI_JOB_ACQUISITION_TOKEN=<existing-session-id>
    # Set QRMI_MAESTRO_SOCKET if the daemon does not use /run/maestro.sock.
-   task_runner MAESTRO_LOCAL examples/task_runner/maestro_local/native-noise.json
+   python examples/task_runner/maestro_local/gen_native_input.py --example noise -o native-noise.json
+   task_runner MAESTRO_LOCAL native-noise.json
 
 Both the Rust and Python task runners accept these files directly. The runner
 uses the supplied session; its owner should release that session after the
@@ -38,42 +39,76 @@ Exact amplitude damping
 This CPU example estimates X and Z after exact T1 damping, giving expectation
 values ``[0.8, 0.36]``. It needs the QCSim density-matrix backend.
 
-.. literalinclude:: ../../../examples/task_runner/maestro_local/native-noise.json
-   :language: json
+.. code-block:: json
    :caption: native-noise.json
 
-Downloadable native requests
-----------------------------
+   {
+     "schema_version": 2,
+     "operation": "estimate",
+     "circuit": {
+       "format": "openqasm",
+       "num_qubits": 1,
+       "source": "OPENQASM 2.0;\nqreg q[1]; h q[0];"
+     },
+     "simulator": {
+       "backend": "qcsim",
+       "method": "density_matrix"
+     },
+     "observables": [
+       "X",
+       "Z"
+     ],
+     "execution": {
+       "seed": 123
+     },
+     "noise": {
+       "evaluation": "exact",
+       "channels": [
+         {
+           "kind": "t1",
+           "targets": [
+             0
+           ],
+           "gamma": 0.36
+         }
+       ]
+     }
+   }
+
+Native request templates
+------------------------
+
+Generate any of the native request templates with ``gen_native_input.py --example <name>``:
 
 .. list-table:: Native examples
    :header-rows: 1
    :widths: 28 32 40
 
-   * - Input
+   * - Example (``--example``)
      - Feature
      - Expected result or prerequisite
-   * - :download:`native-noise.json <../../../examples/task_runner/maestro_local/native-noise.json>`
+   * - ``noise``
      - Exact amplitude damping
      - CPU expectations ``[0.8, 0.36]``.
-   * - :download:`native-query.json <../../../examples/task_runner/maestro_local/native-query.json>`
+   * - ``query``
      - Amplitudes and mixed-state diagnostics
      - Selected amplitudes ``[1, 0]`` and purity ``0.8848``.
-   * - :download:`native-thermal-idle.json <../../../examples/task_runner/maestro_local/native-thermal-idle.json>`
+   * - ``thermal-idle``
      - Thermal gate/idle relaxation and detuning
      - Density matrix; durations in seconds and detuning in Hz.
-   * - :download:`native-correlated-noise.json <../../../examples/task_runner/maestro_local/native-correlated-noise.json>`
+   * - ``correlated-noise``
      - Seeded correlated OU noise and MPS configuration
      - 128 realizations with reported standard errors.
-   * - :download:`native-checkpoint.json <../../../examples/task_runner/maestro_local/native-checkpoint.json>`
+   * - ``checkpoint``
      - Noisy suffixes after an ideal prefix
      - Both suffixes return ``{"1": 32}``.
-   * - :download:`native-incremental.json <../../../examples/task_runner/maestro_local/native-incremental.json>`
+   * - ``incremental``
      - Repeated exact Kraus steps
      - Z expectations ``[-1, -0.5, -0.125, 0.3671875]`` at steps ``[0, 1, 2, 4]``.
-   * - :download:`native-distributed-gpu.json <../../../examples/task_runner/maestro_local/native-distributed-gpu.json>`
+   * - ``distributed-gpu``
      - Local distributed statevector
      - Two physical GPU ordinals and the matching plugin, runtime and license.
-   * - :download:`native-mpi-gpu.json <../../../examples/task_runner/maestro_local/native-mpi-gpu.json>`
+   * - ``mpi-gpu``
      - MPI distributed GPU statevector
      - An administrator-defined server profile, rank-local GPU binding,
        MPI GPU plugin/license and CUDA-aware MPI.
