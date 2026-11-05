@@ -14,15 +14,22 @@ use std::process::Command;
 
 // For C API bindings
 fn main() {
-    // Pull the config from the cbindgen.toml file.
-    let config = cbindgen::Config::from_file("cbindgen.toml").unwrap();
+    // qrmi.h is only needed by the C and Lua builds, which use a checkout of
+    // the repository. Skip it when building the packaged crate (e.g. when
+    // `cargo publish` verifies it, or as a crates.io dependency): a build
+    // script must not write outside OUT_DIR there, and cargo refuses to
+    // publish if it does. Cargo adds Cargo.toml.orig to every packaged crate.
+    if !std::path::Path::new("Cargo.toml.orig").exists() {
+        // Pull the config from the cbindgen.toml file.
+        let config = cbindgen::Config::from_file("cbindgen.toml").unwrap();
 
-    match cbindgen::generate_with_config(".", config) {
-        Ok(value) => {
-            value.write_to_file("qrmi.h");
-        }
-        Err(e) => {
-            eprintln!("{}", e);
+        match cbindgen::generate_with_config(".", config) {
+            Ok(value) => {
+                value.write_to_file("qrmi.h");
+            }
+            Err(e) => {
+                eprintln!("{}", e);
+            }
         }
     }
     if std::env::var("CARGO_FEATURE_MUNGE").is_ok() {
