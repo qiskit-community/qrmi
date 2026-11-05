@@ -1,5 +1,6 @@
 [package]
 name = "qrmi-alice-bob-felis-client"
+keywords = ["quantum", "alice-bob", "rest-api", "http-client", "api-bindings"]
 version.workspace = true
 repository.workspace = true
 license.workspace = true

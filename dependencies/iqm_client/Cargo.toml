@@ -1,6 +1,6 @@
 [package]
 name = "qrmi-iqm-server-client"
-keywords = ["rest-api", "http-client", "api-bindings"]
+keywords = ["quantum", "iqm", "rest-api", "http-client", "api-bindings"]
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true

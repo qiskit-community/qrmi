@@ -1,6 +1,6 @@
 [package]
 name = "qrmi-ibm-quantum-system-client"
-keywords = ["rest-api", "http-client", "api-bindings"]
+keywords = ["quantum", "ibm", "rest-api", "http-client", "api-bindings"]
 description = "Quantum System API client library for Rust"
 repository.workspace = true
 license.workspace = true
