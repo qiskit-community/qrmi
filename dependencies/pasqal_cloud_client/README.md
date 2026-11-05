@@ -22,6 +22,14 @@ We refer to Pasqal's cloud API [documetation](https://docs.pasqal.com/cloud/api/
 
 * Rust 1.81.0 or above
 
+## Installation
+
+Add the crate to your project from crates.io:
+
+```shell
+cargo add qrmi-pasqal-cloud-client
+```
+
 ## How to build
 ```shell-session
 . ~/.cargo/env

@@ -20,6 +20,20 @@ Client to interact with Pasqal on prem QPUs.
 
 * Rust 1.81.0 or above
 
+## Installation
+
+Add the crate to your project from crates.io:
+
+```shell
+cargo add qrmi-pasqal-local-client
+```
+
+To authenticate with [MUNGE](https://dun.github.io/munge/) on a local cluster, enable the `munge` feature, which links against `libmunge` (e.g. `libmunge-dev` or `munge-devel` must be installed):
+
+```shell
+cargo add qrmi-pasqal-local-client --features munge
+```
+
 ## How to build
 ```shell-session
 . ~/.cargo/env
