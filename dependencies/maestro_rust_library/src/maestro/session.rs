@@ -1,5 +1,17 @@
+// This code is part of Qiskit.
+//
+// (C) Copyright Qoro Quantum 2026
+//
+// This code is licensed under the Apache License, Version 2.0. You may
+// obtain a copy of this license in the LICENSE.txt file in the root directory
+// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+//
+// Any modifications or derivative works of this code must retain this
+// copyright notice, and modified files need to carry a notice indicating
+// that they have been altered from the originals.
+
 use crate::maestro_lib;
-use json;
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -47,11 +59,11 @@ impl Session {
         self.id
     }
 
-    pub async fn session_exists(session_id: u32) -> Result<bool, String> {
-        Self::session_exists_at(session_id, &maestro_lib::socket_path()).await
+    pub fn session_exists(session_id: u32) -> Result<bool, String> {
+        Self::session_exists_at(session_id, &maestro_lib::socket_path())
     }
 
-    pub async fn session_exists_at(session_id: u32, socket: &Path) -> Result<bool, String> {
+    pub fn session_exists_at(session_id: u32, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} EXISTS\n", session_id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -63,11 +75,11 @@ impl Session {
         }
     }
 
-    pub async fn delete(&self) -> Result<bool, String> {
-        self.delete_at(&maestro_lib::socket_path()).await
+    pub fn delete(&self) -> Result<bool, String> {
+        self.delete_at(&maestro_lib::socket_path())
     }
 
-    pub async fn delete_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn delete_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} DELETE\n", self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -77,12 +89,11 @@ impl Session {
         }
     }
 
-    pub async fn task_exists(&self, task_id: u32) -> Result<bool, String> {
+    pub fn task_exists(&self, task_id: u32) -> Result<bool, String> {
         self.task_exists_at(task_id, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn task_exists_at(&self, task_id: u32, socket: &Path) -> Result<bool, String> {
+    pub fn task_exists_at(&self, task_id: u32, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} EXISTS\n", self.id, task_id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -94,11 +105,11 @@ impl Session {
         }
     }
 
-    pub async fn create_task(&self) -> Result<Task, String> {
-        self.create_task_at(&maestro_lib::socket_path()).await
+    pub fn create_task(&self) -> Result<Task, String> {
+        self.create_task_at(&maestro_lib::socket_path())
     }
 
-    pub async fn create_task_at(&self, socket: &Path) -> Result<Task, String> {
+    pub fn create_task_at(&self, socket: &Path) -> Result<Task, String> {
         let command = format!("SESSION {} TASK CREATE\n", self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -154,26 +165,32 @@ impl TaskConfig {
     }
 
     fn get_json(&self) -> String {
-        let mut json_obj = json::JsonValue::new_object();
+        let mut json_obj = Map::new();
 
         if self.matrix_product_state_max_bond_dimension > 0 {
-            json_obj["matrix_product_state_max_bond_dimension"] =
-                self.matrix_product_state_max_bond_dimension.into();
+            json_obj.insert(
+                "matrix_product_state_max_bond_dimension".to_string(),
+                Value::from(self.matrix_product_state_max_bond_dimension),
+            );
         }
 
         if self.matrix_product_state_truncation_threshold > 0.0 {
-            json_obj["matrix_product_state_truncation_threshold"] =
-                self.matrix_product_state_truncation_threshold.into();
+            json_obj.insert(
+                "matrix_product_state_truncation_threshold".to_string(),
+                Value::from(self.matrix_product_state_truncation_threshold),
+            );
         }
 
         if !self.mps_sample_measure_algorithm.is_empty() {
-            json_obj["mps_sample_measure_algorithm"] =
-                self.mps_sample_measure_algorithm.clone().into();
+            json_obj.insert(
+                "mps_sample_measure_algorithm".to_string(),
+                Value::from(self.mps_sample_measure_algorithm.clone()),
+            );
         }
 
-        json_obj["shots"] = self.shots.into();
+        json_obj.insert("shots".to_string(), Value::from(self.shots));
 
-        json_obj.dump()
+        Value::Object(json_obj).to_string()
     }
 }
 
@@ -186,11 +203,11 @@ impl Task {
         self.session_id
     }
 
-    pub async fn exists(&self) -> Result<bool, String> {
-        self.exists_at(&maestro_lib::socket_path()).await
+    pub fn exists(&self) -> Result<bool, String> {
+        self.exists_at(&maestro_lib::socket_path())
     }
 
-    pub async fn exists_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn exists_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} EXISTS\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -202,11 +219,11 @@ impl Task {
         }
     }
 
-    pub async fn valid(&self) -> Result<bool, String> {
-        self.valid_at(&maestro_lib::socket_path()).await
+    pub fn valid(&self) -> Result<bool, String> {
+        self.valid_at(&maestro_lib::socket_path())
     }
 
-    pub async fn valid_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn valid_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} VALID\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -218,11 +235,11 @@ impl Task {
         }
     }
 
-    pub async fn pending(&self) -> Result<bool, String> {
-        self.pending_at(&maestro_lib::socket_path()).await
+    pub fn pending(&self) -> Result<bool, String> {
+        self.pending_at(&maestro_lib::socket_path())
     }
 
-    pub async fn pending_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn pending_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} PENDING\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -234,11 +251,11 @@ impl Task {
         }
     }
 
-    pub async fn running(&self) -> Result<bool, String> {
-        self.running_at(&maestro_lib::socket_path()).await
+    pub fn running(&self) -> Result<bool, String> {
+        self.running_at(&maestro_lib::socket_path())
     }
 
-    pub async fn running_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn running_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} RUNNING\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -250,11 +267,11 @@ impl Task {
         }
     }
 
-    pub async fn finished(&self) -> Result<bool, String> {
-        self.finished_at(&maestro_lib::socket_path()).await
+    pub fn finished(&self) -> Result<bool, String> {
+        self.finished_at(&maestro_lib::socket_path())
     }
 
-    pub async fn finished_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn finished_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} FINISHED\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -266,11 +283,11 @@ impl Task {
         }
     }
 
-    pub async fn failed(&self) -> Result<bool, String> {
-        self.failed_at(&maestro_lib::socket_path()).await
+    pub fn failed(&self) -> Result<bool, String> {
+        self.failed_at(&maestro_lib::socket_path())
     }
 
-    pub async fn failed_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn failed_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} FAILED\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -282,11 +299,11 @@ impl Task {
         }
     }
 
-    pub async fn execute(&self) -> Result<bool, String> {
-        self.execute_at(&maestro_lib::socket_path()).await
+    pub fn execute(&self) -> Result<bool, String> {
+        self.execute_at(&maestro_lib::socket_path())
     }
 
-    pub async fn execute_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn execute_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} EXECUTE\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -296,11 +313,11 @@ impl Task {
         }
     }
 
-    pub async fn cancel(&self) -> Result<bool, String> {
-        self.cancel_at(&maestro_lib::socket_path()).await
+    pub fn cancel(&self) -> Result<bool, String> {
+        self.cancel_at(&maestro_lib::socket_path())
     }
 
-    pub async fn cancel_at(&self, socket: &Path) -> Result<bool, String> {
+    pub fn cancel_at(&self, socket: &Path) -> Result<bool, String> {
         let command = format!("SESSION {} TASK {} CANCEL\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -310,8 +327,9 @@ impl Task {
         }
     }
 
-    fn get_task_results_from_string(&self, results: String) -> TaskResult {
-        let parsed = json::parse(&results).unwrap();
+    fn get_task_results_from_string(&self, results: String) -> Result<TaskResult, String> {
+        let parsed: Value =
+            serde_json::from_str(&results).map_err(|e| format!("Malformed task results: {e}"))?;
 
         let time_taken = parsed["time_taken"].as_f64().unwrap_or(0.0);
         let simulator_type = parsed["simulator"].as_str().unwrap_or("").to_string();
@@ -319,21 +337,25 @@ impl Task {
 
         let mut counts = HashMap::<String, u64>::new();
 
-        for (key, value) in parsed["counts"].entries() {
-            if let Some(count) = value.as_u64() {
-                counts.insert(key.to_string(), count);
+        if let Some(entries) = parsed["counts"].as_object() {
+            for (key, value) in entries {
+                if let Some(count) = value.as_u64() {
+                    counts.insert(key.to_string(), count);
+                }
             }
         }
 
         let mut expectation_values = Vec::<f64>::new();
 
-        for val in parsed["expectation_values"].members() {
-            if let Some(v) = val.as_f64() {
-                expectation_values.push(v);
+        if let Some(members) = parsed["expectation_values"].as_array() {
+            for val in members {
+                if let Some(v) = val.as_f64() {
+                    expectation_values.push(v);
+                }
             }
         }
 
-        TaskResult {
+        Ok(TaskResult {
             task_id: self.id,
             session_id: self.session_id,
             time_taken,
@@ -341,15 +363,14 @@ impl Task {
             simulation_method,
             counts,
             expectation_values,
-        }
+        })
     }
 
-    pub async fn get_results_as_string(&self) -> Result<String, String> {
+    pub fn get_results_as_string(&self) -> Result<String, String> {
         self.get_results_as_string_at(&maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn get_results_as_string_at(&self, socket: &Path) -> Result<String, String> {
+    pub fn get_results_as_string_at(&self, socket: &Path) -> Result<String, String> {
         let command = format!("SESSION {} TASK {} GET_RESULTS\n", self.session_id, self.id);
         let res = maestro_lib::send_command_at(socket, &command);
         match res {
@@ -361,15 +382,15 @@ impl Task {
         }
     }
 
-    pub async fn get_results(&self) -> Result<TaskResult, String> {
-        self.get_results_at(&maestro_lib::socket_path()).await
+    pub fn get_results(&self) -> Result<TaskResult, String> {
+        self.get_results_at(&maestro_lib::socket_path())
     }
 
-    pub async fn get_results_at(&self, socket: &Path) -> Result<TaskResult, String> {
-        let results = self.get_results_as_string_at(socket).await;
+    pub fn get_results_at(&self, socket: &Path) -> Result<TaskResult, String> {
+        let results = self.get_results_as_string_at(socket);
 
         if let Ok(result) = results {
-            Ok(self.get_task_results_from_string(result))
+            self.get_task_results_from_string(result)
         } else {
             Err(format!(
                 "Failed to get task results: {}",
@@ -378,12 +399,11 @@ impl Task {
         }
     }
 
-    pub async fn set_type(&self, task_type: TaskType) -> Result<bool, String> {
+    pub fn set_type(&self, task_type: TaskType) -> Result<bool, String> {
         self.set_type_at(task_type, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_type_at(&self, task_type: TaskType, socket: &Path) -> Result<bool, String> {
+    pub fn set_type_at(&self, task_type: TaskType, socket: &Path) -> Result<bool, String> {
         let type_str = match task_type {
             TaskType::EXECUTE => "EXECUTE",
             TaskType::ESTIMATE => "ESTIMATE",
@@ -400,12 +420,11 @@ impl Task {
         }
     }
 
-    pub async fn set_qubits(&self, qubits: u32) -> Result<bool, String> {
+    pub fn set_qubits(&self, qubits: u32) -> Result<bool, String> {
         self.set_qubits_at(qubits, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_qubits_at(&self, qubits: u32, socket: &Path) -> Result<bool, String> {
+    pub fn set_qubits_at(&self, qubits: u32, socket: &Path) -> Result<bool, String> {
         let command = format!(
             "SESSION {} TASK {} SET_QUBITS {}\n",
             self.session_id, self.id, qubits
@@ -418,12 +437,11 @@ impl Task {
         }
     }
 
-    pub async fn set_simulator_type(&self, simulator_type: u32) -> Result<bool, String> {
+    pub fn set_simulator_type(&self, simulator_type: u32) -> Result<bool, String> {
         self.set_simulator_type_at(simulator_type, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_simulator_type_at(
+    pub fn set_simulator_type_at(
         &self,
         simulator_type: u32,
         socket: &Path,
@@ -442,16 +460,11 @@ impl Task {
         }
     }
 
-    pub async fn set_simulation_method(&self, method: u32) -> Result<bool, String> {
+    pub fn set_simulation_method(&self, method: u32) -> Result<bool, String> {
         self.set_simulation_method_at(method, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_simulation_method_at(
-        &self,
-        method: u32,
-        socket: &Path,
-    ) -> Result<bool, String> {
+    pub fn set_simulation_method_at(&self, method: u32, socket: &Path) -> Result<bool, String> {
         let command = format!(
             "SESSION {} TASK {} SET_METHOD {}\n",
             self.session_id, self.id, method
@@ -466,12 +479,11 @@ impl Task {
         }
     }
 
-    pub async fn set_observables_as_string(&self, observables: String) -> Result<bool, String> {
+    pub fn set_observables_as_string(&self, observables: String) -> Result<bool, String> {
         self.set_observables_as_string_at(observables, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_observables_as_string_at(
+    pub fn set_observables_as_string_at(
         &self,
         observables: String,
         socket: &Path,
@@ -496,32 +508,35 @@ impl Task {
         }
     }
 
-    pub async fn set_observables(&self, observables: Vec<String>) -> Result<bool, String> {
+    pub fn set_observables(&self, observables: Vec<String>) -> Result<bool, String> {
         self.set_observables_at(observables, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_observables_at(
+    pub fn set_observables_at(
         &self,
         observables: Vec<String>,
         socket: &Path,
     ) -> Result<bool, String> {
         let observables_str = observables.join(";");
-        return self
-            .set_observables_as_string_at(observables_str, socket)
-            .await;
+        self.set_observables_as_string_at(observables_str, socket)
     }
 
-    pub async fn set_qasm(&self, qasm: String) -> Result<bool, String> {
-        self.set_qasm_at(qasm, &maestro_lib::socket_path()).await
+    pub fn set_qasm(&self, qasm: String) -> Result<bool, String> {
+        self.set_qasm_at(qasm, &maestro_lib::socket_path())
     }
 
-    pub async fn set_qasm_at(&self, qasm: String, socket: &Path) -> Result<bool, String> {
-        // SET_QASM is sent over a line-based socket protocol. QASM generated by
-        // tools like Qiskit's qasm2.dumps() is multi-line, so embedded newlines
-        // must be collapsed to spaces (statements are ';'-terminated, so this is
-        // semantically safe) rather than merely trimmed from the ends, or the
-        // command gets truncated at the first newline and the circuit is lost.
+    pub fn set_qasm_at(&self, qasm: String, socket: &Path) -> Result<bool, String> {
+        // SET_QASM is sent over a single-line socket protocol, so embedded
+        // newlines are collapsed to spaces. Because collapsing newlines after a
+        // `//` line comment would comment out the remainder of the circuit,
+        // reject QASM containing `//` here; callers needing line comments
+        // should use the native request API (`job_type="request"`).
+        if qasm.contains("//") {
+            return Err(
+                "Legacy QASM cannot contain '//' line comments; use the native request API"
+                    .to_string(),
+            );
+        }
         let qasm_trimmed = qasm.replace(['\n', '\r'], " ");
         let qasm_trimmed = qasm_trimmed.trim();
         let command = format!(
@@ -536,16 +551,11 @@ impl Task {
         }
     }
 
-    pub async fn set_options_json(&self, options: String) -> Result<bool, String> {
+    pub fn set_options_json(&self, options: String) -> Result<bool, String> {
         self.set_options_json_at(options, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_options_json_at(
-        &self,
-        options: String,
-        socket: &Path,
-    ) -> Result<bool, String> {
+    pub fn set_options_json_at(&self, options: String, socket: &Path) -> Result<bool, String> {
         // SET_OPTIONS is sent over a line-based socket protocol, so any
         // embedded newlines (e.g. from pretty-printed JSON) must be collapsed
         // rather than merely trimmed from the ends, or the command gets
@@ -566,14 +576,53 @@ impl Task {
         }
     }
 
-    pub async fn set_options(&self, options: TaskConfig) -> Result<bool, String> {
+    pub fn set_options(&self, options: TaskConfig) -> Result<bool, String> {
         self.set_options_at(options, &maestro_lib::socket_path())
-            .await
     }
 
-    pub async fn set_options_at(&self, options: TaskConfig, socket: &Path) -> Result<bool, String> {
+    pub fn set_options_at(&self, options: TaskConfig, socket: &Path) -> Result<bool, String> {
         let json_str = options.get_json();
 
-        self.set_options_json_at(json_str, socket).await
+        self.set_options_json_at(json_str, socket)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{BufRead, BufReader, Write};
+    use std::os::unix::net::UnixListener;
+
+    #[test]
+    fn get_results_returns_err_on_malformed_json_and_set_qasm_rejects_line_comments() {
+        let path =
+            std::env::temp_dir().join(format!("maestro-session-test-{}.sock", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let listener = UnixListener::bind(&path).unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let mut command = String::new();
+            BufReader::new(socket.try_clone().unwrap())
+                .read_line(&mut command)
+                .unwrap();
+            assert_eq!(command, "SESSION 1 TASK 2 GET_RESULTS\n");
+            writeln!(socket, "OK not-json").unwrap();
+        });
+        let task = Task {
+            id: 2,
+            session_id: 1,
+        };
+        let err = task.get_results_at(&path).unwrap_err();
+        server.join().unwrap();
+        std::fs::remove_file(&path).unwrap();
+        assert!(err.contains("Malformed task results"), "{err}");
+
+        let comment_err = task
+            .set_qasm_at(
+                "OPENQASM 2.0;\nqreg q[1];\n// entangle\nh q[0];".to_string(),
+                &path,
+            )
+            .unwrap_err();
+        assert!(comment_err.contains("'//' line comments"), "{comment_err}");
     }
 }

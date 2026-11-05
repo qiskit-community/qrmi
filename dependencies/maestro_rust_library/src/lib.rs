@@ -1,3 +1,15 @@
+// This code is part of Qiskit.
+//
+// (C) Copyright Qoro Quantum 2026
+//
+// This code is licensed under the Apache License, Version 2.0. You may
+// obtain a copy of this license in the LICENSE.txt file in the root directory
+// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+//
+// Any modifications or derivative works of this code must retain this
+// copyright notice, and modified files need to carry a notice indicating
+// that they have been altered from the originals.
+
 // This crate is a library
 #![crate_type = "lib"]
 // The library is named "maestro-local-api"
@@ -21,7 +33,7 @@ pub mod maestro_lib {
         OkResponse(String),
     }
 
-    pub async fn ping() -> Response {
+    pub fn ping() -> Response {
         send_command_close("PING\n")
     }
 
@@ -254,7 +266,7 @@ mod tests {
             response
         );
 
-        let ping_response = futures::executor::block_on(maestro_lib::ping());
+        let ping_response = maestro_lib::ping();
         assert!(
             matches!(ping_response, maestro_lib::Response::OK(true)),
             "Expected OK YES response, got: {:?}",

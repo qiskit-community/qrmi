@@ -1,5 +1,14 @@
+# This code is part of Qiskit.
+#
 # (C) Copyright Qoro Quantum 2026
-# Licensed under the Apache License, Version 2.0.
+#
+# This code is licensed under the Apache License, Version 2.0. You may
+# obtain a copy of this license in the LICENSE.txt file in the root directory
+# of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+#
+# Any modifications or derivative works of this code must retain this
+# copyright notice, and modified files need to carry a notice indicating
+# that they have been altered from the originals.
 """Client-side helpers for Maestro's native request API.
 
 These helpers serialize data only. Maestro servers and workers do not run Python.

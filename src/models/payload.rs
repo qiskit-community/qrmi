@@ -59,9 +59,9 @@ pub enum Payload {
     },
     /// Payload for Maestro Local Server
     MaestroLocal {
-        /// request (usually qasm string)
+        /// Input payload (QASM string, or schema version 2 JSON if job_type == "request")
         input: String,
-        /// Job type (execute, estimate)
+        /// Job type (execute, estimate, request)
         job_type: String,
         /// qubits count
         qubits: u32,

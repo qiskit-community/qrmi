@@ -1,6 +1,19 @@
+// This code is part of Qiskit.
+//
+// (C) Copyright Qoro Quantum 2026
+//
+// This code is licensed under the Apache License, Version 2.0. You may
+// obtain a copy of this license in the LICENSE.txt file in the root directory
+// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+//
+// Any modifications or derivative works of this code must retain this
+// copyright notice, and modified files need to carry a notice indicating
+// that they have been altered from the originals.
+
 //! Native Maestro request API v2. The synchronous client captures its socket
 //! path; asynchronous applications should run exchanges on a blocking executor.
 use crate::maestro_lib;
+use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -68,16 +81,16 @@ impl Client {
         &self.socket
     }
 
-    fn call(&self, document: json::JsonValue) -> Result<json::JsonValue, Error> {
+    fn call(&self, document: Value) -> Result<Value, Error> {
         self.call_with(document, parse_response)
     }
 
     fn call_with(
         &self,
-        document: json::JsonValue,
-        parse: fn(&str) -> Result<json::JsonValue, Error>,
-    ) -> Result<json::JsonValue, Error> {
-        let command = format!("API {}\n", document.dump());
+        document: Value,
+        parse: fn(&str) -> Result<Value, Error>,
+    ) -> Result<Value, Error> {
+        let command = format!("API {document}\n");
         if command.len() > MAX_REQUEST_BYTES {
             return Err(Error::new(
                 "invalid_input",
@@ -101,21 +114,25 @@ impl Client {
     pub fn capabilities(&self) -> Result<String, Error> {
         // Explicit discovery always refreshes the catalog and negotiation.
         self.negotiated.store(false, Ordering::SeqCst);
-        let value = self.call(json::object! { version: VERSION, command: "capabilities" })?;
-        if value["native"]["schema_version"].as_u32() != Some(VERSION) {
+        let value = self.call(json!({ "version": VERSION, "command": "capabilities" }))?;
+        if value["native"]["schema_version"].as_u64() != Some(u64::from(VERSION)) {
             return Err(Error::new(
                 "unsupported_api",
                 "Server lacks Maestro native request schema 2",
             ));
         }
         self.negotiated.store(true, Ordering::SeqCst);
-        Ok(value.dump())
+        Ok(value.to_string())
     }
 
     pub fn submit(&self, session_id: u32, request: &str) -> Result<u32, Error> {
-        let request =
-            json::parse(request).map_err(|error| Error::new("invalid_input", error.to_string()))?;
-        if !request.is_object() || request["schema_version"].as_u32() != Some(VERSION) {
+        let request: Value = serde_json::from_str(request)
+            .map_err(|error| Error::new("invalid_input", error.to_string()))?;
+        self.submit_value(session_id, request)
+    }
+
+    pub fn submit_value(&self, session_id: u32, request: Value) -> Result<u32, Error> {
+        if !request.is_object() || request["schema_version"].as_u64() != Some(u64::from(VERSION)) {
             return Err(Error::new(
                 "invalid_input",
                 "Native request must be an object with schema_version=2",
@@ -127,24 +144,40 @@ impl Client {
         // Legacy-server detection belongs to negotiation above. Once the request
         // has been sent, only a well-formed v2 refusal proves that no task exists.
         let response = self.call_with(
-            json::object! {
-                version: VERSION, command: "submit", session_id: session_id, request: request,
-            },
+            json!({
+                "version": VERSION,
+                "command": "submit",
+                "session_id": session_id,
+                "request": request,
+            }),
             parse_submission_response,
         )?;
-        response["task_id"].as_u32().ok_or_else(|| {
-            self.negotiated.store(false, Ordering::SeqCst);
-            Error::new(
-                "protocol",
-                "Missing task_id; the task may have been created",
-            )
-        })
+        response["task_id"]
+            .as_u64()
+            .and_then(|id| u32::try_from(id).ok())
+            .ok_or_else(|| {
+                self.negotiated.store(false, Ordering::SeqCst);
+                Error::new(
+                    "protocol",
+                    "Missing task_id; the task may have been created",
+                )
+            })
+    }
+
+    /// Returns the parsed diagnostics document, including structured native errors.
+    pub fn logs_value(&self, session_id: u32, task_id: u32) -> Result<Value, Error> {
+        self.call(json!({
+            "version": VERSION,
+            "command": "logs",
+            "session_id": session_id,
+            "task_id": task_id,
+        }))
     }
 
     /// Returns the full diagnostics document, including structured native errors.
     pub fn logs(&self, session_id: u32, task_id: u32) -> Result<String, Error> {
-        self.call(json::object! { version: VERSION, command: "logs", session_id: session_id, task_id: task_id })
-            .map(|value| value.dump())
+        self.logs_value(session_id, task_id)
+            .map(|value| value.to_string())
     }
 
     /// Queries status without creating or renewing a session. Only an explicitly
@@ -154,11 +187,13 @@ impl Client {
             &self.socket,
             &format!(
                 "API {}\n",
-                json::object! {version: VERSION, command: "status"}.dump()
+                json!({ "version": VERSION, "command": "status" })
             ),
         )
         .map_err(|error| Error::new("transport", error.to_string()))?;
         let parsed = parse_response(&response);
+        // All legacy maestro-local-server releases emit the fixed string
+        // `ERROR Unknown command\n` when `API` is unrecognized (`src/main.rs`).
         if response.trim() == "ERROR Unknown command"
             || parsed
                 .as_ref()
@@ -188,7 +223,7 @@ impl Client {
         let status = &value["status"];
         let malformed = || Error::new("protocol", "Invalid server status response");
         let reason = match &status["status_reason"] {
-            json::JsonValue::Null => None,
+            Value::Null => None,
             value => Some(value.as_str().ok_or_else(malformed)?.to_owned()),
         };
         Ok(Status {
@@ -201,7 +236,7 @@ impl Client {
     }
 
     pub fn keepalive(&self, session_id: u32) -> Result<(), Error> {
-        self.call(json::object! { version: VERSION, command: "keepalive", session_id: session_id })
+        self.call(json!({ "version": VERSION, "command": "keepalive", "session_id": session_id }))
             .map(|_| ())
     }
 }
@@ -209,11 +244,11 @@ impl Client {
 /// Replies to a submission. A reply that is not a well-formed API v2 envelope
 /// does not show that the server refused the request, so it is a protocol
 /// failure rather than an unsupported API: the task may already exist.
-fn parse_submission_response(response: &str) -> Result<json::JsonValue, Error> {
+fn parse_submission_response(response: &str) -> Result<Value, Error> {
     let envelope = response
         .strip_prefix("OK ")
-        .and_then(|document| json::parse(document.trim()).ok());
-    if envelope.is_none_or(|value| value["version"].as_u32() != Some(VERSION)) {
+        .and_then(|document| serde_json::from_str::<Value>(document.trim()).ok());
+    if envelope.is_none_or(|value| value["version"].as_u64() != Some(u64::from(VERSION))) {
         let reply: String = response.trim().chars().take(256).collect();
         return Err(Error::new(
             "protocol",
@@ -223,7 +258,7 @@ fn parse_submission_response(response: &str) -> Result<json::JsonValue, Error> {
     parse_response(response)
 }
 
-fn parse_response(response: &str) -> Result<json::JsonValue, Error> {
+fn parse_response(response: &str) -> Result<Value, Error> {
     let Some(document) = response.strip_prefix("OK ") else {
         return Err(Error::new(
             "unsupported_api",
@@ -233,9 +268,9 @@ fn parse_response(response: &str) -> Result<json::JsonValue, Error> {
             ),
         ));
     };
-    let value = json::parse(document.trim())
+    let value: Value = serde_json::from_str(document.trim())
         .map_err(|error| Error::new("protocol", format!("Malformed API response: {error}")))?;
-    if value["version"].as_u32() != Some(VERSION) {
+    if value["version"].as_u64() != Some(u64::from(VERSION)) {
         return Err(Error::new(
             "unsupported_api",
             "Incompatible Maestro public API version",
@@ -269,8 +304,14 @@ mod tests {
             SEQUENCE.fetch_add(1, Ordering::Relaxed)
         ));
         let listener = UnixListener::bind(&path).unwrap();
-        let request = json::object! {schema_version:2, operation:"execute",
-        circuit:{source:"OPENQASM 2.0;\n// comment\nqreg q[1];", num_qubits:1}};
+        let request = json!({
+            "schema_version": 2,
+            "operation": "execute",
+            "circuit": {
+                "source": "OPENQASM 2.0;\n// comment\nqreg q[1];",
+                "num_qubits": 1
+            }
+        });
         let expected = request.clone();
         let server = std::thread::spawn(move || {
             for command in ["capabilities", "submit"] {
@@ -282,19 +323,20 @@ mod tests {
                 BufReader::new(socket.try_clone().unwrap())
                     .read_line(&mut line)
                     .unwrap();
-                let message = json::parse(line.strip_prefix("API ").unwrap()).unwrap();
+                let message: Value =
+                    serde_json::from_str(line.strip_prefix("API ").unwrap()).unwrap();
                 assert_eq!(message["command"].as_str(), Some(command));
                 let reply = if command == "submit" {
                     assert_eq!(message["request"], expected);
-                    assert_eq!(message["session_id"].as_u32(), Some(5));
-                    json::object! {version:2, ok:true, task_id:7}
+                    assert_eq!(message["session_id"].as_u64(), Some(5));
+                    json!({ "version": 2, "ok": true, "task_id": 7 })
                 } else {
-                    json::object! {version:2, ok:true, native:{schema_version:2}}
+                    json!({ "version": 2, "ok": true, "native": { "schema_version": 2 } })
                 };
-                writeln!(socket, "OK {}", reply.dump()).unwrap();
+                writeln!(socket, "OK {reply}").unwrap();
             }
         });
-        let result = Client::new(&path).submit(5, &request.dump());
+        let result = Client::new(&path).submit(5, &request.to_string());
         server.join().unwrap();
         std::fs::remove_file(path).unwrap();
         assert_eq!(result.unwrap(), 7);
@@ -303,9 +345,11 @@ mod tests {
     #[test]
     fn oversized_frames_fail_locally_and_version_errors_keep_their_code() {
         let error = Client::new("/nonexistent/socket")
-            .call(
-                json::object! {version:2, command:"submit", request:"x".repeat(MAX_REQUEST_BYTES)},
-            )
+            .call(json!({
+                "version": 2,
+                "command": "submit",
+                "request": "x".repeat(MAX_REQUEST_BYTES)
+            }))
             .unwrap_err();
         assert_eq!(error.code, "invalid_input");
         let error = parse_response(r#"OK {"version":2,"ok":false,"error":{"code":"unsupported_version","message":"version retired"}}"#).unwrap_err();
@@ -373,7 +417,8 @@ mod tests {
                     BufReader::new(socket.try_clone().unwrap())
                         .read_line(&mut line)
                         .unwrap();
-                    let value = json::parse(line.strip_prefix("API ").unwrap()).unwrap();
+                    let value: Value =
+                        serde_json::from_str(line.strip_prefix("API ").unwrap()).unwrap();
                     assert_eq!(value["command"].as_str(), Some(command));
                     writeln!(socket, "{answer}").unwrap();
                 }
@@ -428,7 +473,8 @@ mod tests {
                     BufReader::new(socket.try_clone().unwrap())
                         .read_line(&mut line)
                         .unwrap();
-                    let value = json::parse(line.strip_prefix("API ").unwrap()).unwrap();
+                    let value: Value =
+                        serde_json::from_str(line.strip_prefix("API ").unwrap()).unwrap();
                     assert_eq!(value["command"].as_str(), Some(command));
                     if let Some(reply) = reply {
                         writeln!(socket, "{reply}").unwrap();

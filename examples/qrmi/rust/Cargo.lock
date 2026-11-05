@@ -1706,12 +1706,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "json"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
-
-[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1773,8 +1767,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 name = "maestro-local-api"
 version = "0.1.0"
 dependencies = [
- "futures",
- "json",
+ "serde_json",
 ]
 
 [[package]]
@@ -2075,7 +2068,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.26.5"
+version = "0.26.6"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2793,6 +2786,7 @@ version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
 dependencies = [
+ "indexmap 2.14.0",
  "itoa",
  "memchr",
  "serde",

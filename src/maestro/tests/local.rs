@@ -1,3 +1,15 @@
+// This code is part of Qiskit.
+//
+// (C) Copyright Qoro Quantum 2026
+//
+// This code is licensed under the Apache License, Version 2.0. You may
+// obtain a copy of this license in the LICENSE.txt file in the root directory
+// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+//
+// Any modifications or derivative works of this code must retain this
+// copyright notice, and modified files need to carry a notice indicating
+// that they have been altered from the originals.
+
 use super::MaestroLocal;
 use crate::models::{Payload, ResourceType, TaskStatus};
 use crate::{QRMIService, QrmiErrorKind, QuantumResource};
@@ -71,6 +83,7 @@ impl Server {
             while !stopping.load(Ordering::SeqCst) {
                 match listener.accept() {
                     Ok((mut stream, _)) => {
+                        stream.set_nonblocking(false).unwrap();
                         stream
                             .set_read_timeout(Some(Duration::from_secs(2)))
                             .unwrap();
@@ -452,9 +465,11 @@ fn classified_configuration_and_input_errors_do_not_contact_server() {
             "bad_json",
             "array_options",
             "zero_qubits",
+            "commented_qasm",
         ] {
             let mut input = payload();
             if let Payload::MaestroLocal {
+                input: qasm,
                 job_type,
                 config,
                 qubits,
@@ -467,6 +482,9 @@ fn classified_configuration_and_input_errors_do_not_contact_server() {
                     "bad_json" => *config = "{".into(),
                     "array_options" => *config = "[]".into(),
                     "zero_qubits" => *qubits = 0,
+                    "commented_qasm" => {
+                        *qasm = "OPENQASM 2.0;\nqreg q[2];\n// entangle\nh q[0];".into()
+                    }
                     _ => unreachable!(),
                 }
             }
