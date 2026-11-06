@@ -111,6 +111,7 @@ fn find_libpython_in(lib_dir: &std::path::Path) -> Option<String> {
 #[cfg(target_os = "macos")]
 fn fallback_soname_candidates() -> &'static [&'static str] {
     &[
+        "libpython3.14.dylib",
         "libpython3.13.dylib",
         "libpython3.12.dylib",
         "libpython3.11.dylib",
@@ -122,6 +123,7 @@ fn fallback_soname_candidates() -> &'static [&'static str] {
 #[cfg(not(target_os = "macos"))]
 fn fallback_soname_candidates() -> &'static [&'static str] {
     &[
+        "libpython3.14.so.1.0",
         "libpython3.13.so.1.0",
         "libpython3.12.so.1.0",
         "libpython3.11.so.1.0",
