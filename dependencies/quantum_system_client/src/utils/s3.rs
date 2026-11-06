@@ -29,7 +29,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let _client = S3Client::new(
     ///     "http://localhost:9000",
@@ -69,7 +69,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let client = S3Client::new(
     ///     "http://localhost:9000",
@@ -111,7 +111,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let client = S3Client::new(
     ///     "http://localhost:9000",
@@ -153,7 +153,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let client = S3Client::new(
     ///     "http://localhost:9000",
@@ -196,7 +196,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let client = S3Client::new(
     ///     "http://localhost:9000",
@@ -246,7 +246,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let client = S3Client::new(
     ///     "http://localhost:9000",
@@ -286,7 +286,7 @@ impl S3Client {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::utils::s3::S3Client;
+    /// use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
     ///
     /// let client = S3Client::new(
     ///     "http://localhost:9000",

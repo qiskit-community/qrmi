@@ -1,0 +1,6 @@
+# OpenAPI Generator Ignore
+# Files listed here are not written when regenerating the client.
+
+# Hand-written: the generated README would replace the crates.io install
+# instructions and drop the hand-written fixes.
+README.md

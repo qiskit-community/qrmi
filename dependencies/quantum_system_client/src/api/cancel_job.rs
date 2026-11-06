@@ -20,7 +20,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use quantum_system_api::{AuthMethod, ClientBuilder};
+    /// use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -81,7 +81,7 @@ impl PrimitiveJob {
     ///
     /// ```no_run
     /// use serde_json::json;
-    /// use quantum_system_api::{AuthMethod, ClientBuilder, models::ProgramId, models::LogLevel};
+    /// use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder, models::ProgramId, models::LogLevel};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -21,7 +21,7 @@ impl Client {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use quantum_system_api::ClientBuilder;
+    ///     use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     ///     let client = ClientBuilder::new("http://localhost:8080")
     ///         .build()

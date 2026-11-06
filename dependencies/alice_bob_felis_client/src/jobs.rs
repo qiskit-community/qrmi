@@ -1,6 +1,10 @@
-use generated::apis::jobs_service::UploadInputError;
-use generated::apis::ResponseContent;
-use generated::apis::{configuration, Error};
+//! Hand-written job endpoints that openapi-generator cannot produce correctly.
+//!
+//! This file is not generated and is not touched by `regenerate.sh`.
+
+use crate::apis::jobs_service::UploadInputError;
+use crate::apis::ResponseContent;
+use crate::apis::{configuration, Error};
 use reqwest::multipart::Part;
 use serde::de::Error as _;
 

@@ -1,5 +1,5 @@
-use alice_bob_felis::apis::{configuration, health_service, targets_service};
-use alice_bob_felis::helpers::decode_api_key;
+use qrmi_alice_bob_felis_client::apis::{configuration, health_service, targets_service};
+use qrmi_alice_bob_felis_client::helpers::decode_api_key;
 
 const API_KEY: &str = "bW9jay1mZWxpcy11c2VyOm1vY2stZmVsaXMtcGFzc3dvcmQ=";
 

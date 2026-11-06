@@ -10,20 +10,20 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Maps errors from `iqm_server_api` -- an OpenAPI-generated client we don't
+//! Maps errors from `qrmi_iqm_server_client` -- an OpenAPI-generated client we don't
 //! control or modify -- onto [`crate::QrmiError`].
 //!
 //! Unlike `quantum_system_client` (which we own, and so gave its own
 //! `thiserror`-based error type with the same kind of classification baked
-//! directly into it), `iqm_server_api` is generated code: every operation
-//! returns `Result<T, iqm_server_api::apis::Error<E>>`, where `E` is a
+//! directly into it), `qrmi_iqm_server_client` is generated code: every operation
+//! returns `Result<T, qrmi_iqm_server_client::apis::Error<E>>`, where `E` is a
 //! *different, per-operation* enum (`GetJobV1Error`, `CancelJobV1Error`,
 //! ...) of named response models (`Unauthorized`, `JobNotFound`,
 //! `RateLimitExceeded`, ...). That per-operation typing is nice for anyone
 //! matching on a single specific call, but it means there's no one type to
 //! hang a shared classifier off of the way `QuantumSystemError::from_response`
 //! does. [`classify`] instead works off of
-//! [`iqm_server_api::apis::Error::ResponseError`]'s `status` field, which
+//! [`qrmi_iqm_server_client::apis::Error::ResponseError`]'s `status` field, which
 //! every operation's error carries regardless of `E` -- the same
 //! status-code-based approach, just implemented here (the consumer) instead
 //! of there (the generated crate).
@@ -40,7 +40,7 @@ pub(crate) enum ResourceKind {
     Job,
 }
 
-/// Maps a failed `iqm_server_api` call onto [`QrmiError`]. `resource_kind`
+/// Maps a failed `qrmi_iqm_server_client` call onto [`QrmiError`]. `resource_kind`
 /// disambiguates a 404 (see [`ResourceKind`]).
 ///
 /// Deliberately conservative about which statuses get their own variant:
@@ -61,16 +61,16 @@ pub(crate) enum ResourceKind {
 /// status to classify by and always fall through to
 /// [`QrmiError::Other`] too, same as a status this function doesn't
 /// otherwise recognize -- still carrying the original error as `source` (it
-/// implements `std::error::Error` via `iqm_server_api`'s own generated
+/// implements `std::error::Error` via `qrmi_iqm_server_client`'s own generated
 /// impl), so nothing is lost for anyone inspecting the chain.
 pub(crate) fn classify<T>(
-    err: iqm_server_api::apis::Error<T>,
+    err: qrmi_iqm_server_client::apis::Error<T>,
     resource_kind: ResourceKind,
 ) -> QrmiError
 where
     T: std::fmt::Debug + Send + Sync + 'static,
 {
-    if let iqm_server_api::apis::Error::ResponseError(ref content) = err {
+    if let qrmi_iqm_server_client::apis::Error::ResponseError(ref content) = err {
         let body = content.content.clone();
         match content.status {
             StatusCode::BAD_REQUEST => return QrmiError::InvalidInput(body),

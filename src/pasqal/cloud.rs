@@ -15,7 +15,7 @@ use crate::pasqal::error::PasqalError;
 use crate::{QrmiError, QuantumResource, Result};
 use anyhow::Context;
 use log::{debug, warn};
-use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
+use qrmi_pasqal_cloud_client::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 
 use super::cloud_config::PasqalCloudConfig;

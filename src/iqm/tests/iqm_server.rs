@@ -13,7 +13,7 @@
 use super::super::IQMServer;
 use crate::models::ResourceType;
 use crate::{QrmiError, QuantumResource};
-use iqm_server_api::apis::configuration;
+use qrmi_iqm_server_client::apis::configuration;
 use std::collections::HashMap;
 
 #[tokio::test]
@@ -542,7 +542,7 @@ const PAYLOAD_CASES: &[PayloadCase] = &[
 /// including `health: null`.
 #[test]
 fn payload_new_server_matches_spec_model() {
-    use iqm_server_api::models::IqmServerQuantumComputerDetails;
+    use qrmi_iqm_server_client::models::IqmServerQuantumComputerDetails;
 
     let qc: IqmServerQuantumComputerDetails =
         serde_json::from_str(NEW_SERVER_ONLINE_HEALTHY).expect("should match the spec model");
@@ -566,7 +566,7 @@ fn payload_new_server_matches_spec_model() {
 /// QcHealthDetail`.
 #[test]
 fn payload_reported_stub_matches_spec_model() {
-    use iqm_server_api::models::IqmServerQuantumComputerDetails;
+    use qrmi_iqm_server_client::models::IqmServerQuantumComputerDetails;
 
     let qc: IqmServerQuantumComputerDetails =
         serde_json::from_str(REPORTED_STUB_ONLINE_HEALTHY).expect("should parse");
@@ -588,7 +588,7 @@ fn payload_reported_stub_matches_spec_model() {
 /// difference `status()` falls back for. Pins down how they differ.
 #[test]
 fn payload_old_server_does_not_match_spec_model() {
-    use iqm_server_api::models::IqmServerQuantumComputerDetails;
+    use qrmi_iqm_server_client::models::IqmServerQuantumComputerDetails;
 
     for (name, raw) in [
         ("REPORTED_ORNL_PAYLOAD", REPORTED_ORNL_PAYLOAD),
@@ -644,7 +644,7 @@ async fn payload_status_and_is_accessible_over_http() {
 #[test]
 fn job_metadata_carries_the_servers_account_of_the_job() {
     // A job as the server reports it, minus the artifacts' contents.
-    let job: iqm_server_api::models::IqmServerJob = serde_json::from_value(json!({
+    let job: qrmi_iqm_server_client::models::IqmServerJob = serde_json::from_value(json!({
         "artifacts": [],
         "id": "4eaaa9e2-ad53-4c5c-8ef1-c1a3f219c427",
         "messages": [],

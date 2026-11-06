@@ -33,6 +33,20 @@ This Rust API client provides all functionalities provided by Quantum System API
 
 * Rust 1.91 or above
 
+## Installation
+
+Add the crate to your project from crates.io:
+
+```shell
+cargo add qrmi-ibm-quantum-system-client
+```
+
+To enable optional features, see [Feature flags](#feature-flags), for example:
+
+```shell
+cargo add qrmi-ibm-quantum-system-client --features iqp_retry_policy
+```
+
 ## How to build
 ```shell-session
 . ~/.cargo/env
@@ -65,7 +79,7 @@ RUST_LOG=trace ./bin/list_jobs
 
 ## Feature flags
 
-The quantum_system_api crate defines some [Cargo features](https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section) to enable using Quantum System Client for Rust in a variety of freestanding environments.
+The qrmi_ibm_quantum_system_client crate defines some [Cargo features](https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section) to enable using Quantum System Client for Rust in a variety of freestanding environments.
 
 ### features = ["ibmcloud_appid_auth"]
 
@@ -95,7 +109,7 @@ export DANGER_TLS_SKIP_CERT_VERIFY=true
 > [!CAUTION]
 > Insecure HTTPS request is being made by this feature. Disabling DANGER_TLS_SKIP_CERT_VERIFY is strongly advised for production.
 
-### features = ["iqp_retry_ppolicy"]
+### features = ["iqp_retry_policy"]
   
 Enable retry behavior consistent with the IBM Quantum Platform when execution lanes are full. Rather than returning an HTTP 429 error, the client library automatically retries job submission.
   

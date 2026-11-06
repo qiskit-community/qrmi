@@ -17,11 +17,11 @@ use crate::common::resolve_opt_required_any;
 use crate::error::QrmiError;
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
-use alice_bob_felis::apis::{configuration, jobs_service, targets_service};
-use alice_bob_felis::helpers::decode_api_key;
-use alice_bob_felis::models;
-use alice_bob_felis::models::{create_external_job, EventType};
 use async_trait::async_trait;
+use qrmi_alice_bob_felis_client::apis::{configuration, jobs_service, targets_service};
+use qrmi_alice_bob_felis_client::helpers::decode_api_key;
+use qrmi_alice_bob_felis_client::models;
+use qrmi_alice_bob_felis_client::models::{create_external_job, EventType};
 use serde_json::json;
 use std::collections::HashMap;
 
@@ -160,13 +160,18 @@ impl QuantumResource for AliceBobFelis {
                 .map_err(|e| classify(e, ResourceKind::Backend))?;
             // The job exists from here on, so an upload failure must not look
             // like a refused request (see `QuantumResource::task_start`).
-            jobs_service::upload_input(&self.config, &external_job.id, human_qir, None)
-                .await
-                .map_err(|e| {
-                    QrmiError::Other(anyhow::Error::new(classify(e, ResourceKind::Job)).context(
-                        format!("input upload failed for created job {}", external_job.id),
-                    ))
-                })?;
+            qrmi_alice_bob_felis_client::jobs::upload_input(
+                &self.config,
+                &external_job.id,
+                human_qir,
+                None,
+            )
+            .await
+            .map_err(|e| {
+                QrmiError::Other(anyhow::Error::new(classify(e, ResourceKind::Job)).context(
+                    format!("input upload failed for created job {}", external_job.id),
+                ))
+            })?;
             // If here we can assume all went well
             Ok(external_job.id)
         } else {

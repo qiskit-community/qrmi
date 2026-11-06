@@ -11,7 +11,7 @@
 #![cfg(feature = "api_version")]
 
 mod common;
-use quantum_system_api::ClientBuilder;
+use qrmi_ibm_quantum_system_client::ClientBuilder;
 use serde_json::json;
 
 /// Test ClientBuilder.with_api_version().

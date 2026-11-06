@@ -23,7 +23,7 @@ use async_trait::async_trait;
 use futures::future::join_all;
 use log::warn;
 use provider_filter::BackendFilter;
-use quantum_system_api::{models::Backends, AuthMethod, ClientBuilder};
+use qrmi_ibm_quantum_system_client::{models::Backends, AuthMethod, ClientBuilder};
 use std::collections::HashMap;
 use std::env;
 
@@ -51,7 +51,7 @@ use std::env;
 /// }
 /// ```
 pub struct IBMQuantumSystemProvider {
-    client: quantum_system_api::Client,
+    client: qrmi_ibm_quantum_system_client::Client,
     provider_env: HashMap<String, String>,
 }
 

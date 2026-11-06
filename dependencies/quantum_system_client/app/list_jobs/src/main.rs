@@ -13,7 +13,7 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::Jitter;
 use std::time::Duration;
 
-use quantum_system_api::{AuthMethod, ClientBuilder};
+use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
 
 #[tokio::main]
 #[allow(unreachable_code)]

@@ -14,7 +14,7 @@ use crate::common::{required_env, resolve_opt, resolve_opt_required};
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
-use pasqal_local_api::{Client, ClientBuilder, JobStatus};
+use qrmi_pasqal_local_client::{Client, ClientBuilder, JobStatus};
 use std::collections::HashMap;
 
 use async_trait::async_trait;

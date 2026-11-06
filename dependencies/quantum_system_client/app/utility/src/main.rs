@@ -9,8 +9,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use quantum_system_api::utils::s3::S3Client;
-use quantum_system_api::utils::uuid;
+use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
+use qrmi_ibm_quantum_system_client::utils::uuid;
 
 static S3_BUCKET: &str = "test";
 static S3_ENDPOINT: &str = "http://localhost:9000";

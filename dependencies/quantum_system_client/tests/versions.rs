@@ -9,7 +9,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 mod common;
-use quantum_system_api::{models::Backends, AuthMethod, ClientBuilder};
+use qrmi_ibm_quantum_system_client::{models::Backends, AuthMethod, ClientBuilder};
 use serde_json::json;
 
 /// Test Client.list_api_versions().

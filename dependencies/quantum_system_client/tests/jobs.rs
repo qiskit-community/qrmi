@@ -11,7 +11,7 @@
 
 mod common;
 use assert_json_diff::assert_json_include;
-use quantum_system_api::{
+use qrmi_ibm_quantum_system_client::{
     models::Job, models::JobStatus, models::Jobs, models::ProgramId, ClientBuilder,
 };
 use serde_json::json;

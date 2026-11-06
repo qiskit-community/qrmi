@@ -215,7 +215,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8080");
     /// ```
@@ -241,7 +241,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::{ClientBuilder, AuthMethod};
+    /// use qrmi_ibm_quantum_system_client::{ClientBuilder, AuthMethod};
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8280")
     ///     .with_auth(
@@ -268,7 +268,7 @@ impl ClientBuilder {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8280")
     ///     .with_timeout(Duration::from_secs(60));
@@ -286,7 +286,7 @@ impl ClientBuilder {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8280")
     ///     .with_connect_timeout(Duration::from_secs(5));
@@ -308,7 +308,7 @@ impl ClientBuilder {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8280")
     ///     .with_read_timeout(Duration::from_secs(30));
@@ -328,7 +328,7 @@ impl ClientBuilder {
     /// use std::time::Duration;
     /// use reqwest_retry::policies::ExponentialBackoff;
     /// use reqwest_retry::Jitter;
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let retry_policy = ExponentialBackoff::builder()
     ///     .retry_bounds(Duration::from_secs(1), Duration::from_secs(5))
@@ -350,7 +350,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8280")
     ///     .with_api_version("2024-01-01");
@@ -369,7 +369,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::ClientBuilder;
+    /// use qrmi_ibm_quantum_system_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:8280")
     ///     .with_s3bucket(
@@ -425,7 +425,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use quantum_system_api::{ClientBuilder, AuthMethod};
+    /// use qrmi_ibm_quantum_system_client::{ClientBuilder, AuthMethod};
     ///
     /// let _client = ClientBuilder::new("http://localhost:8280")
     ///     .with_auth(

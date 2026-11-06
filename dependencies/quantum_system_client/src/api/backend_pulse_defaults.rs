@@ -19,7 +19,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use quantum_system_api::{AuthMethod, ClientBuilder};
+    /// use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
