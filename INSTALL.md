@@ -73,7 +73,7 @@ install the latest (and most thoroughly tested) version.
   - A C compiler
     - For example, GCC (gcc) on Linux and Clang (clang-tools-extra) for Rust unknown targets/cross compilations. QRMI is compatible with a compiler conforming to the C11 standard.
     - make/cmake (make/cmake RPM for RHEL compatible OS)
-    - Python 3.11, 3.12 or 3.13 (for Python API)
+    - Python 3.11, 3.12, 3.13 or 3.14 (for Python API)
       - Libraries and header files needed for Python development (python3.1x-devel RPM for RHEL compatible OS)
         - `/usr/include/python3.1x`
         - `/usr/lib64/libpython3.1x.so`
@@ -81,7 +81,7 @@ install the latest (and most thoroughly tested) version.
     - QRMI Standalone C library & header
 - Runtime requires the following tools:
   - gcc (libgcc RPM for RHEL compatible OS)
-  - Python 3.11, 3.12 or 3.13 (for Python API)
+  - Python 3.11, 3.12, 3.13 or 3.14 (for Python API)
     - Libraries and header files needed for Python development (python3.1x-devel RPM for RHEL compatible OS)
 - Doxygen (for generating C API document):
   - `dnf install doxygen` for Linux(RHEL/CentOS/Rocky Linux etc.)
