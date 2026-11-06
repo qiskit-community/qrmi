@@ -64,6 +64,7 @@ async fn is_accessible_no_authentication() {
         api_client,
         backend_name: "EMU_FREE".to_string(),
         task_kinds: std::collections::HashMap::new(),
+        queue_priority: None,
     };
 
     let res_status = qrmi.status().await.expect("status() should succeed").status;
@@ -72,6 +73,57 @@ async fn is_accessible_no_authentication() {
 
     // Verify that `is_accessible()` returns true
     assert!(accessible);
+}
+
+#[tokio::test]
+async fn status_reports_queue_depth_at_or_above_project_priority() {
+    let mut server = mockito::Server::new_async().await;
+    server
+        .mock("GET", "/core-fast/api/v1/devices")
+        .match_query(mockito::Matcher::Any)
+        .with_body(r#"{"data":[{"status":"UP","availability":"ACTIVE"}]}"#)
+        .create_async()
+        .await;
+    let project_mock = server
+        .mock("GET", "/account/api/v1/projects/project-id")
+        .match_header("authorization", "Bearer opaque-token")
+        .with_body(r#"{"data":{"queue_priority":"MEDIUM"}}"#)
+        .expect(1)
+        .create_async()
+        .await;
+    server
+        .mock("GET", "/core-fast/api/v1/devices/EMU_FREE/queue-size")
+        .match_header("authorization", "Bearer opaque-token")
+        .with_body(
+            r#"{"data":{"device_queues":[
+                {"queue":"batches:emulator:CRITICAL","number_of_jobs":4},
+                {"queue":"batches:emulator:HIGH","number_of_jobs":null},
+                {"queue":"batches:emulator:MEDIUM","number_of_jobs":3},
+                {"queue":"batches:emulator:LOW","number_of_jobs":2},
+                {"queue":"batches:emulator:FREE","number_of_jobs":7}
+            ]}}"#,
+        )
+        .create_async()
+        .await;
+
+    let mut builder = ClientBuilder::new("project-id".to_string());
+    builder.with_base_url(server.url());
+    builder.with_token("opaque-token".to_string());
+    let mut qrmi = PasqalCloud {
+        api_client: builder.build().expect("client build should succeed"),
+        backend_name: "EMU_FREE".to_string(),
+        task_kinds: HashMap::new(),
+        queue_priority: None,
+    };
+
+    for _ in 0..2 {
+        let status = qrmi.status().await.expect("status() should succeed");
+        assert_eq!(status.status, ResourceStatusCode::Online);
+        // CRITICAL + MEDIUM; LOW and FREE are processed after a MEDIUM project.
+        assert_eq!(status.pending_job_count, Some(7));
+    }
+    // The project's queue priority is cached after the first call.
+    project_mock.assert_async().await;
 }
 
 #[test]
@@ -473,6 +525,7 @@ async fn resource_id_and_type_match_backend() {
         api_client,
         backend_name: "EMU_FREE".to_string(),
         task_kinds: std::collections::HashMap::new(),
+        queue_priority: None,
     };
 
     let resource_id = qrmi

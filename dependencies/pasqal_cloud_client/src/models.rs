@@ -16,7 +16,8 @@ pub mod device;
 pub use self::api::{
     AuthError, Batch, CancelBatchResponseData, CreateBatchResponseData, CreateCudaqJobResponseData,
     GetBatchResponseData, GetCudaqJobResponseData, GetDeviceResponseData,
-    GetDeviceSpecsResponseData, GetJobResponseData, Job, Response,
+    GetDeviceSpecsResponseData, GetJobResponseData, GetProjectResponseData,
+    GetQueueSizeResponseData, Job, Response,
 };
 pub(crate) use self::api::{AuthTokenResponse, JobResult};
 pub use self::batch::JobStatus;

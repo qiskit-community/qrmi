@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token_var = format!("{}_QRMI_JOB_ACQUISITION_TOKEN", args.backend);
     std::env::set_var(&token_var, &lock);
 
-    println!("{:#?}", qrmi.metadata().await);
+    println!("{:#?}", qrmi.describe().await?);
 
     let target = qrmi.target().await;
     if let Ok(v) = target {

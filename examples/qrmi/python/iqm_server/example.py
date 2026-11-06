@@ -37,7 +37,7 @@ print(f"lock {lock}")
 
 target_json = json.loads(qrmi.target().value)
 print(json.dumps(target_json, indent=2))
-print(qrmi.metadata())
+print(qrmi.describe())
 
 with open(args.input, encoding="utf-8") as f:
     primitive_input = f.read()
