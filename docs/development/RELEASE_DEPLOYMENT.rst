@@ -175,10 +175,15 @@ crate it was linked against. See the SPANK Plugin's own
 Additional Notes
 ^^^^^^^^^^^^^^^^
 
+-  When QRMI is built from crates.io, ``QRMI_GIT_HASH`` is the commit
+   the crate was packaged from, which cargo records in the crate's
+   ``.cargo_vcs_info.json``. It ends in ``-dirty`` when the crate was
+   packaged from a working tree with uncommitted changes.
 -  If ``QRMI_GIT_HASH`` shows ``unknown``, QRMI was most likely built
    from a source tree without a ``.git`` directory (e.g. an extracted
    release tarball, or a local checkout pointed at via ``QRMI_ROOT`` in
-   the consuming project's build).
+   the consuming project's build), or from a crate packaged with
+   ``--allow-dirty``.
 -  If neither ``strings`` nor ``readelf`` show a ``.version_info``
    section (or it only shows a ``SPANK_QRMI_*`` entry with no
    ``QRMI_BUILD_VERSION``), the binary may have been built before this
