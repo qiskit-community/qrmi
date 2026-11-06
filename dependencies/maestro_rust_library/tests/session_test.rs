@@ -10,6 +10,8 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
+#![cfg(unix)]
+
 use maestro_local_api::maestro::session;
 
 #[test]

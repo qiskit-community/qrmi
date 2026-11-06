@@ -14,6 +14,8 @@
 #![crate_type = "lib"]
 // The library is named "maestro-local-api"
 #![crate_name = "maestro_local_api"]
+// Keep workspace builds available on platforms without Unix domain sockets.
+#![cfg(unix)]
 
 pub mod maestro;
 

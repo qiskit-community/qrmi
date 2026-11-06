@@ -1135,7 +1135,7 @@ def test_new_native_examples_through_qrmi(native_resource):
     assert result["counts"] == {"01": 32}
 
 
-def test_readout_refusal_and_mixed_state_mirror_through_qrmi(native_resource):
+def test_readout_refusal_and_mixed_state_mirror(native_resource):
     """Removed measurements refuse readout; mixed-state mirror observables run."""
     annotated = {
         "format": "instructions",

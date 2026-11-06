@@ -15,11 +15,27 @@ use std::collections::HashMap;
 use crate::alice_bob::AliceBobFelis;
 use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
+#[cfg(unix)]
 use crate::maestro::MaestroLocal;
 use crate::models::ResourceType;
+#[cfg(unix)]
 use crate::oqtopus::Oqtopus;
 use crate::pasqal::{PasqalCloud, PasqalLocal};
 use crate::QuantumResource;
+
+#[cfg(not(unix))]
+fn oqtopus_unsupported() -> crate::QrmiError {
+    crate::QrmiError::UnsupportedResourceType(
+        "oqtopus is only supported on Unix (Linux/macOS)".to_string(),
+    )
+}
+
+#[cfg(not(unix))]
+fn maestro_unsupported() -> crate::QrmiError {
+    crate::QrmiError::UnsupportedResourceType(
+        "maestro-local is only supported on Unix (Linux/macOS)".to_string(),
+    )
+}
 
 pub(crate) fn create_resource(
     resource_type: &ResourceType,
@@ -35,8 +51,14 @@ pub(crate) fn create_resource(
         ResourceType::PasqalLocal => Box::new(PasqalLocal::new(resource_id)?),
         ResourceType::AliceBobFelis => Box::new(AliceBobFelis::new(resource_id)?),
         ResourceType::IQMServer => Box::new(IQMServer::new(resource_id)?),
+        #[cfg(unix)]
         ResourceType::MaestroLocal => Box::new(MaestroLocal::new(resource_id)?),
+        #[cfg(not(unix))]
+        ResourceType::MaestroLocal => return Err(maestro_unsupported()),
+        #[cfg(unix)]
         ResourceType::OQTOPUS => Box::new(Oqtopus::new(resource_id)?),
+        #[cfg(not(unix))]
+        ResourceType::OQTOPUS => return Err(oqtopus_unsupported()),
     })
 }
 
@@ -61,7 +83,37 @@ pub(crate) fn create_resource_from_config(
         ResourceType::PasqalCloud => Box::new(PasqalCloud::from_config(resource_id, config)?),
         ResourceType::AliceBobFelis => Box::new(AliceBobFelis::from_config(resource_id, config)?),
         ResourceType::IQMServer => Box::new(IQMServer::from_config(resource_id, config)?),
+        #[cfg(unix)]
         ResourceType::OQTOPUS => Box::new(Oqtopus::from_config(resource_id, config)?),
+        #[cfg(not(unix))]
+        ResourceType::OQTOPUS => return Err(oqtopus_unsupported()),
+        #[cfg(unix)]
         ResourceType::MaestroLocal => Box::new(MaestroLocal::from_config(resource_id, config)?),
+        #[cfg(not(unix))]
+        ResourceType::MaestroLocal => return Err(maestro_unsupported()),
     })
+}
+
+#[cfg(all(test, not(unix)))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unix_resources_return_unsupported_from_both_factories() {
+        for resource_type in [ResourceType::MaestroLocal, ResourceType::OQTOPUS] {
+            let expected = format!(
+                "{} is only supported on Unix (Linux/macOS)",
+                resource_type.as_str()
+            );
+            for result in [
+                create_resource(&resource_type, "unsupported"),
+                create_resource_from_config(&resource_type, "unsupported", HashMap::new()),
+            ] {
+                assert!(matches!(
+                    result,
+                    Err(crate::QrmiError::UnsupportedResourceType(message)) if message == expected
+                ));
+            }
+        }
+    }
 }

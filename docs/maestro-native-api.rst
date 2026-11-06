@@ -11,6 +11,10 @@ produce an explicit unsupported-API error during capability negotiation.
 
 The server uses only Rust/C/C++; Python is an optional client interface.
 
+Maestro Local is available on Unix (Linux/macOS). On other platforms, its resource
+type and payload remain defined, but resource creation returns
+``UnsupportedResourceType`` / Python ``UnsupportedResourceTypeError``.
+
 Python client
 -------------
 

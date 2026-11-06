@@ -145,11 +145,15 @@ def test_config_preserves_socket_session_and_status(server, monkeypatch):
         [
             (
                 'API {"version":2,"command":"status"}',
-                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,"healthy":true,"busy":false,"pending_job_count":0,"status_reason":null}}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,'
+                '"healthy":true,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
             ),
             (
                 'API {"version":2,"command":"status"}',
-                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,"healthy":false,"busy":false,"pending_job_count":0,"status_reason":null}}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,'
+                '"healthy":false,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
             ),
             ("SESSION 42 EXISTS", "OK YES"),
             ("SESSION 42 DELETE", "OK YES"),
@@ -267,11 +271,15 @@ def test_service_preserves_maestro_session(server, monkeypatch):
         [
             (
                 'API {"version":2,"command":"status"}',
-                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,"healthy":true,"busy":false,"pending_job_count":0,"status_reason":null}}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,'
+                '"healthy":true,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
             ),
             (
                 'API {"version":2,"command":"status"}',
-                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,"healthy":false,"busy":false,"pending_job_count":0,"status_reason":null}}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,'
+                '"healthy":false,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
             ),
             ("SESSION CREATE", "OK 42"),
             ("SESSION 42 EXISTS", "OK YES"),
@@ -448,11 +456,15 @@ def test_c_service_discovers_maestro(c_api, server, monkeypatch):
         [
             (
                 'API {"version":2,"command":"status"}',
-                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,"healthy":true,"busy":false,"pending_job_count":0,"status_reason":null}}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,'
+                '"healthy":true,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
             ),
             (
                 'API {"version":2,"command":"status"}',
-                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,"healthy":false,"busy":false,"pending_job_count":0,"status_reason":null}}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,'
+                '"healthy":false,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
             ),
         ]
     )
@@ -742,7 +754,108 @@ def test_native_and_legacy_schema_matches_helper():
 def test_shared_payload_contract_cases():
     """Apply the shared Rust, Python, and JSON-schema payload cases."""
     cases = json.loads(
-        '[{"name": "bare", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "valid": true, "config": "{}"}, {"name": "wrapped", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, "config": "{}"}, {"name": "wrapped_string", "input": {"request": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, \\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}}"}, "valid": true, "config": "{}"}, {"name": "envelope", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, "config": "{}"}, {"name": "envelope_string", "input": {"job_type": "request", "input": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, \\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}}"}, "valid": true, "config": "{}"}, {"name": "uppercase_request", "input": {"job_type": "REQUEST", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, "config": "{}"}, {"name": "legacy_config_omitted", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": true, "config": "{}"}, {"name": "legacy_config_null", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": null}, "valid": true, "config": "{}"}, {"name": "legacy_config_object", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": {}}, "valid": true, "config": "{}"}, {"name": "legacy_config_string", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": "{}"}, "valid": true, "config": "{}"}, {"name": "legacy_uppercase", "input": {"job_type": "EXECUTE", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": true, "config": "{}"}, {"name": "native_envelope_legacy_fields", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": null}, "valid": true, "config": "{}"}, {"name": "wrapper_extra", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "extra": 1}, "valid": false}, {"name": "wrapper_plus_envelope", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": false}, {"name": "bare_plus_legacy", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "ibm_plus_native", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}}, "program_id": "sampler", "parameters": {}}, "valid": false}, {"name": "legacy_extra", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "extra": 1}, "valid": false}, {"name": "legacy_bad_config", "input": {"job_type": "execute", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0, "config": 3}, "valid": false}, {"name": "legacy_bad_kind", "input": {"job_type": "missing", "input": "qasm", "qubits": 1, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "legacy_no_qubits", "input": {"job_type": "execute", "input": "qasm"}, "valid": false}, {"name": "legacy_zero_qubits", "input": {"job_type": "execute", "input": "qasm", "qubits": 0, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "legacy_bool_qubits", "input": {"job_type": "execute", "input": "qasm", "qubits": true, "simulator_type": 0, "simulation_method": 0}, "valid": false}, {"name": "oqtopus_field_bare", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}, "valid": false}, {"name": "oqtopus_field_wrapped", "input": {"request": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, "valid": false}, {"name": "oqtopus_field_wrapped_string", "input": {"request": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, \\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}, \\"job_spec\\": \\"{}\\"}"}, "valid": false, "schema_valid": true}, {"name": "oqtopus_field_envelope", "input": {"job_type": "request", "input": {"schema_version": 2, "operation": "execute", "circuit": {"num_qubits": 1, "source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, "valid": false}, {"name": "oqtopus_field_envelope_string", "input": {"job_type": "request", "input": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, \\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}, \\"job_spec\\": \\"{}\\"}"}, "valid": false, "schema_valid": true}]'
+        '[{"name": "bare", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "valid": true, '
+        '"config": "{}"}, {"name": "wrapped", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, '
+        '"config": "{}"}, {"name": "wrapped_string", '
+        '"input": {"request": "{\\"schema_version\\": 2, '
+        '\\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}}"}, "valid": true, '
+        '"config": "{}"}, {"name": "envelope", '
+        '"input": {"job_type": "request", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, '
+        '"config": "{}"}, {"name": "envelope_string", '
+        '"input": {"job_type": "request", '
+        '"input": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", '
+        '\\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}}"}, "valid": true, '
+        '"config": "{}"}, {"name": "uppercase_request", '
+        '"input": {"job_type": "REQUEST", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, '
+        '"config": "{}"}, {"name": "legacy_config_omitted", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": true, '
+        '"config": "{}"}, {"name": "legacy_config_null", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": null}, '
+        '"valid": true, "config": "{}"}, {"name": "legacy_config_object", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": {}}, '
+        '"valid": true, "config": "{}"}, {"name": "legacy_config_string", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": "{}"}, '
+        '"valid": true, "config": "{}"}, {"name": "legacy_uppercase", '
+        '"input": {"job_type": "EXECUTE", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": true, '
+        '"config": "{}"}, {"name": "native_envelope_legacy_fields", '
+        '"input": {"job_type": "request", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": null}, '
+        '"valid": true, "config": "{}"}, {"name": "wrapper_extra", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "extra": 1}, '
+        '"valid": false}, {"name": "wrapper_plus_envelope", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "job_type": "request", '
+        '"input": {"schema_version": 2, "operation": "execute", '
+        '"circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": false}, '
+        '{"name": "bare_plus_legacy", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_type": "execute", '
+        '"input": "qasm", "qubits": 1, "simulator_type": 0, '
+        '"simulation_method": 0}, "valid": false}, '
+        '{"name": "ibm_plus_native", "input": {"job_type": "request", '
+        '"input": {"schema_version": 2, "operation": "execute", '
+        '"circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "program_id": "sampler", '
+        '"parameters": {}}, "valid": false}, {"name": "legacy_extra", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "extra": 1}, '
+        '"valid": false}, {"name": "legacy_bad_config", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": 3}, '
+        '"valid": false}, {"name": "legacy_bad_kind", '
+        '"input": {"job_type": "missing", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": false}, '
+        '{"name": "legacy_no_qubits", "input": {"job_type": "execute", '
+        '"input": "qasm"}, "valid": false}, {"name": "legacy_zero_qubits",'
+        ' "input": {"job_type": "execute", "input": "qasm", "qubits": 0, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": false}, '
+        '{"name": "legacy_bool_qubits", "input": {"job_type": "execute", '
+        '"input": "qasm", "qubits": true, "simulator_type": 0, '
+        '"simulation_method": 0}, "valid": false}, '
+        '{"name": "oqtopus_field_bare", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}, '
+        '"valid": false}, {"name": "oqtopus_field_wrapped", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, '
+        '"valid": false}, {"name": "oqtopus_field_wrapped_string", '
+        '"input": {"request": "{\\"schema_version\\": 2, '
+        '\\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}, '
+        '\\"job_spec\\": \\"{}\\"}"}, "valid": false, "schema_valid": true}, '
+        '{"name": "oqtopus_field_envelope", '
+        '"input": {"job_type": "request", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, '
+        '"valid": false}, {"name": "oqtopus_field_envelope_string", '
+        '"input": {"job_type": "request", '
+        '"input": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", '
+        '\\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}, '
+        '\\"job_spec\\": \\"{}\\"}"}, "valid": false, "schema_valid": true}]'
     )
     for case in cases:
         if case["valid"]:
