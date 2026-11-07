@@ -48,7 +48,6 @@ anyhow = { version = "1.0.97", features = ["backtrace"] }
 thiserror = "2.0"
 glob = "0.3"
 pyo3 = { version = "0.29.0", features = ["anyhow"], optional = true }
-ffi_helpers = "0.3.0"
 async-trait = "0.1.88"
 dotenv = "0.15.0"
 pyo3-stub-gen = { version = "0.23.0", optional = true }
