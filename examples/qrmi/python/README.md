@@ -8,4 +8,5 @@
 * [Pasqal Cloud QRMI - CUDA-Q Examples](./cudaq)
 * [Pasqal Local QRMI](./pasqal_local)
 * [Alice and Bob Felis](./alice_bob_felis)
+* [Maestro Local QRMI](./maestro_local)
 * [QRMIService](./service)

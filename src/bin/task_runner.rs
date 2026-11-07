@@ -32,6 +32,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
 use qrmi::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
+use qrmi::maestro::MaestroLocal;
 use qrmi::pasqal::PasqalCloud;
 use qrmi::pasqal::PasqalLocal;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
@@ -98,6 +99,16 @@ pub struct QrmiInput {
 #[allow(dead_code)]
 /// QRMI resource types
 pub enum ResourceType {
+    /// Maestro local native or legacy task
+    MaestroLocal {
+        input: String,
+        job_type: String,
+        qubits: u32,
+        simulator_type: u32,
+        simulation_method: u32,
+        observables: String,
+        config: String,
+    },
     /// IBM Quantum System
     IBMQuantumSystem {
         /// Qiskit primitive input
@@ -142,6 +153,29 @@ impl ResourceType {
                 return Err(eyre!("Failed to open {}. reason = {}", args.input, err).into());
             }
         };
+        if qpu_type == "maestro-local" {
+            let Some(Payload::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            }) = MaestroLocal::payload_from_json(&payload)?
+            else {
+                unreachable!()
+            };
+            return Ok(Self::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            });
+        }
         let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
         if qpu_type == "ibm-quantum-system" {
             let input = match &deserialized.parameters {
@@ -231,6 +265,7 @@ impl ResourceType {
     #[allow(dead_code)]
     fn as_str(&self) -> &str {
         match self {
+            ResourceType::MaestroLocal { .. } => "maestro-local",
             ResourceType::IBMQuantumSystem { .. } => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
             ResourceType::IBMQuantumComputeService { .. } => "ibm-quantum-compute-service",
@@ -240,6 +275,23 @@ impl ResourceType {
     }
     fn to_payload(&self) -> Option<Payload> {
         match self {
+            ResourceType::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            } => Some(Payload::MaestroLocal {
+                input: input.clone(),
+                job_type: job_type.clone(),
+                qubits: *qubits,
+                simulator_type: *simulator_type,
+                simulation_method: *simulation_method,
+                observables: observables.clone(),
+                config: config.clone(),
+            }),
             ResourceType::IBMQuantumSystem { input, program_id }
             | ResourceType::QiskitRuntimeService { input, program_id }
             | ResourceType::IBMQuantumComputeService { input, program_id } => {
@@ -263,6 +315,9 @@ impl ResourceType {
         qpu_name: &str,
     ) -> Result<Box<dyn QuantumResource>, Box<dyn std::error::Error>> {
         match self {
+            ResourceType::MaestroLocal { .. } => {
+                Ok(Box::new(MaestroLocal::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
             ResourceType::IBMQuantumSystem { .. } => {
                 Ok(Box::new(IBMQuantumSystem::new(qpu_name)?) as Box<dyn QuantumResource>)
             }

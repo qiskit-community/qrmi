@@ -231,6 +231,7 @@ References and Acknowledgements
    :hidden:
    
    getting_started/INSTALLATION
+   maestro-native-api
    getting_started/HELP_AND_SUPPORT
 
 .. toctree::

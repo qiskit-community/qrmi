@@ -1,0 +1,897 @@
+# This code is part of Qiskit.
+#
+# (C) Copyright Qoro Quantum 2026
+#
+# This code is licensed under the Apache License, Version 2.0. You may
+# obtain a copy of this license in the LICENSE.txt file in the root directory
+# of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+#
+# Any modifications or derivative works of this code must retain this
+# copyright notice, and modified files need to carry a notice indicating
+# that they have been altered from the originals.
+
+"""Maestro binding regressions using a scripted Unix socket, without a daemon."""
+
+import ctypes
+import importlib.util
+import json
+import os
+import socket
+import subprocess
+import tempfile
+import threading
+from collections import deque
+from pathlib import Path
+
+import pytest
+
+from qrmi import (
+    ConfigError,
+    InvalidInputError,
+    Payload,
+    QrmiError,
+    QRMIService,
+    QuantumResource,
+    ResourceType,
+    ResourceStatusCode,
+    TaskNotFoundError,
+    TaskNotReadyError,
+    UnsupportedFunctionError,
+    UnsupportedPayloadError,
+)
+from qrmi.maestro import payload_from_input, request_payload
+
+
+@pytest.fixture(name="server")
+def fixture_server(monkeypatch):
+    """Serve exact command/reply pairs; fail on missing or unexpected traffic."""
+    pending = deque()
+    failures = []
+    stopping = threading.Event()
+    with tempfile.TemporaryDirectory(prefix="qrmi-") as directory:
+        path = str(Path(directory) / "maestro.sock")
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
+            listener.bind(path)
+            listener.listen()
+            listener.settimeout(0.05)
+            monkeypatch.setenv("QRMI_MAESTRO_SOCKET", path)
+
+            def serve():
+                while not stopping.is_set():
+                    try:
+                        connection, _ = listener.accept()
+                    except socket.timeout:
+                        continue
+                    with connection:
+                        connection.settimeout(2)
+                        try:
+                            with connection.makefile("rb") as stream:
+                                command = stream.readline().decode().rstrip("\r\n")
+                            expected, reply = pending.popleft()
+                            if command != expected:
+                                failures.append(
+                                    f"Expected {expected!r}, received {command!r}"
+                                )
+                        except (OSError, IndexError) as error:
+                            failures.append(str(error))
+                            reply = "ERROR unexpected request"
+                        connection.sendall((reply + "\n").encode())
+
+            worker = threading.Thread(target=serve)
+            worker.start()
+            try:
+                yield pending
+            finally:
+                stopping.set()
+                worker.join(timeout=3)
+                assert not worker.is_alive(), "mock server did not stop"
+                assert not failures, failures
+                assert not pending, f"Unconsumed requests: {list(pending)}"
+
+
+@pytest.fixture(autouse=True)
+def fixture_clean_job_environment(monkeypatch):
+    """Do not inherit scheduler state from the machine running the tests."""
+    for name in (
+        "QRMI_PLUGIN_ERROR",
+        "py_maestro_QRMI_JOB_ACQUISITION_TOKEN",
+        "offline_maestro_QRMI_JOB_ACQUISITION_TOKEN",  # pragma: allowlist secret
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("QRMI_LIST_DELIMITER", ",")
+
+
+def test_python_errors_are_classified_without_a_session(monkeypatch):
+    """Expose QRMI error categories before contacting a Maestro session."""
+    resource = QuantumResource("py_maestro", ResourceType.MaestroLocal)
+    with pytest.raises(InvalidInputError):
+        resource.task_status("invalid")
+    with pytest.raises(ConfigError):
+        resource.task_status("1")
+    with pytest.raises(InvalidInputError):
+        resource.release("invalid")
+    with pytest.raises(ConfigError):
+        resource.task_logs("1")
+    with pytest.raises(UnsupportedPayloadError):
+        resource.task_start(Payload.QiskitPrimitive(input="{}", program_id="sampler"))
+    with pytest.raises(InvalidInputError):
+        resource.task_start(
+            Payload.MaestroLocal(
+                input="OPENQASM 2.0; qreg q[1];",
+                job_type="execute",
+                qubits=1,
+                simulator_type=0,
+                simulation_method=0,
+                observables="",
+                config="{",
+            )
+        )
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "invalid")
+    with pytest.raises(ConfigError):
+        QuantumResource("py_maestro", ResourceType.MaestroLocal)
+
+
+def test_config_preserves_socket_session_and_status(server, monkeypatch):
+    """The config factory uses explicit settings despite conflicting environment."""
+    socket_path = os.environ["QRMI_MAESTRO_SOCKET"]
+    monkeypatch.setenv("QRMI_MAESTRO_SOCKET", "/wrong.sock")
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "invalid")
+    resource = QuantumResource.from_config(
+        "py_maestro",
+        ResourceType.MaestroLocal,
+        {"qrmi_maestro_socket": socket_path, "qrmi_job_acquisition_token": "42"},
+    )
+    server.extend(
+        [
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,'
+                '"healthy":true,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
+            ),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,'
+                '"healthy":false,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
+            ),
+            ("SESSION 42 EXISTS", "OK YES"),
+            ("SESSION 42 DELETE", "OK YES"),
+        ]
+    )
+    assert resource.status().to_dict() == {
+        "status": "online",
+        "status_reason": None,
+        "healthy": True,
+        "busy": False,
+        "capacity": None,
+        "pending_job_count": 0,
+    }
+    assert resource.status().status == ResourceStatusCode.Offline
+    assert resource.acquire() == "42"
+    resource.release("42")
+    assert os.environ["QRMI_MAESTRO_SOCKET"] == "/wrong.sock"
+    with pytest.raises(ConfigError):
+        QuantumResource.from_config(
+            "py_maestro",
+            ResourceType.MaestroLocal,
+            {"QRMI_JOB_ACQUISITION_TOKEN": "invalid"},
+        )
+
+
+def test_provider_values_preserve_upstream_abi():
+    """OQTOPUS keeps the upstream value; Maestro moves after it."""
+    assert int(ResourceType.OQTOPUS) == 7
+    assert int(ResourceType.MaestroLocal) == 8
+
+
+@pytest.mark.parametrize("mode", ["execute", "estimate"])
+def test_lua_maestro_payload_dispatch(server, monkeypatch, mode):
+    """Exercise the Lua/C adapters, defaults, errors and detached sessions."""
+    module = os.environ.get("QRMI_TEST_LUA_MODULE")
+    executable = os.environ.get("QRMI_TEST_LUA")
+    if not module or not executable:
+        pytest.skip("set QRMI_TEST_LUA_MODULE and QRMI_TEST_LUA for Lua checks")
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "8")
+    server.extend(
+        [
+            ("SESSION 8 EXISTS", "OK YES"),
+            ("SESSION 8 TASK CREATE", "OK 1"),
+            (f"SESSION 8 TASK 1 SET_TYPE {mode.upper()}", "OK YES"),
+        ]
+    )
+    if mode == "estimate":
+        server.append(("SESSION 8 TASK 1 SET_OBSERVABLES Z", "OK YES"))
+    simulator, method, config = (
+        (2, 3, '{"shots":8}') if mode == "estimate" else (0, 0, "{}")
+    )
+    server.extend(
+        [
+            ("SESSION 8 TASK 1 SET_QUBITS 1", "OK YES"),
+            (f"SESSION 8 TASK 1 SET_SIM_TYPE {simulator}", "OK YES"),
+            (f"SESSION 8 TASK 1 SET_METHOD {method}", "OK YES"),
+            ("SESSION 8 TASK 1 SET_QASM OPENQASM 2.0; qreg q[1];", "OK YES"),
+            (f"SESSION 8 TASK 1 SET_OPTIONS {config}", "OK YES"),
+            ("SESSION 8 TASK 1 EXECUTE", "OK YES"),
+            ("SESSION 8 DELETE", "OK YES"),
+        ]
+    )
+    script = """
+local loader = assert(package.loadlib(os.getenv("QRMI_TEST_LUA_MODULE"), "luaopen_qrmi"))
+local qrmi = loader()
+local resource = assert(qrmi.new("py_maestro", "maestro-local"))
+assert(resource:acquire() == "8")
+local payload = { input = "OPENQASM 2.0; qreg q[1];", qubits = 1 }
+if arg[1] == "estimate" then
+    payload.job_type = "estimate"
+    payload.observables = "Z"
+    payload.simulator_type = 2
+    payload.simulation_method = 3
+    payload.config = '{"shots":8}'
+end
+local task, err = resource:task_start({ maestro_local = payload })
+assert(task == "1", err)
+local rejected, reason = resource:task_start({
+    qiskit_primitive = { input = "{}", program_id = "sampler" }
+})
+assert(rejected == nil and reason:find("payload type is not supported", 1, true))
+for field, value in pairs({ qubits = 4294967297, simulator_type = -1, simulation_method = 4294967296 }) do
+    local saved = payload[field]
+    payload[field] = value
+    local ok, message = pcall(resource.task_start, resource, { maestro_local = payload })
+    assert(not ok and message:find(field .. " must be an integer in 0..4294967295", 1, true), message)
+    payload[field] = saved
+end
+payload.input = string.char(255)
+rejected, reason = resource:task_start({ maestro_local = payload })
+assert(rejected == nil and reason:find("UTF-8", 1, true))
+assert(resource:detach() == "8")
+assert(resource:detach() == nil)
+resource:free()
+local other = assert(qrmi.new("py_maestro", "maestro-local"))
+assert(other:release("8"))
+other:free()
+"""
+    result = subprocess.run(
+        [executable, "-", mode],
+        input=script,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_service_preserves_maestro_session(server, monkeypatch):
+    """Discover accessible resources and retain their acquired sessions."""
+    monkeypatch.setenv("QRMI_JOB_QPU_RESOURCES", "py_maestro,offline_maestro")
+    monkeypatch.setenv("QRMI_JOB_QPU_TYPES", "maestro-local,maestro-local")
+    server.extend(
+        [
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,'
+                '"healthy":true,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
+            ),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,'
+                '"healthy":false,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
+            ),
+            ("SESSION CREATE", "OK 42"),
+            ("SESSION 42 EXISTS", "OK YES"),
+            ("SESSION 42 DELETE", "OK YES"),
+        ]
+    )
+    service = QRMIService()
+    resources = service.resources()
+    assert len(resources) == 1
+    resource = service.resource("py_maestro")
+    assert resource is resources[0]
+    assert service.resource("offline_maestro") is None
+    assert resource.resource_id() == "py_maestro"
+    assert resource.resource_type() == ResourceType.MaestroLocal
+    assert resource.acquire() == "42"
+    assert service.resource("py_maestro").acquire() == "42"
+    resource.release("42")
+    with pytest.raises(ConfigError):
+        resource.task_status("1")
+
+
+def test_missing_and_failed_tasks_raise_distinct_errors(server, monkeypatch):
+    """Keep missing tasks distinct from known failures in Python."""
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "8")
+    server.extend(
+        [
+            ("SESSION 8 TASK 1 EXISTS", "OK NO"),
+            # Without a recorded cancellation, a missing task stays not found.
+            (
+                'API {"version":2,"command":"logs","session_id":8,"task_id":1}',
+                'OK {"version":2,"ok":false,"error":'
+                '{"code":"task_not_found","message":"Task does not exist"}}',
+            ),
+            ("SESSION 8 TASK 2 EXISTS", "OK YES"),
+            ("SESSION 8 TASK 2 FAILED", "OK YES"),
+        ]
+    )
+    resource = QuantumResource("py_maestro", ResourceType.MaestroLocal)
+    with pytest.raises(TaskNotFoundError):
+        resource.task_status("1")
+    with pytest.raises(TaskNotReadyError, match="Failed"):
+        resource.task_result("2")
+    resource.task_stop("2")
+
+
+class _Resources(ctypes.Structure):
+    _fields_ = [
+        ("resources", ctypes.POINTER(ctypes.c_void_p)),
+        ("length", ctypes.c_size_t),
+    ]
+
+
+class _MaestroBody(ctypes.Structure):  # pylint: disable=too-few-public-methods
+    """QrmiPayload_MaestroLocal_Body."""
+
+    _fields_ = [
+        ("input", ctypes.c_char_p),
+        ("job_type", ctypes.c_char_p),
+        ("qubits", ctypes.c_uint32),
+        ("simulator_type", ctypes.c_uint32),
+        ("simulation_method", ctypes.c_uint32),
+        ("observables", ctypes.c_char_p),
+        ("config", ctypes.c_char_p),
+    ]
+
+
+class _Payload(ctypes.Structure):  # pylint: disable=too-few-public-methods
+    """QrmiPayload with its QRMI_PAYLOAD_MAESTRO_LOCAL variant."""
+
+    _fields_ = [("tag", ctypes.c_int), ("maestro", _MaestroBody)]
+
+
+QRMI_PAYLOAD_MAESTRO_LOCAL = 5
+
+
+@pytest.fixture(name="c_api")
+def fixture_c_api():
+    """Opt in with QRMI_TEST_LIBRARY pointing to the matching C library."""
+    path = os.environ.get("QRMI_TEST_LIBRARY")
+    if path is None:
+        pytest.skip(
+            "set QRMI_TEST_LIBRARY to the rebuilt libqrmi.so to check the C ABI"
+        )
+    api = ctypes.CDLL(path)
+    signatures = {
+        "qrmi_resource_new": ([ctypes.c_char_p, ctypes.c_int], ctypes.c_void_p),
+        "qrmi_resource_free": ([ctypes.c_void_p], ctypes.c_int),
+        "qrmi_resource_type": (
+            [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)],
+            ctypes.c_int,
+        ),
+        "qrmi_resource_id": (
+            [ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)],
+            ctypes.c_int,
+        ),
+        "qrmi_resource_target": (
+            [ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)],
+            ctypes.c_int,
+        ),
+        "qrmi_resource_task_status": (
+            [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int)],
+            ctypes.c_int,
+        ),
+        "qrmi_get_last_error": ([], ctypes.c_void_p),
+        "qrmi_get_last_error_kind": ([], ctypes.c_int),
+        "qrmi_string_free": ([ctypes.c_void_p], ctypes.c_int),
+        "qrmi_service_resources": ([ctypes.POINTER(_Resources)], ctypes.c_int),
+        "qrmi_service_resources_free": ([ctypes.POINTER(_Resources)], ctypes.c_int),
+        "qrmi_resource_task_start": (
+            [
+                ctypes.c_void_p,
+                ctypes.POINTER(_Payload),
+                ctypes.POINTER(ctypes.c_void_p),
+            ],
+            ctypes.c_int,
+        ),
+    }
+    for name, (arguments, result) in signatures.items():
+        function = getattr(api, name)
+        function.argtypes = arguments
+        function.restype = result
+    return api
+
+
+def test_c_error_codes_and_maestro_enum(c_api, server, monkeypatch):
+    """Keep C error codes and the Maestro enum aligned with Python."""
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "invalid")
+    assert not c_api.qrmi_resource_new(b"py_maestro", int(ResourceType.MaestroLocal))
+    assert c_api.qrmi_get_last_error_kind() == 103  # ParseError
+    message = c_api.qrmi_get_last_error()
+    assert message
+    try:
+        assert b"ACQUISITION_TOKEN" in ctypes.string_at(message)
+    finally:
+        c_api.qrmi_string_free(message)
+
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "8")
+    server.extend(
+        [
+            ('API {"version":2,"command":"capabilities"}', "ERROR Unknown command"),
+            ("SESSION 8 TASK 1 EXISTS", "OK NO"),
+            # An old server has no retained diagnostics to consult.
+            (
+                'API {"version":2,"command":"logs","session_id":8,"task_id":1}',
+                "ERROR Unknown command",
+            ),
+        ]
+    )
+    resource = c_api.qrmi_resource_new(b"py_maestro", int(ResourceType.MaestroLocal))
+    assert resource
+    try:
+        kind = ctypes.c_int()
+        assert c_api.qrmi_resource_type(resource, ctypes.byref(kind)) == 0
+        assert kind.value == int(ResourceType.MaestroLocal)
+        value = ctypes.c_void_p()
+        assert c_api.qrmi_resource_target(resource, ctypes.byref(value)) == 105
+        assert (
+            c_api.qrmi_resource_task_status(resource, b"invalid", ctypes.byref(kind))
+            == 109
+        )
+        assert (
+            c_api.qrmi_resource_task_status(resource, b"1", ctypes.byref(kind)) == 112
+        )
+        assert c_api.qrmi_get_last_error_kind() == 112
+    finally:
+        c_api.qrmi_resource_free(resource)
+
+
+def test_c_service_discovers_maestro(c_api, server, monkeypatch):
+    """Return accessible Maestro resources through the shared C service."""
+    monkeypatch.setenv("QRMI_JOB_QPU_RESOURCES", "py_maestro,offline_maestro")
+    monkeypatch.setenv("QRMI_JOB_QPU_TYPES", "maestro-local,maestro-local")
+    server.extend(
+        [
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":true,'
+                '"healthy":true,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
+            ),
+            (
+                'API {"version":2,"command":"status"}',
+                'OK {"version":2,"ok":true,"status":{"accepting_jobs":false,'
+                '"healthy":false,"busy":false,"pending_job_count":0,'
+                '"status_reason":null}}',
+            ),
+        ]
+    )
+    resources = _Resources()
+    assert c_api.qrmi_service_resources(ctypes.byref(resources)) == 0
+    try:
+        assert resources.length == 1
+        resource = resources.resources[0]
+        identifier = ctypes.c_void_p()
+        assert c_api.qrmi_resource_id(resource, ctypes.byref(identifier)) == 0
+        try:
+            assert ctypes.string_at(identifier) == b"py_maestro"
+        finally:
+            c_api.qrmi_string_free(identifier)
+        kind = ctypes.c_int()
+        assert c_api.qrmi_resource_type(resource, ctypes.byref(kind)) == 0
+        assert kind.value == int(ResourceType.MaestroLocal)
+    finally:
+        c_api.qrmi_service_resources_free(ctypes.byref(resources))
+
+
+def test_target_negotiates_old_server(server):
+    """Report unsupported capabilities when a legacy daemon rejects the API."""
+    server.append(
+        ('API {"version":2,"command":"capabilities"}', "ERROR Unknown command")
+    )
+    with pytest.raises(UnsupportedFunctionError):
+        QuantumResource("py_maestro", ResourceType.MaestroLocal).target()
+
+
+@pytest.mark.parametrize(
+    "code,exception",
+    [
+        ("unsupported_capability", UnsupportedFunctionError),
+        ("unsupported_operation", UnsupportedFunctionError),
+        ("invalid_config", ConfigError),
+        ("session_not_found", ConfigError),
+    ],
+)
+def test_native_error_codes_reach_python_categories(
+    server, monkeypatch, code, exception
+):
+    """Preserve native error categories and messages in Python exceptions."""
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "4")
+    server.append(
+        (
+            'API {"version":2,"command":"logs","session_id":4,"task_id":8}',
+            "OK "
+            + json.dumps(
+                {
+                    "version": 2,
+                    "ok": False,
+                    "error": {"code": code, "message": "review probe"},
+                }
+            ),
+        )
+    )
+    resource = QuantumResource("py_maestro", ResourceType.MaestroLocal)
+    with pytest.raises(exception, match="review probe"):
+        resource.task_logs("8")
+
+
+NATIVE_REQUEST = '{"schema_version":2,"operation":"execute"}'
+SUBMIT = (
+    'API {"version":2,"command":"submit","session_id":3,"request":'
+    + NATIVE_REQUEST
+    + "}"
+)
+CAPABILITIES = (
+    'API {"version":2,"command":"capabilities"}',
+    'OK {"version":2,"ok":true,"native":{"schema_version":2}}',
+)
+UNRECOGNIZED_SUBMISSION_REPLIES = [
+    'OK {"ok":true,"task_id":73}',
+    "garbled response",
+    "ERROR Unknown command",
+    'OK {"version":3,"ok":true,"task_id":73}',
+    'OK {"version":2,"ok":true}',
+]
+
+
+def native_payload():
+    """A native request payload; legacy positional fields are unused."""
+    return Payload.MaestroLocal(
+        input=NATIVE_REQUEST,
+        job_type="request",
+        qubits=0,
+        simulator_type=0,
+        simulation_method=0,
+        observables="",
+        config="{}",
+    )
+
+
+@pytest.mark.parametrize("reply", UNRECOGNIZED_SUBMISSION_REPLIES)
+def test_unrecognized_submit_reply_is_generic(server, monkeypatch, reply):
+    """Only the generic error may follow a sent request without a valid refusal."""
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "3")
+    server.extend([CAPABILITIES, (SUBMIT, reply)])
+    resource = QuantumResource("py_maestro", ResourceType.MaestroLocal)
+    with pytest.raises(QrmiError, match="may have been created") as raised:
+        resource.task_start(native_payload())
+    assert raised.type is QrmiError
+
+
+def test_submit_refusal_keeps_its_category(server, monkeypatch):
+    """A well-formed v2 refusal still proves that no task was created."""
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "3")
+    refusal = {
+        "version": 2,
+        "ok": False,
+        "error": {"code": "invalid_input", "message": "review probe"},
+    }
+    server.extend([CAPABILITIES, (SUBMIT, "OK " + json.dumps(refusal))])
+    resource = QuantumResource("py_maestro", ResourceType.MaestroLocal)
+    with pytest.raises(InvalidInputError, match="review probe"):
+        resource.task_start(native_payload())
+
+
+def test_c_submit_codes_follow_task_start_contract(c_api, server, monkeypatch):
+    """C callers see QRMI_RETURN_CODE_ERROR (100) when a task may exist."""
+    monkeypatch.setenv("py_maestro_QRMI_JOB_ACQUISITION_TOKEN", "3")
+    refusal = (
+        'OK {"version":2,"ok":false,"error":'
+        '{"code":"invalid_input","message":"review probe"}}'
+    )
+    cases = [(reply, 100) for reply in UNRECOGNIZED_SUBMISSION_REPLIES]
+    cases.append((refusal, 109))
+    resource = c_api.qrmi_resource_new(b"py_maestro", int(ResourceType.MaestroLocal))
+    assert resource
+    try:
+        for index, (reply, expected) in enumerate(cases):
+            # Every protocol failure resets negotiation; a refusal keeps it.
+            if index == 0 or cases[index - 1][1] == 100:
+                server.append(CAPABILITIES)
+            server.append((SUBMIT, reply))
+            payload = _Payload(
+                QRMI_PAYLOAD_MAESTRO_LOCAL,
+                _MaestroBody(NATIVE_REQUEST.encode(), b"request", 0, 0, 0, b"", b"{}"),
+            )
+            task = ctypes.c_void_p()
+            code = c_api.qrmi_resource_task_start(
+                resource, ctypes.byref(payload), ctypes.byref(task)
+            )
+            assert code == expected, reply
+    finally:
+        c_api.qrmi_resource_free(resource)
+
+
+EXAMPLES = Path(__file__).resolve().parents[4] / "examples/task_runner/maestro_local"
+
+
+def test_request_payload_preserves_native_fields():
+    """Keep noise, distribution, and multiline source intact in each envelope."""
+    request = {
+        "schema_version": 2,
+        "operation": "execute",
+        "circuit": {
+            "source": "OPENQASM 2.0;\n// line comment\nqreg q[2];",
+            "num_qubits": 2,
+        },
+        "simulator": {
+            "backend": "distributed_gpu",
+            "distribution": {"devices": [0, 1]},
+        },
+        "noise": {
+            "channels": [{"kind": "bit_flip", "targets": [0], "probability": 0.1}]
+        },
+    }
+    for task_input in (
+        request,
+        {"request": request},
+        {"job_type": "request", "input": request},
+    ):
+        payload = payload_from_input(task_input)
+        assert payload.job_type == "request"
+        assert payload.qubits == 0
+        assert json.loads(payload.input) == request
+
+
+def test_legacy_runner_accepts_config_object_or_string():
+    """Serialize object configurations without double-encoding JSON strings."""
+    task = {
+        "input": "OPENQASM 2.0; qreg q[1];",
+        "job_type": "execute",
+        "qubits": 1,
+        "simulator_type": 0,
+        "simulation_method": 0,
+    }
+    for config in ({"shots": 4}, '{"shots":4}'):
+        payload = payload_from_input({**task, "config": config})
+        assert json.loads(payload.config) == {"shots": 4}
+        assert payload.input == task["input"]
+
+
+@pytest.mark.parametrize(
+    "document", [[], {}, {"schema_version": 1}, '{"schema_version":1}']
+)
+def test_request_payload_rejects_wrong_schema(document):
+    """Reject missing and unsupported schema versions before submission."""
+    with pytest.raises(ValueError):
+        request_payload(document)
+
+
+def test_request_payload_rejects_nonfinite_options():
+    """Reject nonfinite values instead of emitting invalid JSON numbers."""
+    with pytest.raises(ValueError):
+        request_payload(
+            {"schema_version": 2, "simulator": {"options": {"threshold": float("nan")}}}
+        )
+
+
+def _load_native_examples():
+    spec = importlib.util.spec_from_file_location(
+        "gen_native_input", EXAMPLES / "gen_native_input.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.NATIVE_EXAMPLES
+
+
+NATIVE_EXAMPLES = _load_native_examples()
+
+
+@pytest.mark.parametrize("name", sorted(NATIVE_EXAMPLES))
+def test_native_examples_match_schema_and_helper(name):
+    """Accept every native example in the payload helper (and schema if jsonschema is installed)."""
+    document = NATIVE_EXAMPLES[name]
+    assert json.loads(payload_from_input(document).input) == document
+    try:
+        import jsonschema  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return
+    schema = json.loads(
+        (EXAMPLES.parents[2] / "qrmi_payload_v1_schema.json").read_text()
+    )
+    jsonschema.Draft202012Validator(schema).validate(document)
+
+
+def test_native_and_legacy_schema_matches_helper():
+    """Keep schema validation consistent with native and legacy parsing."""
+    root = Path(__file__).resolve().parents[4]
+    native = {"schema_version": 2, "operation": "execute"}
+    legacy = {
+        "job_type": "execute",
+        "input": "qasm",
+        "qubits": 1,
+        "simulator_type": 0,
+        "simulation_method": 0,
+    }
+    valid_values = [
+        native,
+        {"request": native},
+        {"request": json.dumps(native)},
+        {"job_type": "request", "input": native},
+        {"job_type": "request", "input": json.dumps(native)},
+        {**legacy, "job_type": "request", "input": native},
+        legacy,
+        {**legacy, "config": {"shots": 4}},
+        {**legacy, "config": '{"shots":4}'},
+    ]
+    invalid_values = [
+        {"job_type": "execute", "input": "qasm"},
+        {**legacy, "qubits": 0},
+        {**legacy, "input": {}},
+        {"job_type": "request", "input": {"schema_version": 1}},
+        {"job_type": "request"},
+    ]
+    for value in valid_values:
+        payload_from_input(value)
+    for value in invalid_values:
+        with pytest.raises(ValueError):
+            payload_from_input(value)
+    try:
+        import jsonschema  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return
+    schema = json.loads((root / "qrmi_payload_v1_schema.json").read_text())
+    validator = jsonschema.Draft202012Validator(schema)
+    validator.check_schema(schema)
+    for value in valid_values:
+        validator.validate(value)
+    for value in invalid_values:
+        assert not validator.is_valid(value), value
+
+
+def test_shared_payload_contract_cases():
+    """Apply the shared Rust, Python, and JSON-schema payload cases."""
+    cases = json.loads(
+        '[{"name": "bare", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "valid": true, '
+        '"config": "{}"}, {"name": "wrapped", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, '
+        '"config": "{}"}, {"name": "wrapped_string", '
+        '"input": {"request": "{\\"schema_version\\": 2, '
+        '\\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}}"}, "valid": true, '
+        '"config": "{}"}, {"name": "envelope", '
+        '"input": {"job_type": "request", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, '
+        '"config": "{}"}, {"name": "envelope_string", '
+        '"input": {"job_type": "request", '
+        '"input": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", '
+        '\\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}}"}, "valid": true, '
+        '"config": "{}"}, {"name": "uppercase_request", '
+        '"input": {"job_type": "REQUEST", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": true, '
+        '"config": "{}"}, {"name": "legacy_config_omitted", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": true, '
+        '"config": "{}"}, {"name": "legacy_config_null", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": null}, '
+        '"valid": true, "config": "{}"}, {"name": "legacy_config_object", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": {}}, '
+        '"valid": true, "config": "{}"}, {"name": "legacy_config_string", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": "{}"}, '
+        '"valid": true, "config": "{}"}, {"name": "legacy_uppercase", '
+        '"input": {"job_type": "EXECUTE", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": true, '
+        '"config": "{}"}, {"name": "native_envelope_legacy_fields", '
+        '"input": {"job_type": "request", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": null}, '
+        '"valid": true, "config": "{}"}, {"name": "wrapper_extra", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "extra": 1}, '
+        '"valid": false}, {"name": "wrapper_plus_envelope", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "job_type": "request", '
+        '"input": {"schema_version": 2, "operation": "execute", '
+        '"circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}}, "valid": false}, '
+        '{"name": "bare_plus_legacy", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_type": "execute", '
+        '"input": "qasm", "qubits": 1, "simulator_type": 0, '
+        '"simulation_method": 0}, "valid": false}, '
+        '{"name": "ibm_plus_native", "input": {"job_type": "request", '
+        '"input": {"schema_version": 2, "operation": "execute", '
+        '"circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}}, "program_id": "sampler", '
+        '"parameters": {}}, "valid": false}, {"name": "legacy_extra", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "extra": 1}, '
+        '"valid": false}, {"name": "legacy_bad_config", '
+        '"input": {"job_type": "execute", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0, "config": 3}, '
+        '"valid": false}, {"name": "legacy_bad_kind", '
+        '"input": {"job_type": "missing", "input": "qasm", "qubits": 1, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": false}, '
+        '{"name": "legacy_no_qubits", "input": {"job_type": "execute", '
+        '"input": "qasm"}, "valid": false}, {"name": "legacy_zero_qubits",'
+        ' "input": {"job_type": "execute", "input": "qasm", "qubits": 0, '
+        '"simulator_type": 0, "simulation_method": 0}, "valid": false}, '
+        '{"name": "legacy_bool_qubits", "input": {"job_type": "execute", '
+        '"input": "qasm", "qubits": true, "simulator_type": 0, '
+        '"simulation_method": 0}, "valid": false}, '
+        '{"name": "oqtopus_field_bare", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}, '
+        '"valid": false}, {"name": "oqtopus_field_wrapped", '
+        '"input": {"request": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, '
+        '"valid": false}, {"name": "oqtopus_field_wrapped_string", '
+        '"input": {"request": "{\\"schema_version\\": 2, '
+        '\\"operation\\": \\"execute\\", \\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}, '
+        '\\"job_spec\\": \\"{}\\"}"}, "valid": false, "schema_valid": true}, '
+        '{"name": "oqtopus_field_envelope", '
+        '"input": {"job_type": "request", "input": {"schema_version": 2, '
+        '"operation": "execute", "circuit": {"num_qubits": 1, '
+        '"source": "OPENQASM 2.0; qreg q[1];"}, "job_spec": "{}"}}, '
+        '"valid": false}, {"name": "oqtopus_field_envelope_string", '
+        '"input": {"job_type": "request", '
+        '"input": "{\\"schema_version\\": 2, \\"operation\\": \\"execute\\", '
+        '\\"circuit\\": {\\"num_qubits\\": 1, '
+        '\\"source\\": \\"OPENQASM 2.0; qreg q[1];\\"}, '
+        '\\"job_spec\\": \\"{}\\"}"}, "valid": false, "schema_valid": true}]'
+    )
+    for case in cases:
+        if case["valid"]:
+            payload = payload_from_input(case["input"])
+            assert json.loads(payload.config) == json.loads(case["config"]), case[
+                "name"
+            ]
+        else:
+            with pytest.raises(ValueError):
+                payload_from_input(case["input"])
+
+
+@pytest.mark.parametrize("kind", ["execute", "estimate"])
+@pytest.mark.parametrize(
+    "field", ["input", "qubits", "simulator_type", "simulation_method"]
+)
+def test_missing_legacy_fields_have_descriptive_errors(kind, field):
+    """Name the missing legacy field for each supported legacy operation."""
+    document = {
+        "job_type": kind,
+        "input": "qasm",
+        "qubits": 1,
+        "simulator_type": 0,
+        "simulation_method": 0,
+    }
+    del document[field]
+    with pytest.raises(ValueError, match=f"^Missing legacy Maestro fields: {field}$"):
+        payload_from_input(document)
+
+
+def test_missing_native_and_legacy_fields():
+    """Describe absent native input and all missing legacy fields."""
+    with pytest.raises(ValueError, match="^Missing Maestro request field: input$"):
+        payload_from_input({"job_type": "REQUEST"})
+    with pytest.raises(
+        ValueError,
+        match="^Missing legacy Maestro fields: input, qubits, simulator_type, simulation_method$",
+    ):
+        payload_from_input({"job_type": "execute"})

@@ -5,3 +5,4 @@
 * [IQM Server](./iqm)
 * [OQTOPUS](./oqtopus)
 * [Pasqal Cloud/Local](./pasqal)
+* [Maestro Local](./maestro)

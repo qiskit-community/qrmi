@@ -364,6 +364,18 @@ Example:
    task_runner ab_emu_1q_lescanne_2020 /shared/input/alice_bob_felis_input.json
 
 
+Maestro Local
+^^^^^^^^^^^^^
+
+Use ``QRMI_JOB_QPU_TYPES=maestro-local`` and an existing Maestro session in
+``{backend_name}_QRMI_JOB_ACQUISITION_TOKEN``. Both the Python and Rust runners
+accept legacy execute/estimate payloads and schema-2 native requests. The native
+form exposes noise models, state queries and distributed simulators using symbolic
+backend names. See :doc:`TASK_RUNNER_MAESTRO` for setup, downloadable inputs and
+GPU/MPI prerequisites, and :doc:`../../maestro-native-api` for payload semantics
+and diagnostics.
+
+
 License
 -------
 

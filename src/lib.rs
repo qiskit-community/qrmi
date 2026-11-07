@@ -17,6 +17,9 @@ pub mod error;
 pub use error::{QrmiError, QrmiErrorKind};
 pub mod ibm;
 pub mod iqm;
+// Maestro communicates over Unix domain sockets.
+#[cfg(unix)]
+pub mod maestro;
 // OQTOPUS loads libpython via dlopen (Unix-only); see src/oqtopus/lib.rs.
 #[cfg(unix)]
 pub mod oqtopus;

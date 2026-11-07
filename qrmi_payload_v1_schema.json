@@ -108,7 +108,221 @@
                     "description": "Job spec, as a JSON object string matching the keyword arguments of Python's `OqtopusJobSpec` dataclass, minus `device_id` (QRMI fills that in automatically). Required keys: `job_type` (one of \"sampling\", \"estimation\", \"multi_manual\", \"sse\") and `program` (array of strings; a single program is a single-element array; `sse` jobs require exactly one). Optional keys: `shots` (integer; omit the key entirely to use OQTOPUS's default of 1000 — sending `null` fails), `name`, `description`, `transpiler_info`, `simulator_info`, `mitigation_info`, and `operator` (for estimation jobs)."
                 }
             }
+        },
+        {
+            "type": "object",
+            "description": "Payload for `maestro-local` QPU resource",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "required": [
+                        "input",
+                        "job_type",
+                        "qubits",
+                        "simulator_type",
+                        "simulation_method"
+                    ],
+                    "properties": {
+                        "input": {
+                            "type": "string",
+                            "description": "QASM source for legacy execute/estimate jobs."
+                        },
+                        "job_type": {
+                            "type": "string",
+                            "pattern": "^([eE][xX][eE][cC][uU][tT][eE]|[eE][sS][tT][iI][mM][aA][tT][eE])$",
+                            "description": "Job type."
+                        },
+                        "qubits": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4294967295,
+                            "description": "Positive qubit count for legacy jobs."
+                        },
+                        "simulator_type": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295,
+                            "description": "Simulator type."
+                        },
+                        "simulation_method": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295,
+                            "description": "Simulation method."
+                        },
+                        "observables": {
+                            "type": "string",
+                            "description": "Observables."
+                        },
+                        "config": {
+                            "type": [
+                                "string",
+                                "object",
+                                "null"
+                            ],
+                            "description": "Optional configuration parameters for the job, in a json format."
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "$ref": "#/$defs/maestroRequest"
+                },
+                {
+                    "type": "object",
+                    "required": [
+                        "request"
+                    ],
+                    "properties": {
+                        "request": {
+                            "oneOf": [
+                                {
+                                    "$ref": "#/$defs/maestroRequest"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "required": [
+                        "job_type",
+                        "input"
+                    ],
+                    "properties": {
+                        "job_type": {
+                            "type": "string",
+                            "pattern": "^[rR][eE][qQ][uU][eE][sS][tT]$"
+                        },
+                        "input": {
+                            "oneOf": [
+                                {
+                                    "$ref": "#/$defs/maestroRequest"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "qubits": {},
+                        "simulator_type": {},
+                        "simulation_method": {},
+                        "observables": {},
+                        "config": {}
+                    },
+                    "additionalProperties": false
+                }
+            ]
         }
-    ]
+    ],
+    "$defs": {
+        "maestroRequest": {
+            "type": "object",
+            "required": [
+                "schema_version",
+                "operation"
+            ],
+            "properties": {
+                "schema_version": {
+                    "const": 2
+                },
+                "operation": {
+                    "type": "string"
+                }
+            },
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "input"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "job_type"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "qubits"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "simulator_type"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "simulation_method"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "request"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "program_id"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "parameters"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "job_runs"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sequence"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "human_qir"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "input_params"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "iqmjson"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "use_timeslot"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "tag"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "job_spec"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
 }
-

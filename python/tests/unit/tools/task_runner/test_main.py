@@ -51,7 +51,14 @@ def test_signal_handler_stops_application():
     assert app.is_running is False
 
 
-def test_find_qpu_type(monkeypatch):
+@pytest.mark.parametrize(
+    ("resource_name", "resource_type"),
+    [
+        ("pasqal-cloud", ResourceType.PasqalCloud),
+        ("maestro-local", ResourceType.MaestroLocal),
+    ],
+)
+def test_find_qpu_type(monkeypatch, resource_name, resource_type):
     """Test that _find_qpu_type returns the correct ResourceType for a given QPU name."""
     app = App("qpu1", "input.json", "output.json")
 
@@ -59,11 +66,11 @@ def test_find_qpu_type(monkeypatch):
         "qrmi.tools.task_runner.main.get_job_qpu_resources_and_types",
         lambda: (
             ["qpu1"],
-            ["pasqal-cloud"],
+            [resource_name],
         ),
     )
 
-    assert app._find_qpu_type("qpu1") == ResourceType.PasqalCloud
+    assert app._find_qpu_type("qpu1") == resource_type
 
 
 def test_find_qpu_type_not_found(monkeypatch):
