@@ -71,7 +71,7 @@ Prerequisites
          with a compiler conforming to the C11 standard.
 
    -  make/cmake (make/cmake RPM for RHEL compatible OS)
-   -  Python 3.11, 3.12 or 3.13 (for Python API)
+   -  Python 3.11, 3.12, 3.13 or 3.14 (for Python API)
 
       -  Libraries and header files needed for Python
          development (python3.1x-devel RPM for RHEL compatible OS)
@@ -85,7 +85,7 @@ Prerequisites
 -  Runtime requires the following tools:
 
    -  gcc (libgcc RPM for RHEL compatible OS)
-   -  Python 3.11, 3.12 or 3.13 (for Python API)
+   -  Python 3.11, 3.12, 3.13 or 3.14 (for Python API)
 
       -  Libraries and header files needed for Python development
          (python3.1x-devel RPM for RHEL compatible OS)
