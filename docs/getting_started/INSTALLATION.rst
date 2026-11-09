@@ -33,7 +33,7 @@ To use a specific quantum resource, install QRMI with the corresponding optional
    pip install "qrmi[pasqal]"    # Include dependencies for Pasqal
    pip install "qrmi[alice-bob]" # Include dependencies for Alice and Bob
    pip install "qrmi[oqtopus]"   # Include dependencies for OQTOPUS
-   pip install "qrmi[all]"       # Include dependencies for all quantum resources except `alice-bob`
+   pip install "qrmi[all]"       # Include dependencies for IBM and Pasqal
 
 Or combine multiple resources:
 
