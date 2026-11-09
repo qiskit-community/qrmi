@@ -734,7 +734,8 @@ static int submit_alice_bob_felis_payload(lua_State *L, lua_qrmi_resource_t *ud,
 }
 
 static uint32_t maestro_u32(lua_State *L, lua_Integer value, const char *field) {
-    if (value < 0 || (lua_Unsigned)value > UINT32_MAX) {
+    /* Widen through uintmax_t: lua_Unsigned is 32-bit in Lua 5.2 and absent in 5.1. */
+    if (value < 0 || (uintmax_t)value > UINT32_MAX) {
         luaL_error(L, "Maestro %s must be an integer in 0..4294967295", field);
     }
     return (uint32_t)value;

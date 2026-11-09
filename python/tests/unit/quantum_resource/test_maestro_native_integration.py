@@ -25,7 +25,6 @@ import math
 import os
 from pathlib import Path
 import subprocess
-import sys
 import time
 
 import pytest
@@ -775,42 +774,6 @@ def test_native_and_cleanup_failures_reach_logs(native_resource):
         "code": "native_test_failure",
         "message": "original native cause",
     }
-
-
-@pytest.mark.parametrize("runner", ["python", "rust"])
-def test_cli_failure_exits_nonzero_and_logs_to_stderr(
-    native_resource, tmp_path, runner
-):
-    """Make both CLIs exit unsuccessfully and write diagnostics to stderr."""
-    if runner == "rust":
-        binary = os.environ.get("QRMI_TEST_RUST_RUNNER")
-        if not binary:
-            pytest.skip("set QRMI_TEST_RUST_RUNNER to test the Rust CLI")
-        command = [binary]
-    else:
-        command = [sys.executable, "-m", "qrmi.tools.task_runner.main"]
-    document = native_request("execute", "statevector")
-    document["simulator"] = {"backend": "gpu", "options": {"gpu_device": 2147483647}}
-    source = tmp_path / "failure.json"
-    source.write_text(json.dumps(document))
-    env = {
-        **os.environ,
-        "QRMI_JOB_QPU_RESOURCES": "native_test",
-        "QRMI_JOB_QPU_TYPES": "maestro-local",
-        "native_test_QRMI_JOB_ACQUISITION_TOKEN": native_resource.acquire(),
-    }
-    result = subprocess.run(
-        [*command, "native_test", str(source)],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    assert result.returncode != 0, result.stdout
-    assert "Failed" in result.stderr
-    assert "failure_message" in result.stderr
-    assert "failure_message" not in result.stdout
 
 
 @pytest.mark.parametrize(

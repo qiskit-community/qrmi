@@ -278,11 +278,8 @@ wrappers for configuration, noise, queries and GPU distribution. See the
 files in `examples/task_runner/maestro_local`. The assigned session remains required.
 
 
-Both task runners exit nonzero on task failure, cancellation, or failed result
-retrieval/output. Available task diagnostics go to stderr before cleanup. A failed
-log query is reported without replacing the original task failure. Native
-`job_type: "request"` envelopes accept object or serialized JSON `input`, without
-requiring legacy simulator fields.
+Native `job_type: "request"` envelopes accept object or serialized JSON `input`,
+without requiring legacy simulator fields.
 
 For legacy Maestro payloads, omitted or null `config` becomes `{}` in both
 runners; objects and serialized configuration strings are also accepted. Job
