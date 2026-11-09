@@ -216,8 +216,13 @@ jobs:
         CIBW_BEFORE_ALL="dnf install -y openblas-devel libjpeg-turbo-devel zlib-devel" cibuildwheel
     - if: inputs.lint == true
       name: Lint wheels
+      # grpcio (pulled in by the iqm extra) has no ppc64le wheels on PyPI and is built from sdist.
+      # Its bundled BoringSSL no longer supports ppc64le ("Unknown target CPU"), so build it
+      # against the system OpenSSL instead.
+      env:
+        GRPC_PYTHON_BUILD_SYSTEM_OPENSSL: "1"
       run: |
-        sudo apt install -y libopenblas-dev libjpeg-turbo8-dev zlib1g-dev gfortran pkgconf
+        sudo apt install -y libopenblas-dev libjpeg-turbo8-dev zlib1g-dev gfortran pkgconf libssl-dev
         make lint-wheels
     - uses: actions/upload-artifact@v7
       with:

@@ -158,7 +158,7 @@ create-venv: $(PYTHON_VENV_DIR) check-python-version-installed
 
 install-wheels: $(PYTHON_VENV_DIR) $(WHEELS_PATH)
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	pip install --force-reinstall $(WHEELS_PATH)[all]
+	pip install --force-reinstall $(WHEELS_PATH)[all,iqm]
 
 # ------------------------------------------------
 # Clean targets

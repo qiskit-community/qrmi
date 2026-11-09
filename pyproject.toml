@@ -17,6 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
@@ -75,8 +76,7 @@ docs = [
   "sphinx-copybutton>=0.5.2",
   "sphinx-togglebutton>=0.4.5",
 ]
-# 'iqm' should be removed, but can't for now - will impact to test-wheels in Makefile.
-all = ["qrmi[ibm,pasqal,iqm]"]
+all = ["qrmi[ibm,pasqal]"]
 
 [project.urls]
 Repository = "https://github.com/qiskit-community/qrmi"

@@ -33,7 +33,7 @@ infrastructure and cancels the running quantum workload.
 Prerequisites
 -------------
 
--  Python 3.11, 3.12 or 3.13
+-  Python 3.11, 3.12, 3.13 or 3.14
 -  Ensure the :ref:`QRMI Python package <install_source>`
    is installed on your Python virtual environment. 
    
