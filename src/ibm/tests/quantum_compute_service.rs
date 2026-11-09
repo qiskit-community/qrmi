@@ -103,3 +103,26 @@ fn from_config_missing_required_key_errors() {
     )]);
     assert!(IBMQuantumComputeService::from_config("ibm_torino", config).is_err());
 }
+
+#[tokio::test]
+async fn describe_reports_session_id_in_extra() {
+    let mut qrmi = IBMQuantumComputeService {
+        config: configuration::Configuration::new(),
+        backend_name: "ibm_torino".to_string(),
+        session_id: None,
+        calibration_id: None,
+        timeout_secs: None,
+        session_mode: "dedicated".to_string(),
+        session_max_ttl: 28800,
+        api_key: "dummy".to_string(),
+        iam_endpoint: "http://127.0.0.1:8080".to_string(),
+        token_expiration: 0,
+        token_lifetime: 0,
+    };
+    let info = qrmi.describe().await.expect("describe should succeed");
+    assert!(info.extra.is_null());
+
+    qrmi.session_id = Some("session-123".to_string());
+    let info = qrmi.describe().await.expect("describe should succeed");
+    assert_eq!(info.extra["session_id"], "session-123");
+}

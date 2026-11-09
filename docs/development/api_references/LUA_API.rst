@@ -213,6 +213,91 @@ Fetch detailed status information as a Lua table.
      print(st.capacity.available_slots, st.capacity.max_slots)
    end
 
+.. _resource-describe:
+
+``resource:describe()``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Fetches the resource's configuration and attributes as a Lua table.
+Wraps ``qrmi_resource_describe()`` and its
+``qrmi_quantum_resource_info_*()`` accessors. Replaces the deprecated
+``resource:metadata()``.
+
+**Returns:** on success, a table with the fields described below; on failure,
+``nil, err``.
+
+A field the vendor does not report is ``nil``, so it does not appear when
+iterating the table with ``pairs()``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Field
+     - Type
+     - Description
+   * - ``resource_id``
+     - string
+     - The resource identifier (same value as ``resource:id()``).
+   * - ``resource_type``
+     - string
+     - The resource type (same value as ``resource:type()``).
+   * - ``hardware_platform``
+     - string
+     - One of ``"superconducting"``, ``"trapped_ion"``, ``"photonic"``,
+       ``"neutral_atom"``, ``"semiconductor"`` or ``"other"``.
+   * - ``backend_display_name``
+     - string or nil
+     - Human-readable backend name reported by the provider.
+   * - ``num_qubits``
+     - integer or nil
+     - The number of qubits the resource exposes.
+   * - ``processor_name``
+     - string or nil
+     - The hardware generation or processor name.
+   * - ``processor_revision``
+     - string or nil
+     - The processor revision.
+   * - ``description``
+     - string or nil
+     - A free-form description of the resource.
+   * - ``is_simulator``
+     - boolean or nil
+     - ``true`` if the resource is a simulator or emulator.
+   * - ``has_queue``
+     - boolean or nil
+     - ``true`` if the resource has its own job queue.
+   * - ``max_shots``
+     - integer or nil
+     - The maximum number of shots per job.
+   * - ``pending_job_count``
+     - integer or nil
+     - The number of jobs pending in the queue.
+   * - ``status``
+     - string or nil
+     - One of ``"online"``, ``"offline"``, or ``"paused"`` (same value as
+       ``resource:status().status``).
+   * - ``last_updated``
+     - string or nil
+     - RFC 3339 timestamp of the last hardware update reported
+       by the vendor. Unrelated to ``status`` and
+       ``pending_job_count``, which are live values.
+   * - ``extra``
+     - string or nil
+     - Vendor-specific data, as a JSON object string.
+
+.. code:: lua
+
+   local info, err = resource:describe()
+   if not info then
+     error(err)
+   end
+   print(info.resource_id, info.hardware_platform)  -- always present
+   print(info.num_qubits)                    -- integer or nil
+   for k, v in pairs(info) do                -- only the reported fields
+     print(k, v)
+   end
+
 ``resource:id()``
 ~~~~~~~~~~~~~~~~~
 
@@ -394,6 +479,10 @@ Stops a running task.
 
 ``resource:metadata()``
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+.. deprecated:: 0.27.0
+   Use :ref:`resource:describe() <resource-describe>` instead. Prints a
+   warning to stderr.
 
 Fetches the resource's metadata as a Lua table (combines
 ``qrmi_resource_metadata`` + ``qrmi_resource_metadata_keys`` +

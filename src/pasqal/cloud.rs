@@ -10,7 +10,10 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    HardwarePlatform, Payload, QuantumResourceInfo, ResourceStatus, ResourceStatusCode,
+    ResourceType, Target, TaskResult, TaskStatus,
+};
 use crate::pasqal::error::PasqalError;
 use crate::{QrmiError, QuantumResource, Result};
 use anyhow::Context;
@@ -19,7 +22,12 @@ use pasqal_cloud_api::{Client, ClientBuilder, DeviceType, JobStatus};
 use std::collections::HashMap;
 
 use super::cloud_config::PasqalCloudConfig;
+use super::parse_device_specs;
 use async_trait::async_trait;
+
+/// Pasqal Cloud queue priorities, highest first: higher queues are
+/// processed first.
+const QUEUE_PRIORITIES: [&str; 5] = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "FREE"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PasqalTaskKind {
@@ -32,6 +40,8 @@ pub struct PasqalCloud {
     pub(crate) api_client: Client,
     pub(crate) backend_name: String,
     task_kinds: HashMap<String, PasqalTaskKind>,
+    /// Project queue priority, fetched once
+    queue_priority: Option<String>,
 }
 
 impl PasqalCloud {
@@ -143,6 +153,7 @@ impl PasqalCloud {
             api_client,
             backend_name: backend_name.to_string(),
             task_kinds: HashMap::new(),
+            queue_priority: None,
         })
     }
 
@@ -162,6 +173,41 @@ impl PasqalCloud {
             ))
             .into()
         })
+    }
+
+    /// Jobs waiting on the device ahead of or alongside ours: the sum over
+    /// the queues at the project's priority or above. `None` if none of
+    /// those queues reports a job count.
+    async fn pending_job_count(&mut self) -> Result<Option<u64>> {
+        let device_type = self.parse_device_type()?;
+
+        // Get current project's queue priority
+        let project_queue = match &self.queue_priority {
+            Some(tier) => tier.clone(),
+            None => {
+                let tier = self.api_client.get_project().await?.queue_priority;
+                self.queue_priority.insert(tier).clone()
+            }
+        };
+        // Queue names end with their level (e.g. "batches:emulator:MEDIUM");
+        // the project's priority is the bare level.
+        let rank = |queue: &str| {
+            let level = queue.rsplit(':').next().unwrap_or(queue);
+            QUEUE_PRIORITIES
+                .iter()
+                .position(|p| p.eq_ignore_ascii_case(level))
+        };
+        let our_rank = rank(&project_queue)
+            .ok_or_else(|| anyhow::anyhow!("unknown project queue priority '{project_queue}'"))?;
+        let resp = self.api_client.get_queue_size(device_type).await?;
+        let counts: Vec<u64> = resp
+            .device_queues
+            .iter()
+            // Unknown queues are counted: they may be processed before ours.
+            .filter(|q| rank(&q.queue).is_none_or(|r| r <= our_rank))
+            .filter_map(|q| q.number_of_jobs)
+            .collect();
+        Ok((!counts.is_empty()).then(|| counts.iter().sum()))
     }
 
     fn is_cudaq_sequence(sequence: &str) -> bool {
@@ -264,6 +310,73 @@ impl QuantumResource for PasqalCloud {
             .await
             .context("failed to get device")?;
         Ok(device.availability == "ACTIVE")
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        #[allow(deprecated)]
+        let device_type = self.parse_device_type()?;
+        let device = self
+            .api_client
+            .get_device(device_type)
+            .await
+            .context("failed to get device")?;
+        // Best-effort: unlike the availability check, the queue-size
+        // endpoint requires authentication.
+        let pending_job_count = self
+            .pending_job_count()
+            .await
+            .inspect_err(|e| warn!("{}: queue size unavailable: {e}", self.backend_name))
+            .ok()
+            .flatten();
+        Ok(ResourceStatus {
+            status: if device.availability == "ACTIVE" {
+                ResourceStatusCode::Online
+            } else {
+                ResourceStatusCode::Offline
+            },
+            status_reason: Some(format!(
+                "device status {}, availability {}",
+                device.status, device.availability
+            )),
+            healthy: None,
+            busy: None,
+            capacity: None,
+            pending_job_count,
+        })
+    }
+
+    async fn describe(&mut self) -> Result<QuantumResourceInfo> {
+        let mut info = QuantumResourceInfo::new(
+            self.resource_id().await?,
+            &self.resource_type().await?,
+            HardwarePlatform::NeutralAtom,
+        );
+        // Cloud jobs are always queued, on QPUs and emulators alike.
+        info.has_queue = Some(true);
+        // For emulators, target() returns the public specs of every cloud
+        // device, which do not describe the emulator itself.
+        let is_simulator = self.backend_name.starts_with("EMU");
+        info.is_simulator = Some(is_simulator);
+        // Specs and status are best-effort: describe() must still answer
+        // when the cloud API is unreachable.
+        if !is_simulator {
+            if let Err(e) = self
+                .target()
+                .await
+                .and_then(|t| parse_device_specs(&mut info, &t.value))
+            {
+                warn!("{}: device specs unavailable: {e}", self.backend_name);
+            }
+        }
+        if let Ok(status) = self
+            .status()
+            .await
+            .inspect_err(|e| warn!("{}: status unavailable: {e}", self.backend_name))
+        {
+            info.status = Some(status.status);
+            info.pending_job_count = status.pending_job_count;
+        }
+        Ok(info)
     }
 
     async fn task_start(&mut self, payload: Payload) -> Result<String> {
