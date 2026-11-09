@@ -2195,7 +2195,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_free(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_id(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2220,7 +2220,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_id(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2246,7 +2246,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_resource_type(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2278,7 +2278,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_backend_display_name(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut u32,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2309,7 +2309,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_num_qubits(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_hardware_platform(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut crate::models::HardwarePlatform,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2358,7 +2358,7 @@ pub extern "C" fn qrmi_hardware_platform_to_string(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_name(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2387,7 +2387,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_name(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_revision(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2416,7 +2416,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_processor_revision(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2448,7 +2448,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_description(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut bool,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2481,7 +2481,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_is_simulator(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut bool,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2514,7 +2514,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_has_queue(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_max_shots(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut u64,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2547,7 +2547,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_max_shots(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_pending_job_count(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut u64,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2581,7 +2581,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_pending_job_count(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_status(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
     outp: *mut crate::models::ResourceStatusCode,
 ) -> ReturnCode {
     crate::common::initialize();
@@ -2612,7 +2612,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_status(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_last_updated(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() {
@@ -2642,7 +2642,7 @@ pub unsafe extern "C" fn qrmi_quantum_resource_info_last_updated(
 /// @version 0.27.0
 #[no_mangle]
 pub unsafe extern "C" fn qrmi_quantum_resource_info_extra(
-    info: *mut QuantumResourceInfo,
+    info: *const QuantumResourceInfo,
 ) -> *mut c_char {
     crate::common::initialize();
     if info.is_null() || (*info).inner.extra.is_null() {
