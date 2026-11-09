@@ -1,2 +1,2 @@
-qiskit
+qiskit<3
 qrmi

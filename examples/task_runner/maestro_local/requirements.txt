@@ -1,1 +1,1 @@
-qiskit
+qiskit<3
