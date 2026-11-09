@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    The Python and Rust ``task_runner`` commands now exit with status 1 when the task
+    fails or is cancelled, including by SIGTERM/SIGCONT from Slurm, or when its result
+    cannot be retrieved or written. Previously they logged the failure and exited with
+    status 0, so a Slurm job step reported success for a failed task. On failure, the
+    runners write the error and the task logs, if the resource provides them, to stderr
+    before stopping the task.
+upgrade:
+  - |
+    The Python ``task_runner`` writes its log messages, including the ``Task ID`` line,
+    to stderr instead of stdout, so stdout carries only the task result. Scripts that
+    read the ``Task ID`` line from stdout should read stderr instead.

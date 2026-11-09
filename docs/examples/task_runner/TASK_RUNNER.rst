@@ -63,6 +63,19 @@ How to run
      -h, --help  show this help message and exit
 
 
+Exit status and diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``task_runner`` exits with status 0 only when the task completed and its result
+was written to the output file or stdout. It exits with status 1 when the task
+fails or is cancelled (including by SIGTERM/SIGCONT from Slurm), or when its
+result cannot be retrieved or written. On failure, the error and the task logs,
+if the resource provides them, are written to stderr before the task is stopped;
+a failed log query is reported without replacing the original error. Log
+messages, including the ``Task ID`` line, go to stderr, so stdout carries only
+the result.
+
+
 Preparing input payload
 ~~~~~~~~~~~~~~~~~~~~~~~
 

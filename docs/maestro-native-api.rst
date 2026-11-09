@@ -221,6 +221,11 @@ Legacy QASM containing ``//`` is rejected with ``InvalidInputError`` before a ta
 is created: flattening its newlines would turn subsequent gates into a comment.
 Use ``job_type="request"`` with a schema-2 document to preserve commented QASM.
 
+Both task runners exit nonzero when a task fails or is cancelled, or when its result
+cannot be retrieved or written. On failure they write the error and the
+``task_logs()`` diagnostics, including ``failure_message``, to stderr before stopping
+the task. A failed log query is reported without replacing the original failure.
+
 The ready-to-run documents in
 :doc:`Maestro task runner examples <examples/task_runner/TASK_RUNNER_MAESTRO>`
 include:
