@@ -233,7 +233,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use pasqal_local_api::ClientBuilder;
+    /// use qrmi_pasqal_local_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("http://localhost:4207");
     /// ```
@@ -247,7 +247,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use pasqal_local_api::{ClientBuilder};
+    /// use qrmi_pasqal_local_client::{ClientBuilder};
     ///
     /// let _builder = ClientBuilder::new("http://localhost:4207").build();
     /// ```

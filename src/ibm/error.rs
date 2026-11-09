@@ -45,7 +45,7 @@ impl IbmError {
     }
 }
 
-/// Maps errors from the `quantum_system_api` crate (used by
+/// Maps errors from the `qrmi_ibm_quantum_system_client` crate (used by
 /// [`crate::ibm::IBMQuantumSystem`] and [`crate::ibm::IBMQuantumSystemProvider`])
 /// onto [`crate::QrmiError`]. A few conditions that crate can distinguish
 /// map onto specific `QrmiError` variants (a missing backend or job, a
@@ -54,13 +54,13 @@ impl IbmError {
 /// `source` so the message and cause chain aren't lost.
 ///
 /// This is a plain `impl From`, not a `#[from]` variant on `IbmError` or
-/// `QrmiError` -- `quantum_system_api::QuantumSystemError` doesn't represent
+/// `QrmiError` -- `qrmi_ibm_quantum_system_client::QuantumSystemError` doesn't represent
 /// an IBM-specific *condition* the way `IbmError`'s variants do, it's just
 /// the error type of a dependency we're translating, so it doesn't belong
 /// as a variant of either enum.
-impl From<quantum_system_api::QuantumSystemError> for crate::QrmiError {
-    fn from(err: quantum_system_api::QuantumSystemError) -> Self {
-        use quantum_system_api::QuantumSystemError as QsError;
+impl From<qrmi_ibm_quantum_system_client::QuantumSystemError> for crate::QrmiError {
+    fn from(err: qrmi_ibm_quantum_system_client::QuantumSystemError) -> Self {
+        use qrmi_ibm_quantum_system_client::QuantumSystemError as QsError;
         match err {
             QsError::BackendNotFound(msg) => crate::QrmiError::ResourceNotFound(msg),
             QsError::JobNotFound(msg) => crate::QrmiError::TaskNotFound(msg),
@@ -71,7 +71,7 @@ impl From<quantum_system_api::QuantumSystemError> for crate::QrmiError {
     }
 }
 
-/// Disambiguates a 404 from `quantum_compute_client` (used by
+/// Disambiguates a 404 from `qrmi_ibm_quantum_compute_client` (used by
 /// [`crate::ibm::IBMQiskitRuntimeService`] and
 /// [`crate::ibm::IBMQuantumComputeService`]): on its own, the status code
 /// doesn't say whether it was a job, a session, or a backend that wasn't
@@ -83,10 +83,10 @@ pub(crate) enum ResourceKind {
     Session,
 }
 
-/// Maps a failed `quantum_compute_client` call onto [`QrmiError`].
+/// Maps a failed `qrmi_ibm_quantum_compute_client` call onto [`QrmiError`].
 /// `resource_kind` disambiguates a 404 (see [`ResourceKind`]).
 ///
-/// Unlike `iqm_server_api` (see [`crate::iqm::error`]), every operation in
+/// Unlike `qrmi_iqm_server_client` (see [`crate::iqm::error`]), every operation in
 /// this API reuses the same generic error body model (`ListJobs400Response`
 /// -- just a `trace`/`errors` pair) regardless of status, rather than a
 /// distinct *named* model per status the way IQM's `Unauthorized`/
@@ -119,13 +119,13 @@ pub(crate) enum ResourceKind {
 /// `Error<T>`'s own `Display` only shows the bare status (e.g. `"status
 /// code 403 Forbidden"`), dropping whatever the server actually said.
 pub(crate) fn classify<T>(
-    err: quantum_compute_client::apis::Error<T>,
+    err: qrmi_ibm_quantum_compute_client::apis::Error<T>,
     resource_kind: ResourceKind,
 ) -> QrmiError
 where
     T: std::fmt::Debug + Send + Sync + 'static,
 {
-    if let quantum_compute_client::apis::Error::ResponseError(ref content) = err {
+    if let qrmi_ibm_quantum_compute_client::apis::Error::ResponseError(ref content) = err {
         let status = content.status;
         let body = content.content.clone();
         match (status, resource_kind) {

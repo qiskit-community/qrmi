@@ -45,7 +45,7 @@ pub struct Gate {
 /// ```no_run
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     use quantum_system_api::{AuthMethod, ClientBuilder};
+///     use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
 ///
 ///     let client = ClientBuilder::new("http://localhost:8080")
 ///         .with_auth(AuthMethod::IbmCloudIam {
@@ -56,7 +56,7 @@ pub struct Gate {
 ///         .build()
 ///         .unwrap();
 ///     let props = client
-///         .get_backend_properties::<quantum_system_api::models::BackendProperties>("ibm_brisbane")
+///         .get_backend_properties::<qrmi_ibm_quantum_system_client::models::BackendProperties>("ibm_brisbane")
 ///         .await?;
 ///     println!("{:#?}", props);
 ///     Ok(())

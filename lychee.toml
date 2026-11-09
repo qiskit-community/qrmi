@@ -38,9 +38,10 @@ exclude = [
     "https://resonance.meetiqm.com/.*",
     "https://api.alice-bob.com/.*",
 
-    'dependencies/alice_bob_felis_client/felis_generated/docs/*',
-    'dependencies/alice_bob_felis_client/felis_generated/src/*',
-    'dependencies/alice_bob_felis_client/felis_generated/.openapi-generator/*',
+    'dependencies/alice_bob_felis_client/docs/*',
+    'dependencies/alice_bob_felis_client/src/apis/*',
+    'dependencies/alice_bob_felis_client/src/models/*',
+    'dependencies/alice_bob_felis_client/.openapi-generator/*',
     'dependencies/iqm_client/src/*',
     'dependencies/iqm_client/docs/*',
     'dependencies/quantum_compute_client/src/*',

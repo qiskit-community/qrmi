@@ -26,7 +26,7 @@
 use crate::ibm::models::BackendConfiguration;
 use crate::{QrmiError, Result};
 use glob::Pattern;
-use quantum_compute_client::models::BackendsResponseV2DevicesInner;
+use qrmi_ibm_quantum_compute_client::models::BackendsResponseV2DevicesInner;
 
 /// Whether to filter by online status.
 #[derive(Debug, Default, PartialEq)]
@@ -188,7 +188,7 @@ impl BackendFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quantum_compute_client::models::{
+    use qrmi_ibm_quantum_compute_client::models::{
         BackendsResponseV2DevicesInner, BackendsResponseV2DevicesInnerStatus,
     };
 

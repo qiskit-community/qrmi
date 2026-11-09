@@ -269,7 +269,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use pasqal_cloud_api::ClientBuilder;
+    /// use qrmi_pasqal_cloud_client::ClientBuilder;
     ///
     /// let _builder = ClientBuilder::new("your_project_id".to_string());
     /// ```
@@ -322,7 +322,7 @@ impl ClientBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use pasqal_cloud_api::ClientBuilder;
+    /// use qrmi_pasqal_cloud_client::ClientBuilder;
     ///
     /// let mut builder = ClientBuilder::new("your_project_id".to_string());
     /// builder.with_token("your_token".to_string());

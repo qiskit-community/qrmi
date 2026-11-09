@@ -102,7 +102,7 @@ pub struct TimingConstraints {
 /// # Example
 ///
 /// ```no_run
-/// use quantum_system_api::{AuthMethod, ClientBuilder};
+/// use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -115,7 +115,7 @@ pub struct TimingConstraints {
 ///         .build()
 ///         .unwrap();
 ///     let config = client
-///         .get_backend_configuration::<quantum_system_api::models::BackendConfiguration>("ibm_brisbane")
+///         .get_backend_configuration::<qrmi_ibm_quantum_system_client::models::BackendConfiguration>("ibm_brisbane")
 ///         .await?;
 ///     println!("{:#?}", config);
 ///     Ok(())

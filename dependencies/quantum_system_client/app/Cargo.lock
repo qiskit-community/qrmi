@@ -87,7 +87,7 @@ name = "api_versions"
 version = "0.2.0"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "serde_json",
  "tokio",
 ]
@@ -470,7 +470,7 @@ name = "backend"
 version = "0.2.1"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -562,7 +562,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -594,9 +594,9 @@ checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 
 [[package]]
 name = "chacha20"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d524456ba66e72eb8b115ff89e01e497f8e6d11d78b70b1aa13c0fbd97540a81"
+checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
@@ -819,7 +819,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -1555,7 +1555,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -1594,7 +1594,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -1872,8 +1872,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum-system-api"
-version = "0.15.0"
+name = "qrmi-ibm-quantum-system-client"
+version = "0.26.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2189,7 +2189,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -2201,7 +2201,7 @@ version = "0.2.1"
 dependencies = [
  "clap",
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "reqwest-retry",
  "serde_json",
  "tokio",
@@ -2830,7 +2830,7 @@ name = "utility"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "tokio",
 ]
 
@@ -2851,7 +2851,7 @@ name = "version"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "quantum-system-api",
+ "qrmi-ibm-quantum-system-client",
  "serde_json",
  "tokio",
 ]

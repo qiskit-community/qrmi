@@ -19,8 +19,8 @@ use crate::models::{
 };
 use crate::{QuantumResource, Result};
 use log::info;
-use quantum_system_api::utils::s3::S3Client;
-use quantum_system_api::{
+use qrmi_ibm_quantum_system_client::utils::s3::S3Client;
+use qrmi_ibm_quantum_system_client::{
     models::Backend, models::BackendLanesConfiguration, models::BackendStatus, models::Job,
     models::JobStatus, models::Jobs, models::LogLevel, models::ProgramId, AuthMethod, Client,
     ClientBuilder,

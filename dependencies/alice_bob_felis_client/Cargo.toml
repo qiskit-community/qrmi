@@ -1,6 +1,7 @@
 [package]
-name = "alice-bob-felis"
-version = "0.1.0"
+name = "qrmi-alice-bob-felis-client"
+keywords = ["quantum", "alice-bob", "rest-api", "http-client", "api-bindings"]
+version.workspace = true
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -8,7 +9,6 @@ edition.workspace = true
 description = "The Felis Cloud API lets you execute quantum circuits on emulators and real quantum hardware made by Alice & Bob."
 
 [dependencies]
-generated = { package = "felis-generated", path = "felis_generated/" }
 base64 = "0.22.1"
 anyhow = "1.0.102"
 serde = { version = "^1.0", features = ["derive"] }

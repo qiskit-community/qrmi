@@ -31,10 +31,12 @@ use crate::ibm::qiskit_runtime_service::models::{
 use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
 use crate::{QuantumResource, Result};
 use log::error;
-use quantum_compute_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
-use quantum_compute_client::models;
-use quantum_compute_client::models::create_job_request_one_of::LogLevel;
-use quantum_compute_client::models::create_session_request_one_of::Mode;
+use qrmi_ibm_quantum_compute_client::apis::{
+    auth, backends_api, configuration, jobs_api, sessions_api,
+};
+use qrmi_ibm_quantum_compute_client::models;
+use qrmi_ibm_quantum_compute_client::models::create_job_request_one_of::LogLevel;
+use qrmi_ibm_quantum_compute_client::models::create_session_request_one_of::Mode;
 
 use serde_json::{json, Value};
 use std::collections::HashMap;

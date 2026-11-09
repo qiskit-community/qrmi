@@ -24,14 +24,20 @@ jobs:
     outputs:
       valid-qrmi-version: ${{ steps.info.outputs.qrmi-version }}
       python-version: ${{ steps.info.outputs.python-version }}
+      published-crates: ${{ steps.info.outputs.published-crates }}
     steps:
       - uses: actions/checkout@v6
       - run: make check-new-qrmi-version-valid
+      # Fail before anything is released if the crates to publish to
+      # crates.io don't match the path dependencies of qrmi.
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: make check-published-crates
       - name: Information
         id: info
         run: |
           echo "qrmi-version=$(make get-qrmi-version)" >> $GITHUB_OUTPUT
           echo "python-version=$(make get-python-version)" >> $GITHUB_OUTPUT
+          echo "published-crates=$(make get-published-crates)" >> $GITHUB_OUTPUT
 
   # Build and test the libqrmi tarball for x86_64.
   # Create the vendor source tarball
@@ -61,10 +67,22 @@ jobs:
       libqrmi-tarball: true
       artifact-prefix: 'release'
 
+  # Package the crates published to crates.io and build each one from its
+  # package, as cargo publish does, so that a crate that can't be published
+  # stops the release before anything is released.
+  package-crates:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [qrmi-info]
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - run: make package-crates
+
   publish-github:
     if: github.repository_owner == 'qiskit-community'
     name: Create draft release with artifacts and publish it
-    needs: [qrmi-info, libqrmi-x86_64, libqrmi-other-archs]
+    needs: [qrmi-info, libqrmi-x86_64, libqrmi-other-archs, package-crates]
     permissions:
       contents: write # required to create a draft release
     runs-on: ubuntu-24.04
@@ -147,6 +165,61 @@ jobs:
       with:
         verbose: true
         print-hash: true
+
+  # Publish the client crates listed in PUBLISHED_CLIENT_CRATES
+  # (Makefile_common.mk) and then qrmi to crates.io, all with the same
+  # version (see docs/development/RELEASE_DEPLOYMENT.rst). qrmi depends on
+  # the clients with an exact version requirement, so they must be on
+  # crates.io before it.
+  publish-crates:
+    if: github.repository_owner == 'qiskit-community'
+    needs: [publish-github, qrmi-info]
+    runs-on: ubuntu-24.04
+    # ATTENTION:
+    # If you change the environment name below or the name of this workflow
+    # file, please make sure to also update the Trusted Publisher
+    # configuration of each crate on crates.io.
+    environment:
+      name: crates-io
+      url: https://crates.io/crates/qrmi
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    env:
+      VERSION: ${{ needs.qrmi-info.outputs.valid-qrmi-version }}
+      CLIENT_CRATES: ${{ needs.qrmi-info.outputs.published-crates }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - uses: rust-lang/crates-io-auth-action@v1
+      id: auth
+    # A version can't be republished on crates.io, so skip the crates
+    # already there: that lets a failed run be re-run.
+    - name: Publish the client crates
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+      run: |
+        if [ -z "${CLIENT_CRATES}" ]; then
+          echo "Error: no client crates to publish, see PUBLISHED_CLIENT_CRATES in Makefile_common.mk"
+          exit 1
+        fi
+        for crate in ${CLIENT_CRATES}; do
+          if curl -sf -A "qrmi-release (github.com/qiskit-community/qrmi)" \
+              "https://crates.io/api/v1/crates/${crate}/${VERSION}" >/dev/null; then
+            echo "${crate} ${VERSION} is already on crates.io, skipping"
+          else
+            cargo publish --locked -p "${crate}"
+          fi
+        done
+    - name: Publish qrmi
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+      run: |
+        if curl -sf -A "qrmi-release (github.com/qiskit-community/qrmi)" \
+            "https://crates.io/api/v1/crates/qrmi/${VERSION}" >/dev/null; then
+          echo "qrmi ${VERSION} is already on crates.io, skipping"
+        else
+          cargo publish --locked -p qrmi
+        fi
 
   # Once a package version is released to either pypi.org or test.pypi.org,
   # it cannot be overwritten or deleted/reused. This job checks if the

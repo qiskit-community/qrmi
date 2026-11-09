@@ -10,16 +10,16 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Maps errors from `alice_bob_felis` -- an OpenAPI-generated client we
+//! Maps errors from `qrmi_alice_bob_felis_client` -- an OpenAPI-generated client we
 //! don't control or modify -- onto [`crate::QrmiError`]. Same approach as
-//! [`crate::ibm::error`]'s `classify` for `quantum_compute_client` (see
+//! [`crate::ibm::error`]'s `classify` for `qrmi_ibm_quantum_compute_client` (see
 //! that module's docs for the general shape); the specifics here differ
 //! because this API's own OpenAPI spec differs.
 
 use crate::QrmiError;
 use http::StatusCode;
 
-/// Disambiguates a 404 from `alice_bob_felis`: on its own, the status code
+/// Disambiguates a 404 from `qrmi_alice_bob_felis_client`: on its own, the status code
 /// doesn't say whether it was a job or a target (backend) that wasn't
 /// found.
 #[derive(Debug, Clone, Copy)]
@@ -28,14 +28,14 @@ pub(crate) enum ResourceKind {
     Job,
 }
 
-/// Maps a failed `alice_bob_felis` call onto [`QrmiError`]. `resource_kind`
+/// Maps a failed `qrmi_alice_bob_felis_client` call onto [`QrmiError`]. `resource_kind`
 /// disambiguates a 404 (see [`ResourceKind`]).
 ///
 /// Every operation this crate uses only ever types a single status --
 /// 422 (`HttpValidationError`, FastAPI's standard request-validation
 /// failure response) -- in its generated per-operation error enum;
 /// nothing else has a typed model at all, typed *or* generic (unlike
-/// `quantum_compute_client`'s reused `ListJobs400Response` -- see
+/// `qrmi_ibm_quantum_compute_client`'s reused `ListJobs400Response` -- see
 /// [`crate::ibm::error`]'s docs). That's different from IQM's 403 case,
 /// though: there, a specific status had a *documented, differently-named*
 /// model proving it meant something else. Here there's simply no
@@ -57,13 +57,13 @@ pub(crate) enum ResourceKind {
 ///   `"status code 403 Forbidden"`), dropping whatever the server actually
 ///   said.
 pub(crate) fn classify<T>(
-    err: alice_bob_felis::apis::Error<T>,
+    err: qrmi_alice_bob_felis_client::apis::Error<T>,
     resource_kind: ResourceKind,
 ) -> QrmiError
 where
     T: std::fmt::Debug + Send + Sync + 'static,
 {
-    if let alice_bob_felis::apis::Error::ResponseError(ref content) = err {
+    if let qrmi_alice_bob_felis_client::apis::Error::ResponseError(ref content) = err {
         let status = content.status;
         let body = content.content.clone();
         match (status, resource_kind) {

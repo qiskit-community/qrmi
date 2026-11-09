@@ -1,6 +1,6 @@
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
-use pasqal_cloud_api::{AccessTokenRequest, Client, ClientBuilder, DeviceType};
+use qrmi_pasqal_cloud_client::{AccessTokenRequest, Client, ClientBuilder, DeviceType};
 use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
 

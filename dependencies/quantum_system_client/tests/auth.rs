@@ -13,7 +13,7 @@ mod common;
 use assert_json_diff::assert_json_include;
 #[cfg(feature = "ibmcloud_appid_auth")]
 use base64::{engine::general_purpose::STANDARD, prelude::*};
-use quantum_system_api::{AuthMethod, ClientBuilder};
+use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
 use serde_json::json;
 
 use chrono::Utc;

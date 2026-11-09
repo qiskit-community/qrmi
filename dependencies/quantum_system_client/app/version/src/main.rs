@@ -9,7 +9,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use quantum_system_api::ClientBuilder;
+use qrmi_ibm_quantum_system_client::ClientBuilder;
 
 #[tokio::main]
 #[allow(unreachable_code)]

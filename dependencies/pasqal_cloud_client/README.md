@@ -22,6 +22,14 @@ We refer to Pasqal's cloud API [documetation](https://docs.pasqal.com/cloud/api/
 
 * Rust 1.81.0 or above
 
+## Installation
+
+Add the crate to your project from crates.io:
+
+```shell
+cargo add qrmi-pasqal-cloud-client
+```
+
 ## How to build
 ```shell-session
 . ~/.cargo/env
@@ -65,7 +73,7 @@ You should provide either:
 Default flow (username + password):
 
 ```rust
-use pasqal_cloud_api::ClientBuilder;
+use qrmi_pasqal_cloud_client::ClientBuilder;
 
 let mut builder = ClientBuilder::new("<project id>".to_string());
 builder.with_credentials("<username>".to_string(), "<password>".to_string());
@@ -75,7 +83,7 @@ let mut client = builder.build()?;
 Token flow:
 
 ```rust
-use pasqal_cloud_api::ClientBuilder;
+use qrmi_pasqal_cloud_client::ClientBuilder;
 
 let mut builder = ClientBuilder::new("<project id>".to_string());
 builder.with_token("<api token>".to_string());
@@ -87,7 +95,7 @@ let mut client = builder.build()?;
 If username/password auth is used, `request_access_token` can be used to obtain a token.
 
 ```rust
-use pasqal_cloud_api::{AccessTokenRequest, Client};
+use qrmi_pasqal_cloud_client::{AccessTokenRequest, Client};
 
 let token = Client::request_access_token(
     "authenticate.pasqal.cloud/oauth/token",
@@ -103,7 +111,7 @@ let token = Client::request_access_token(
 `jwt_expiry_unix_seconds` returns the JWT `exp` claim (if present).
 
 ```rust
-use pasqal_cloud_api::Client;
+use qrmi_pasqal_cloud_client::Client;
 
 let exp = Client::jwt_expiry_unix_seconds("<jwt token>")?;
 ```
@@ -121,7 +129,7 @@ let batch = client.create_batch(sequence, job_runs, device_type).await?;
 Most users do not need to set this. Use only when a non-default auth endpoint is required.
 
 ```rust
-use pasqal_cloud_api::ClientBuilder;
+use qrmi_pasqal_cloud_client::ClientBuilder;
 
 let mut builder = ClientBuilder::new("<project id>".to_string());
 builder.with_credentials("<username>".to_string(), "<password>".to_string());

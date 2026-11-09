@@ -1,0 +1,12 @@
+# OpenAPI Generator Ignore
+# Files listed here are not written when regenerating the client (see regenerate.sh).
+
+# Hand-written crate files
+Cargo.toml
+README.md
+src/lib.rs
+
+# Generator scaffolding we don't keep
+.gitignore
+.travis.yml
+git_push.sh

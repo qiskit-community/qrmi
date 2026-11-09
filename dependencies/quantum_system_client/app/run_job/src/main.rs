@@ -19,8 +19,8 @@ use reqwest_retry::Jitter;
 use serde_json::json;
 use std::time::Duration;
 
-use quantum_system_api::utils::{s3::S3Client, uuid};
-use quantum_system_api::{AuthMethod, ClientBuilder};
+use qrmi_ibm_quantum_system_client::utils::{s3::S3Client, uuid};
+use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder};
 
 static S3_BUCKET: &str = "test";
 static S3_ENDPOINT: &str = "http://localhost:9000";

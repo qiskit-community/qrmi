@@ -21,7 +21,7 @@ impl Client {
     /// ```no_run
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use quantum_system_api::{AuthMethod, ClientBuilder, models::Job};
+    ///     use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder, models::Job};
     ///
     ///     let client = ClientBuilder::new("http://localhost:8080")
     ///         .with_auth(AuthMethod::IbmCloudIam {
@@ -60,7 +60,7 @@ impl PrimitiveJob {
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     use serde_json::json;
-    ///     use quantum_system_api::{AuthMethod, ClientBuilder, models::Job, models::ProgramId, models::LogLevel};
+    ///     use qrmi_ibm_quantum_system_client::{AuthMethod, ClientBuilder, models::Job, models::ProgramId, models::LogLevel};
     ///
     ///     let payload = json!({
     ///         "pubs":[

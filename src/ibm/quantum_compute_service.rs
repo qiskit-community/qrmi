@@ -22,13 +22,15 @@ use crate::models::{
 };
 use crate::{QuantumResource, Result};
 use log::error;
-use quantum_compute_client::apis::{auth, backends_api, configuration, jobs_api, sessions_api};
-use quantum_compute_client::models;
-use quantum_compute_client::models::backends_response_v2_devices_inner_status::Name;
-use quantum_compute_client::models::create_job_request_one_of::LogLevel;
-use quantum_compute_client::models::create_session_200_response::Mode as SessionResponseMode;
-use quantum_compute_client::models::create_session_200_response::State;
-use quantum_compute_client::models::create_session_request_one_of::Mode;
+use qrmi_ibm_quantum_compute_client::apis::{
+    auth, backends_api, configuration, jobs_api, sessions_api,
+};
+use qrmi_ibm_quantum_compute_client::models;
+use qrmi_ibm_quantum_compute_client::models::backends_response_v2_devices_inner_status::Name;
+use qrmi_ibm_quantum_compute_client::models::create_job_request_one_of::LogLevel;
+use qrmi_ibm_quantum_compute_client::models::create_session_200_response::Mode as SessionResponseMode;
+use qrmi_ibm_quantum_compute_client::models::create_session_200_response::State;
+use qrmi_ibm_quantum_compute_client::models::create_session_request_one_of::Mode;
 
 use serde_json::{json, Value};
 use std::collections::HashMap;

@@ -1,11 +1,11 @@
 [package]
-name = "pasqal-cloud-api"
-keywords = ["rest-api", "http-client", "api-bindings"]
+name = "qrmi-pasqal-cloud-client"
+keywords = ["quantum", "pasqal", "rest-api", "http-client", "api-bindings"]
 description = "Pasqal Cloud API client library for Rust"
 repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 
 [dependencies]
