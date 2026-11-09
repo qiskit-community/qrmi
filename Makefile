@@ -56,7 +56,7 @@ build-rust-all: build build-rust-examples build-task-runner
 # ------------------------------------------------
 
 .PHONY: lint lint-rust-examples lint-task-runner lint-stubgen
-.PHONY: lint-wheels lint-rust-all
+.PHONY: lint-wheels lint-wheels-all lint-wheels-iqm lint-rust-all
 
 lint:
 	cargo clippy --locked $(CARGO_PROFILE_FLAG) --lib -- -D warnings
@@ -73,9 +73,20 @@ ifeq ($(INSIDE_CONTAINER),1)
 endif
 	PYO3_PYTHON=python$(PYTHON_VERSION) cargo clippy --locked $(CARGO_PROFILE_FLAG) --bin stubgen --features="pyo3" -- -D warnings
 
-lint-wheels: $(PYTHON_VENV_DIR) install-wheels
+# Python code that depends on qrmi[iqm]; linted in its own venv by lint-wheels-iqm.
+# (pylint --ignore matches base names, so this covers python/qrmi/qiskit_iqm and
+# python/tests/compatibility/qiskit_iqm.)
+IQM_PYTHON_PATHS = ./python/qrmi/qiskit_iqm ./python/tests/compatibility
+
+lint-wheels: lint-wheels-all lint-wheels-iqm
+
+lint-wheels-all: $(PYTHON_VENV_DIR) install-wheels
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	pylint ./python
+	pylint --ignore=CVS,qiskit_iqm ./python
+
+lint-wheels-iqm: $(PYTHON_VENV_DIR_IQM) install-wheels-iqm
+	@source $(PYTHON_VENV_ACTIVATE_IQM) && \
+	pylint $(IQM_PYTHON_PATHS)
 
 # lint-stubgen has very specific requirements, please do not include it in this target
 lint-rust-all: lint lint-rust-examples lint-task-runner
@@ -137,7 +148,7 @@ fmt-python: $(PYTHON_VENV_DIR)
 # Setup targets
 # ------------------------------------------------
 
-.PHONY: create-venv install-wheels
+.PHONY: create-venv install-wheels install-wheels-iqm
 
 $(PYTHON_VENV_DIR):
 	@python$(PYTHON_VERSION) -m venv $(PYTHON_VENV_DIR) && \
@@ -151,13 +162,23 @@ $(PYTHON_VENV_DIR):
 	echo "you can manually activate it with: source $(PYTHON_VENV_DIR)/bin/activate" && \
 	echo
 
+$(PYTHON_VENV_DIR_IQM):
+	@python$(PYTHON_VERSION) -m venv $(PYTHON_VENV_DIR_IQM) && \
+	source $(PYTHON_VENV_ACTIVATE_IQM) && \
+	pip install --upgrade pip && \
+	pip install -r requirements-dev.txt
+
 create-venv: $(PYTHON_VENV_DIR) check-python-version-installed
 
 # ------------------------------------------------
 
 install-wheels: $(PYTHON_VENV_DIR) $(WHEELS_PATH)
 	@source $(PYTHON_VENV_ACTIVATE) && \
-	pip install --force-reinstall $(WHEELS_PATH)[all,iqm]
+	pip install --force-reinstall $(WHEELS_PATH)[all]
+
+install-wheels-iqm: $(PYTHON_VENV_DIR_IQM) $(WHEELS_PATH)
+	@source $(PYTHON_VENV_ACTIVATE_IQM) && \
+	pip install --force-reinstall $(WHEELS_PATH)[iqm]
 
 # ------------------------------------------------
 # Clean targets
@@ -291,8 +312,10 @@ Linting targets:
     [./run_in_container.sh] lint-rust-examples   - Lint rust examples
     [./run_in_container.sh] lint-task-runner     - Lint task_runner binary
                             lint-stubgen         - Lint stubgen binary
-    [./run_in_container.sh] lint-wheels          - Lint built wheels with python-$(PYTHON_VERSION) (cibuildwheel not required)
+    [./run_in_container.sh] lint-wheels          - Same as "lint-wheels-all" + "lint-wheels-iqm"
+    [./run_in_container.sh] lint-wheels-all      - Lint built wheels with python-$(PYTHON_VERSION) and qrmi[all] (cibuildwheel not required)
                                                    The qrmi python package will be built and installed if necessary
+    [./run_in_container.sh] lint-wheels-iqm      - Lint IQM code with qrmi[iqm] in a separate venv ($(PYTHON_VENV_DIR_IQM))
     [./run_in_container.sh] lint-rust-all        - Lint libqrmi, rust examples and binaries (except stubgen)
 
 Unit test targets:
@@ -326,7 +349,8 @@ Setup targets:
     [./run_in_container.sh] create-venv          - Create python virtual environment for QRMI using the python version
                                                    defined in PYTHON_VERSION (default: 'make get-python-version').
                                                    Once created, the makefile target will activate the venv automatically.
-    [./run_in_container.sh] install-wheels       - Install the wheels in the venv
+    [./run_in_container.sh] install-wheels       - Install the wheels with [all] in the venv
+    [./run_in_container.sh] install-wheels-iqm   - Install the wheels with [iqm] in the IQM venv
 
 Packaging targets:
     [./run_in_container.sh] libqrmi-tarball      - Create versioned libqrmi tarball with libqrmi.so and qrmi.h

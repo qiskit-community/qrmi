@@ -16,6 +16,10 @@ PYTHON_VERSION ?= $(shell grep "requires-python" pyproject.toml | cut -d'"' -f2 
 PYTHON_VERSION_NO_DOTS = $(shell echo "$(PYTHON_VERSION)" | sed 's/\.//')
 PYTHON_VENV_DIR = .venv_py$(PYTHON_VERSION_NO_DOTS)
 PYTHON_VENV_ACTIVATE = $(PYTHON_VENV_DIR)/bin/activate
+# Separate venv for IQM: qrmi[iqm] needs qiskit<2.2, which conflicts with the latest
+# qiskit-ibm-runtime installed by qrmi[all].
+PYTHON_VENV_DIR_IQM = $(PYTHON_VENV_DIR)_iqm
+PYTHON_VENV_ACTIVATE_IQM = $(PYTHON_VENV_DIR_IQM)/bin/activate
 
 WHEELS_PATH = wheelhouse/qrmi-$(QRMI_VERSION)-cp$(PYTHON_VERSION_NO_DOTS)-abi3-$(MANYLINUX_VERSION)_$(ARCH).whl
 
