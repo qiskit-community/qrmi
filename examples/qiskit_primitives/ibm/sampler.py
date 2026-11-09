@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""SamplerV2 example with IBM Quantum System QRMI"""
+"""Sampler example with IBM Quantum Compute Service/Quantum System QRMI"""
 
 # pylint: disable=invalid-name
 import random
@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from qiskit.circuit.library import efficient_su2
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import SamplerV2, get_backend
+from qrmi.primitives.ibm import QRMIExecutorSampler as Sampler, get_backend
 
 # Create QRMI
 load_dotenv()
@@ -36,8 +36,8 @@ for res in resources:
 qrmi = resources[random.randrange(len(resources))]
 print(qrmi.metadata())
 
-# Generate transpiler target from backend configuration & properties
-target = get_backend(qrmi).target
+# Generate Qiskit BackendV2 instance from QuantumResource
+backend = get_backend(qrmi)
 
 # Create a circuit - You need at least one circuit as the input to the Sampler primitive.
 circuit = efficient_su2(127, entanglement="linear")
@@ -50,7 +50,7 @@ param_values = np.random.rand(circuit.num_parameters)
 # We'll use the transpiler to do this.
 pm = generate_preset_pass_manager(
     optimization_level=1,
-    target=target,
+    backend=backend,
 )
 isa_circuit = pm.run(circuit)
 print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
@@ -59,7 +59,7 @@ print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
 options = {
     "default_shots": 10000,
 }
-sampler = SamplerV2(qrmi, options=options)
+sampler = Sampler(mode=backend, options=options)
 
 # Next, invoke the run() method to generate the output. The circuit and optional
 # parameter value sets are input as primitive unified bloc (PUB) tuples.
@@ -74,6 +74,3 @@ try:
     print(f"Counts for the 'meas' output register: {pub_result.data.meas.get_counts()}")
 except RuntimeError as err:
     print(err)
-
-if job.errored():
-    print(qrmi.task_logs(job.job_id()))
