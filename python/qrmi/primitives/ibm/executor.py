@@ -89,7 +89,7 @@ def _backend_for_dd(
 ) -> BackendV2 | None:
     """Create the QRMIBackend on demand when DD is enabled but only a resource was given."""
     if backend is None and options.dynamical_decoupling.enable:
-        from qrmi.primitives.ibm import get_backend  # fetches target via qrmi.target()
+        from qrmi.primitives.ibm.backend import get_backend  # fetches target via qrmi.target()
 
         backend = get_backend(qrmi)
     return backend
