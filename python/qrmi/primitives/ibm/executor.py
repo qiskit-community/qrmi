@@ -10,16 +10,13 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""Executor and client-side SamplerV2 / EstimatorV2 on top of QRMI.
-Requires: qiskit-ibm-runtime >= 0.50 (client-side primitives), qrmi.
-"""
+"""Executor and client-side SamplerV2 / EstimatorV2 on top of QRMI."""
 
 from __future__ import annotations
 
 import json
 import time
 from collections.abc import Iterable
-from functools import reduce
 from typing import TYPE_CHECKING, Any
 
 from qiskit.primitives import BasePrimitiveJob
@@ -30,7 +27,16 @@ from qiskit.providers import BackendV2, JobStatus
 from qiskit.providers.jobstatus import JOB_FINAL_STATES
 
 # NOTE: these are internal modules of qiskit-ibm-runtime and may change between releases.
-from qiskit_ibm_runtime.decoders.defaults import DEFAULT_DECODERS
+from qiskit_ibm_runtime.decoders.executor.decoder import (
+    BaseClientSideResultDecoder,
+    ExecutorResultDecoder,
+)
+from qiskit_ibm_runtime.decoders.executor_estimator.decoder import (
+    ClientSideEstimatorDecoder,
+)
+from qiskit_ibm_runtime.decoders.executor_sampler.decoder import (
+    ClientSideSamplerResultDecoder,
+)
 from qiskit_ibm_runtime.executor_estimator.prepare import prepare as estimator_prepare
 from qiskit_ibm_runtime.executor_sampler.prepare import prepare
 from qiskit_ibm_runtime.options_models.estimator import EstimatorOptions
@@ -41,7 +47,12 @@ from qiskit_ibm_runtime.quantum_program.params_converters import (
     QUANTUM_PROGRAM_PARAMS_CONVERTERS,
 )
 
-from qrmi import Payload, QuantumResource, TaskStatus
+from qrmi import ( # pylint: disable=no-name-in-module
+    Payload,
+    QuantumResource,
+    TaskStatus,
+    QrmiError,
+)
 
 if TYPE_CHECKING:
     import samplomatic
@@ -92,12 +103,41 @@ def _backend_for_dd(
     return backend
 
 
+def _submit_program(
+    qrmi: QuantumResource,
+    options: ExecutorOptions,
+    program: QuantumProgram | samplomatic.QuantumProgram,
+    post_processor: type[BaseClientSideResultDecoder] | None = None,
+) -> ExecutorJob:
+    """Encode ``program`` as Executor input, submit it through QRMI and return the job.
+
+    ``post_processor`` is attached to the job so that ``result()`` returns a
+    ``PrimitiveResult`` (Sampler/Estimator) instead of a ``QuantumProgramResult``.
+    """
+    if not isinstance(program, QuantumProgram):
+        program = QuantumProgram.from_(program)  # accept samplomatic.QuantumProgram
+    # Same encoding as qiskit_ibm_runtime.Executor.run (the job `params`)
+    params = QUANTUM_PROGRAM_PARAMS_CONVERTERS[SCHEMA_VERSION].encoder(program, options)
+    payload = Payload.QiskitPrimitive(
+        input=json.dumps(params.model_dump(mode="json")), program_id="executor"
+    )
+    job_id = qrmi.task_start(payload)
+    return ExecutorJob(qrmi, job_id, post_processor=post_processor)
+
+
 class ExecutorJob(BasePrimitiveJob[Any, JobStatus]):
     """Job handle for an Executor job submitted through QRMI."""
 
-    def __init__(self, qrmi: QuantumResource, job_id: str, poll_interval: float = 1.0):
+    def __init__(
+        self,
+        qrmi: QuantumResource,
+        job_id: str,
+        poll_interval: float = 1.0,
+        post_processor: type[BaseClientSideResultDecoder] | None = None,
+    ):
         super().__init__(job_id)
         self._qrmi = qrmi
+        self._post_processor = post_processor
         self._poll = poll_interval
         self._status: JobStatus | None = None
         self._result: Any = None
@@ -117,14 +157,21 @@ class ExecutorJob(BasePrimitiveJob[Any, JobStatus]):
             raise RuntimeError(f"Job {self._job_id} ended with status {self._status}")
 
         raw = self._qrmi.task_result(self._job_id).value
-        # Same decoder chain as qiskit_ibm_runtime.RuntimeJobV2 for program "executor":
-        # raw JSON -> QuantumProgramResult -> (semantic_role == "sampler_v2") -> PrimitiveResult
-        self._result = reduce(
-            lambda res, dec: dec.decode(res) if dec.is_applicable(res) else res,
-            DEFAULT_DECODERS["executor"],
-            raw,
-        )
+        # raw JSON -> QuantumProgramResult
+        result = ExecutorResultDecoder.decode(raw)
+        # -> PrimitiveResult, using the post-processor chosen by the Sampler/Estimator that
+        # submitted the job (instead of relying on the program's semantic role).
+        if self._post_processor is not None:
+            result = self._post_processor.decode(result)
+        self._result = result
         return self._result
+
+    def __del__(self):
+        """destructor."""
+        try:
+            self._qrmi.task_stop(self._job_id)
+        except QrmiError:
+            pass
 
     def cancel(self) -> None:
         self._qrmi.task_stop(self._job_id)
@@ -137,6 +184,10 @@ class ExecutorJob(BasePrimitiveJob[Any, JobStatus]):
 
     def cancelled(self) -> bool:
         return self.status() == JobStatus.CANCELLED
+
+    def errored(self) -> bool:
+        """Return whether the job has failed."""
+        return self.status() == JobStatus.ERROR
 
     def in_final_state(self) -> bool:
         return self.status() in JOB_FINAL_STATES
@@ -183,12 +234,13 @@ class ExecutorSampler(BaseSamplerV2):
         program, executor_options = prepare(
             pubs, self.options, shots, add_tags=False, backend=self._backend
         )
-        program._semantic_role = (
-            "sampler_v2"  # lets the decoder pick the sampler post-processor
+        # 2)+3) Encode and submit through QRMI; post-process results as Sampler results
+        return _submit_program(
+            self._qrmi,
+            executor_options,
+            program,
+            post_processor=ClientSideSamplerResultDecoder,
         )
-
-        # 2)+3) Encode and submit through QRMI
-        return Executor(self._qrmi, options=executor_options).run(program)
 
 
 class ExecutorEstimator(BaseEstimatorV2):
@@ -226,8 +278,12 @@ class ExecutorEstimator(BaseEstimatorV2):
         program, executor_options = estimator_prepare(
             pubs, self.options, precision, add_tags=False, backend=self._backend
         )
-        program._semantic_role = "estimator_v2"
-        return Executor(self._qrmi, options=executor_options).run(program)
+        return _submit_program(
+            self._qrmi,
+            executor_options,
+            program,
+            post_processor=ClientSideEstimatorDecoder,
+        )
 
 
 class Executor:
@@ -235,8 +291,8 @@ class Executor:
 
     ``run()`` takes a ``QuantumProgram`` (qiskit-ibm-runtime's or samplomatic's) and returns a
     job whose ``result()`` is a ``QuantumProgramResult`` (raw per-item arrays such as ``meas``).
-    If the program carries a ``_semantic_role`` (set by the Sampler/Estimator wrappers), the
-    result is further post-processed into a ``PrimitiveResult`` by the same decoder chain.
+    The Sampler/Estimator wrappers additionally attach their post-processor to the job, so their
+    jobs return a ``PrimitiveResult``.
 
     Args:
         mode: A ``QRMIBackend`` (``qrmi.primitives.ibm.get_backend(qrmi)``) or a QRMI
@@ -267,17 +323,6 @@ class Executor:
                 ``samplomatic.QuantumProgram``.
 
         Returns:
-            A job whose ``result()`` is a ``QuantumProgramResult``, or a ``PrimitiveResult``
-            if the program has a ``_semantic_role``.
+            A job whose ``result()`` is a ``QuantumProgramResult``.
         """
-        if not isinstance(program, QuantumProgram):
-            program = QuantumProgram.from_(program)  # accept samplomatic.QuantumProgram
-        # Same encoding as qiskit_ibm_runtime.Executor.run (the job `params`)
-        params = QUANTUM_PROGRAM_PARAMS_CONVERTERS[SCHEMA_VERSION].encoder(
-            program, self.options
-        )
-        payload = Payload.QiskitPrimitive(
-            input=json.dumps(params.model_dump(mode="json")), program_id="executor"
-        )
-        job_id = self._qrmi.task_start(payload)
-        return ExecutorJob(self._qrmi, job_id)
+        return _submit_program(self._qrmi, self.options, program)
