@@ -32,8 +32,8 @@ Install dependencies
 Tools
 -----
 
-`gen_sampling_inputs.py`_
-~~~~~~~~~~~~~~~~~~~~~~~
+gen_sampling_inputs.py
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. _gen_sampling_inputs.py: https://github.com/qiskit-community/qrmi/blob/main/examples/task_runner/oqtopus/gen_sampling_inputs.py
 
