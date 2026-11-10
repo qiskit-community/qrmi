@@ -43,7 +43,7 @@ backend = get_backend(qrmi)
 target = backend.target
 
 # Create a circuit - You need at least one circuit as the input to the Sampler primitive.
-circuit = efficient_su2(127, entanglement="linear")
+circuit = efficient_su2(target.num_qubits, entanglement="linear")
 circuit.measure_all()
 # The circuit is parametrized, so we will define the parameter values for execution
 param_values = np.random.rand(circuit.num_parameters)
