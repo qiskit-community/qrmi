@@ -63,6 +63,19 @@ How to run
      -h, --help  show this help message and exit
 
 
+Exit status and diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``task_runner`` exits with status 0 only when the task completed and its result
+was written to the output file or stdout. It exits with status 1 when the task
+fails or is cancelled (including by SIGTERM/SIGCONT from Slurm), or when its
+result cannot be retrieved or written. On failure, the error and the task logs,
+if the resource provides them, are written to stderr before the task is stopped;
+a failed log query is reported without replacing the original error. Log
+messages, including the ``Task ID`` line, go to stderr, so stdout carries only
+the result.
+
+
 Preparing input payload
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -362,6 +375,18 @@ Example:
    export ab_emu_1q_lescanne_2020_QRMI_AB_FELIS_API_KEY=<Felis API Key>
 
    task_runner ab_emu_1q_lescanne_2020 /shared/input/alice_bob_felis_input.json
+
+
+Maestro Local
+^^^^^^^^^^^^^
+
+Use ``QRMI_JOB_QPU_TYPES=maestro-local`` and an existing Maestro session in
+``{backend_name}_QRMI_JOB_ACQUISITION_TOKEN``. Both the Python and Rust runners
+accept legacy execute/estimate payloads and schema-2 native requests. The native
+form exposes noise models, state queries and distributed simulators using symbolic
+backend names. See :doc:`TASK_RUNNER_MAESTRO` for setup, downloadable inputs and
+GPU/MPI prerequisites, and :doc:`../../maestro-native-api` for payload semantics
+and diagnostics.
 
 
 License

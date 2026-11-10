@@ -171,3 +171,10 @@ def test_iqm_resource_type(iqm_env):
     """resource_type() returns ResourceType.IQMServer."""
     qr = QuantumResource(iqm_env, ResourceType.IQMServer)
     assert qr.resource_type() == ResourceType.IQMServer
+
+
+def test_maestro_resource_id_and_type():
+    """The shared factory preserves Maestro construction and enum conversion."""
+    qr = QuantumResource("sync_test_maestro", ResourceType.MaestroLocal)
+    assert qr.resource_id() == "sync_test_maestro"
+    assert qr.resource_type() == ResourceType.MaestroLocal

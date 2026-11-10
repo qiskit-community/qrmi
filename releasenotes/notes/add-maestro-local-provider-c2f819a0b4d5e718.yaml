@@ -1,0 +1,24 @@
+---
+features:
+  - |
+    Add ``maestro-local`` quantum resource provider to QRMI.
+    Maestro Local connects to a locally running Maestro server over a Unix domain socket
+    (default ``/run/maestro.sock``, configurable via ``QRMI_MAESTRO_SOCKET`` or the resource
+    configuration map).
+  - |
+    Support task execution and lifecycle operations (start, status, stop, logs, result retrieval,
+    and session cleanup) for Maestro Local across Rust, Python, C, and Lua interfaces.
+    Cancellation and session deletion wait up to 60 seconds for the server to stop the task's
+    worker (MPI cleanup can take 25 seconds), and a task that another client cancelled is
+    reported as ``Cancelled`` rather than ``TaskNotFound``.
+  - |
+    Support native schema-version-2 Maestro requests (``job_type="request"``) in addition to
+    standard circuit execution and estimation payloads. Native requests expose simulator selection,
+    simulator options, noise models, state queries (including the mixed-state queries
+    ``density_matrix_overlap`` and ``fidelity_with_statevector`` on ``density_matrix`` and
+    ``matrix_product_operator``), incremental evolution, checkpoint suffix batches, and GPU
+    simulation distribution (when supported by the local server). Newer queries need a matching
+    Maestro library; older libraries reject them before a task is allocated.
+  - |
+    Add comprehensive examples and documentation for Maestro Local across C, Lua, Python,
+    Rust, and the task runner.

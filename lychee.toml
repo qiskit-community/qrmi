@@ -31,6 +31,11 @@ exclude = [
     # GitHub Pages links that may not exist in PR builds
     "https://qiskit-community.github.io/qrmi/.*",
 
+    # TODO: remove once this change is merged and the directories exist on main.
+    # Maestro Local example directories linked from the docs. They are added by
+    # the same change that adds the links, so they do not exist on main until it merges.
+    '^https://github\.com/qiskit-community/qrmi/tree/main/examples/.+/maestro(_local)?/?$',
+
     # Provider authenticated/API endpoints
     "https://iam.cloud.ibm.com/.*",
     "https://quantum.cloud.ibm.com/.*",

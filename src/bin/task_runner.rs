@@ -32,6 +32,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
 use qrmi::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
+use qrmi::maestro::MaestroLocal;
 use qrmi::pasqal::PasqalCloud;
 use qrmi::pasqal::PasqalLocal;
 use qrmi::{models::Payload, models::TaskStatus, QuantumResource};
@@ -98,6 +99,16 @@ pub struct QrmiInput {
 #[allow(dead_code)]
 /// QRMI resource types
 pub enum ResourceType {
+    /// Maestro local native or legacy task
+    MaestroLocal {
+        input: String,
+        job_type: String,
+        qubits: u32,
+        simulator_type: u32,
+        simulation_method: u32,
+        observables: String,
+        config: String,
+    },
     /// IBM Quantum System
     IBMQuantumSystem {
         /// Qiskit primitive input
@@ -142,6 +153,29 @@ impl ResourceType {
                 return Err(eyre!("Failed to open {}. reason = {}", args.input, err).into());
             }
         };
+        if qpu_type == "maestro-local" {
+            let Some(Payload::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            }) = MaestroLocal::payload_from_json(&payload)?
+            else {
+                unreachable!()
+            };
+            return Ok(Self::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            });
+        }
         let deserialized: QrmiInput = serde_json::from_str(&payload).unwrap();
         if qpu_type == "ibm-quantum-system" {
             let input = match &deserialized.parameters {
@@ -231,6 +265,7 @@ impl ResourceType {
     #[allow(dead_code)]
     fn as_str(&self) -> &str {
         match self {
+            ResourceType::MaestroLocal { .. } => "maestro-local",
             ResourceType::IBMQuantumSystem { .. } => "ibm-quantum-system",
             ResourceType::QiskitRuntimeService { .. } => "qiskit-runtime-service",
             ResourceType::IBMQuantumComputeService { .. } => "ibm-quantum-compute-service",
@@ -240,6 +275,23 @@ impl ResourceType {
     }
     fn to_payload(&self) -> Option<Payload> {
         match self {
+            ResourceType::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
+            } => Some(Payload::MaestroLocal {
+                input: input.clone(),
+                job_type: job_type.clone(),
+                qubits: *qubits,
+                simulator_type: *simulator_type,
+                simulation_method: *simulation_method,
+                observables: observables.clone(),
+                config: config.clone(),
+            }),
             ResourceType::IBMQuantumSystem { input, program_id }
             | ResourceType::QiskitRuntimeService { input, program_id }
             | ResourceType::IBMQuantumComputeService { input, program_id } => {
@@ -263,6 +315,9 @@ impl ResourceType {
         qpu_name: &str,
     ) -> Result<Box<dyn QuantumResource>, Box<dyn std::error::Error>> {
         match self {
+            ResourceType::MaestroLocal { .. } => {
+                Ok(Box::new(MaestroLocal::new(qpu_name)?) as Box<dyn QuantumResource>)
+            }
             ResourceType::IBMQuantumSystem { .. } => {
                 Ok(Box::new(IBMQuantumSystem::new(qpu_name)?) as Box<dyn QuantumResource>)
             }
@@ -313,20 +368,6 @@ async fn handle_signals(mut signals: Signals) {
             }
             // only registered sinals come
             _ => unreachable!(),
-        }
-    }
-}
-
-// Create the specified file and write the given data to it.
-fn write_to_file(filename: &String, data: &[u8]) {
-    if let Ok(mut f) = File::create(filename) {
-        match f.write_all(data) {
-            Ok(()) => {
-                let _ = f.flush();
-            }
-            Err(e) => {
-                eprintln!("Error: Failed to write output. reason = {:?}", e);
-            }
         }
     }
 }
@@ -425,57 +466,287 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let handle = signals.handle();
     let signals_task = tokio::spawn(handle_signals(signals));
 
-    // start a task
-    let job_id = qrmi.task_start(payload).await?;
-    println!("Task ID: {}", job_id);
-
-    // Poll the task status until it progresses to a final state such as TaskStatus::Completed.
-    let mut succeeded = false;
-    let one_sec = time::Duration::from_millis(POLLING_INTERVAL);
-    while IS_RUNNING.load(Ordering::SeqCst) {
-        match qrmi.task_status(&job_id).await {
-            Ok(status) => {
-                if matches!(status, TaskStatus::Completed) {
-                    succeeded = true;
-                    break;
-                } else if matches!(status, TaskStatus::Failed | TaskStatus::Cancelled) {
-                    eprintln!("{:#?}", status);
-                    break;
-                }
-            }
-            Err(err) => {
-                eprintln!(
-                    "Error: Failed to get task status. reason = {}. Retrying.",
-                    err
-                );
-            }
-        }
-        thread::sleep(one_sec);
-    }
-
-    // write output if task was succeeded
-    if succeeded {
-        match qrmi.task_result(&job_id).await {
-            Ok(result) => {
-                if let Some(output_file) = args.output {
-                    write_to_file(&output_file, result.value.as_bytes());
-                    println!("Wrote output to {}.", output_file);
-                } else {
-                    println!("{}", result.value);
-                }
-            }
-            Err(err) => {
-                eprintln!("Error: Failed to get result. reason = {}", err);
-            }
-        }
-    }
-
-    // cleanup quantum task
-    let _ = qrmi.task_stop(&job_id).await;
+    let result = run_task(
+        qrmi.as_mut(),
+        payload,
+        args.output.as_deref(),
+        &IS_RUNNING,
+        Duration::from_millis(POLLING_INTERVAL),
+        &mut std::io::stdout(),
+        &mut std::io::stderr(),
+    )
+    .await;
 
     // shutdown signal handler
     handle.close();
     signals_task.await?;
 
+    if result.is_err() {
+        // run_task has already written the error and the task diagnostics to stderr.
+        std::process::exit(1);
+    }
     Ok(())
+}
+
+type RunnerResult = Result<(), Box<dyn std::error::Error>>;
+
+/// Submit a task, poll it until it finishes and write its result.
+///
+/// Succeeds only when the task completed and its result was written to
+/// `output_file`, or to `output` when no file is given. Every other outcome is an
+/// error: the task failed or was cancelled, `running` was cleared by a signal, or
+/// the result could not be retrieved or written. Errors are written to
+/// `diagnostics` together with the task's logs, which are retrieved before the
+/// task is stopped. A failed log query is reported without replacing the
+/// original error. A submitted task is always stopped.
+async fn run_task(
+    qrmi: &mut dyn QuantumResource,
+    payload: Payload,
+    output_file: Option<&str>,
+    running: &AtomicBool,
+    poll_interval: Duration,
+    output: &mut dyn Write,
+    diagnostics: &mut dyn Write,
+) -> RunnerResult {
+    let job_id = match qrmi.task_start(payload).await {
+        Ok(job_id) => job_id,
+        Err(err) => {
+            let _ = writeln!(diagnostics, "Error: Failed to start task. reason = {err}");
+            return Err(err.into());
+        }
+    };
+
+    // Keep every exit after submission inside this block so that cleanup always runs.
+    let result: RunnerResult = async {
+        writeln!(output, "Task ID: {job_id}")?;
+        // Poll the task status until it progresses to a final state such as TaskStatus::Completed.
+        while running.load(Ordering::SeqCst) {
+            match qrmi.task_status(&job_id).await {
+                Ok(TaskStatus::Completed) => {
+                    let result = qrmi.task_result(&job_id).await?;
+                    if let Some(path) = output_file {
+                        fs::write(path, result.value.as_bytes())?;
+                        writeln!(output, "Wrote output to {path}.")?;
+                    } else {
+                        writeln!(output, "{}", result.value)?;
+                    }
+                    return Ok(());
+                }
+                Ok(status @ (TaskStatus::Failed | TaskStatus::Cancelled)) => {
+                    return Err(eyre!("Task {job_id} {status:?}").into());
+                }
+                Ok(_) => {}
+                Err(err) => {
+                    let _ = writeln!(
+                        diagnostics,
+                        "Error: Failed to get task status. reason = {err}. Retrying."
+                    );
+                }
+            }
+            tokio::time::sleep(poll_interval).await;
+        }
+        // SIGTERM/SIGCONT stopped the polling loop before the task finished.
+        Err(eyre!("Task {job_id} cancelled").into())
+    }
+    .await;
+
+    if let Err(error) = &result {
+        let _ = writeln!(diagnostics, "Error: {error}");
+        match qrmi.task_logs(&job_id).await {
+            Ok(logs) if !logs.is_empty() => {
+                let _ = writeln!(diagnostics, "{logs}");
+            }
+            Ok(_) => {}
+            Err(err) => {
+                let _ = writeln!(
+                    diagnostics,
+                    "Error: Unable to retrieve task logs. reason = {err}"
+                );
+            }
+        }
+    }
+
+    // cleanup quantum task
+    if let Err(err) = qrmi.task_stop(&job_id).await {
+        let _ = writeln!(diagnostics, "Error: Failed to stop task. reason = {err}");
+    }
+    result
+}
+
+#[cfg(test)]
+mod runner_outcome_tests {
+    use super::*;
+
+    /// A resource whose task immediately reaches `status`, recording each call.
+    struct Resource {
+        status: TaskStatus,
+        fail_start: bool,
+        fail_logs: bool,
+        fail_result: bool,
+        calls: Vec<&'static str>,
+    }
+
+    impl Resource {
+        fn new(status: TaskStatus) -> Self {
+            Self {
+                status,
+                fail_start: false,
+                fail_logs: false,
+                fail_result: false,
+                calls: Vec::new(),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl QuantumResource for Resource {
+        async fn resource_id(&mut self) -> qrmi::Result<String> {
+            Ok("test".into())
+        }
+        async fn resource_type(&mut self) -> qrmi::Result<qrmi::models::ResourceType> {
+            Ok(qrmi::models::ResourceType::MaestroLocal)
+        }
+        async fn is_accessible(&mut self) -> qrmi::Result<bool> {
+            Ok(true)
+        }
+        async fn task_start(&mut self, _: Payload) -> qrmi::Result<String> {
+            self.calls.push("start");
+            if self.fail_start {
+                Err(qrmi::QrmiError::InvalidInput("bad payload".into()))
+            } else {
+                Ok("1".into())
+            }
+        }
+        async fn task_status(&mut self, _: &str) -> qrmi::Result<TaskStatus> {
+            self.calls.push("status");
+            Ok(self.status.clone())
+        }
+        async fn task_result(&mut self, _: &str) -> qrmi::Result<qrmi::models::TaskResult> {
+            self.calls.push("result");
+            if self.fail_result {
+                Err(qrmi::QrmiError::InvalidInput("result unavailable".into()))
+            } else {
+                Ok(qrmi::models::TaskResult {
+                    value: "task-result".into(),
+                })
+            }
+        }
+        async fn task_logs(&mut self, _: &str) -> qrmi::Result<String> {
+            self.calls.push("logs");
+            if self.fail_logs {
+                Err(qrmi::QrmiError::UnsupportedFunction(
+                    "logs unavailable".into(),
+                ))
+            } else {
+                Ok("backend diagnostic".into())
+            }
+        }
+        async fn task_stop(&mut self, _: &str) -> qrmi::Result<()> {
+            self.calls.push("stop");
+            Ok(())
+        }
+    }
+
+    fn payload() -> Payload {
+        Payload::MaestroLocal {
+            input: "{}".into(),
+            job_type: "request".into(),
+            qubits: 0,
+            simulator_type: 0,
+            simulation_method: 0,
+            observables: String::new(),
+            config: "{}".into(),
+        }
+    }
+
+    /// Run `resource` to its end, returning the outcome, stdout and stderr.
+    async fn run(
+        resource: &mut Resource,
+        output_file: Option<&str>,
+        running: bool,
+    ) -> (RunnerResult, String, String) {
+        let (mut output, mut diagnostics) = (Vec::new(), Vec::new());
+        let result = run_task(
+            resource,
+            payload(),
+            output_file,
+            &AtomicBool::new(running),
+            Duration::ZERO,
+            &mut output,
+            &mut diagnostics,
+        )
+        .await;
+        (
+            result,
+            String::from_utf8(output).unwrap(),
+            String::from_utf8(diagnostics).unwrap(),
+        )
+    }
+
+    #[tokio::test]
+    async fn completed_task_writes_result_and_cleans_up() {
+        let mut resource = Resource::new(TaskStatus::Completed);
+        let (result, output, diagnostics) = run(&mut resource, None, true).await;
+        result.unwrap();
+        assert!(output.contains("task-result"));
+        assert_eq!(diagnostics, "");
+        assert_eq!(resource.calls, ["start", "status", "result", "stop"]);
+    }
+
+    #[tokio::test]
+    async fn unsuccessful_outcomes_report_diagnostics_then_clean_up() {
+        for (status, fail_logs, fail_result, running, expected) in [
+            (TaskStatus::Failed, false, false, true, "Failed"),
+            (TaskStatus::Cancelled, false, false, true, "Cancelled"),
+            (TaskStatus::Failed, true, false, true, "Failed"),
+            (
+                TaskStatus::Completed,
+                false,
+                true,
+                true,
+                "result unavailable",
+            ),
+            (TaskStatus::Running, false, false, false, "cancelled"),
+        ] {
+            let mut resource = Resource::new(status);
+            resource.fail_logs = fail_logs;
+            resource.fail_result = fail_result;
+            let (result, output, diagnostics) = run(&mut resource, None, running).await;
+            assert!(result.unwrap_err().to_string().contains(expected));
+            assert!(diagnostics.contains(expected), "{diagnostics}");
+            // A failed log query is reported without hiding the original error.
+            let detail = if fail_logs {
+                "logs unavailable"
+            } else {
+                "backend diagnostic"
+            };
+            assert!(diagnostics.contains(detail), "{diagnostics}");
+            assert!(!output.contains(detail));
+            // Logs are retrieved before the task is stopped.
+            assert_eq!(resource.calls[resource.calls.len() - 2..], ["logs", "stop"]);
+        }
+    }
+
+    #[tokio::test]
+    async fn output_write_failure_is_an_error_and_cleans_up() {
+        let mut resource = Resource::new(TaskStatus::Completed);
+        let path = std::env::temp_dir()
+            .join(uuid::Uuid::new_v4().to_string())
+            .join("output");
+        let (result, _, diagnostics) = run(&mut resource, path.to_str(), true).await;
+        assert!(result.is_err());
+        assert!(diagnostics.starts_with("Error: "), "{diagnostics}");
+        assert_eq!(resource.calls.last(), Some(&"stop"));
+    }
+
+    #[tokio::test]
+    async fn start_failure_is_reported_without_cleanup() {
+        let mut resource = Resource::new(TaskStatus::Completed);
+        resource.fail_start = true;
+        let (result, output, diagnostics) = run(&mut resource, None, true).await;
+        assert!(result.is_err());
+        assert_eq!(output, "");
+        assert!(diagnostics.contains("bad payload"), "{diagnostics}");
+        assert_eq!(resource.calls, ["start"]);
+    }
 }

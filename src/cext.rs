@@ -138,6 +138,23 @@ pub enum Payload {
         /// `simulator_info`, `mitigation_info`, and `operator`.
         job_spec: *mut c_char,
     },
+    /// Payload for Maestro Local Server
+    MaestroLocal {
+        /// Input payload (QASM string, or schema version 2 JSON if job_type == "request")
+        input: *mut c_char,
+        /// Job type (execute, estimate, request)
+        job_type: *mut c_char,
+        /// qubits count
+        qubits: u32,
+        /// simulator type
+        simulator_type: u32,
+        /// simulation method
+        simulation_method: u32,
+        /// observables, if needed, pauli strings separated by ";"
+        observables: *mut c_char,
+        /// Configuration in json format
+        config: *mut c_char,
+    },
 }
 
 /// A key-value pair
@@ -1762,6 +1779,39 @@ pub unsafe extern "C" fn qrmi_resource_task_start(
         if let Ok(job_spec_str) = CStr::from_ptr(job_spec).to_str() {
             qrmi_payload = Some(crate::models::Payload::Oqtopus {
                 job_spec: job_spec_str.to_string(),
+            });
+        }
+    } else if let Payload::MaestroLocal {
+        input,
+        job_type,
+        qubits,
+        simulator_type,
+        simulation_method,
+        observables,
+        config,
+    } = *payload
+    {
+        let cstr_opt = |ptr: *const c_char, default: Option<&str>| -> Option<String> {
+            if ptr.is_null() {
+                default.map(str::to_owned)
+            } else {
+                CStr::from_ptr(ptr).to_str().ok().map(str::to_owned)
+            }
+        };
+        if let (Some(input), Some(job_type), Some(observables), Some(config)) = (
+            cstr_opt(input, None),
+            cstr_opt(job_type, None),
+            cstr_opt(observables, Some("")),
+            cstr_opt(config, Some("{}")),
+        ) {
+            qrmi_payload = Some(crate::models::Payload::MaestroLocal {
+                input,
+                job_type,
+                qubits,
+                simulator_type,
+                simulation_method,
+                observables,
+                config,
             });
         }
     }

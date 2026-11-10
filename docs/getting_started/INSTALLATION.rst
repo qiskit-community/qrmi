@@ -376,6 +376,17 @@ missing Munge to be detected as soon as QRMI is loaded:
 Further Resources
 -----------------
 
+Maestro Local
+~~~~~~~~~~~~~
+
+Maestro Local requires no optional Python extra. It talks to a running
+`maestro-local-server <https://github.com/QoroQuantum/maestro-local-server>`__; install it and the Maestro library it uses by
+following the server's `installation guide <https://github.com/QoroQuantum/maestro-local-server/blob/main/docs/installation.md>`__. Select its Unix socket with ``QRMI_MAESTRO_SOCKET`` when it is
+not ``/run/maestro.sock``. The server and its workers use Rust/C/C++.
+
+See :doc:`../maestro-native-api` for native requests, noise simulation and
+distribution, and :doc:`../examples/task_runner/TASK_RUNNER_MAESTRO` for examples.
+
 Examples
 ~~~~~~~~
 

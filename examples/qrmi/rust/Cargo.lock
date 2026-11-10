@@ -1764,6 +1764,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
+name = "maestro-local-api"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "md-5"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2061,7 +2068,7 @@ dependencies = [
 
 [[package]]
 name = "qrmi"
-version = "0.26.5"
+version = "0.26.6"
 dependencies = [
  "alice-bob-felis",
  "anyhow",
@@ -2078,6 +2085,7 @@ dependencies = [
  "libc",
  "libloading",
  "log",
+ "maestro-local-api",
  "pasqal-cloud-api",
  "pasqal-local-api",
  "quantum-system-api",
@@ -2140,6 +2148,18 @@ dependencies = [
  "clap",
  "dotenv",
  "env_logger",
+ "qrmi",
+ "tokio",
+]
+
+[[package]]
+name = "qrmi-example-maestro-local"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "env_logger",
+ "maestro-local-api",
  "qrmi",
  "tokio",
 ]
@@ -2766,6 +2786,7 @@ version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
 dependencies = [
+ "indexmap 2.14.0",
  "itoa",
  "memchr",
  "serde",

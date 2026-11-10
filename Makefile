@@ -94,6 +94,7 @@ test-doc:
 	cargo test --doc --locked $(CARGO_PROFILE_FLAG)
 
 test-deps:
+	cargo test --locked $(CARGO_PROFILE_FLAG) -p maestro-local-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p quantum-system-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-cloud-api
 	cargo test --locked $(CARGO_PROFILE_FLAG) -p pasqal-local-api

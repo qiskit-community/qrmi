@@ -43,6 +43,10 @@ This allows:
   Simulated Quantum Resource).
   To add a resource type, add a test file and a job in that workflow.
 
+Example:
+
+`python/tests/integration/quantum_resource/test_maestro_live.py`
+
 ## Conventions
 
 - Use `pytest`.
@@ -54,3 +58,24 @@ Contributors are encouraged to:
 - Add tests alongside their features.
 - Replicate the source structure under `unit/` where appropriate.
 - Introduce vendor-specific fixtures inside scoped directories.
+
+## Maestro Local and C bindings
+
+The tests in `unit/quantum_resource/test_maestro_local.py` run a scripted local
+Unix socket server and require the rebuilt Python extension, but no Maestro daemon.
+Set `QRMI_TEST_LIBRARY` to the rebuilt `libqrmi.so` to include C ABI/error/discovery
+checks.
+
+To test against a running Maestro server, opt in explicitly:
+
+```sh
+PYTHONPATH=python QRMI_TEST_MAESTRO_LIVE=1 \
+    python -m pytest python/tests/integration/quantum_resource/test_maestro_live.py
+```
+
+These tests use fresh sessions, two-qubit circuits and 128 shots. They check Aer
+and QCSim execution and estimation, cancellation, consumed results, discovery and
+session release/replacement. Polling has a 60-second deadline, and each test's
+sessions are deleted and checked for removal during cleanup, including on failure.
+The default socket is `/run/maestro.sock`; `QRMI_MAESTRO_SOCKET` can select another
+running server. This suite is skipped unless `QRMI_TEST_MAESTRO_LIVE=1` is set.
