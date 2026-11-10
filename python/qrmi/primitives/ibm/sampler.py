@@ -12,10 +12,18 @@
 
 """SamplerV2 Primitive implementation with IBM QRMI"""
 
+from warnings import deprecated
 from qrmi import QuantumResource
 from qrmi.primitives import QRMIBaseSamplerV2
 
 
+@deprecated(
+    "The SamplerV2 class is deprecated as of qrmi 0.27.0 and will be removed no sooner "
+    "than 3 months after the release date. `qrmi.primitives.ibm.ExecutorSampler` "
+    "provides a new Sampler implementation that runs all the pre- and post-processing "
+    "in the client side.",
+    category=FutureWarning,
+)
 class SamplerV2(QRMIBaseSamplerV2):
     """SamplerV2 for QRMI"""
 

@@ -12,10 +12,18 @@
 
 """EstimatorV2 Primitive implementation with IBM QRMI"""
 
+from warnings import deprecated
 from qrmi import QuantumResource
 from qrmi.primitives import QRMIBaseEstimatorV2
 
 
+@deprecated(
+    "The EstimatorV2 class is deprecated as of qrmi 0.27.0 and will be removed no sooner "
+    "than 3 months after the release date. `qrmi.primitives.ibm.ExecutorEstimator` "
+    "provides a new Estimator implementation that runs all the pre- and post-processing "
+    "in the client side.",
+    category=FutureWarning,
+)
 class EstimatorV2(QRMIBaseEstimatorV2):
     """EstimatorV2 for QRMI"""
 
