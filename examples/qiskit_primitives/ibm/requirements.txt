@@ -1,4 +1,3 @@
 python-dotenv
-samplomatic
 plotly
-qrmi
+qrmi[ibm]

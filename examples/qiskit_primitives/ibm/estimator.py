@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""Estimator example with IBM Quantum Compute Service/Quantum System QRMI"""
+"""ExecutorEstimator example with IBM Quantum Compute Service/Quantum System QRMI"""
 
 # pylint: disable=invalid-name
 import random
@@ -19,7 +19,7 @@ from qiskit.circuit.library import QAOAAnsatz
 from qiskit.transpiler import generate_preset_pass_manager
 from qiskit.quantum_info import SparsePauliOp
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import ExecutorEstimator as Estimator, get_backend
+from qrmi.primitives.ibm import ExecutorEstimator, get_backend
 
 # Create QRMI
 load_dotenv()
@@ -36,15 +36,18 @@ for res in resources:
 qrmi = resources[random.randrange(len(resources))]
 print(qrmi.metadata())
 
-# Generate Qiskit BackendV2 instance from QuantumResource
+# Create a backend from the QRMI resource. Its target is used for transpilation, and the
+# backend itself is passed to the Estimator (it carries the QRMI resource and provides the
+# timing information needed for dynamical decoupling).
 backend = get_backend(qrmi)
+target = backend.target
 
 # Create a circuit and an observable
 # You need at least one circuit and one observable as inputs to the Estimator primitive.
-entanglement = [tuple(edge) for edge in backend.target.build_coupling_map().get_edges()]
+entanglement = [tuple(edge) for edge in target.build_coupling_map().get_edges()]
 observable = SparsePauliOp.from_sparse_list(
     [("ZZ", [i, j], 0.5) for i, j in entanglement],
-    num_qubits=backend.num_qubits,
+    num_qubits=target.num_qubits,
 )
 circuit = QAOAAnsatz(observable, reps=2)
 # the circuit is parametrized, so we will define the parameter values for execution
@@ -57,15 +60,16 @@ print(f">>> Observable: {observable.paulis}")
 # We'll use the transpiler to do this.
 pm = generate_preset_pass_manager(
     optimization_level=1,
-    backend=backend,
+    target=target,
 )
 isa_circuit = pm.run(circuit)
 isa_observable = observable.apply_layout(isa_circuit.layout)
 print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
 
-# Initialize QRMI Estimator
+# Initialize QRMI Estimator. Error mitigation (resilience_level=1, i.e. TREX, by default)
+# runs on the client side, and the job is submitted to the `executor` program.
 options = {}
-estimator = Estimator(mode=backend, options=options)
+estimator = ExecutorEstimator(backend, options=options)
 
 # Invoke the Estimator and get results
 # Next, invoke the run() method to calculate expectation values for the input circuits
@@ -82,3 +86,6 @@ try:
     print(f"  > Metadata: {result[0].metadata}")
 except RuntimeError as err:
     print(err)
+
+if job.errored():
+    print(qrmi.task_logs(job.job_id()))

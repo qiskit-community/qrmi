@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""Sampler example with IBM Quantum Compute Service/Quantum System QRMI"""
+"""ExecutorSampler example with IBM Quantum Compute Service/Quantum System QRMI"""
 
 # pylint: disable=invalid-name
 import random
@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from qiskit.circuit.library import efficient_su2
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import ExecutorSampler as Sampler, get_backend
+from qrmi.primitives.ibm import ExecutorSampler, get_backend
 
 # Create QRMI
 load_dotenv()
@@ -36,8 +36,11 @@ for res in resources:
 qrmi = resources[random.randrange(len(resources))]
 print(qrmi.metadata())
 
-# Generate Qiskit BackendV2 instance from QuantumResource
+# Create a backend from the QRMI resource. Its target is used for transpilation, and the
+# backend itself is passed to the Sampler (it carries the QRMI resource and provides the
+# timing information needed for dynamical decoupling).
 backend = get_backend(qrmi)
+target = backend.target
 
 # Create a circuit - You need at least one circuit as the input to the Sampler primitive.
 circuit = efficient_su2(127, entanglement="linear")
@@ -50,16 +53,17 @@ param_values = np.random.rand(circuit.num_parameters)
 # We'll use the transpiler to do this.
 pm = generate_preset_pass_manager(
     optimization_level=1,
-    backend=backend,
+    target=target,
 )
 isa_circuit = pm.run(circuit)
 print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
 
-# Initialize QRMI Sampler
+# Initialize QRMI Sampler. Pre- and post-processing (e.g. twirling, dynamical decoupling)
+# run on the client side, and the job is submitted to the `executor` program.
 options = {
     "default_shots": 10000,
 }
-sampler = Sampler(mode=backend, options=options)
+sampler = ExecutorSampler(backend, options=options)
 
 # Next, invoke the run() method to generate the output. The circuit and optional
 # parameter value sets are input as primitive unified bloc (PUB) tuples.
@@ -74,3 +78,6 @@ try:
     print(f"Counts for the 'meas' output register: {pub_result.data.meas.get_counts()}")
 except RuntimeError as err:
     print(err)
+
+if job.errored():
+    print(qrmi.task_logs(job.job_id()))
