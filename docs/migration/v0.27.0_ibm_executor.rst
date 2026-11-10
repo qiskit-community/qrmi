@@ -1,4 +1,4 @@
-.. _v0.27.0:
+.. _v0.27.0_ibm_executor:
 
 Migrating to v0.27.0: ``SamplerV2`` / ``EstimatorV2`` are deprecated in favor of ``ExecutorSampler`` / ``ExecutorEstimator``
 ===============================================================================================================================
