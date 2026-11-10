@@ -124,7 +124,7 @@ export ibm_marrakesh_QRMI_IBM_QRS_SERVICE_CRN=your_instance
 
 ## How to run
 
-These examples use `ExecutorSampler` / `ExecutorEstimator`, which run pre- and post-processing on the client side and submit jobs to the `executor` program. They require `qiskit-ibm-runtime>=0.50`. To migrate from `SamplerV2` / `EstimatorV2`, see the [migration guide](../../../docs/migration/v0.27.0.md).
+These examples use `ExecutorSampler` / `ExecutorEstimator`, which run pre- and post-processing on the client side and submit jobs to the `executor` program. They require `qiskit-ibm-runtime>=0.50`. To migrate from `SamplerV2` / `EstimatorV2`, see the [migration guide](../../../docs/migration/v0.27.0_ibm_executor.md).
 
 ### ExecutorSampler
 
