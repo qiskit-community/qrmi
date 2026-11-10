@@ -17,8 +17,8 @@ from .estimator import EstimatorV2
 from .target import get_target
 from .backend import get_backend
 from .executor import (
-    QRMIExecutorJob,
-    QRMIExecutorSampler,
-    QRMIExecutorEstimator,
-    QRMIExecutor,
+    ExecutorJob,
+    ExecutorSampler,
+    ExecutorEstimator,
+    Executor,
 )

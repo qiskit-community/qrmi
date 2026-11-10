@@ -11,11 +11,6 @@
 # that they have been altered from the originals.
 
 """Executor and client-side SamplerV2 / EstimatorV2 on top of QRMI.
-
-Reuses the pre-/post-processing of ``qiskit_ibm_runtime.executor_sampler.Sampler`` and
-``qiskit_ibm_runtime.executor_estimator.Estimator`` and only replaces the submission path
-with QRMI (program_id="executor").
-
 Requires: qiskit-ibm-runtime >= 0.50 (client-side primitives), qrmi.
 """
 
@@ -97,7 +92,7 @@ def _backend_for_dd(
     return backend
 
 
-class QRMIExecutorJob(BasePrimitiveJob[Any, JobStatus]):
+class ExecutorJob(BasePrimitiveJob[Any, JobStatus]):
     """Job handle for an Executor job submitted through QRMI."""
 
     def __init__(self, qrmi: QuantumResource, job_id: str, poll_interval: float = 1.0):
@@ -155,7 +150,7 @@ class QRMIExecutorJob(BasePrimitiveJob[Any, JobStatus]):
         return self._qrmi.task_logs(self._job_id)
 
 
-class QRMIExecutorSampler(BaseSamplerV2):
+class ExecutorSampler(BaseSamplerV2):
     """SamplerV2 that runs via the IBM ``executor`` program through QRMI.
 
     Args:
@@ -182,7 +177,7 @@ class QRMIExecutorSampler(BaseSamplerV2):
 
     def run(
         self, pubs: Iterable[SamplerPubLike], *, shots: int | None = None
-    ) -> QRMIExecutorJob:
+    ) -> ExecutorJob:
         # 1) Client-side pre-processing (identical to executor_sampler.Sampler.run)
         self._backend = _backend_for_dd(self._qrmi, self._backend, self.options)
         program, executor_options = prepare(
@@ -193,10 +188,10 @@ class QRMIExecutorSampler(BaseSamplerV2):
         )
 
         # 2)+3) Encode and submit through QRMI
-        return QRMIExecutor(self._qrmi, options=executor_options).run(program)
+        return Executor(self._qrmi, options=executor_options).run(program)
 
 
-class QRMIExecutorEstimator(BaseEstimatorV2):
+class ExecutorEstimator(BaseEstimatorV2):
     """EstimatorV2 that runs via the IBM ``executor`` program through QRMI.
 
     Pre-processing (twirling, ZNE gate folding, PEC/PEA noise injection, TREX, DD) and
@@ -226,16 +221,16 @@ class QRMIExecutorEstimator(BaseEstimatorV2):
 
     def run(
         self, pubs: Iterable[EstimatorPubLike], *, precision: float | None = None
-    ) -> QRMIExecutorJob:
+    ) -> ExecutorJob:
         self._backend = _backend_for_dd(self._qrmi, self._backend, self.options)
         program, executor_options = estimator_prepare(
             pubs, self.options, precision, add_tags=False, backend=self._backend
         )
         program._semantic_role = "estimator_v2"
-        return QRMIExecutor(self._qrmi, options=executor_options).run(program)
+        return Executor(self._qrmi, options=executor_options).run(program)
 
 
-class QRMIExecutor:
+class Executor:
     """Counterpart of ``qiskit_ibm_runtime.Executor`` that submits through QRMI.
 
     ``run()`` takes a ``QuantumProgram`` (qiskit-ibm-runtime's or samplomatic's) and returns a
@@ -266,7 +261,7 @@ class QRMIExecutor:
 
     def run(
         self, program: QuantumProgram | samplomatic.QuantumProgram
-    ) -> QRMIExecutorJob:
+    ) -> ExecutorJob:
         """Encode a quantum program as Executor input and submit it through QRMI.
 
         Args:
@@ -287,4 +282,4 @@ class QRMIExecutor:
             input=json.dumps(params.model_dump(mode="json")), program_id="executor"
         )
         job_id = self._qrmi.task_start(payload)
-        return QRMIExecutorJob(self._qrmi, job_id)
+        return ExecutorJob(self._qrmi, job_id)

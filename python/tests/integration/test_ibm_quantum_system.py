@@ -22,7 +22,7 @@ from qiskit import QuantumCircuit
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
 from qrmi import QuantumResource, ResourceStatusCode, ResourceType
-from qrmi.primitives.ibm import QRMIExecutorSampler as Sampler, get_backend
+from qrmi.primitives.ibm import ExecutorSampler, get_backend
 
 RESOURCE = "fake_lagos"
 
@@ -49,7 +49,7 @@ def test_sampler(qrmi):
         optimization_level=1, backend=backend
     ).run(qc)
 
-    job = Sampler(mode=backend).run([isa_circuit], shots=1024)
+    job = ExecutorSampler(mode=backend).run([isa_circuit], shots=1024)
     counts = job.result()[0].data.c.get_counts()
     assert sum(counts.values()) == 1024
     assert qrmi.task_logs(job.job_id())

@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from qiskit.circuit import Parameter, QuantumCircuit
 from qiskit.transpiler import generate_preset_pass_manager
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import QRMIExecutor as Executor, get_backend
+from qrmi.primitives.ibm import Executor, get_backend
 from qiskit_ibm_runtime.quantum_program import QuantumProgram
 import numpy as np
 from samplomatic import build
