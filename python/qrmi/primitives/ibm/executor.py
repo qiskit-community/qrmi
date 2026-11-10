@@ -47,7 +47,7 @@ from qiskit_ibm_runtime.quantum_program.params_converters import (
     QUANTUM_PROGRAM_PARAMS_CONVERTERS,
 )
 
-from qrmi import ( # pylint: disable=no-name-in-module
+from qrmi import (  # pylint: disable=no-name-in-module
     Payload,
     QuantumResource,
     TaskStatus,
