@@ -12,7 +12,7 @@
 
 """EstimatorV2 Primitive implementation with IBM QRMI"""
 
-from warnings import deprecated
+from typing_extensions import deprecated
 from qrmi import QuantumResource
 from qrmi.primitives import QRMIBaseEstimatorV2
 

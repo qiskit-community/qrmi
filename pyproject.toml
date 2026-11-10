@@ -45,6 +45,7 @@ keywords = [
 dependencies = [
   "python-dotenv",
   "python-dateutil<3",
+  "typing_extensions>=4.12",
 ]
 
 [project.optional-dependencies]
