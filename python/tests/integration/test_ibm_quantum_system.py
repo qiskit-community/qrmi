@@ -44,7 +44,7 @@ def test_sampler(qrmi):
     qc.h(0)
     qc.cx(0, 1)
     qc.measure([0, 1], [0, 1])
-    backend=get_backend(qrmi)
+    backend = get_backend(qrmi)
     isa_circuit = generate_preset_pass_manager(
         optimization_level=1, backend=backend
     ).run(qc)

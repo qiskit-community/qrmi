@@ -259,9 +259,7 @@ class Executor:
             options = ExecutorOptions(**options)
         self.options = options
 
-    def run(
-        self, program: QuantumProgram | samplomatic.QuantumProgram
-    ) -> ExecutorJob:
+    def run(self, program: QuantumProgram | samplomatic.QuantumProgram) -> ExecutorJob:
         """Encode a quantum program as Executor input and submit it through QRMI.
 
         Args:
