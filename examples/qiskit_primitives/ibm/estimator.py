@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""EstimatorV2 example with IBM Quantum System QRMI"""
+"""ExecutorEstimator example with IBM Quantum Compute Service/Quantum System QRMI"""
 
 # pylint: disable=invalid-name
 import random
@@ -19,7 +19,7 @@ from qiskit.circuit.library import QAOAAnsatz
 from qiskit.transpiler import generate_preset_pass_manager
 from qiskit.quantum_info import SparsePauliOp
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import EstimatorV2, get_backend
+from qrmi.primitives.ibm import ExecutorEstimator, get_backend
 
 # Create QRMI
 load_dotenv()
@@ -36,8 +36,11 @@ for res in resources:
 qrmi = resources[random.randrange(len(resources))]
 print(qrmi.metadata())
 
-# Generate transpiler target from backend configuration & properties
-target = get_backend(qrmi).target
+# Create a backend from the QRMI resource. Its target is used for transpilation, and the
+# backend itself is passed to the Estimator (it carries the QRMI resource and provides the
+# timing information needed for dynamical decoupling).
+backend = get_backend(qrmi)
+target = backend.target
 
 # Create a circuit and an observable
 # You need at least one circuit and one observable as inputs to the Estimator primitive.
@@ -63,9 +66,10 @@ isa_circuit = pm.run(circuit)
 isa_observable = observable.apply_layout(isa_circuit.layout)
 print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
 
-# Initialize QRMI Estimator
+# Initialize QRMI Estimator. Error mitigation (resilience_level=1, i.e. TREX, by default)
+# runs on the client side, and the job is submitted to the `executor` program.
 options = {}
-estimator = EstimatorV2(qrmi, options=options)
+estimator = ExecutorEstimator(backend, options=options)
 
 # Invoke the Estimator and get results
 # Next, invoke the run() method to calculate expectation values for the input circuits

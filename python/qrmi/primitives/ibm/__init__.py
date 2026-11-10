@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright 2025 IBM. All Rights Reserved.
+# (C) Copyright 2025-2026 IBM. All Rights Reserved.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -16,3 +16,9 @@ from .sampler import SamplerV2
 from .estimator import EstimatorV2
 from .target import get_target
 from .backend import get_backend
+from .executor import (
+    ExecutorJob,
+    ExecutorSampler,
+    ExecutorEstimator,
+    Executor,
+)

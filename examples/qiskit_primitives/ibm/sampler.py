@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""SamplerV2 example with IBM Quantum System QRMI"""
+"""ExecutorSampler example with IBM Quantum Compute Service/Quantum System QRMI"""
 
 # pylint: disable=invalid-name
 import random
@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from qiskit.circuit.library import efficient_su2
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qrmi.primitives import QRMIService
-from qrmi.primitives.ibm import SamplerV2, get_backend
+from qrmi.primitives.ibm import ExecutorSampler, get_backend
 
 # Create QRMI
 load_dotenv()
@@ -36,11 +36,14 @@ for res in resources:
 qrmi = resources[random.randrange(len(resources))]
 print(qrmi.metadata())
 
-# Generate transpiler target from backend configuration & properties
-target = get_backend(qrmi).target
+# Create a backend from the QRMI resource. Its target is used for transpilation, and the
+# backend itself is passed to the Sampler (it carries the QRMI resource and provides the
+# timing information needed for dynamical decoupling).
+backend = get_backend(qrmi)
+target = backend.target
 
 # Create a circuit - You need at least one circuit as the input to the Sampler primitive.
-circuit = efficient_su2(127, entanglement="linear")
+circuit = efficient_su2(target.num_qubits, entanglement="linear")
 circuit.measure_all()
 # The circuit is parametrized, so we will define the parameter values for execution
 param_values = np.random.rand(circuit.num_parameters)
@@ -55,11 +58,12 @@ pm = generate_preset_pass_manager(
 isa_circuit = pm.run(circuit)
 print(f">>> Circuit ops (ISA): {isa_circuit.count_ops()}")
 
-# Initialize QRMI Sampler
+# Initialize QRMI Sampler. Pre- and post-processing (e.g. twirling, dynamical decoupling)
+# run on the client side, and the job is submitted to the `executor` program.
 options = {
     "default_shots": 10000,
 }
-sampler = SamplerV2(qrmi, options=options)
+sampler = ExecutorSampler(backend, options=options)
 
 # Next, invoke the run() method to generate the output. The circuit and optional
 # parameter value sets are input as primitive unified bloc (PUB) tuples.

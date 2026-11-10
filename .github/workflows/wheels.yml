@@ -177,7 +177,10 @@ jobs:
       uses: pypa/cibuildwheel@v3.4.1
     - if: inputs.lint == true
       name: Lint wheels
-      run: make lint-wheels
+      run: make lint-wheels-all
+    - if: inputs.lint == true
+      name: Lint wheels (IQM)
+      run: make lint-wheels-iqm
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-x86_64
@@ -249,7 +252,10 @@ jobs:
     - uses: pypa/cibuildwheel@v3.4.1
     - if: inputs.lint == true
       name: Lint wheels
-      run: make lint-wheels
+      run: make lint-wheels-all
+    - if: inputs.lint == true
+      name: Lint wheels (IQM)
+      run: make lint-wheels-iqm
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-arm64

@@ -186,6 +186,11 @@ Example
 IBM Qiskit Runtime Service specific (deprecated)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+
+   ``ExecutorSampler`` and ``ExecutorEstimator`` are not supported with the deprecated
+   ``qiskit-runtime-service`` resource type. Use ``ibm-quantum-compute-service`` instead.
+
 When run as a job in a Slurm cluster, these environment variables are set by users or administrator.
 
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------+
@@ -241,8 +246,13 @@ Example
 How to run `this example`_
 --------------------------
 
-SamplerV2
-~~~~~~~~~
+These examples use ``ExecutorSampler`` / ``ExecutorEstimator``, which run pre- and
+post-processing on the client side and submit jobs to the ``executor`` program. They require
+``qiskit-ibm-runtime>=0.50``. To migrate from ``SamplerV2`` / ``EstimatorV2``, see the
+:ref:`migration guide <v0.27.0_ibm_executor>`.
+
+ExecutorSampler
+~~~~~~~~~~~~~~~
 
 Code is based on the `"Get started with Sampler" tutorial`_.
 
@@ -257,8 +267,8 @@ Run `sampler.py`_:
    python sampler.py
 
 
-EstimatorV2
-~~~~~~~~~~~
+ExecutorEstimator
+~~~~~~~~~~~~~~~~~
 
 Code is based on the `"Get started with Estimator" tutorial`_.
 
