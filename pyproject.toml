@@ -50,7 +50,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ibm = [
-  "qiskit_ibm_runtime>=0.50.0",
+  "qiskit_ibm_runtime>=0.51.0",
   "qiskit_qasm3_import",
 ]
 pasqal = [
