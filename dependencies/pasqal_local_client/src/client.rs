@@ -82,15 +82,19 @@ pub struct CreateSessionPayload {
 }
 
 impl Client {
-    /// Return authentication headers for request with a fresh munge token
-    async fn create_headers(&self) -> Result<header::HeaderMap> {
+    /// Return authentication headers for request with a fresh munge token.
+    ///
+    /// The token's payload is "<METHOD> <URL>", so Warden (with
+    /// `api.munge_audience` set) refuses it for any other request or server:
+    /// a token sent to a wrong URL cannot be relayed to Warden.
+    async fn create_headers(&self, method: &str, url: &str) -> Result<header::HeaderMap> {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             reqwest::header::CONTENT_TYPE,
             reqwest::header::HeaderValue::from_static("application/json"),
         );
 
-        let token = munge::encode(b"")?;
+        let token = munge::encode(format!("{method} {url}").as_bytes())?;
         headers.insert(
             reqwest::header::HeaderName::from_static("x-munge-cred"),
             reqwest::header::HeaderValue::from_str(&token).expect("invalid munge token"),
@@ -117,7 +121,7 @@ impl Client {
         let url = format!("{}/jobs", self.base_url);
         let job = CreateJob { sequence, shots };
 
-        let headers = self.create_headers().await?;
+        let headers = self.create_headers("POST", &url).await?;
         let resp = self
             .client
             .post(url)
@@ -132,7 +136,7 @@ impl Client {
 
     pub async fn cancel_job(&self, job_id: &str) -> Result<JobResponse> {
         let url = format!("{}/jobs/{}/cancel", self.base_url, job_id);
-        let headers = self.create_headers().await?;
+        let headers = self.create_headers("POST", &url).await?;
         let resp = self.client.post(url).headers(headers).send().await?;
 
         self.handle_request(resp).await
@@ -157,7 +161,7 @@ impl Client {
             slurm_job_id: slurm_job_id.to_string(),
         };
 
-        let headers = self.create_headers().await?;
+        let headers = self.create_headers("POST", &url).await?;
         let resp = self
             .client
             .post(url)
@@ -172,7 +176,7 @@ impl Client {
     pub async fn revoke_session(&self, session_id: &str) -> Result<SessionResponse> {
         let url = format!("{}/sessions/{}", self.base_url, session_id);
 
-        let headers = self.create_headers().await?;
+        let headers = self.create_headers("DELETE", &url).await?;
         let resp = self.client.delete(url).headers(headers).send().await?;
 
         self.handle_request(resp).await
@@ -200,7 +204,7 @@ impl Client {
     }
 
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let headers = self.create_headers().await?;
+        let headers = self.create_headers("GET", url).await?;
         let resp = self.client.get(url).headers(headers).send().await?;
 
         self.handle_request(resp).await

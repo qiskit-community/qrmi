@@ -58,3 +58,39 @@ async fn failed_request_reports_status_and_body() {
     assert!(message.contains("503"));
     assert!(message.contains("QPU unreachable"));
 }
+
+#[tokio::test]
+async fn munge_token_is_bound_to_the_request() {
+    let mut server = mockito::Server::new_async().await;
+    // Echo the token back as the session id, to decode it below
+    server
+        .mock("POST", "/sessions")
+        .with_body_from_request(|req| {
+            let token = req.header("x-munge-cred")[0].to_str().unwrap().to_string();
+            json!({ "id": token }).to_string().into()
+        })
+        .create_async()
+        .await;
+
+    let Ok(session) = client_for(&server).create_session(1000, "1").await else {
+        eprintln!("skipped: no MUNGE daemon to sign the request");
+        return;
+    };
+    let mut unmunge = std::process::Command::new("unmunge")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect("unmunge should run where munged does");
+    use std::io::Write;
+    unmunge
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(session.id.as_bytes())
+        .unwrap();
+    let decoded = String::from_utf8(unmunge.wait_with_output().unwrap().stdout).unwrap();
+    assert!(
+        decoded.ends_with(&format!("POST {}/sessions", server.url())),
+        "{decoded}"
+    );
+}
