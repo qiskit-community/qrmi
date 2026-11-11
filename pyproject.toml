@@ -120,6 +120,19 @@ test-command = [
   "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
 ]
 
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+skip = 'cp*t-*'
+# requirements-dev.txt is not used here: maturin[patchelf] pulls in patchelf,
+# which has no Windows wheels. Keep the pytest pin in sync with requirements-dev.txt.
+test-requires = ["pytest==9.0.3"]
+test-extras = ["ibm", "pasqal"]
+# Unit tests only. Maestro (Unix domain sockets) and OQTOPUS are not supported
+# on Windows, so their tests are excluded.
+test-command = [
+  "pytest {project}/python/tests/unit --ignore={project}/python/tests/unit/quantum_resource/test_maestro_local.py --ignore={project}/python/tests/unit/quantum_resource/test_maestro_native_integration.py --deselect={project}/python/tests/unit/quantum_resource/test_resource_id_resource_type.py::test_maestro_resource_id_and_type",
+]
+
 # Run only the unit tests where [iqm] cannot be installed:
 # - aarch64, Python 3.14: qiskit-aer (required by iqm-client[qiskit]) has no
 #   wheels yet, see https://github.com/Qiskit/qiskit-aer/issues/2419
