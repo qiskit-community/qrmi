@@ -38,6 +38,12 @@ on:
         type: boolean
         default: false
         required: false
+      arch-macos-arm64:
+        description: >-
+          Build wheels for macOS arm64 (Apple Silicon)
+        type: boolean
+        default: false
+        required: false
       unit-test:
         description: >-
           pytest after building the wheels
@@ -89,6 +95,12 @@ on:
       arch-arm64:
         description: >-
           Build wheels for arm64
+        type: boolean
+        default: false
+        required: false
+      arch-macos-arm64:
+        description: >-
+          Build wheels for macOS arm64 (Apple Silicon)
         type: boolean
         default: false
         required: false
@@ -259,6 +271,31 @@ jobs:
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-arm64
+        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  wheels-macos-arm64:
+    if: ${{ inputs.arch-macos-arm64 == true }}
+    runs-on: macos-15
+    needs: [info]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ needs.info.outputs.python-version }}
+    - if: ${{ inputs.format-check == true }}
+      name: Format check the .python directory
+      run: make fmt-python
+    - if: ${{ inputs.unit-test == false }}
+      name: Skip wheel unit tests
+      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
+    # rustup is preinstalled on GitHub-hosted macOS runners; the toolchain
+    # pinned in rust-toolchain.toml is installed automatically on first use.
+    - uses: pypa/cibuildwheel@v3.4.1
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-macos-arm64
         path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
         if-no-files-found: error
         retention-days: 1
