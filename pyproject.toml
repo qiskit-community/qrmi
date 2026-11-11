@@ -120,6 +120,20 @@ test-command = [
   "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
 ]
 
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+skip = 'cp*t-*'
+before-test = 'pip install -r requirements-dev.txt'
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
+test-extras = ["ibm", "pasqal"]
+test-command = [
+  "pytest {project}/python/tests/unit",
+  "VENV_IQM=$(mktemp -d)",
+  "python -m venv $VENV_IQM",
+  "$VENV_IQM/bin/pip install -r {project}/requirements-dev.txt '{wheel}[iqm]'",
+  "$VENV_IQM/bin/pytest {project}/python/tests/compatibility",
+]
+
 # Run only the unit tests where [iqm] cannot be installed:
 # - aarch64, Python 3.14: qiskit-aer (required by iqm-client[qiskit]) has no
 #   wheels yet, see https://github.com/Qiskit/qiskit-aer/issues/2419
