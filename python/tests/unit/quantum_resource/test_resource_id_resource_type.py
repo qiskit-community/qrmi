@@ -18,6 +18,7 @@ variables are injected via ``monkeypatch`` so no credentials are needed.
 """
 
 import base64
+import sys
 
 import pytest
 
@@ -173,6 +174,7 @@ def test_iqm_resource_type(iqm_env):
     assert qr.resource_type() == ResourceType.IQMServer
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="maestro-local is Unix-only")
 def test_maestro_resource_id_and_type():
     """The shared factory preserves Maestro construction and enum conversion."""
     qr = QuantumResource("sync_test_maestro", ResourceType.MaestroLocal)

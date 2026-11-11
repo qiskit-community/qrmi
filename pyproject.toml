@@ -130,7 +130,7 @@ test-extras = ["ibm", "pasqal"]
 # Unit tests only. Maestro (Unix domain sockets) and OQTOPUS are not supported
 # on Windows, so their tests are excluded.
 test-command = [
-  "pytest {project}/python/tests/unit --ignore={project}/python/tests/unit/quantum_resource/test_maestro_local.py --ignore={project}/python/tests/unit/quantum_resource/test_maestro_native_integration.py --deselect={project}/python/tests/unit/quantum_resource/test_resource_id_resource_type.py::test_maestro_resource_id_and_type",
+  "pytest {project}/python/tests/unit --ignore={project}/python/tests/unit/quantum_resource/test_maestro_local.py --ignore={project}/python/tests/unit/quantum_resource/test_maestro_native_integration.py",
 ]
 
 # Run only the unit tests where [iqm] cannot be installed:
