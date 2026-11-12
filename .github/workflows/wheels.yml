@@ -38,6 +38,12 @@ on:
         type: boolean
         default: false
         required: false
+      arch-windows-x86_64:
+        description: >-
+          Build wheels for Windows x86_64
+        type: boolean
+        default: false
+        required: false
       unit-test:
         description: >-
           pytest after building the wheels
@@ -89,6 +95,12 @@ on:
       arch-arm64:
         description: >-
           Build wheels for arm64
+        type: boolean
+        default: false
+        required: false
+      arch-windows-x86_64:
+        description: >-
+          Build wheels for Windows x86_64
         type: boolean
         default: false
         required: false
@@ -259,6 +271,34 @@ jobs:
     - uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-arm64
+        path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
+        if-no-files-found: error
+        retention-days: 1
+
+  wheels-windows-x86_64:
+    if: ${{ inputs.arch-windows-x86_64 == true }}
+    runs-on: windows-2025
+    needs: [info]
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ needs.info.outputs.python-version }}
+    # format-check is not run here: the Makefile targets assume a Unix shell,
+    # and formatting is platform-independent (already checked on Linux).
+    - if: ${{ inputs.unit-test == false }}
+      name: Skip wheel unit tests
+      run: echo "CIBW_TEST_SKIP=cp*" >> $GITHUB_ENV
+    # rustup with the MSVC toolchain is preinstalled on GitHub-hosted Windows
+    # runners; the toolchain pinned in rust-toolchain.toml is installed
+    # automatically on first use.
+    - uses: pypa/cibuildwheel@v3.4.1
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-prefix }}-qrmi-${{ needs.info.outputs.qrmi-version }}-wheels-windows-x86_64
         path: ./wheelhouse/qrmi-${{ needs.info.outputs.qrmi-version }}*.whl
         if-no-files-found: error
         retention-days: 1

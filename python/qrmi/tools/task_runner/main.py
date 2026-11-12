@@ -104,7 +104,9 @@ class App:
 
         # setup signal handler for slurm, and start it
         signal.signal(signal.SIGTERM, self._signal_handler)
-        signal.signal(signal.SIGCONT, self._signal_handler)
+        # SIGCONT does not exist on Windows.
+        if hasattr(signal, "SIGCONT"):
+            signal.signal(signal.SIGCONT, self._signal_handler)
 
     def _signal_handler(self, _signal_number, _frame):
         """A signal handler to cancel this task"""
