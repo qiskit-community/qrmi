@@ -116,6 +116,7 @@ jobs:
       arch-x86_64: false
       arch-ppc64le: true
       arch-arm64: true
+      arch-windows-x86_64: true
       artifact-prefix: 'release'
 
   publish-pypi:
