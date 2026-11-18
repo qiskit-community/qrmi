@@ -132,6 +132,8 @@ test-extras = ["ibm", "pasqal"]
 # on Windows, so their tests are excluded.
 test-command = [
   "pytest {project}/python/tests/unit --ignore={project}/python/tests/unit/quantum_resource/test_maestro_local.py --ignore={project}/python/tests/unit/quantum_resource/test_maestro_native_integration.py",
+]
+
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
 skip = 'cp*t-*'
