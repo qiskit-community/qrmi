@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/github/license/qiskit-community/qrmi.svg?)](https://opensource.org/licenses/Apache-2.0) <!--- long-description-skip-begin -->
 [![Current Release](https://img.shields.io/github/release/qiskit-community/qrmi.svg?)](https://github.com/qiskit-community/qrmi/releases)
-![Platform](https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS-blue)
+![Platform](https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS20%7C%20Windows-blue)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi?cacheSeconds=3600)
 [![manylinux: 2_28](https://img.shields.io/badge/manylinux-2__28-blue.svg?logo=linux&logoColor=white)](https://github.com/pypa/manylinux)
 [![C99](https://img.shields.io/badge/C-C99-blue.svg?logo=c&logoColor=white)](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf)
