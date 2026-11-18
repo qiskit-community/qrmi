@@ -41,6 +41,9 @@ on:
       arch-windows-x86_64:
         description: >-
           Build wheels for Windows x86_64
+        type: boolean
+        default: false
+        required: false
       arch-macos-arm64:
         description: >-
           Build wheels for macOS arm64 (Apple Silicon)
@@ -104,6 +107,9 @@ on:
       arch-windows-x86_64:
         description: >-
           Build wheels for Windows x86_64
+        type: boolean
+        default: false
+        required: false
       arch-macos-arm64:
         description: >-
           Build wheels for macOS arm64 (Apple Silicon)
