@@ -27,8 +27,6 @@
 
 pub mod error;
 pub mod models;
-mod qiskit_runtime_service;
-mod qiskit_runtime_service_provider;
 mod quantum_compute_service;
 mod quantum_compute_service_provider;
 mod quantum_system;
