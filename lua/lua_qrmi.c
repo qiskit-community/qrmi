@@ -154,7 +154,7 @@ static const char *status_code_to_string(QrmiResourceStatusCode s) {
  *   - [1] resource_id (string)   e.g. "ibm_kingston"
  *   - [2] resource_type (string) canonical hyphenated name as returned by
  *         qrmi_config_resource_type_to_str(), e.g. "ibm-quantum-system",
- *         "ibm-quantum-compute-service", "qiskit-runtime-service"(deprecated),
+ *         "ibm-quantum-compute-service",
  *         "pasqal-cloud", "pasqal-local", "alice-bob-felis", "iqm-server"
  * @return Number of values pushed onto the Lua stack.
  *         On success: 1 (resource: qrmi.resource userdata)

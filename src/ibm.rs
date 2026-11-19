@@ -34,8 +34,6 @@ mod quantum_compute_service_provider;
 mod quantum_system;
 mod quantum_system_provider;
 
-pub use self::qiskit_runtime_service::IBMQiskitRuntimeService;
-pub use self::qiskit_runtime_service_provider::IBMQiskitRuntimeServiceProvider;
 pub use self::quantum_compute_service::IBMQuantumComputeService;
 pub use self::quantum_compute_service_provider::IBMQuantumComputeServiceProvider;
 pub use self::quantum_system::IBMQuantumSystem;

@@ -29,7 +29,7 @@
 //!
 //! ```shell-session
 //! export QRMI_JOB_QPU_RESOURCES=ibm_torino,my_pasqal_qpu
-//! export QRMI_JOB_QPU_TYPES=qiskit-runtime-service,pasqal-cloud
+//! export QRMI_JOB_QPU_TYPES=ibm-quantum-compute-service,pasqal-cloud
 //! ```
 //!
 //! Each resource named above also needs its own vendor-specific environment

@@ -29,7 +29,7 @@ Creates a quantum resource handle.
 | `resource_type` | string | Canonical name from `qrmi_config_resource_type_to_str()`. One of the values below |
 
 Valid values for `resource_type`:
-`ibm-quantum-system` / `ibm-quantum-compute-service` / `qiskit-runtime-service`(deprecated) / `pasqal-cloud` / `pasqal-local` / `alice-bob-felis` / `iqm-server`
+`ibm-quantum-system` / `ibm-quantum-compute-service` / `pasqal-cloud` / `pasqal-local` / `alice-bob-felis` / `iqm-server`
 
 **Returns:** on success, `resource` (a `qrmi.resource`); on failure, `nil, err`
 

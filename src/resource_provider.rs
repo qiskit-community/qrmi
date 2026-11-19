@@ -102,9 +102,6 @@ pub fn create_provider(
     environment: &HashMap<String, String>,
 ) -> Result<Box<dyn ResourceProvider>> {
     match resource_type {
-        ResourceType::QiskitRuntimeService => Ok(Box::new(
-            crate::ibm::IBMQiskitRuntimeServiceProvider::new(environment)?,
-        )),
         ResourceType::IBMQuantumSystem => Ok(Box::new(crate::ibm::IBMQuantumSystemProvider::new(
             environment,
         )?)),

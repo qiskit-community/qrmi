@@ -31,8 +31,6 @@ int main(int argc, char *argv[]) {
 
   if (!strcmp(argv[1], "ibm-quantum-system")) {
     resource_type = QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM;
-  } else if (!strcmp(argv[1], "qiskit-runtime-service")) {
-    resource_type = QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE;
   } else if (!strcmp(argv[1], "ibm-quantum-compute-service")) {
     resource_type = QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE;
   } else if (!strcmp(argv[1], "pasqal-cloud")) {

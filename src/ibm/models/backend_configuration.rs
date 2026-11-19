@@ -11,7 +11,7 @@
 // that they have been altered from the originals.
 
 //! Shared IBM backend configuration model used by both
-//! `IBMQiskitRuntimeServiceProvider` and `IBMQuantumSystemProvider`.
+//! `IBMQuantumComputeServiceProvider` and `IBMQuantumSystemProvider`.
 //!
 //! The JSON format is identical between the two services.
 

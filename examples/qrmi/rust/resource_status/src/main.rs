@@ -14,7 +14,7 @@ use clap::Parser;
 use dotenv::dotenv;
 use qrmi::QuantumResource;
 use qrmi::{
-    alice_bob::AliceBobFelis, ibm::IBMQiskitRuntimeService, ibm::IBMQuantumComputeService,
+    alice_bob::AliceBobFelis, ibm::IBMQuantumComputeService,
     ibm::IBMQuantumSystem, iqm::IQMServer, oqtopus::Oqtopus, pasqal::PasqalCloud,
     pasqal::PasqalLocal,
 };
@@ -43,7 +43,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut qrmi: Box<dyn QuantumResource> = match args.resource_type.as_str() {
         "ibm-quantum-system" => Box::new(IBMQuantumSystem::new(&args.resource_id)?),
-        "qiskit-runtime-service" => Box::new(IBMQiskitRuntimeService::new(&args.resource_id)?),
         "ibm-quantum-compute-service" => {
             Box::new(IBMQuantumComputeService::new(&args.resource_id)?)
         }

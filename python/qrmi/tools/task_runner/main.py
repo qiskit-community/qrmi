@@ -77,7 +77,6 @@ class App:
     RESOURCE_TYPE_MAP = {
         "ibm-quantum-system": ResourceType.IBMQuantumSystem,
         "ibm-quantum-compute-service": ResourceType.IBMQuantumComputeService,
-        "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
         "pasqal-cloud": ResourceType.PasqalCloud,
         "iqm-server": ResourceType.IQMServer,
         "alice-bob-felis": ResourceType.AliceBobFelis,
@@ -199,7 +198,6 @@ class App:
             if res_type in [
                 ResourceType.IBMQuantumSystem,
                 ResourceType.IBMQuantumComputeService,
-                ResourceType.IBMQiskitRuntimeService,
             ]:
                 payload = Payload.QiskitPrimitive(
                     input=json.dumps(task_input["parameters"]),
