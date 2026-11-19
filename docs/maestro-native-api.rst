@@ -286,13 +286,14 @@ existing helper approximations. Distributed GPU engines currently support statev
 Noise results identify approximations; an MPO result is not automatically free of
 truncation error.
 
-For thermal relaxation with ``T1 < T2 <= 2*T1``, sampled execution uses effective
-``T2 = T1``, matching Maestro's Python policy. This includes thermal noise after
-one-qubit/two-qubit gates and during delays. The result lists
+For thermal relaxation with ``T1 < T2 <= 2*T1``, exact density-matrix/MPO execution
+keeps the calibrated T2. With Maestro 0.3.15 or later, so do the statevector and the
+matrix product state, which sample the channel itself from their state. Other sampled
+execution uses effective ``T2 = T1``, matching Maestro's Python policy. This includes
+thermal noise after one-qubit/two-qubit gates and during delays. The result then lists
 ``thermal_T2_clamped_to_T1`` in ``noise.approximations``, and ``task_logs()`` retains
-a warning naming the affected qubits. Exact density-matrix/MPO execution keeps the
-calibrated T2. This requires a Maestro library containing the native thermal-policy
-update.
+a warning naming the affected qubits. This requires a Maestro library containing the
+native thermal-policy update.
 
 Native readout rates follow the measured qubit and apply when each measurement
 writes its classical bit, including conditional measurements. Classical control
@@ -318,8 +319,10 @@ covers the whole result document, and the server's ``max_result_bytes`` adds hea
 for MPI metadata. QRMI accepts a reply of that size plus its ``OK`` framing. Use selected
 ``basis_states`` and ``max_output_elements`` for state queries. Batches have at most 256
 members and four nested levels. No interactive state persists across tasks. Composer
-orchestration, decoder/Sinter execution, general pure-state Kraus trajectories, new
-distributed mixed-state engines, and artifact storage remain outside this change.
+orchestration, decoder/Sinter execution, new distributed mixed-state engines, and
+artifact storage remain outside this change. General pure-state Kraus trajectories
+need Maestro 0.3.15 or later, whose statevector and matrix product state sample
+Kraus channels from their state.
 
 Authoritative native field/option/channel details are in Maestro's
 `docs/native-request-api.md <https://github.com/QoroQuantum/maestro/blob/main/docs/native-request-api.md>`__; server framing, leases and MPI profile
@@ -441,7 +444,8 @@ catalog entries; per-backend limits appear as ``constraints``:
      - All
      - Booleans, default false
    * - ``trajectory_policy``, ``trajectory_max_memory_mb``
-     - QCSim statevector/density matrix (policy also path integral)
+     - QCSim statevector and density matrix, plus stabilizer, extended stabilizer, MPS
+       and MPO from Maestro 0.3.14 (policy also path integral)
      - ``block_v1`` or ``shot_v1`` (default); positive MiB count
 
 An option for another backend or method raises ``UnsupportedFunctionError`` and an
@@ -507,9 +511,11 @@ They use the existing ``request`` payload unchanged:
   including the adjoint operations, nested ``other_circuit``/``step_circuit`` and
   the ``checkpoint_batch`` prefix, refuse it with ``UnsupportedFunctionError``;
   checkpoint suffix measurements apply it), and ``pauli_channel`` with ``4**len(qubits)``
-  ``probabilities``. Mixed-state methods apply the channel exactly; pure-state
-  methods sample it per noise realization and need a trajectory ``noise`` block,
-  whose ``channels`` may be omitted.
+  ``probabilities``. Mixed-state methods apply the channel exactly. With Maestro
+  0.3.15 or later, the statevector and matrix product state sample it as each shot
+  runs, with or without a ``noise`` block; other pure-state methods sample it per
+  noise realization and need a trajectory ``noise`` block, whose ``channels`` may be
+  omitted.
 - ``density_matrix_overlap`` returns ``overlap``, the complex ``Tr(rho sigma)`` of
   ``circuit`` and ``other_circuit`` prepared separately, and
   ``fidelity_with_statevector`` returns ``fidelity``, ``<psi|rho|psi> / Tr(rho)``

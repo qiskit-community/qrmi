@@ -161,7 +161,7 @@ allocating a task.
 | --- | --- | --- |
 | `adjoint` | Adjoint Jacobian for two parameter rows, with Pauli, weighted-sum and probability readouts | Four values and a 4×2 Jacobian per row; the all-zero row gives values `[1, 0.5, 1, 0]`. |
 | `mirror-observables` | Per-observable mirror fidelity of a GHZ-like MPS | `[1, 1, 1, 1]`; set `max_bond_dimension` to 1 to see truncation. |
-| `instructions` | Instruction-array `rzz`, `noiseless` basis changes, a `pauli_channel` and `readout_error` on a density matrix | Counts `{"01": 32}`. On `statevector`, add `"noise": {"realizations": 32}` to sample the channel. |
+| `instructions` | Instruction-array `rzz`, `noiseless` basis changes, a `pauli_channel` and `readout_error` on a density matrix | Counts `{"01": 32}`. With Maestro 0.3.15 or later, `statevector` samples the channel as is; on `path_integral` (or `statevector` with an older Maestro), add `"noise": {"realizations": 32}`. |
 | `mixed-state` | `fidelity_with_statevector` of a noisy Bell state on a density matrix, and `density_matrix_overlap` of two MPO preparations | Fidelity `0.7624` against the ideal Bell state; overlap `[0.5, 0]` for `|+>` and `|1>`. |
 
 These use QCSim by default. GPU support depends on matching Maestro/plugin builds
