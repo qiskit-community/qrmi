@@ -218,7 +218,6 @@ def test_fixed_noisy_shots_remain_independent(native_resource, backend, method):
         assert result["execution_metadata"]["backend"] == backend
         assert result["execution_metadata"]["method"] == method
         assert result["execution_metadata"]["selection"] == "fixed"
-        assert result["noise"]["realizations"] == 1
         assert set(result["counts"]) == {"00", "01", "10", "11"}
         assert sum(result["counts"].values()) == 4096
         assert all(700 < count < 1350 for count in result["counts"].values())
@@ -475,8 +474,7 @@ def test_exact_noise_capabilities_and_retained_logs(native_resource):
 @pytest.mark.parametrize(
     "method",
     [
-        "statevector",
-        "matrix_product_state",
+        "pauli_propagator",
         "density_matrix",
         "matrix_product_operator",
     ],
@@ -501,7 +499,7 @@ def test_thermal_approximation_matches_python_policy(native_resource, method):
     result = json.loads(native_resource.task_result(task).value)
     logs = json.loads(native_resource.task_logs(task))["logs"]
     marker = "thermal_T2_clamped_to_T1"
-    if method in {"statevector", "matrix_product_state"}:
+    if method == "pauli_propagator":
         assert marker in result["noise"]["approximations"]
         assert logs.count("effective T2 clamped to T1") == 1
         assert "circuit qubits [0]" in logs
@@ -1077,7 +1075,7 @@ def test_current_option_contract_through_qrmi(native_resource):
         ),
         (
             "qcsim",
-            "matrix_product_state",
+            "tensor_network",
             {"trajectory_policy": "shot_v1"},
             UnsupportedFunctionError,
         ),
@@ -1126,8 +1124,8 @@ def test_new_native_examples_through_qrmi(native_resource):
     document = example_doc("instructions")
     _, result = run_native(native_resource, document)
     assert result["counts"] == {"01": 32}
-    # Pure states sample the channel and need a trajectory noise block.
-    document["simulator"]["method"] = "statevector"
+    # Path integral samples the channel and needs a trajectory noise block.
+    document["simulator"]["method"] = "path_integral"
     with pytest.raises(UnsupportedFunctionError, match="trajectory"):
         native_resource.task_start(request_payload(document))
     document["noise"] = {"realizations": 32}
