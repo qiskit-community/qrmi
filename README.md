@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/github/license/qiskit-community/qrmi.svg?)](https://opensource.org/licenses/Apache-2.0) <!--- long-description-skip-begin -->
 [![Current Release](https://img.shields.io/github/release/qiskit-community/qrmi.svg?)](https://github.com/qiskit-community/qrmi/releases)
-![Platform](https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS20%7C%20Windows-blue)
+![Platform](https://img.shields.io/badge/%F0%9F%92%BB_Platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qrmi?cacheSeconds=3600)
 [![manylinux: 2_28](https://img.shields.io/badge/manylinux-2__28-blue.svg?logo=linux&logoColor=white)](https://github.com/pypa/manylinux)
 [![C99](https://img.shields.io/badge/C-C99-blue.svg?logo=c&logoColor=white)](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf)
@@ -13,12 +13,6 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20650771.svg)](https://doi.org/10.5281/zenodo.20650771)
 [![arXiv](https://img.shields.io/badge/arXiv-2506.10052-b31b1b.svg)](https://arxiv.org/abs/2506.10052)
 [![CI](https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml/badge.svg)](https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml)
-
-> [!IMPORTANT]
-> **Deprecation notice (since v0.23.0)**
->
-> The IBM Qiskit Runtime Service API has been renamed to the IBM Quantum Compute Service API. Resource names and environment variable prefixes
-> have changed accordingly. Legacy names remain supported until **November 21, 2026**. See the [migration guide](https://github.com/qiskit-community/qrmi/blob/main/docs/migration/0.23.0.md) for details.
 
 The *Quantum Resource Management Interface* (QRMI) is a vendor-agnostic library for high-performance compute (HPC) systems to access, control, and monitor the behavior of quantum computational resources. It acts as a thin middleware layer that abstracts away the complexities associated with controlling quantum resources through a set of simple APIs. Written in Rust, this interface also exposes Python, C and Lua APIs for ease of integration into nearly any computational environment.
 
