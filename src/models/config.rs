@@ -3,18 +3,13 @@
 // (C) Copyright IBM 2025-2026
 // (C) Copyright UKRI-STFC (Hartree Centre) 2026
 //
-// This program and the accompanying materials are made available under the
-// terms of the GNU General Public License version 3, as published by the
-// Free Software Foundation.
+// This code is licensed under the Apache License, Version 2.0. You may
+// obtain a copy of this license in the LICENSE.txt file in the root directory
+// of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <[https://www.gnu.org/licenses/gpl-3.0.txt]
-//
+// Any modifications or derivative works of this code must retain this
+// copyright notice, and modified files need to carry a notice indicating
+// that they have been altered from the originals.
 
 #![allow(dead_code)]
 
