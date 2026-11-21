@@ -54,32 +54,32 @@ def test_ibm_qs_resource_type(ibm_qs_env):
 
 
 # ---------------------------------------------------------------------------
-# QuantumResource — IBMQiskitRuntimeService
+# QuantumResource — IBMQuantumComputeService
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture(name="ibm_qrs_env")
 def fixture_ibm_qrs_env(monkeypatch):
-    """Inject the minimum env vars required to construct an IBMQiskitRuntimeService resource."""
+    """Inject the minimum env vars required to construct an IBMQuantumComputeService resource."""
     rid = "ibm_marrakesh"
-    monkeypatch.setenv(f"{rid}_QRMI_IBM_QRS_ENDPOINT", "https://localhost")
-    monkeypatch.setenv(f"{rid}_QRMI_IBM_QRS_IAM_ENDPOINT", "https://iam.localhost")
-    monkeypatch.setenv(f"{rid}_QRMI_IBM_QRS_IAM_APIKEY", "dummy-key")
-    monkeypatch.setenv(f"{rid}_QRMI_IBM_QRS_SERVICE_CRN", "dummy-crn")
+    monkeypatch.setenv(f"{rid}_QRMI_IBM_QCS_ENDPOINT", "https://localhost")
+    monkeypatch.setenv(f"{rid}_QRMI_IBM_QCS_IAM_ENDPOINT", "https://iam.localhost")
+    monkeypatch.setenv(f"{rid}_QRMI_IBM_QCS_IAM_APIKEY", "dummy-key")
+    monkeypatch.setenv(f"{rid}_QRMI_IBM_QCS_SERVICE_CRN", "dummy-crn")
     return rid
 
 
 def test_ibm_qrs_resource_id(ibm_qrs_env):
     """resource_id() returns the name passed to the constructor."""
     rid = ibm_qrs_env
-    qr = QuantumResource(rid, ResourceType.IBMQiskitRuntimeService)
+    qr = QuantumResource(rid, ResourceType.IBMQuantumComputeService)
     assert qr.resource_id() == rid
 
 
 def test_ibm_qrs_resource_type(ibm_qrs_env):
-    """resource_type() returns ResourceType.IBMQiskitRuntimeService."""
-    qr = QuantumResource(ibm_qrs_env, ResourceType.IBMQiskitRuntimeService)
-    assert qr.resource_type() == ResourceType.IBMQiskitRuntimeService
+    """resource_type() returns ResourceType.IBMQuantumComputeService."""
+    qr = QuantumResource(ibm_qrs_env, ResourceType.IBMQuantumComputeService)
+    assert qr.resource_type() == ResourceType.IBMQuantumComputeService
 
 
 # ---------------------------------------------------------------------------

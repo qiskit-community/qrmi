@@ -13,7 +13,7 @@ use crate::Result;
 use std::collections::HashMap;
 
 use crate::alice_bob::AliceBobFelis;
-use crate::ibm::{IBMQiskitRuntimeService, IBMQuantumComputeService, IBMQuantumSystem};
+use crate::ibm::{IBMQuantumComputeService, IBMQuantumSystem};
 use crate::iqm::IQMServer;
 #[cfg(unix)]
 use crate::maestro::MaestroLocal;
@@ -43,7 +43,6 @@ pub(crate) fn create_resource(
 ) -> Result<Box<dyn QuantumResource + Send + Sync>> {
     Ok(match resource_type {
         ResourceType::IBMQuantumSystem => Box::new(IBMQuantumSystem::new(resource_id)?),
-        ResourceType::QiskitRuntimeService => Box::new(IBMQiskitRuntimeService::new(resource_id)?),
         ResourceType::IBMQuantumComputeService => {
             Box::new(IBMQuantumComputeService::new(resource_id)?)
         }
@@ -72,9 +71,6 @@ pub(crate) fn create_resource_from_config(
     Ok(match resource_type {
         ResourceType::IBMQuantumSystem => {
             Box::new(IBMQuantumSystem::from_config(resource_id, config)?)
-        }
-        ResourceType::QiskitRuntimeService => {
-            Box::new(IBMQiskitRuntimeService::from_config(resource_id, config)?)
         }
         ResourceType::IBMQuantumComputeService => {
             Box::new(IBMQuantumComputeService::from_config(resource_id, config)?)

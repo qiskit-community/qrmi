@@ -181,8 +181,8 @@ def test_config_preserves_socket_session_and_status(server, monkeypatch):
 
 def test_provider_values_preserve_upstream_abi():
     """OQTOPUS keeps the upstream value; Maestro moves after it."""
-    assert int(ResourceType.OQTOPUS) == 7
-    assert int(ResourceType.MaestroLocal) == 8
+    assert int(ResourceType.OQTOPUS) == 6
+    assert int(ResourceType.MaestroLocal) == 7
 
 
 @pytest.mark.parametrize("mode", ["execute", "estimate"])

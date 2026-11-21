@@ -72,7 +72,6 @@ impl From<quantum_system_api::QuantumSystemError> for crate::QrmiError {
 }
 
 /// Disambiguates a 404 from `quantum_compute_client` (used by
-/// [`crate::ibm::IBMQiskitRuntimeService`] and
 /// [`crate::ibm::IBMQuantumComputeService`]): on its own, the status code
 /// doesn't say whether it was a job, a session, or a backend that wasn't
 /// found.

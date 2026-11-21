@@ -10,7 +10,7 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-//! Filter parsing and application for [`super::IBMQiskitRuntimeServiceProvider::resources`].
+//! Filter parsing and application for [`super::IBMQuantumComputeServiceProvider::resources`].
 //!
 //! Filter string format: `key=value` pairs joined by `&`.
 //!

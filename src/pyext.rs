@@ -12,7 +12,6 @@
 // that they have been altered from the originals.
 
 use crate::error::{QrmiError, QrmiErrorKind};
-use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
 use crate::models::{Payload, ResourceDef, ResourceStatus, Target, TaskResult, TaskStatus};
@@ -123,7 +122,6 @@ fn to_py_err(err: QrmiError) -> PyErr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
     IBMQuantumSystem,
-    IBMQiskitRuntimeService,
     IBMQuantumComputeService,
     PasqalCloud,
     PasqalLocal,
@@ -136,9 +134,6 @@ impl From<ResourceType> for crate::models::ResourceType {
     fn from(value: ResourceType) -> Self {
         match value {
             ResourceType::IBMQuantumSystem => crate::models::ResourceType::IBMQuantumSystem,
-            ResourceType::IBMQiskitRuntimeService => {
-                crate::models::ResourceType::QiskitRuntimeService
-            }
             ResourceType::IBMQuantumComputeService => {
                 crate::models::ResourceType::IBMQuantumComputeService
             }
@@ -276,9 +271,6 @@ impl PyQuantumResource {
         match result {
             Ok(v) => Ok(match v {
                 crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
-                crate::models::ResourceType::QiskitRuntimeService => {
-                    ResourceType::IBMQiskitRuntimeService
-                }
                 crate::models::ResourceType::IBMQuantumComputeService => {
                     ResourceType::IBMQuantumComputeService
                 }
@@ -414,9 +406,6 @@ impl PyResourceDef {
     pub fn resource_type(&self) -> ResourceType {
         match self.inner.r#type {
             crate::models::ResourceType::IBMQuantumSystem => ResourceType::IBMQuantumSystem,
-            crate::models::ResourceType::QiskitRuntimeService => {
-                ResourceType::IBMQiskitRuntimeService
-            }
             crate::models::ResourceType::IBMQuantumComputeService => {
                 ResourceType::IBMQuantumComputeService
             }
@@ -492,7 +481,6 @@ impl PyResourceProvider {
     /// Constructs a new provider from a resource type and environment variable map.
     ///
     /// Currently supported resource types:
-    /// - `ResourceType.IBMQiskitRuntimeService`(deprecated)
     /// - `ResourceType.IBMQuantumComputeService`
     /// - `ResourceType.IBMQuantumSystem`
     #[new]
@@ -502,12 +490,6 @@ impl PyResourceProvider {
     ) -> PyResult<Self> {
         crate::common::initialize();
         let inner: Box<dyn crate::ResourceProvider> = match resource_type {
-            ResourceType::IBMQiskitRuntimeService => {
-                match IBMQiskitRuntimeServiceProvider::new(&environment) {
-                    Ok(p) => Box::new(p),
-                    Err(e) => return Err(to_py_err(e)),
-                }
-            }
             ResourceType::IBMQuantumComputeService => {
                 match IBMQuantumComputeServiceProvider::new(&environment) {
                     Ok(p) => Box::new(p),

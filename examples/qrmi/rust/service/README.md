@@ -20,10 +20,10 @@ delimiter-separated list (delimiter: `,` by default, overridable via `QRMI_LIST_
 | Environment variables | Descriptions |
 | ---- | ---- |
 | QRMI_JOB_QPU_RESOURCES | Comma-separated list of resource identifiers, e.g. `ibm_torino,my_pasqal_qpu` |
-| QRMI_JOB_QPU_TYPES | Comma-separated list of resource types, positionally paired with the above, e.g. `qiskit-runtime-service,pasqal-cloud` |
+| QRMI_JOB_QPU_TYPES | Comma-separated list of resource types, positionally paired with the above, e.g. `ibm-quantum-compute-service,pasqal-cloud` |
 | QRMI_LIST_DELIMITER | Delimiter used for both lists above. Optional, defaults to `,` |
 
-Supported values for `QRMI_JOB_QPU_TYPES` entries: `ibm-quantum-system`, `ibm-quantum-compute-service`, `qiskit-runtime-service`, `pasqal-cloud`, `pasqal-local`, `alice-bob-felis`, `iqm-server`.
+Supported values for `QRMI_JOB_QPU_TYPES` entries: `ibm-quantum-system`, `ibm-quantum-compute-service`, `pasqal-cloud`, `pasqal-local`, `alice-bob-felis`, `iqm-server`.
 
 Each resource named in `QRMI_JOB_QPU_RESOURCES` also needs its own vendor-specific environment variables set -- see the other examples in this
 directory (e.g. [`../ibm_quantum_compute_service`](../ibm_quantum_compute_service) or [`../pasqal_cloud`](../pasqal_cloud)) for what those are per vendor. This
@@ -59,7 +59,7 @@ For example, with a `.env` file set up as described above:
 ```text
 Accessible resources (2 found):
 ----------------------------------------
-  ibm_torino                     type=qiskit-runtime-service
+  ibm_torino                     type=ibm-quantum-compute-service
   my_pasqal_qpu                  type=pasqal-cloud
 ```
 

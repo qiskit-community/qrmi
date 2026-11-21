@@ -46,7 +46,7 @@ impl Default for Configuration {
 
         Configuration {
             base_path: "/api".to_owned(),
-            user_agent: Some("SLURM-QRMI-QRS".to_owned()),
+            user_agent: Some("SLURM-QRMI-QCS".to_owned()),
             client,
             basic_auth: None,
             oauth_access_token: None,

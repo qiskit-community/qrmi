@@ -448,8 +448,8 @@ Structure of ``def``:
        type = "ibm-quantum-compute-service",
        is_dynamic = false,
        environments = {
-           QRMI_IBM_QRS_ENDPOINT = "...",
-           QRMI_IBM_QRS_IAM_ENDPOINT = "...",
+           QRMI_IBM_QCS_ENDPOINT = "...",
+           QRMI_IBM_QCS_IAM_ENDPOINT = "...",
        },
    }
 

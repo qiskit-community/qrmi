@@ -25,8 +25,6 @@ use std::io::BufReader;
 pub enum ResourceType {
     /// IBM Quantum System
     IBMQuantumSystem,
-    /// Qiskit Runtime Service(deprecated)
-    QiskitRuntimeService,
     /// IBM Quantum Compute Service
     IBMQuantumComputeService,
     /// Pasqal Cloud
@@ -53,7 +51,6 @@ impl<'de> serde::Deserialize<'de> for ResourceType {
                 &s,
                 &[
                     "ibm-quantum-system",
-                    "qiskit-runtime-service",
                     "ibm-quantum-compute-service",
                     "pasqal-cloud",
                     "pasqal-local",
@@ -70,7 +67,6 @@ impl ResourceType {
     pub fn as_str(&self) -> &str {
         match self {
             ResourceType::IBMQuantumSystem => "ibm-quantum-system",
-            ResourceType::QiskitRuntimeService => "qiskit-runtime-service",
             ResourceType::IBMQuantumComputeService => "ibm-quantum-compute-service",
             ResourceType::PasqalCloud => "pasqal-cloud",
             ResourceType::PasqalLocal => "pasqal-local",
@@ -91,7 +87,6 @@ impl ResourceType {
     pub fn from_qpu_type_str(s: &str) -> Option<Self> {
         match s {
             "ibm-quantum-system" => Some(ResourceType::IBMQuantumSystem),
-            "qiskit-runtime-service" => Some(ResourceType::QiskitRuntimeService),
             "ibm-quantum-compute-service" => Some(ResourceType::IBMQuantumComputeService),
             "pasqal-cloud" => Some(ResourceType::PasqalCloud),
             "pasqal-local" => Some(ResourceType::PasqalLocal),

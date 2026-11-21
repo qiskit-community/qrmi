@@ -494,7 +494,7 @@ def test_init_filters_iqm_resources(mock_resources):
         ],
         [
             "iqm-server",
-            "qiskit-runtime-service",
+            "ibm-quantum-compute-service",
             "iqm-server",
         ],
     )

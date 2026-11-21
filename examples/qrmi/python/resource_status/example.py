@@ -35,7 +35,6 @@ args = parser.parse_args()
 
 _resource_type_map = {
     "ibm-quantum-system": ResourceType.IBMQuantumSystem,
-    "qiskit-runtime-service": ResourceType.IBMQiskitRuntimeService,
     "ibm-quantum-compute-service": ResourceType.IBMQuantumComputeService,
     "pasqal-cloud": ResourceType.PasqalCloud,
     "pasqal-local": ResourceType.PasqalLocal,

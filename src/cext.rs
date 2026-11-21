@@ -12,7 +12,6 @@
 // that they have been altered from the originals.
 #![allow(dead_code)]
 use crate::error::{QrmiError, QrmiErrorKind};
-use crate::ibm::IBMQiskitRuntimeServiceProvider;
 use crate::ibm::IBMQuantumComputeServiceProvider;
 use crate::ibm::IBMQuantumSystemProvider;
 use crate::models::{Config, ResourceType, TaskStatus};
@@ -2374,15 +2373,6 @@ pub unsafe extern "C" fn qrmi_provider_new(
     };
 
     let provider: Box<dyn crate::ResourceProvider> = match resource_type {
-        ResourceType::QiskitRuntimeService => {
-            match IBMQiskitRuntimeServiceProvider::new(&env_map) {
-                Ok(inner) => Box::new(inner),
-                Err(err) => {
-                    _record_error(err);
-                    return std::ptr::null_mut();
-                }
-            }
-        }
         ResourceType::IBMQuantumComputeService => {
             match IBMQuantumComputeServiceProvider::new(&env_map) {
                 Ok(inner) => Box::new(inner),

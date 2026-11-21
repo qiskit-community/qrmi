@@ -22,10 +22,10 @@ Create a `qrmi_config.json` with an `is_dynamic: true` entry:
             "type": "ibm-quantum-compute-service",
             "is_dynamic": true,
             "environment": {
-                "QRMI_IBM_QRS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
-                "QRMI_IBM_QRS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
-                "QRMI_IBM_QRS_IAM_APIKEY":   "<your_api_key>",
-                "QRMI_IBM_QRS_SERVICE_CRN":  "<your_service_crn>"
+                "QRMI_IBM_QCS_ENDPOINT":     "https://quantum.cloud.ibm.com/api/v1",
+                "QRMI_IBM_QCS_IAM_ENDPOINT": "https://iam.cloud.ibm.com",
+                "QRMI_IBM_QCS_IAM_APIKEY":   "<your_api_key>",
+                "QRMI_IBM_QCS_SERVICE_CRN":  "<your_service_crn>"
             }
         }
     ]
