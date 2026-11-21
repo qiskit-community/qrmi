@@ -517,6 +517,51 @@ impl ClientBuilder {
                 .with(TransparentRetryMiddleware::new_with_policy(v));
         };
 
+        // Retry layers are attached *before* (and so, since middleware runs
+        // in attachment order, *outside*) the `auth_middleware` blocks
+        // below. `AuthMiddleware` therefore runs once per attempt, so every
+        // retried send -- in particular every round of the unbounded
+        // 429/423 loop, which can last longer than an access token's
+        // lifetime -- asks `TokenManager` for a token and gets a fresh one
+        // once the cached one is about to expire. Previously retry sat
+        // *inside* auth, so the token attached before the loop was resent
+        // unchanged until the server rejected it.
+        //
+        // This does not multiply token acquisitions: `TokenManager` caches
+        // the token and only calls the token endpoint when it has expired
+        // (with that call's own independent retry policy, see
+        // `TokenManager::new`). A token-acquisition failure surfaces as
+        // `reqwest_middleware::Error::Middleware`, which the default
+        // strategy classifies as fatal, so the outer retry layers don't
+        // retry it again.
+        if let Some(v) = self.retry_policy {
+            #[cfg(feature = "iqp_retry_policy")]
+            {
+                let mut retry_policy_429 = ExponentialBackoff::builder()
+                    .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
+                    .jitter(Jitter::Bounded)
+                    .base(2)
+                    .build_with_max_retries(1);
+                retry_policy_429.max_n_retries = None;
+                middleware_client_builder = middleware_client_builder
+                    .with(TransparentRetryMiddleware::new_with_policy_and_strategy(
+                        v,
+                        RetryStrategyExcept429,
+                    ))
+                    .with(TransparentRetryMiddleware::new_with_policy_and_strategy(
+                        retry_policy_429,
+                        RetryStrategy429,
+                    ))
+            }
+            #[cfg(not(feature = "iqp_retry_policy"))]
+            {
+                middleware_client_builder =
+                    middleware_client_builder.with(TransparentRetryMiddleware::new_with_policy(v));
+            }
+        };
+
+        // Attached *after* (and so *inside*) the retry layers above -- see
+        // the comment there.
         #[cfg(feature = "ibmcloud_appid_auth")]
         if let AuthMethod::IbmCloudAppId { .. } = self.auth_method.clone() {
             let token_url = format!("{}/v1/token", self.base_url);
@@ -549,45 +594,6 @@ impl ClientBuilder {
             let auth_middleware = AuthMiddleware::new(token_manager.clone());
             middleware_client_builder = middleware_client_builder.with(auth_middleware);
         }
-
-        // Attached *after* (and so, since middleware runs in attachment
-        // order, *inside* -- see `TransparentRetryMiddleware`'s docs)
-        // both `auth_middleware` blocks above. This matters: if retry
-        // instead wrapped auth (as it did previously), a transient failure
-        // on the actual request would cause the *whole*
-        // `AuthMiddleware::handle()` call to be retried, including
-        // redundantly re-running its own internal, already-retried token
-        // acquisition every single time -- turning what should be a
-        // handful of attempts into a multiplicative explosion (outer
-        // retries x inner retries). With retry innermost, it only ever
-        // retries the actual request send, while token acquisition (with
-        // its own independent retry policy, see `TokenManager::new`)
-        // happens exactly once per call.
-        if let Some(v) = self.retry_policy {
-            #[cfg(feature = "iqp_retry_policy")]
-            {
-                let mut retry_policy_429 = ExponentialBackoff::builder()
-                    .retry_bounds(Duration::from_secs(1), Duration::from_secs(60))
-                    .jitter(Jitter::Bounded)
-                    .base(2)
-                    .build_with_max_retries(1);
-                retry_policy_429.max_n_retries = None;
-                middleware_client_builder = middleware_client_builder
-                    .with(TransparentRetryMiddleware::new_with_policy_and_strategy(
-                        v,
-                        RetryStrategyExcept429,
-                    ))
-                    .with(TransparentRetryMiddleware::new_with_policy_and_strategy(
-                        retry_policy_429,
-                        RetryStrategy429,
-                    ))
-            }
-            #[cfg(not(feature = "iqp_retry_policy"))]
-            {
-                middleware_client_builder =
-                    middleware_client_builder.with(TransparentRetryMiddleware::new_with_policy(v));
-            }
-        };
 
         let client = middleware_client_builder.build();
         let plain_client = middleware_plain_client_builder.build();

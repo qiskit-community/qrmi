@@ -203,9 +203,11 @@ impl Middleware for AuthMiddleware {
         extensions: &mut Extensions,
         next: Next<'_>,
     ) -> reqwest_middleware::Result<Response> {
-        let mut token_manager = self.token_manager.lock().await;
-        let token = token_manager.get_token().await?;
-        // add authentication header to the request
+        // Hold the lock only while obtaining a token, never across
+        // `next.run()`: the inner chain may sit in a long 429/423 retry
+        // loop, and holding the lock there would block every other
+        // request sharing this `TokenManager`.
+        let token = self.token_manager.lock().await.get_token().await?;
         let mut cloned_req = request.try_clone().unwrap();
         cloned_req.headers_mut().insert(
             reqwest::header::AUTHORIZATION,
@@ -213,22 +215,24 @@ impl Middleware for AuthMiddleware {
         );
 
         // send a request
-        let response = next
-            .clone()
-            .run(cloned_req.try_clone().unwrap(), extensions)
-            .await;
+        let response = next.clone().run(cloned_req, extensions).await;
 
         // Retry with a freshly-renewed token only if the *actual API*
         // rejected the current one (401) -- not on `response.is_err()`,
         // which also covers things entirely unrelated to the token (a
-        // connection timeout, DNS failure, ...). Retrying those here would
-        // silently run the *entire* inner retry chain (see
-        // `crate::middleware::retry`) a second time for a problem that
-        // renewing the token can't possibly fix.
+        // connection timeout, DNS failure, ...).
         if matches!(&response, Ok(resp) if resp.status() == reqwest::StatusCode::UNAUTHORIZED) {
-            debug!("renew access token");
-            token_manager.get_access_token().await?;
-            let token = token_manager.get_token().await?;
+            let token = {
+                let mut token_manager = self.token_manager.lock().await;
+                // Another request may already have renewed the token while
+                // this one was in flight; only renew if it's still the one
+                // that was just rejected.
+                if token_manager.access_token.as_deref() == Some(token.as_str()) {
+                    debug!("renew access token");
+                    token_manager.get_access_token().await?;
+                }
+                token_manager.get_token().await?
+            };
             let mut new_request = request.try_clone().unwrap();
             new_request.headers_mut().insert(
                 reqwest::header::AUTHORIZATION,

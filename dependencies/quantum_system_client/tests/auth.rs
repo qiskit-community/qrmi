@@ -536,3 +536,87 @@ async fn test_auth_invalid_iam_bearer_token() {
         println!("Error message return by API: {}", e)
     }
 }
+
+/// A QS API call that keeps getting 429 for longer than the access token
+/// lives must pick up a renewed token on later retries, instead of resending
+/// the token attached before the retry loop started.
+#[tokio::test]
+#[cfg(feature = "iqp_retry_policy")]
+async fn test_iam_token_renewed_during_429_retries() {
+    use reqwest_retry::policies::ExponentialBackoff;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    common::setup();
+
+    const IAM_APIKEY: &str = "demoapikey";
+    const SERVICE_CRN: &str = "crn:v1:local:test";
+
+    let mut server = mockito::Server::new_async().await;
+
+    // Each token request issues a distinct token that lives ~1s
+    // (TokenManager treats it as expired after 90% of `expires_in`).
+    let issued = Arc::new(AtomicUsize::new(0));
+    let issued_in_mock = issued.clone();
+    server
+        .mock("POST", "/identity/token")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body_from_request(move |_| {
+            let n = issued_in_mock.fetch_add(1, Ordering::SeqCst) + 1;
+            json!({
+                "access_token": format!("token-{}", n),
+                "expires_in": 2,
+                "token_type": "Bearer",
+            })
+            .to_string()
+            .into()
+        })
+        .create_async()
+        .await;
+
+    let expected = json!({ "backends": [] });
+
+    // The first token is always rate limited; a renewed one succeeds.
+    let rate_limited = server
+        .mock("GET", "/v1/backends")
+        .match_header("authorization", "Bearer token-1")
+        .with_status(429)
+        .expect_at_least(1)
+        .create_async()
+        .await;
+    server
+        .mock("GET", "/v1/backends")
+        .match_header("authorization", "Bearer token-2")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(expected.to_string())
+        .create_async()
+        .await;
+
+    let base_url = server.url();
+    let retry_policy = ExponentialBackoff::builder()
+        .retry_bounds(Duration::from_millis(100), Duration::from_millis(200))
+        .build_with_max_retries(3);
+    let client = ClientBuilder::new(&base_url)
+        .with_auth(AuthMethod::IbmCloudIam {
+            apikey: IAM_APIKEY.to_string(),
+            service_crn: SERVICE_CRN.to_string(),
+            iam_endpoint_url: base_url,
+        })
+        .with_retry_policy(retry_policy)
+        .build()
+        .unwrap();
+
+    let actual = tokio::time::timeout(
+        Duration::from_secs(20),
+        client.list_backends::<serde_json::Value>(),
+    )
+    .await
+    .expect("429 retry loop never switched to a renewed token")
+    .unwrap();
+    assert_json_include!(actual: actual, expected: expected);
+    rate_limited.assert_async().await;
+    assert_eq!(issued.load(Ordering::SeqCst), 2);
+}
