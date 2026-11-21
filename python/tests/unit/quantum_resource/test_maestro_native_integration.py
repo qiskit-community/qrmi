@@ -12,8 +12,8 @@
 
 """Opt-in QRMI -> isolated native daemon -> C++ feature tests.
 
-Set QRMI_TEST_MAESTRO_SERVER to the rebuilt daemon, and its native library search
-path in LD_LIBRARY_PATH. The test harness starts no Python server or worker.
+Set QRMI_TEST_MAESTRO_SERVER to the rebuilt daemon and LD_LIBRARY_PATH to its
+Maestro 0.3.15 library directory. The test harness starts no Python server or worker.
 QRMI_TEST_MAESTRO_REQUEST names the native maestro-request executable. With
 QRMI_REQUIRE_MAESTRO_NATIVE=1, as in CI, a missing binary fails instead of skipping.
 """
@@ -210,6 +210,9 @@ def test_fixed_noisy_shots_remain_independent(native_resource, backend, method):
             {"kind": "readout", "targets": [0], "probability": 0.5},
         ],
     }
+    expected_realizations = 1
+    if backend == "qcsim" and method in {"statevector", "matrix_product_state"}:
+        expected_realizations = document["execution"]["shots"]
     previous = None
     for _ in range(2):
         task = native_resource.task_start(request_payload(document))
@@ -218,7 +221,7 @@ def test_fixed_noisy_shots_remain_independent(native_resource, backend, method):
         assert result["execution_metadata"]["backend"] == backend
         assert result["execution_metadata"]["method"] == method
         assert result["execution_metadata"]["selection"] == "fixed"
-        assert result["noise"]["realizations"] == 1
+        assert result["noise"]["realizations"] == expected_realizations
         assert set(result["counts"]) == {"00", "01", "10", "11"}
         assert sum(result["counts"].values()) == 4096
         assert all(700 < count < 1350 for count in result["counts"].values())
@@ -475,6 +478,7 @@ def test_exact_noise_capabilities_and_retained_logs(native_resource):
 @pytest.mark.parametrize(
     "method",
     [
+        "pauli_propagator",
         "statevector",
         "matrix_product_state",
         "density_matrix",
@@ -482,10 +486,11 @@ def test_exact_noise_capabilities_and_retained_logs(native_resource):
     ],
 )
 def test_thermal_approximation_matches_python_policy(native_resource, method):
-    """Accept sampled T2>T1 and retain its warning through the native worker."""
+    """Verify thermal coherence and the retained warning on methods that clamp T2."""
+    samples_channels = method in {"statevector", "matrix_product_state"}
     document = native_request(method=method)
     document["noise"] = {
-        "realizations": 256,
+        "realizations": 4096 if samples_channels else 256,
         "channels": [
             {
                 "kind": "thermal_relaxation",
@@ -501,7 +506,7 @@ def test_thermal_approximation_matches_python_policy(native_resource, method):
     result = json.loads(native_resource.task_result(task).value)
     logs = json.loads(native_resource.task_logs(task))["logs"]
     marker = "thermal_T2_clamped_to_T1"
-    if method in {"statevector", "matrix_product_state"}:
+    if method == "pauli_propagator":
         assert marker in result["noise"]["approximations"]
         assert logs.count("effective T2 clamped to T1") == 1
         assert "circuit qubits [0]" in logs
@@ -520,7 +525,13 @@ def test_thermal_approximation_matches_python_policy(native_resource, method):
     else:
         assert marker not in result["noise"]["approximations"]
         assert "effective T2 clamped to T1" not in logs
-        assert result["expectation_values"][0] == pytest.approx(math.exp(-0.3 / 1.5))
+        expected_evaluation = "trajectories" if samples_channels else "exact_channels"
+        assert result["noise"]["evaluation"] == expected_evaluation
+        # The clamped coherence is exp(-0.3) = 0.741, versus 0.819 at calibrated T2.
+        tolerance = 0.04 if samples_channels else 1e-12
+        assert result["expectation_values"][0] == pytest.approx(
+            math.exp(-0.3 / 1.5), abs=tolerance
+        )
 
 
 @pytest.mark.parametrize(
@@ -1041,6 +1052,11 @@ def test_current_option_contract_through_qrmi(native_resource):
         ("qcsim", "density_matrix", {"trajectory_policy": "block_v1"}),
         (
             "qcsim",
+            "matrix_product_state",
+            {"trajectory_policy": "shot_v1", "trajectory_max_memory_mb": 32},
+        ),
+        (
+            "qcsim",
             "statevector",
             {"min_cluster_qubits": 2, "max_cluster_qubits": 4, "auto_reduce": False},
         ),
@@ -1077,7 +1093,7 @@ def test_current_option_contract_through_qrmi(native_resource):
         ),
         (
             "qcsim",
-            "matrix_product_state",
+            "tensor_network",
             {"trajectory_policy": "shot_v1"},
             UnsupportedFunctionError,
         ),
@@ -1126,13 +1142,53 @@ def test_new_native_examples_through_qrmi(native_resource):
     document = example_doc("instructions")
     _, result = run_native(native_resource, document)
     assert result["counts"] == {"01": 32}
-    # Pure states sample the channel and need a trajectory noise block.
-    document["simulator"]["method"] = "statevector"
+    # Path integral samples the channel and needs a trajectory noise block.
+    document["simulator"]["method"] = "path_integral"
     with pytest.raises(UnsupportedFunctionError, match="trajectory"):
         native_resource.task_start(request_payload(document))
     document["noise"] = {"realizations": 32}
     _, result = run_native(native_resource, document)
     assert result["counts"] == {"01": 32}
+
+
+@pytest.mark.parametrize("method", ["statevector", "matrix_product_state"])
+@pytest.mark.parametrize("realizations", [None, 1, 128])
+def test_pauli_channel_shot_sampling(native_resource, method, realizations):
+    """Count independent Pauli draws per shot and a shared draw per realization."""
+    document = native_request("execute", method)
+    document["execution"]["shots"] = 128
+    document["circuit"] = {
+        "format": "instructions",
+        "num_qubits": 1,
+        "source": [
+            {"name": "pauli_channel", "qubits": [0], "probabilities": [0.5, 0.5, 0, 0]},
+            {"name": "measure", "qubits": [0], "clbits": [0]},
+        ],
+    }
+    if realizations is not None:
+        document["noise"] = {"realizations": realizations}
+    _, result = run_native(native_resource, document)
+    counts = result["counts"]
+    assert sum(counts.values()) == 128
+    if realizations == 1:
+        assert len(counts) == 1
+    else:
+        assert set(counts) == {"0", "1"}
+        assert 32 < counts["0"] < 96
+
+
+@pytest.mark.parametrize("method", ["statevector", "matrix_product_state"])
+def test_gpu_channel_refusals(native_resource, method):
+    """GPU validation requires trajectory noise for Pauli and rejects general Kraus."""
+    document = example_doc("instructions")
+    document["simulator"] = {"backend": "gpu", "method": method}
+    with pytest.raises(UnsupportedFunctionError, match="trajectory"):
+        native_resource.task_start(request_payload(document))
+
+    document["circuit"] = example_doc("incremental")["step_circuit"]
+    document["noise"] = {"evaluation": "trajectories", "realizations": 32}
+    with pytest.raises(UnsupportedFunctionError, match="Kraus"):
+        native_resource.task_start(request_payload(document))
 
 
 def test_readout_refusal_and_mixed_state_mirror(native_resource):
