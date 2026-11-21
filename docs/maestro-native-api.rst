@@ -277,23 +277,29 @@ the selection and shot count unchanged; no client-side switch to automatic selec
 is needed. Deploy the updated ``libmaestro.so`` on the local server and all configured
 native/MPI workers, then restart the server. Updating QRMI alone does not update that
 native runtime. The fixed-selection integration checks can include ordinary GPU MPS
-and statevector execution by setting ``QRMI_TEST_GPU=1``. The noisy-shot checks
-also cover density matrix and MPO: reuse stays within each noise realization,
-with independent relaxation-reset outcomes and readout flips on each shot.
-Automatic ideal execute/estimate can use explicit candidate lists. Exact quantum
-channels require density-matrix/MPO methods; pure-state sampled noise follows Maestro's
-existing helper approximations. Distributed GPU engines currently support statevectors.
+and statevector execution by setting ``QRMI_TEST_GPU=1``. For the test circuit
+with amplitude damping after a two-qubit gate and readout noise, Maestro 0.3.15
+reports one realization per shot on the QCSim statevector and MPS. Density
+matrices, MPOs and the GPU statevector and MPS report the single requested
+realization.
+Automatic ideal execute/estimate can use explicit candidate lists. Distributed GPU
+engines currently support statevectors.
 Noise results identify approximations; an MPO result is not automatically free of
 truncation error.
 
-For thermal relaxation with ``T1 < T2 <= 2*T1``, exact density-matrix/MPO execution
-keeps the calibrated T2. With Maestro 0.3.15 or later, so do the statevector and the
-matrix product state, which sample the channel itself from their state. Other sampled
-execution uses effective ``T2 = T1``, matching Maestro's Python policy. This includes
-thermal noise after one-qubit/two-qubit gates and during delays. The result then lists
-``thermal_T2_clamped_to_T1`` in ``noise.approximations``, and ``task_logs()`` retains
-a warning naming the affected qubits. This requires a Maestro library containing the
-native thermal-policy update.
+For thermal relaxation with ``T1 < T2 <= 2*T1``, exact channel evaluation keeps
+the calibrated T2 on density-matrix and MPO methods and, since Maestro 0.3.14,
+on the QCSim ``pauli_propagator`` with ``noise.evaluation`` set to ``"exact"``.
+In Maestro 0.3.15, the ``qcsim`` and ``aer`` backends sample general Kraus
+channels on ``statevector`` and ``matrix_product_state`` (MPS).
+``composite_qcsim`` and ``composite_aer`` also support this on ``statevector``.
+Averaging these trajectories preserves the calibrated T2.
+
+Other sampled methods, including the ``gpu`` statevector and MPS, use effective
+``T2 = T1`` for this relaxation and reject general Kraus trajectories. When
+Maestro clamps T2 after a gate or during a delay, ``noise.approximations`` lists
+``thermal_T2_clamped_to_T1`` and ``task_logs()`` retains a warning naming the
+affected qubits.
 
 Native readout rates follow the measured qubit and apply when each measurement
 writes its classical bit, including conditional measurements. Classical control
@@ -320,9 +326,7 @@ for MPI metadata. QRMI accepts a reply of that size plus its ``OK`` framing. Use
 ``basis_states`` and ``max_output_elements`` for state queries. Batches have at most 256
 members and four nested levels. No interactive state persists across tasks. Composer
 orchestration, decoder/Sinter execution, new distributed mixed-state engines, and
-artifact storage remain outside this change. General pure-state Kraus trajectories
-need Maestro 0.3.15 or later, whose statevector and matrix product state sample
-Kraus channels from their state.
+artifact storage remain outside this change.
 
 Authoritative native field/option/channel details are in Maestro's
 `docs/native-request-api.md <https://github.com/QoroQuantum/maestro/blob/main/docs/native-request-api.md>`__; server framing, leases and MPI profile
@@ -510,12 +514,19 @@ They use the existing ``request`` payload unchanged:
   p_meas0_prep1}``; counts only, so operations that remove terminal measurements,
   including the adjoint operations, nested ``other_circuit``/``step_circuit`` and
   the ``checkpoint_batch`` prefix, refuse it with ``UnsupportedFunctionError``;
-  checkpoint suffix measurements apply it), and ``pauli_channel`` with ``4**len(qubits)``
-  ``probabilities``. Mixed-state methods apply the channel exactly. With Maestro
-  0.3.15 or later, the statevector and matrix product state sample it as each shot
-  runs, with or without a ``noise`` block; other pure-state methods sample it per
-  noise realization and need a trajectory ``noise`` block, whose ``channels`` may be
-  omitted.
+  checkpoint suffix measurements apply it).
+- ``pauli_channel`` takes ``4**len(qubits)`` probabilities. With fixed selection,
+  density matrices, MPOs and the QCSim Pauli propagator apply it exactly by
+  default. Since Maestro 0.3.15, an ``execute`` request without a ``noise`` block
+  draws a Pauli per shot on the QCSim and Aer statevector and MPS, and on their
+  composite statevectors. The GPU statevector and MPS and QCSim ``path_integral``
+  require a trajectory ``noise`` block for this instruction.
+
+  With a trajectory ``noise`` block and only a Pauli channel, shots in the same
+  realization share one Pauli draw. Set ``noise.realizations`` to ``execution.shots``
+  for independent draws per shot. The block may omit ``channels`` when the
+  instruction supplies the noise. On a backend that samples channels from its
+  state, put a multi-branch Pauli channel in a ``checkpoint_batch`` suffix.
 - ``density_matrix_overlap`` returns ``overlap``, the complex ``Tr(rho sigma)`` of
   ``circuit`` and ``other_circuit`` prepared separately, and
   ``fidelity_with_statevector`` returns ``fidelity``, ``<psi|rho|psi> / Tr(rho)``
