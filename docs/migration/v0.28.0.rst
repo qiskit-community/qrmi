@@ -5,7 +5,7 @@ Overview
 --------
 
 v0.28.0 removes the legacy IBM Qiskit Runtime Service names that were
-deprecated in `v0.23.0 <./0.23.0.md>`_. Only the IBM Quantum Compute Service
+deprecated in :ref:`v0.23.0 <v0.23.0>`. Only the IBM Quantum Compute Service
 names are supported from this release.
 
 If you already migrated to the new names in v0.23.0 or later, no action is
@@ -15,4 +15,4 @@ How to migrate
 --------------
 
 Follow the steps in the
-`v0.23.0 migration guide <./0.23.0.md#how-to-migrate>`_.
+:ref:`v0.23.0 migration guide <v0.23.0>`.

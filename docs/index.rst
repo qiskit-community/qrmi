@@ -133,16 +133,6 @@ Quantum Resource Management Interface (QRMI)
 .. |CI| image:: https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml/badge.svg
    :target: https://github.com/qiskit-community/qrmi/actions/workflows/on-schedule.yml
 
-
-.. important::
-
-   **Deprecation notice (since v0.23.0)**
-
-   The IBM Qiskit Runtime Service API has been renamed to the IBM Quantum 
-   Compute Service API. Resource names and environment variable prefixes 
-   have changed accordingly. Legacy names remain supported until November 
-   21, 2026. See the :ref:`migration guide<v0.23.0>` for details.
-
 The :ref:`Quantum Resource Management Interface <qrmi_overview>` (QRMI) is a vendor-agnostic
 library for high-performance compute (HPC) systems to access, control,
 and monitor the behavior of quantum computational resources. It acts as
