@@ -163,7 +163,7 @@ html_js_files = [
 ]
 
 ANNOUNCEMENT = """
-<b>Deprecation notice (since v0.23.0).</b> See the <a href="https://qiskit-community.github.io/qrmi/migration/v0.23.0.html">migration guide</a> for details.
+<b>Deprecation notices (since v0.25.0).</b> See the <a href="https://qiskit-community.github.io/qrmi/migration/index.html">migration guides</a> for details.
 """
 
 html_theme_options = {
