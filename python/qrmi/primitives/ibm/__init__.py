@@ -12,11 +12,12 @@
 
 """IBM implementations of Primitive"""
 
+from typing import TYPE_CHECKING
+
 from .sampler import SamplerV2
 from .estimator import EstimatorV2
 from .target import get_target
 from .backend import get_backend
-from typing import TYPE_CHECKING
 
 # The executor depends on qiskit-ibm-runtime internals that first appear in
 # 0.51.0. Load it lazily (PEP 562) so SamplerV2, EstimatorV2, get_target and

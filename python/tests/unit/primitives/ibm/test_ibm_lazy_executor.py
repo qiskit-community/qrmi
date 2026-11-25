@@ -18,8 +18,8 @@ import sys
 import pytest
 
 
-@pytest.fixture
-def ibm_without_executor(monkeypatch):
+@pytest.fixture(name="ibm_without_executor")
+def fixture_ibm_without_executor(monkeypatch):
     """Reload qrmi.primitives.ibm with its executor submodule made unimportable."""
     for mod in ("qrmi.primitives.ibm", "qrmi.primitives.ibm.executor"):
         monkeypatch.delitem(sys.modules, mod, raising=False)
@@ -31,6 +31,7 @@ def ibm_without_executor(monkeypatch):
 
 
 def test_non_executor_symbols_still_import(ibm_without_executor):
+    """SamplerV2, EstimatorV2, get_target and get_backend import without the executor."""
     for name in ("SamplerV2", "EstimatorV2", "get_target", "get_backend"):
         assert hasattr(ibm_without_executor, name)
 
@@ -39,10 +40,12 @@ def test_non_executor_symbols_still_import(ibm_without_executor):
     "name", ["ExecutorJob", "ExecutorSampler", "ExecutorEstimator", "Executor"]
 )
 def test_executor_symbols_raise_clear_error(ibm_without_executor, name):
+    """Executor symbols raise an ImportError naming the required runtime version."""
     with pytest.raises(ImportError, match=r"qiskit-ibm-runtime>=0\.51\.0"):
         getattr(ibm_without_executor, name)
 
 
 def test_unknown_attribute_raises_attribute_error(ibm_without_executor):
+    """Unknown names still raise AttributeError."""
     with pytest.raises(AttributeError):
         getattr(ibm_without_executor, "DoesNotExist")
