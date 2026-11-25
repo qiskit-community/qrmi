@@ -16,9 +16,29 @@ from .sampler import SamplerV2
 from .estimator import EstimatorV2
 from .target import get_target
 from .backend import get_backend
-from .executor import (
-    ExecutorJob,
-    ExecutorSampler,
-    ExecutorEstimator,
-    Executor,
-)
+from typing import TYPE_CHECKING
+
+# The executor depends on qiskit-ibm-runtime internals that first appear in
+# 0.51.0. Load it lazily (PEP 562) so SamplerV2, EstimatorV2, get_target and
+# get_backend keep working with older qiskit-ibm-runtime versions.
+_EXECUTOR_NAMES = ("ExecutorJob", "ExecutorSampler", "ExecutorEstimator", "Executor")
+
+if TYPE_CHECKING:
+    from .executor import ExecutorJob, ExecutorSampler, ExecutorEstimator, Executor
+
+
+def __getattr__(name):
+    if name in _EXECUTOR_NAMES:
+        try:
+            from . import executor  # pylint: disable=import-outside-toplevel
+        except ImportError as exc:
+            raise ImportError(
+                f"qrmi.primitives.ibm.{name} requires qiskit-ibm-runtime>=0.51.0. "
+                "Install it with: pip install 'qrmi[ibm]'"
+            ) from exc
+        return getattr(executor, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted([*globals(), *_EXECUTOR_NAMES])

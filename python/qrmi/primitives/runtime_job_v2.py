@@ -17,10 +17,10 @@
 import time
 
 try:
-    # qiskit-ibm-runtime >= 0.46
+    # qiskit-ibm-runtime >= 0.48
     from qiskit_ibm_runtime.decoders.result_decoder import ResultDecoder
 except ModuleNotFoundError:
-    # qiskit_ibm_runtime < 0.46
+    # qiskit-ibm-runtime < 0.48 (e.g. the [iqm] extra pins <0.46)
     from qiskit_ibm_runtime.utils.result_decoder import ResultDecoder
 from qiskit.primitives import BasePrimitiveJob, PrimitiveResult
 from qiskit.providers import JobStatus
