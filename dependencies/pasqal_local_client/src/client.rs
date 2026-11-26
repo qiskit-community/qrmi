@@ -14,7 +14,7 @@
 use crate::munge;
 use anyhow::{bail, Result};
 
-use crate::models::job::JobStatus;
+use crate::models::{JobStatus, ResourceState};
 use reqwest::header;
 use reqwest_middleware::ClientBuilder as ReqwestClientBuilder;
 use serde::de::DeserializeOwned;
@@ -47,6 +47,22 @@ pub struct CreateJob {
 pub struct AccessibleResponse {
     pub is_accessible: bool,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResourceCapacity {
+    pub available_slots: u64,
+    pub max_slots: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResourceStatusResponse {
+    pub status: ResourceState,
+    pub status_reason: Option<String>,
+    pub healthy: Option<bool>,
+    pub busy: bool,
+    pub pending_job_count: u64,
+    pub capacity: Option<ResourceCapacity>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -140,6 +156,14 @@ impl Client {
 
     pub async fn get_accessible(&self) -> Result<AccessibleResponse> {
         let url = format!("{}/accessible", self.base_url);
+
+        let resp = self.client.get(url).send().await?;
+
+        self.handle_request(resp).await
+    }
+
+    pub async fn get_status_summary(&self) -> Result<ResourceStatusResponse> {
+        let url = format!("{}/status/summary", self.base_url);
 
         let resp = self.client.get(url).send().await?;
 

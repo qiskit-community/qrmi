@@ -19,4 +19,4 @@ mod models;
 mod munge;
 
 pub use client::{Client, ClientBuilder};
-pub use models::JobStatus;
+pub use models::{JobStatus, ResourceState};

@@ -11,10 +11,13 @@
 // that they have been altered from the originals.
 
 use crate::common::{required_env, resolve_opt, resolve_opt_required};
-use crate::models::{Payload, ResourceType, Target, TaskResult, TaskStatus};
+use crate::models::{
+    Payload, ResourceCapacity, ResourceStatus, ResourceStatusCode, ResourceType, Target,
+    TaskResult, TaskStatus,
+};
 use crate::{QrmiError, QuantumResource, Result};
 use log::warn;
-use pasqal_local_api::{Client, ClientBuilder, JobStatus};
+use pasqal_local_api::{Client, ClientBuilder, JobStatus, ResourceState};
 use std::collections::HashMap;
 
 use async_trait::async_trait;
@@ -126,6 +129,25 @@ impl QuantumResource for PasqalLocal {
     async fn is_accessible(&mut self) -> Result<bool> {
         let accessible = self.api_client.get_accessible().await?;
         Ok(accessible.is_accessible)
+    }
+
+    async fn status(&mut self) -> Result<ResourceStatus> {
+        let resp = self.api_client.get_status_summary().await?;
+        Ok(ResourceStatus {
+            status: match resp.status {
+                ResourceState::Online => ResourceStatusCode::Online,
+                ResourceState::Offline => ResourceStatusCode::Offline,
+                ResourceState::Paused => ResourceStatusCode::Paused,
+            },
+            status_reason: resp.status_reason,
+            healthy: resp.healthy,
+            busy: Some(resp.busy),
+            capacity: resp.capacity.map(|c| ResourceCapacity {
+                available_slots: c.available_slots,
+                max_slots: c.max_slots,
+            }),
+            pending_job_count: Some(resp.pending_job_count),
+        })
     }
 
     async fn acquire(&mut self) -> Result<String> {

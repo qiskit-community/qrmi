@@ -10,5 +10,7 @@
 // that they have been altered from the originals.
 
 pub mod job;
+pub mod status;
 
 pub use self::job::JobStatus;
+pub use self::status::ResourceState;
