@@ -2326,7 +2326,6 @@ pub struct ResourceProvider {
 /// Created handle must be released with qrmi_provider_free() when no longer needed.
 ///
 /// Currently supported resource types:
-/// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_QISKIT_RUNTIME_SERVICE(deprecated)
 /// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_COMPUTE_SERVICE
 /// - @ref QrmiResourceType::QRMI_RESOURCE_TYPE_IBM_QUANTUM_SYSTEM
 ///
