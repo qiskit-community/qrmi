@@ -49,6 +49,8 @@ required environment variables are listed below.
 | ``QRMI_JOB_ID``                   | ID of the job                     |
 +-----------------------------------+-----------------------------------+
 
+``QRMI_JOB_UID`` and ``QRMI_JOB_ID`` are only required by ``acquire()``.
+
 Where ``<backend_name>`` is the backend name passed via ``--backend``
 (e.g. ``PASQAL_LOCAL``).
 

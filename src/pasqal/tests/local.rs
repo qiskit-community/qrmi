@@ -87,3 +87,24 @@ fn acquisition_token_falls_back_to_environment() {
     std::env::remove_var("session_env_QRMI_JOB_ACQUISITION_TOKEN");
     assert_eq!(token.unwrap(), "session-env");
 }
+
+#[test]
+fn from_config_accepts_missing_job_ids() {
+    let config = HashMap::from([(
+        "QRMI_WARDEN_URL".to_string(),
+        "http://localhost:8006".to_string(),
+    )]);
+    assert!(PasqalLocal::from_config("test_backend", config).is_ok());
+}
+
+#[tokio::test]
+async fn acquire_errors_without_job_ids() {
+    use crate::QuantumResource;
+    let config = HashMap::from([(
+        "QRMI_WARDEN_URL".to_string(),
+        "http://localhost:8006".to_string(),
+    )]);
+    let mut qrmi = PasqalLocal::from_config("test_backend", config).unwrap();
+    let err = qrmi.acquire().await.unwrap_err();
+    assert_eq!(QrmiErrorKind::InvalidConfig, err.kind());
+}
