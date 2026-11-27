@@ -181,13 +181,11 @@ impl Drop for PyQuantumResource {
 
 impl PyQuantumResource {
     /// Internal constructor used by `PyResourceProvider::backends()`.
-    pub(crate) fn from_inner(qrmi: Box<dyn QuantumResource + Send + Sync>) -> Self {
-        Self {
+    pub(crate) fn from_inner(qrmi: Box<dyn QuantumResource + Send + Sync>) -> PyResult<Self> {
+        Ok(Self {
             qrmi,
-            rt: std::mem::ManuallyDrop::new(
-                Runtime::new().expect("Failed to create a new tokio runtime."),
-            ),
-        }
+            rt: std::mem::ManuallyDrop::new(crate::common::new_runtime().map_err(to_py_err)?),
+        })
     }
 }
 
@@ -202,9 +200,7 @@ impl PyQuantumResource {
 
         Ok(Self {
             qrmi,
-            rt: std::mem::ManuallyDrop::new(
-                Runtime::new().expect("Failed to create a new tokio runtime."),
-            ),
+            rt: std::mem::ManuallyDrop::new(crate::common::new_runtime().map_err(to_py_err)?),
         })
     }
 
@@ -222,9 +218,7 @@ impl PyQuantumResource {
 
         Ok(Self {
             qrmi,
-            rt: std::mem::ManuallyDrop::new(
-                Runtime::new().expect("Failed to create a new tokio runtime."),
-            ),
+            rt: std::mem::ManuallyDrop::new(crate::common::new_runtime().map_err(to_py_err)?),
         })
     }
 
@@ -508,9 +502,7 @@ impl PyResourceProvider {
         };
         Ok(Self {
             inner,
-            rt: std::mem::ManuallyDrop::new(
-                Runtime::new().expect("Failed to create a new tokio runtime."),
-            ),
+            rt: std::mem::ManuallyDrop::new(crate::common::new_runtime().map_err(to_py_err)?),
         })
     }
 
@@ -542,10 +534,10 @@ impl PyResourceProvider {
                 .block_on(async { self.inner.resources(filters.map(str::to_string)).await })
         });
         match result {
-            Ok(resources) => Ok(resources
+            Ok(resources) => resources
                 .into_iter()
                 .map(PyQuantumResource::from_inner)
-                .collect()),
+                .collect(),
             Err(e) => Err(to_py_err(e)),
         }
     }
@@ -573,7 +565,7 @@ impl PyResourceProvider {
                 .block_on(async { self.inner.least_busy(filters.map(str::to_string)).await })
         });
         match result {
-            Ok(resource) => Ok(resource.map(PyQuantumResource::from_inner)),
+            Ok(resource) => resource.map(PyQuantumResource::from_inner).transpose(),
             Err(e) => Err(to_py_err(e)),
         }
     }
@@ -642,7 +634,7 @@ impl PyQRMIService {
         // methods are called after this, so there's no need to keep it
         // around (or worry about its `Drop` deadlocking; see those types'
         // `Drop` impls for why that's normally a concern here).
-        let rt = Runtime::new().expect("Failed to create a new tokio runtime.");
+        let rt = crate::common::new_runtime().map_err(to_py_err)?;
         let inner = py
             .detach(|| rt.block_on(async { crate::QRMIService::new().await }))
             .map_err(to_py_err)?;
@@ -651,7 +643,7 @@ impl PyQRMIService {
             .into_resource_map()
             .into_iter()
             .map(|(id, boxed)| {
-                Py::new(py, PyQuantumResource::from_inner(boxed)).map(|obj| (id, obj))
+                Py::new(py, PyQuantumResource::from_inner(boxed)?).map(|obj| (id, obj))
             })
             .collect::<PyResult<std::collections::HashMap<_, _>>>()?;
 

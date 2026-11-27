@@ -867,9 +867,16 @@ pub unsafe extern "C" fn qrmi_resource_new(
             }
         };
 
+        let runtime = match crate::common::new_runtime() {
+            Ok(v) => v,
+            Err(err) => {
+                _record_error(err);
+                return std::ptr::null_mut();
+            }
+        };
         let qrmi = Box::new(QuantumResource {
             inner: res,
-            runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+            runtime: Arc::new(runtime),
         });
         return Box::into_raw(qrmi);
     }
@@ -943,9 +950,16 @@ pub unsafe extern "C" fn qrmi_resource_new_from_config(
                 }
             };
 
+        let runtime = match crate::common::new_runtime() {
+            Ok(v) => v,
+            Err(err) => {
+                _record_error(err);
+                return std::ptr::null_mut();
+            }
+        };
         let qrmi = Box::new(QuantumResource {
             inner: res,
-            runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+            runtime: Arc::new(runtime),
         });
         return Box::into_raw(qrmi);
     }
@@ -2395,9 +2409,16 @@ pub unsafe extern "C" fn qrmi_provider_new(
             return std::ptr::null_mut();
         }
     };
+    let runtime = match crate::common::new_runtime() {
+        Ok(v) => v,
+        Err(err) => {
+            _record_error(err);
+            return std::ptr::null_mut();
+        }
+    };
     Box::into_raw(Box::new(ResourceProvider {
         inner: provider,
-        runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
+        runtime: Arc::new(runtime),
     }))
 }
 
@@ -2738,7 +2759,10 @@ pub unsafe extern "C" fn qrmi_service_resources(
     // its own `Runtime` (contrast `PyQuantumResource` in `pyext.rs`, where
     // each Python-visible object needs to be independently droppable and
     // so does own its own).
-    let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
+    let runtime = match crate::common::new_runtime() {
+        Ok(v) => Arc::new(v),
+        Err(err) => return _fail(err),
+    };
     let result = runtime.block_on(async { crate::QRMIService::new().await });
 
     match result {
