@@ -86,8 +86,8 @@ impl PasqalCloud {
     ///
     /// Same lookup as [`Self::new`]'s "Config file fallback", except the
     /// config root only comes from the map's unprefixed `PASQAL_CONFIG_ROOT`.
-    /// The `$HOME` fallback will not be read from the environment variables
-    /// but can still be explicitely set in the config with the `HOME` key.
+    /// The `$HOME` fallback uses the map's `HOME` key if set, otherwise the
+    /// `HOME` environment variable.
     pub fn from_config(backend_name: &str, config: HashMap<String, String>) -> Result<Self> {
         let cfg = PasqalCloudConfig::from_opt(backend_name, Some(&config))?;
         Self::from_pasqal_cloud_config(backend_name, cfg)
