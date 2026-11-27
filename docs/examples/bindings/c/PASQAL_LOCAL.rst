@@ -42,6 +42,8 @@ that a ``.env`` file is available under the current directory.
 | ``QRMI_JOB_ID``                   | ID of the job                     |
 +-----------------------------------+-----------------------------------+
 
+``QRMI_JOB_UID`` and ``QRMI_JOB_ID`` are only required by ``acquire()``.
+
 Where ``<backend_name>`` is the backend name passed as the first
 argument (e.g. ``PASQAL_LOCAL``).
 
